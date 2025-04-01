@@ -7,10 +7,24 @@ using Microsoft.Identity.Web.UI;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+// Load Azure AD Configuration
+var azureAdConfig = builder.Configuration.GetSection("AzureAd");
+var isDevelopment = builder.Environment.IsDevelopment();
 
+if (!isDevelopment && !string.IsNullOrEmpty(azureAdConfig["ClientId"]))
+{
+    // Use Azure AD authentication in production
+    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApp(azureAdConfig);
+}
+else
+{
+    // Use a dummy authentication scheme in development to prevent errors
+    builder.Services.AddAuthentication("DummyScheme")
+        .AddScheme<AuthenticationSchemeOptions, DummyAuthenticationHandler>("DummyScheme", options => { });
+}
+
+// Add MVC Controllers with Conditional Authentication
 builder.Services.AddControllersWithViews(options =>
 {
     var policy = new AuthorizationPolicyBuilder()
@@ -18,22 +32,24 @@ builder.Services.AddControllersWithViews(options =>
         .Build();
     options.Filters.Add(new AuthorizeFilter(policy));
 });
+
+// Add Razor Pages
 builder.Services.AddRazorPages()
     .AddMicrosoftIdentityUI();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+// Configure middleware
+if (!isDevelopment)
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
 
 app.MapStaticAssets();
