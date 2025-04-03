@@ -1,0 +1,294 @@
+﻿@model PaginatedList<SFCDB.Models.PERecord>
+
+@{
+    ViewData["Title"] = "PE Records";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">PE Records</h1>
+
+    <div class="search-section mb-4">
+        <form method="get" asp-action="Index">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchType" class="form-label">Search By:</label>
+                        <select class="form-select" id="searchType" name="searchType" onchange="toggleSearchFields()">
+                            <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
+                            <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
+                            <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
+                            <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <!-- PE Number Search -->
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "peNumber" ? "" : "d-none")" id="peNumberField">
+                        <label for="peNumber" class="form-label">PE Number:</label>
+                        <input type="text" name="peNumber" class="form-control" id="peNumber" placeholder="Enter PE Number" value="@ViewData["PENumberFilter"]" />
+                    </div>
+
+                    <!-- Customer Search -->
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "customer" ? "" : "d-none")" id="customerField">
+                        <label for="customer" class="form-label">Customer:</label>
+                        <input type="text" name="customer" class="form-control" id="customer" placeholder="Enter Customer Name" value="@ViewData["CustomerFilter"]" />
+                    </div>
+
+                    <!-- Job Reference Search -->
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "jobReference" ? "" : "d-none")" id="jobReferenceField">
+                        <label for="jobReference" class="form-label">Job Reference:</label>
+                        <input type="text" name="jobReference" class="form-control" id="jobReference" placeholder="Enter Job Reference" value="@ViewData["JobReferenceFilter"]" />
+                    </div>
+
+                    <!-- SO Number Search -->
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "soNumber" ? "" : "d-none")" id="soNumberField">
+                        <label for="soNumber" class="form-label">SO Number:</label>
+                        <input type="text" name="soNumber" class="form-control" id="soNumber" placeholder="Enter SO Number" value="@ViewData["SONumberFilter"]" />
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var item in Model)
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">PE Number: @item.PE_NUMBER</h5>
+                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@item.PE_NUMBER" aria-expanded="false">
+                        Show Details
+                    </button>
+                </div>
+                <div id="@item.PE_NUMBER">
+                    <div class="card-body">
+                        <!-- Always visible summary information -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Status</dt>
+                                    <dd class="col-sm-8">@item.WO_STATUS</dd>
+                                    <dt class="col-sm-4">Customer</dt>
+                                    <dd class="col-sm-8">@item.CUSTOMER</dd>
+                                    <dt class="col-sm-4">Service Type</dt>
+                                    <dd class="col-sm-8">@item.SERVICE_TYPE</dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Start Date</dt>
+                                    <dd class="col-sm-8">@item.WO_START_DATE?.ToString("dd/MM/yyyy")</dd>
+                                    <dt class="col-sm-4">Required Date</dt>
+                                    <dd class="col-sm-8">@item.SERVICE_REQUIRED_DATE?.ToString("dd/MM/yyyy")</dd>
+                                    <dt class="col-sm-4">SO Number</dt>
+                                    <dd class="col-sm-8">@item.SO_NUMBER</dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="collapse" id="collapse-@item.PE_NUMBER">
+                            <hr />
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="section-title">Location Details</h6>
+                                    <dl class="row">
+                                        <dt class="col-sm-4">Province</dt>
+                                        <dd class="col-sm-8">@item.PROVINCE</dd>
+                                        <dt class="col-sm-4">Region</dt>
+                                        <dd class="col-sm-8">@item.REGION</dd>
+                                        <dt class="col-sm-4">RTOM</dt>
+                                        <dd class="col-sm-8">@item.RTOM</dd>
+                                        <dt class="col-sm-4">RTOM Description</dt>
+                                        <dd class="col-sm-8">@item.RTOM_DESCRIPTION</dd>
+                                    </dl>
+
+                                    <h6 class="section-title">Project Details</h6>
+                                    <dl class="row">
+                                        <dt class="col-sm-4">Job Reference</dt>
+                                        <dd class="col-sm-8">@item.JOB_REFERENCE</dd>
+                                        <dt class="col-sm-4">Contractor</dt>
+                                        <dd class="col-sm-8">@item.CONTRACTOR_NAME</dd>
+                                        <dt class="col-sm-4">PE Activity</dt>
+                                        <dd class="col-sm-8">@item.PE_ACTIVITY</dd>
+                                        <dt class="col-sm-4">PE Nature</dt>
+                                        <dd class="col-sm-8">@item.PE_NATURE</dd>
+                                        <dt class="col-sm-4">PE Title</dt>
+                                        <dd class="col-sm-8">@item.PE_TITLE</dd>
+                                        <dt class="col-sm-4">PE Objective</dt>
+                                        <dd class="col-sm-8">@item.PE_OBJECTIVE</dd>
+                                        <dt class="col-sm-4">PE Area</dt>
+                                        <dd class="col-sm-8">@item.PE_AREA</dd>
+                                    </dl>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <h6 class="section-title">Task Information</h6>
+                                    <dl class="row">
+                                        <dt class="col-sm-4">Task Sequence</dt>
+                                        <dd class="col-sm-8">@item.TASK_SEQ</dd>
+                                        <dt class="col-sm-4">Task Name</dt>
+                                        <dd class="col-sm-8">@item.TASK_NAME</dd>
+                                        <dt class="col-sm-4">Task WG</dt>
+                                        <dd class="col-sm-8">@item.TASK_WG</dd>
+                                        <dt class="col-sm-4">Actual Start Date</dt>
+                                        <dd class="col-sm-8">@item.WO_ACTUAL_START_DATE</dd>
+                                    </dl>
+
+                                    <h6 class="section-title">Service Details</h6>
+                                    <dl class="row">
+                                        <dt class="col-sm-4">Service Category</dt>
+                                        <dd class="col-sm-8">@item.SERVICE_CATEGORY</dd>
+                                        <dt class="col-sm-4">Service Speed</dt>
+                                        <dd class="col-sm-8">@item.SERVICE_SPEED</dd>
+                                        <dt class="col-sm-4">Order Type</dt>
+                                        <dd class="col-sm-8">@item.ORDER_TYPE</dd>
+                                        <dt class="col-sm-4">CRM Order</dt>
+                                        <dd class="col-sm-8">@item.CRM_ORDER</dd>
+                                    </dl>
+
+                                    <h6 class="section-title">Customer Information</h6>
+                                    <dl class="row">
+                                        <dt class="col-sm-4">Customer Type</dt>
+                                        <dd class="col-sm-8">@item.CUS_TYPE</dd>
+                                        <dt class="col-sm-4">Account Manager</dt>
+                                        <dd class="col-sm-8">@item.ACCOUNT_MANAGER</dd>
+                                        <dt class="col-sm-4">Section Handled By</dt>
+                                        <dd class="col-sm-8">@item.SECTION_HANDLED_BY</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h6 class="section-title">Location Information</h6>
+                                    <dl class="row">
+                                        <dt class="col-sm-2">Location A</dt>
+                                        <dd class="col-sm-10">@item.LOCATION_A_ADDRESS</dd>
+                                        <dt class="col-sm-2">Location B</dt>
+                                        <dd class="col-sm-10">@item.LOCATION_B_ADDRESS</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.PE_WO_COMMENTS) || !string.IsNullOrEmpty(item.WO_COMMENTS))
+                            {
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <h6 class="section-title">Comments</h6>
+                                        @if (!string.IsNullOrEmpty(item.PE_WO_COMMENTS))
+                                        {
+                                            <div class="mb-3">
+                                                <strong>PE Work Order Comments:</strong>
+                                                <p class="mb-2">@item.PE_WO_COMMENTS</p>
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.WO_COMMENTS))
+                                        {
+                                            <div>
+                                                <strong>Work Order Comments:</strong>
+                                                <p class="mb-0">@item.WO_COMMENTS</p>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No records found.
+        </div>
+    }
+    @if (Model != null && Model.Any())
+
+    {
+
+        <!-- Pagination Controls -->
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.PageIndex == 1 ? "disabled" : "")">
+                <a class="page-link" href="?pageIndex=1&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">First</a>
+            </li>
+            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                <a class="page-link" href="?pageIndex=@(Model.PageIndex - 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Previous</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">@Model.PageIndex</span>
+            </li>
+            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                <a class="page-link" href="?pageIndex=@(Model.PageIndex + 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Next</a>
+            </li>
+            <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="?pageIndex=@Model.TotalPages&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Last</a>
+            </li>
+        </ul>
+    </nav>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle button text for collapse
+        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const isCollapsed = this.getAttribute('aria-expanded') === 'true';
+                this.textContent = isCollapsed ? 'Hide Details' : 'Show Details';
+            });
+        });
+
+        // Search fields toggle function
+        function toggleSearchFields() {
+            const searchType = document.getElementById('searchType').value;
+            const searchFields = document.querySelectorAll('.search-field');
+
+            // Hide all search fields
+            searchFields.forEach(field => field.classList.add('d-none'));
+
+            // Show selected search field
+            document.getElementById(searchType + 'Field').classList.remove('d-none');
+
+            // Clear other search fields
+            searchFields.forEach(field => {
+                if (field.id !== searchType + 'Field') {
+                    const input = field.querySelector('input');
+                    if (input) input.value = '';
+                }
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleSearchFields();
+        });
+    </script>
+}
+
+<style>
+    .search-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .search-field {
+        transition: all 0.3s ease;
+    }
+
+    .form-label {
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+</style>

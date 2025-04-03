@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Models;
+using SFCDB.Models;
 
 namespace SFCDashboard.Data
 {
@@ -17,6 +18,7 @@ namespace SFCDashboard.Data
         public DbSet<TaskExtensionRequest> TaskExtensionRequests { get; set; }
         public DbSet<TaskHistory> TaskHistories { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<PERecord> PERecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
