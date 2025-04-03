@@ -6,11 +6,39 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SFCDashboard.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class initialmigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "PETask",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TaskSeq = table.Column<int>(type: "int", nullable: false),
+                    PlannedEvent = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OLA_Parameters = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PETask", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserRole",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserRole", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "WorkGroups",
                 columns: table => new
@@ -30,19 +58,19 @@ namespace SFCDashboard.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Username = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    FullName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    Role = table.Column<int>(type: "int", nullable: false),
-                    WorkGroupId = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    LastLoginDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    ServiceId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UserRoleId = table.Column<int>(type: "int", nullable: true),
+                    WorkGroupId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Users_UserRole_UserRoleId",
+                        column: x => x.UserRoleId,
+                        principalTable: "UserRole",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Users_WorkGroups_WorkGroupId",
                         column: x => x.WorkGroupId,
@@ -58,7 +86,6 @@ namespace SFCDashboard.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PENumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     JobReferenceNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    SoNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     SONumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Region = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Area = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
@@ -94,7 +121,7 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Notifications",
+                name: "Notification",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -109,14 +136,14 @@ namespace SFCDashboard.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.PrimaryKey("PK_Notification", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Notifications_PlannedEvents_PlannedEventId",
+                        name: "FK_Notification_PlannedEvents_PlannedEventId",
                         column: x => x.PlannedEventId,
                         principalTable: "PlannedEvents",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Notifications_Users_UserId",
+                        name: "FK_Notification_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id");
@@ -222,13 +249,13 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Notifications_PlannedEventId",
-                table: "Notifications",
+                name: "IX_Notification_PlannedEventId",
+                table: "Notification",
                 column: "PlannedEventId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Notifications_UserId",
-                table: "Notifications",
+                name: "IX_Notification_UserId",
+                table: "Notification",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -277,6 +304,11 @@ namespace SFCDashboard.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Users_UserRoleId",
+                table: "Users",
+                column: "UserRoleId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_WorkGroupId",
                 table: "Users",
                 column: "WorkGroupId");
@@ -286,7 +318,10 @@ namespace SFCDashboard.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Notifications");
+                name: "Notification");
+
+            migrationBuilder.DropTable(
+                name: "PETask");
 
             migrationBuilder.DropTable(
                 name: "TaskEscalations");
@@ -302,6 +337,9 @@ namespace SFCDashboard.Migrations
 
             migrationBuilder.DropTable(
                 name: "Users");
+
+            migrationBuilder.DropTable(
+                name: "UserRole");
 
             migrationBuilder.DropTable(
                 name: "WorkGroups");
