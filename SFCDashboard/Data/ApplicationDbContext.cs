@@ -18,7 +18,11 @@ namespace SFCDashboard.Data
         public DbSet<TaskExtensionRequest> TaskExtensionRequests { get; set; }
         public DbSet<TaskHistory> TaskHistories { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+<<<<<<< HEAD
         public DbSet<PERecord> PERecords { get; set; }
+=======
+        public DbSet<Notification> PETasks{ get; set; }
+>>>>>>> origin/Tasks
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -36,5 +40,6 @@ namespace SFCDashboard.Data
                 .OnDelete(DeleteBehavior.Restrict);
         }
         public DbSet<SFCDashboard.Models.UserRole> UserRole { get; set; } = default!;
+        public DbSet<SFCDashboard.Models.PETask> PETask { get; set; } = default!;
     }
 }
