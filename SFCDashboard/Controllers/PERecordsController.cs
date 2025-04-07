@@ -373,5 +373,29 @@ namespace SFCDB.Controllers
         {
             return _context.PERecords.Any(e => e.ID == id);
         }
+        public async Task<IActionResult> InProgressRecords()
+        {
+            var inProgressRecords = await _context.PERecords
+                .Where(p => p.WO_STATUS == "INPROGRESS")
+                .ToListAsync();
+
+            // Log the count of records found
+            Console.WriteLine($"Total INPROGRESS records found: {inProgressRecords.Count}");
+
+
+            return View(inProgressRecords);
+        }
+        public async Task<IActionResult> OLAViolateRecords()
+        {
+            var today = DateTime.Today;
+            var OLAViolateRecords = await _context.PERecords
+                .Where(p => p.WO_START_DATE.HasValue && p.WO_START_DATE.Value.AddDays(30) < today)
+                .ToListAsync();
+
+            // Log the count of records found
+            Console.WriteLine($"Total OLA Violate records found: {OLAViolateRecords.Count}");
+
+            return View(OLAViolateRecords);
+        }
     }
 }

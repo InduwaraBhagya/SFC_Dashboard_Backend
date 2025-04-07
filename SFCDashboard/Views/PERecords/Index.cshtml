@@ -5,9 +5,7 @@
 }
 
 <div class="container mt-4">
-    <div class="mb-3">
-        <a asp-action="ImportExcel" class="btn btn-success">Import Excel Data</a>
-    </div>
+
     <div class="search-section mb-4">
         <form method="get" asp-action="Index">
             <div class="row g-3 align-items-end">
@@ -237,6 +235,19 @@
         </ul>
     </nav>
     }
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <a asp-action="InProgressRecords" class="btn btn-success w-100 p-4 text-white" style="background-color: #28a745; border: none; border-radius: 0.25rem;">
+                <h4>In Progress Records</h4>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a asp-action="OLAViolateRecords" class="btn btn-secondary w-100 p-4 text-white" style="background-color: #6c757d; border: none; border-radius: 0.25rem;">
+                <h4>OLA Violate Records</h4>
+            </a>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
