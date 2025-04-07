@@ -13,55 +13,58 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">SFCDashboard</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="WorkGroups" asp-action="Index">Add WorkGroup</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="SystemUsers" asp-action="Index">Add User</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="UserRoles" asp-action="Index">Add Role</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="PETasks" asp-action="Index">Add Task</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="ImportExcel">Import Excel</a>
-                        </li>
-                    </ul>
-                    <partial name="_LoginPartial" />
-                </div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="Home" asp-action="Index">
+                <img src="~/images/logo.png" alt="Logo" class="logo-img me-2" />
+                <span class="dashboard-name">SFCDashboard</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="Index">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="WorkGroups" asp-action="Index">Add WorkGroup</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="SystemUsers" asp-action="Index">Add User</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="UserRoles" asp-action="Index">Add Role</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="PETasks" asp-action="Index">Add Task</a>
+                    </li>
+                </ul>
+                <partial name="_LoginPartial" />
             </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
+</header>
     <div class="container mt-4">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
-    <footer class="bg-dark text-white mt-4">
-        <div class="container py-3">
-            <div class="row">
-                <div class="col-md-6">
-                    <p>&copy; 2025 - SFCDashboard</p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <a class="text-white" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                </div>
+ <footer class="bg-dark text-white mt-4">
+    <div class="container py-3">
+        <div class="row align-items-center">
+            <div class="col-md-6 d-flex align-items-center">
+                <img src="~/images/logoRmv.png" alt="Footer Logo" height="30" class="me-2" />
+                <p class="mb-0">&copy; 2025 - SFCDashboard</p>
+            </div>
+            <div class="col-md-6 text-end">
+                <a class="text-white" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
             </div>
         </div>
-    </footer>
+    </div>
+ </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
