@@ -240,15 +240,20 @@
         <div class="col-md-6">
             <a asp-action="InProgressRecords" class="btn btn-success w-100 p-4 text-white" style="background-color: #28a745; border: none; border-radius: 0.25rem;">
                 <h4>In Progress Records</h4>
+                <div class="mt-2">
+                    <span class="badge bg-light text-success" style="font-size: 1.2rem;">@ViewData["InProgressCount"] Tasks</span>
+                </div>
             </a>
         </div>
         <div class="col-md-6">
             <a asp-action="OLAViolateRecords" class="btn btn-secondary w-100 p-4 text-white" style="background-color: #6c757d; border: none; border-radius: 0.25rem;">
                 <h4>OLA Violate Records</h4>
+                <div class="mt-2">
+                    <span class="badge bg-light text-secondary" style="font-size: 1.2rem;">@ViewData["OLAViolateCount"] Tasks</span>
+                </div>
             </a>
         </div>
     </div>
-</div>
 
 @section Scripts {
     <script>

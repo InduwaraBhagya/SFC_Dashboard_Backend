@@ -48,6 +48,16 @@ namespace SFCDB.Controllers
                 _ => peNumber
             };
 
+            // Calculate counts for dashboard boxes
+            var today = DateTime.Today;
+            ViewData["InProgressCount"] = await _context.PERecords
+                .Where(p => p.WO_STATUS == "INPROGRESS")
+                .CountAsync();
+
+            ViewData["OLAViolateCount"] = await _context.PERecords
+                .Where(p => p.WO_START_DATE.HasValue && p.WO_START_DATE.Value.AddDays(30) < today)
+                .CountAsync();
+
             // Apply search filters based on type
             if (!string.IsNullOrEmpty(searchString))
             {
