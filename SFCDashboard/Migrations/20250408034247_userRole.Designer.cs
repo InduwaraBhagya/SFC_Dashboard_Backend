@@ -12,8 +12,8 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250404051201_newPEtable")]
-    partial class newPEtable
+    [Migration("20250408034247_userRole")]
+    partial class userRole
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

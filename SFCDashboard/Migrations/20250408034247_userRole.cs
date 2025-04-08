@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SFCDashboard.Migrations
 {
     /// <inheritdoc />
-    public partial class newPEtable : Migration
+    public partial class userRole : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
