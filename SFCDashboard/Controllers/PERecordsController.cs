@@ -57,6 +57,9 @@ namespace SFCDB.Controllers
             ViewData["OLAViolateCount"] = await _context.PERecords
                 .Where(p => p.WO_START_DATE.HasValue && p.WO_START_DATE.Value.AddDays(30) < today)
                 .CountAsync();
+            ViewData["UrgentCount"] = await _context.PERecords
+                .Where(p => p.WO_STATUS == "URGENT")
+                .CountAsync();
 
             // Apply search filters based on type
             if (!string.IsNullOrEmpty(searchString))
@@ -406,6 +409,38 @@ namespace SFCDB.Controllers
             Console.WriteLine($"Total OLA Violate records found: {OLAViolateRecords.Count}");
 
             return View(OLAViolateRecords);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkAsUrgent(int id)
+        {
+            var pERecord = await _context.PERecords.FindAsync(id);
+            if (pERecord == null)
+            {
+                return NotFound();
+            }
+
+            pERecord.WO_STATUS = "URGENT";
+            _context.Update(pERecord);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+        public async Task<IActionResult> UrgentRecords()
+        {
+            var urgentRecords = await _context.PERecords
+                .Where(p => p.WO_STATUS == "URGENT")
+                .ToListAsync();
+
+            // Log the count of records found
+            Console.WriteLine($"Total URGENT records found: {urgentRecords.Count}");
+
+            return View(urgentRecords);
+        }
+        public IActionResult HoldRecords()
+        {
+            // Placeholder action for HoldRecords
+            return View();
         }
     }
 }
