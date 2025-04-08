@@ -2,6 +2,10 @@
 
 @{
     ViewData["Title"] = "PE Records";
+    bool isSearchPerformed = !string.IsNullOrEmpty(ViewData["PENumberFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["CustomerFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["JobReferenceFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["SONumberFilter"]?.ToString());
 }
 
 <div class="container mt-4">
@@ -203,37 +207,36 @@
             </div>
         }
     }
-    else
+    else if (isSearchPerformed)
     {
         <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
             No records found.
         </div>
     }
+
     @if (Model != null && Model.Any())
-
     {
-
         <!-- Pagination Controls -->
         <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center">
-            <li class="page-item @(Model.PageIndex == 1 ? "disabled" : "")">
-                <a class="page-link" href="?pageIndex=1&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">First</a>
-            </li>
-            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                <a class="page-link" href="?pageIndex=@(Model.PageIndex - 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Previous</a>
-            </li>
-            <li class="page-item disabled">
-                <span class="page-link">@Model.PageIndex</span>
-            </li>
-            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                <a class="page-link" href="?pageIndex=@(Model.PageIndex + 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Next</a>
-            </li>
-            <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : "")">
-                <a class="page-link" href="?pageIndex=@Model.TotalPages&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Last</a>
-            </li>
-        </ul>
-    </nav>
+                <li class="page-item @(Model.PageIndex == 1 ? "disabled" : "")">
+                    <a class="page-link" href="?pageIndex=1&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">First</a>
+                </li>
+                <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                    <a class="page-link" href="?pageIndex=@(Model.PageIndex - 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Previous</a>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">@Model.PageIndex</span>
+                </li>
+                <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                    <a class="page-link" href="?pageIndex=@(Model.PageIndex + 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Next</a>
+                </li>
+                <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" href="?pageIndex=@Model.TotalPages&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Last</a>
+                </li>
+            </ul>
+        </nav>
     }
 
     <div class="row mb-4">
@@ -255,57 +258,57 @@
         </div>
     </div>
 
-@section Scripts {
-    <script>
-        // Toggle button text for collapse
-        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const isCollapsed = this.getAttribute('aria-expanded') === 'true';
-                this.textContent = isCollapsed ? 'Hide Details' : 'Show Details';
+    @section Scripts {
+        <script>
+            // Toggle button text for collapse
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const isCollapsed = this.getAttribute('aria-expanded') === 'true';
+                    this.textContent = isCollapsed ? 'Hide Details' : 'Show Details';
+                });
             });
-        });
 
-        // Search fields toggle function
-        function toggleSearchFields() {
-            const searchType = document.getElementById('searchType').value;
-            const searchFields = document.querySelectorAll('.search-field');
+            // Search fields toggle function
+            function toggleSearchFields() {
+                const searchType = document.getElementById('searchType').value;
+                const searchFields = document.querySelectorAll('.search-field');
 
-            // Hide all search fields
-            searchFields.forEach(field => field.classList.add('d-none'));
+                // Hide all search fields
+                searchFields.forEach(field => field.classList.add('d-none'));
 
-            // Show selected search field
-            document.getElementById(searchType + 'Field').classList.remove('d-none');
+                // Show selected search field
+                document.getElementById(searchType + 'Field').classList.remove('d-none');
 
-            // Clear other search fields
-            searchFields.forEach(field => {
-                if (field.id !== searchType + 'Field') {
-                    const input = field.querySelector('input');
-                    if (input) input.value = '';
-                }
+                // Clear other search fields
+                searchFields.forEach(field => {
+                    if (field.id !== searchType + 'Field') {
+                        const input = field.querySelector('input');
+                        if (input) input.value = '';
+                    }
+                });
+            }
+
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                toggleSearchFields();
             });
+        </script>
+    }
+
+    <style>
+        .search-section {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            toggleSearchFields();
-        });
-    </script>
-}
+        .search-field {
+            transition: all 0.3s ease;
+        }
 
-<style>
-    .search-section {
-        background-color: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 0.25rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .search-field {
-        transition: all 0.3s ease;
-    }
-
-    .form-label {
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-    }
-</style>
+        .form-label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+    </style>
