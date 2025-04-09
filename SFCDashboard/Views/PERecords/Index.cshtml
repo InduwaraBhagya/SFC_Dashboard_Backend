@@ -52,7 +52,7 @@
                 </div>
 
                 <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                    <button type="submit" class="btn btn-primary btn-ripple w-100">Search</button>
                 </div>
             </div>
         </form>
@@ -240,92 +240,417 @@
     }
 
     <div class="row mb-4">
-        <div class="col-md-6">
-            <a asp-action="UrgentRecords" class="btn btn-secondary w-100 p-4 text-white" style="background-color: #FA8072; border: double; border-radius: 0.5rem;">
-                <h4>Urgent Records</h4>
-                <div class="mt-2">
-                    <span class="badge bg-light text-secondary" style="font-size: 1.2rem;">@ViewData["UrgentCount"] Tasks</span>
+        <div class="col-md-6 mb-3">
+            <a asp-action="UrgentRecords" class="dashboard-card urgent-card">
+                <div class="card-content">
+                    <h4>Urgent Records</h4>
+                    <div class="mt-2">
+                        <span class="badge bg-light text-danger" style="font-size: 1.2rem;">@ViewData["UrgentCount"] Tasks</span>
+                    </div>
+                </div>
+                <div class="img-container">
+                    <img src="~/images/urgent.png" alt="Urgent" class="dashboard-img" />
                 </div>
             </a>
         </div>
-        <div class="col-md-6">
-            <a asp-action="InProgressRecords" class="btn btn-success w-100 p-4 text-white" style="background-color: #1fd655; border: double; border-radius: 0.5rem;">
-                <h4>In Progress Records</h4>
-                <div class="mt-2">
-                    <span class="badge bg-light text-success" style="font-size: 1.2rem;">@ViewData["InProgressCount"] Tasks</span>
+        <div class="col-md-6 mb-3">
+            <a asp-action="InProgressRecords" class="dashboard-card inprogress-card">
+                <div class="card-content">
+                    <h4>In Progress Records</h4>
+                    <div class="mt-2">
+                        <span class="badge bg-light text-success" style="font-size: 1.2rem;">@ViewData["InProgressCount"] Tasks</span>
+                    </div>
+                </div>
+                <div class="img-container">
+                    <img src="~/images/work-in-progress.png" alt="In Progress" class="dashboard-img" />
                 </div>
             </a>
         </div>
-        <div class="col-md-6">
-            <a asp-action="OLAViolateRecords" class="btn btn-secondary w-100 p-4 text-white" style="background-color: #6c757d; border: double; border-radius: 0.5rem;">
-                <h4>OLA Violate Records</h4>
-                <div class="mt-2">
-                    <span class="badge bg-light text-secondary" style="font-size: 1.2rem;">@ViewData["OLAViolateCount"] Tasks</span>
+        <div class="col-md-6 mb-3">
+            <a asp-action="OLAViolateRecords" class="dashboard-card ola-card">
+                <div class="card-content">
+                    <h4>OLA Violate Records</h4>
+                    <div class="mt-2">
+                        <span class="badge bg-light text-dark" style="font-size: 1.2rem;">@ViewData["OLAViolateCount"] Tasks</span>
+                    </div>
+                </div>
+                <div class="img-container">
+                    <img src="~/images/ola _Validate.png" alt="OLA Violate" class="dashboard-img" />
                 </div>
             </a>
         </div>
-        <div class="col-md-6">
-            <a asp-action="HoldRecords" class="btn btn-secondary w-100 p-4 text-white" style="background-color: #fbb917; border: double; border-radius: 0.5rem;">
-                <h4>Hold Records</h4>
-                <div class="mt-2">
-                    <span class="badge bg-light text-secondary" style="font-size: 1.2rem;">0 Tasks</span>
+        <div class="col-md-6 mb-3">
+            <a asp-action="HoldRecords" class="dashboard-card hold-card">
+                <div class="card-content">
+                    <h4>Hold Records</h4>
+                    <div class="mt-2">
+                        <span class="badge bg-light text-warning" style="font-size: 1.2rem;">0 Tasks</span>
+                    </div>
+                </div>
+                <div class="img-container">
+                    <img src="~/images/hold.png" alt="Hold" class="dashboard-img" />
                 </div>
             </a>
         </div>
-
     </div>
 
-    @section Scripts {
-        <script>
-            // Toggle button text for collapse
-            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
-                button.addEventListener('click', function() {
-                    const isCollapsed = this.getAttribute('aria-expanded') === 'true';
-                    this.textContent = isCollapsed ? 'Hide Details' : 'Show Details';
-                });
+</div>
+
+@section Scripts {
+    <script>
+               // Search fields toggle function
+        function toggleSearchFields() {
+            const searchType = document.getElementById('searchType').value;
+            const searchFields = document.querySelectorAll('.search-field');
+
+            // Hide all search fields with animation
+            searchFields.forEach(field => {
+                if (!field.classList.contains('d-none')) {
+                    field.style.opacity = '0';
+                    field.style.maxHeight = '0';
+
+                    setTimeout(() => {
+                        field.classList.add('d-none');
+
+                        // Clear the input when hiding
+                        const input = field.querySelector('input');
+                        if (input && field.id !== searchType + 'Field') {
+                            input.value = '';
+                        }
+                    }, 300);
+                }
             });
 
-            // Search fields toggle function
-            function toggleSearchFields() {
-                const searchType = document.getElementById('searchType').value;
-                const searchFields = document.querySelectorAll('.search-field');
+            // Show selected search field with animation
+            setTimeout(() => {
+                const selectedField = document.getElementById(searchType + 'Field');
+                selectedField.classList.remove('d-none');
 
-                // Hide all search fields
-                searchFields.forEach(field => field.classList.add('d-none'));
+                // Trigger reflow
+                void selectedField.offsetWidth;
 
-                // Show selected search field
-                document.getElementById(searchType + 'Field').classList.remove('d-none');
+                // Animate in
+                selectedField.style.opacity = '1';
+                selectedField.style.maxHeight = '100px';
 
-                // Clear other search fields
-                searchFields.forEach(field => {
-                    if (field.id !== searchType + 'Field') {
-                        const input = field.querySelector('input');
-                        if (input) input.value = '';
-                    }
+                // Focus on the input after animation
+                setTimeout(() => {
+                    const input = selectedField.querySelector('input');
+                    if (input) input.focus();
+                }, 300);
+            }, 350);
+        }
+
+        // Add button ripple effect
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the search field toggle
+            toggleSearchFields();
+
+            // Add ripple effect to search button
+            const searchButton = document.querySelector('.search-section .btn-primary');
+
+            if (searchButton) {
+                searchButton.addEventListener('mousedown', function(e) {
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    this.style.setProperty('--ripple-x', x + 'px');
+                    this.style.setProperty('--ripple-y', y + 'px');
+
+                    this.classList.remove('btn-ripple');
+                    void this.offsetWidth; // Force reflow
+                    this.classList.add('btn-ripple');
                 });
             }
 
-            // Initialize on page load
-            document.addEventListener('DOMContentLoaded', function() {
-                toggleSearchFields();
+            // Add animation for form controls
+            const formControls = document.querySelectorAll('.search-section .form-control, .search-section .form-select');
+
+            formControls.forEach(control => {
+                control.addEventListener('focus', function() {
+                    const label = this.parentElement.querySelector('.form-label');
+                    if (label) {
+                        label.style.color = '#4a89dc';
+                    }
+                });
+
+                control.addEventListener('blur', function() {
+                    const label = this.parentElement.querySelector('.form-label');
+                    if (label) {
+                        label.style.color = '#495057';
+                    }
+                });
             });
-        </script>
+        });
+    </script>
+}
+
+<style>
+    /* Existing styles */
+    .search-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
-    <style>
-        .search-section {
+    .search-field {
+        transition: all 0.3s ease;
+    }
+
+    .form-label {
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    /* Updated styles for dashboard cards */
+    .dashboard-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: white;
+        height: 180px;
+        overflow: hidden;
+        position: relative;
+    }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+        }
+
+    .card-content {
+        position: relative;
+        z-index: 2;
+        width: 50%;
+    }
+
+    .img-container {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 100%;
+        width: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    .dashboard-img {
+        height: 80%;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+    }
+
+    .urgent-card {
+        background: linear-gradient(135deg, #FF6B6B 0%, #FF0000 100%);
+        border: none;
+    }
+
+    .inprogress-card {
+        background: linear-gradient(135deg, #52C234 0%, #20803C 100%);
+        border: none;
+    }
+
+    .ola-card {
+        background: linear-gradient(135deg, #4B79A1 0%, #283E51 100%);
+        border: none;
+    }
+
+    .hold-card {
+        background: linear-gradient(135deg, #F7971E 0%, #FFD200 100%);
+        border: none;
+    }
+
+    .dashboard-card h4 {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        font-size: 1.4rem;
+    }
+
+    /* Make the dashboard responsive */
+    @* Use @@ to escape @ in media queries in Razor views *@
+    @@media (max-width: 768px) {
+        .img-container
+
+    {
+        width: 40%;
+    }
+
+    .card-content {
+        width: 60%;
+    }
+
+    }
+
+    /* Enhanced Search Section Styles */
+    .search-section {
+        background-color: #ffffff;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        margin-bottom: 2rem;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+
+        .search-section:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Search form enhancements */
+        .search-section form {
+            position: relative;
+        }
+
+        /* Search type dropdown styling */
+        .search-section .form-select {
+            border: 2px solid #e0e0e0;
+            border-radius: 0.5rem;
+            padding: 0.6rem 1rem;
             background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 0.25rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .search-field {
             transition: all 0.3s ease;
-        }
-
-        .form-label {
-            margin-bottom: 0.5rem;
+            box-shadow: none;
             font-weight: 500;
         }
-    </style>
+
+            .search-section .form-select:focus {
+                border-color: #4a89dc;
+                box-shadow: 0 0 0 0.25rem rgba(74, 137, 220, 0.25);
+                background-color: #fff;
+            }
+
+    /* Search input fields styling */
+    .search-field {
+        transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        transform-origin: top;
+        opacity: 0;
+        max-height: 0;
+        overflow: hidden;
+    }
+
+        .search-field:not(.d-none) {
+            opacity: 1;
+            max-height: 100px;
+            margin-top: 0.5rem;
+        }
+
+    .search-section .form-control {
+        border: 2px solid #e0e0e0;
+        border-radius: 0.5rem;
+        padding: 0.7rem 1rem;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+        box-shadow: none;
+    }
+
+        .search-section .form-control:focus {
+            border-color: #4a89dc;
+            box-shadow: 0 0 0 0.25rem rgba(74, 137, 220, 0.25);
+            background-color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .search-section .form-control::placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+    /* Label styling */
+    .search-section .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    /* Search button styling */
+    .search-section .btn-primary {
+        background: linear-gradient(135deg, #4a89dc 0%, #5e9cea 100%);
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.8rem 1.5rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(74, 137, 220, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+        .search-section .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(74, 137, 220, 0.4);
+            background: linear-gradient(135deg, #3a79cc 0%, #4e8eea 100%);
+        }
+
+        .search-section .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        /* Button ripple effect */
+        .search-section .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            transform: scale(0);
+            opacity: 1;
+            transition: all 0.5s ease;
+        }
+
+        .search-section .btn-primary:active::after {
+            transform: scale(40);
+            opacity: 0;
+        }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .search-section
+
+    {
+        padding: 1.5rem;
+    }
+
+    .search-section .form-control,
+    .search-section .form-select,
+    .search-section .btn-primary {
+        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
+    }
+
+    }
+
+    /* Ripple effect animation */
+    .btn-ripple::after {
+        animation: ripple 0.8s ease-out;
+    }
+
+    @@keyframes ripple {
+        from
+
+    {
+        transform: scale(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: scale(40);
+        opacity: 0;
+    }
+
+    }
+</style>
