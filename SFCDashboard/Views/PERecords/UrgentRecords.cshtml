@@ -53,14 +53,9 @@
                     @Html.DisplayFor(modelItem => item.WO_STATUS)
                 </td>
                 <td>
-                    <form asp-action="MarkAsUrgent" method="post">
-                        <input type="hidden" name="id" value="@item.ID" />
-                        <button type="submit" class="btn btn-danger">Mark as Urgent</button>
-                    </form>
-                </td>
-                <td>
                     <a asp-action="Details" asp-route-id="@item.ID">Details</a>
                 </td>
+
             </tr>
         }
     </tbody>
