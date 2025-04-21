@@ -62,7 +62,9 @@ namespace SFCDashboard.Controllers
         }
         public IActionResult ImportFromBackend()
         {
+
             string filePath = @"C:\Users\ccs\Desktop\.net core\slt project\CONFIDENTIAL DOCUMENTS\WORK_GROUPS.xlsx"; // Change this to your file path
+
 
             if (!System.IO.File.Exists(filePath))
             {

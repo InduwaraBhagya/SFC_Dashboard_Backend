@@ -1,0 +1,166 @@
+﻿@model SFCDB.Models.PERecord
+
+@{
+    ViewData["Title"] = "Edit PE Record";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Edit PE Record</h5>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Edit">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                <input type="hidden" asp-for="ID" />
+
+                <div class="row">
+                    <!-- Location Details Section -->
+                    <div class="col-md-6">
+                        <h6 class="section-title">Location Details</h6>
+                        <div class="card mb-3 p-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="PROVINCE" class="control-label"></label>
+                                <input asp-for="PROVINCE" class="form-control" />
+                                <span asp-validation-for="PROVINCE" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="REGION" class="control-label"></label>
+                                <input asp-for="REGION" class="form-control" />
+                                <span asp-validation-for="REGION" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="RTOM" class="control-label"></label>
+                                <input asp-for="RTOM" class="form-control" />
+                                <span asp-validation-for="RTOM" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="RTOM_DESCRIPTION" class="control-label"></label>
+                                <input asp-for="RTOM_DESCRIPTION" class="form-control" />
+                                <span asp-validation-for="RTOM_DESCRIPTION" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <!-- Project Details Section -->
+                        <h6 class="section-title">Project Details</h6>
+                        <div class="card mb-3 p-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="PE_NUMBER" class="control-label"></label>
+                                <input asp-for="PE_NUMBER" class="form-control" />
+                                <span asp-validation-for="PE_NUMBER" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="PE_ACTIVITY" class="control-label"></label>
+                                <input asp-for="PE_ACTIVITY" class="form-control" />
+                                <span asp-validation-for="PE_ACTIVITY" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="PE_NATURE" class="control-label"></label>
+                                <input asp-for="PE_NATURE" class="form-control" />
+                                <span asp-validation-for="PE_NATURE" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="PE_TITLE" class="control-label"></label>
+                                <input asp-for="PE_TITLE" class="form-control" />
+                                <span asp-validation-for="PE_TITLE" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="PE_OBJECTIVE" class="control-label"></label>
+                                <textarea asp-for="PE_OBJECTIVE" class="form-control"></textarea>
+                                <span asp-validation-for="PE_OBJECTIVE" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="PE_AREA" class="control-label"></label>
+                                <input asp-for="PE_AREA" class="form-control" />
+                                <span asp-validation-for="PE_AREA" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <!-- Task Information Section -->
+                        <h6 class="section-title">Task Information</h6>
+                        <div class="card mb-3 p-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="TASK_NAME" class="control-label"></label>
+                                <input asp-for="TASK_NAME" class="form-control" />
+                                <span asp-validation-for="TASK_NAME" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="TASK_WG" class="control-label"></label>
+                                <input asp-for="TASK_WG" class="form-control" />
+                                <span asp-validation-for="TASK_WG" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="WO_STATUS" class="control-label"></label>
+                                <input asp-for="WO_STATUS" class="form-control" />
+                                <span asp-validation-for="WO_STATUS" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="WO_START_DATE" class="control-label"></label>
+                                <input asp-for="WO_START_DATE" class="form-control" type="date" />
+                                <span asp-validation-for="WO_START_DATE" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <!-- Service Details Section -->
+                        <h6 class="section-title">Service Details</h6>
+                        <div class="card mb-3 p-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="SERVICE_CATEGORY" class="control-label"></label>
+                                <input asp-for="SERVICE_CATEGORY" class="form-control" />
+                                <span asp-validation-for="SERVICE_CATEGORY" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="SERVICE_TYPE" class="control-label"></label>
+                                <input asp-for="SERVICE_TYPE" class="form-control" />
+                                <span asp-validation-for="SERVICE_TYPE" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="SERVICE_SPEED" class="control-label"></label>
+                                <input asp-for="SERVICE_SPEED" class="form-control" />
+                                <span asp-validation-for="SERVICE_SPEED" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="SERVICE_REQUIRED_DATE" class="control-label"></label>
+                                <input asp-for="SERVICE_REQUIRED_DATE" class="form-control" type="date" />
+                                <span asp-validation-for="SERVICE_REQUIRED_DATE" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comments Section -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="section-title">Comments</h6>
+                        <div class="card mb-3 p-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="PE_WO_COMMENTS" class="control-label"></label>
+                                <textarea asp-for="PE_WO_COMMENTS" class="form-control" rows="3"></textarea>
+                                <span asp-validation-for="PE_WO_COMMENTS" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="WO_COMMENTS" class="control-label"></label>
+                                <textarea asp-for="WO_COMMENTS" class="form-control" rows="3"></textarea>
+                                <span asp-validation-for="WO_COMMENTS" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
