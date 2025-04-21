@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SFCDashboard.Data;
 
@@ -11,9 +12,11 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250402100705_ChangeSystemUser")]
+    partial class ChangeSystemUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -277,24 +280,6 @@ namespace SFCDashboard.Migrations
                     b.ToTable("TaskHistories");
                 });
 
-            modelBuilder.Entity("SFCDashboard.Models.UserRole", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("UserRole");
-                });
-
             modelBuilder.Entity("SFCDashboard.Models.WorkGroup", b =>
                 {
                     b.Property<int>("Id")
@@ -326,20 +311,18 @@ namespace SFCDashboard.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
                     b.Property<string>("ServiceId")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("UserRoleId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("WorkGroupId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("UserRoleId");
 
                     b.HasIndex("WorkGroupId");
 
@@ -442,15 +425,9 @@ namespace SFCDashboard.Migrations
 
             modelBuilder.Entity("SystemUser", b =>
                 {
-                    b.HasOne("SFCDashboard.Models.UserRole", "UserRole")
-                        .WithMany()
-                        .HasForeignKey("UserRoleId");
-
                     b.HasOne("SFCDashboard.Models.WorkGroup", "WorkGroup")
                         .WithMany("Users")
                         .HasForeignKey("WorkGroupId");
-
-                    b.Navigation("UserRole");
 
                     b.Navigation("WorkGroup");
                 });

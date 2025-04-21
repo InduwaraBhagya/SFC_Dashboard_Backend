@@ -1,12 +1,14 @@
-﻿namespace SFCDashboard.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace SFCDashboard.Models
 {
-    public enum UserRole
+    public class UserRole
     {
-        NetworkEngineer,
-        AccountManager,
-        GeneralManager,
-        OPMCManager,
-        DrawFiberEngineer,
-        Admin
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public required string Name { get; set; }
     }
 }

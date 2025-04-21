@@ -33,5 +33,6 @@ namespace SFCDashboard.Data
                 .HasForeignKey(t => t.ApprovedById)
                 .OnDelete(DeleteBehavior.Restrict);
         }
+        public DbSet<SFCDashboard.Models.UserRole> UserRole { get; set; } = default!;
     }
 }

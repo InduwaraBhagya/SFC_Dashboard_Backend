@@ -1,16 +1,14 @@
-﻿@model IEnumerable<SFCDashboard.Models.WorkGroup>
+﻿@model IEnumerable<SFCDashboard.Models.UserRole>
 
 @{
     ViewData["Title"] = "Index";
 }
 
-<h1>Work Groups</h1>
+<h1>Roles</h1>
 
 <p>
     <a asp-action="Create">Create New</a>
 </p>
-<a asp-action="ImportFromBackend" class="btn btn-success">Refresh</a> 
-@*change the url in workgroup controller ImportFromBackend method if not working *@
 <table class="table">
     <thead>
         <tr>
