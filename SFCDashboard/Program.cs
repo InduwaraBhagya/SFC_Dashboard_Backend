@@ -4,8 +4,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-
+using Microsoft.EntityFrameworkCore;
+using SFCDashboard.Data;
+using SFCDashboard.Interfaces;
+using SFCDashboard.Services;
+using SFCDashboard.Controllers;
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IPlannedEventService, PlannedEventService>();
 
 // Load Azure AD Configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
