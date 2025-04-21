@@ -1,0 +1,61 @@
+﻿@model IEnumerable<SFCDB.Models.PERecord>
+
+@{
+    ViewData["Title"] = "In Progress Records";
+}
+
+<h1>In Progress Records</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.PROVINCE)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.REGION)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RTOM)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.JOB_REFERENCE)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PE_NUMBER)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.WO_STATUS)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PROVINCE)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.REGION)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.RTOM)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.JOB_REFERENCE)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PE_NUMBER)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.WO_STATUS)
+                </td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.ID">Details</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
