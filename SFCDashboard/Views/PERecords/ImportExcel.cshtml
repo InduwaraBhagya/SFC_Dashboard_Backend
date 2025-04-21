@@ -1,0 +1,41 @@
+﻿@{
+    ViewData["Title"] = "Import PE Records from Excel";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Import PE Records from Excel</h4>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert @(TempData["Message"].ToString().StartsWith("Error") ? "alert-danger" : "alert-success")">
+                            @TempData["Message"]
+                        </div>
+                    }
+
+                    <form method="post" enctype="multipart/form-data" asp-action="ImportExcel">
+                        <div class="mb-3">
+                            <label for="excelFile" class="form-label">Select Excel File (.xlsx)</label>
+                            <input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx" required />
+                            <div class="form-text">
+                                Please ensure your Excel file has the correct format with all required columns.
+                            </div>
+                        </div>
+                        <div class="form-text text-danger">
+                            <strong>Warning:</strong> Uploading a new Excel file will replace ALL existing records in the database.
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Upload and Import</button>
+                            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

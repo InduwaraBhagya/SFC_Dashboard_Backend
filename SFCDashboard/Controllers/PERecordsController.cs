@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +17,12 @@ namespace SFCDB.Controllers
     public class PERecordsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PERecordsController(ApplicationDbContext context)
+        public PERecordsController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         // GET: PERecords
@@ -88,7 +93,6 @@ namespace SFCDB.Controllers
 
             return View(paginatedList);
         }
-
 
         // GET: PERecords/Details/5
         public async Task<IActionResult> Details(int? id)
@@ -210,30 +214,59 @@ namespace SFCDB.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private bool PERecordExists(int id)
+        // GET: PERecords/ImportExcel
+        public IActionResult ImportExcel()
         {
-            return _context.PERecords.Any(e => e.ID == id);
+            return View();
         }
-        public IActionResult PEImportFromExcel()
-        {
-            string filePath = @"D:\slt intern\PE_total.xlsx"; // Update the path
 
-            if (!System.IO.File.Exists(filePath))
+        // POST: PERecords/ImportExcel
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportExcel(IFormFile excelFile)
+        {
+            if (excelFile == null || excelFile.Length <= 0)
             {
-                TempData["Message"] = "Excel file not found.";
-                return RedirectToAction("Index");
+                TempData["Message"] = "Please select an Excel file to upload.";
+                return RedirectToAction("ImportExcel");
+            }
+
+            if (!Path.GetExtension(excelFile.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Message"] = "Please select a valid Excel file (.xlsx).";
+                return RedirectToAction("ImportExcel");
             }
 
             try
             {
-                using (var workbook = new XLWorkbook(filePath))
+                // Create temp file path
+                var fileName = Path.GetFileName(excelFile.FileName);
+                var filePath = Path.Combine(_webHostEnvironment.WebRootPath, "temp");
+
+                // Ensure directory exists
+                if (!Directory.Exists(filePath))
+                {
+                    Directory.CreateDirectory(filePath);
+                }
+
+                var fullPath = Path.Combine(filePath, fileName);
+
+                // Save the uploaded file temporarily
+                using (var fileStream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await excelFile.CopyToAsync(fileStream);
+                }
+
+                List<PERecord> peRecords = new List<PERecord>();
+
+                // Process the Excel file
+                using (var workbook = new XLWorkbook(fullPath))
                 {
                     var worksheet = workbook.Worksheet(1); // Read the first worksheet
                     var rows = worksheet.RowsUsed();
 
-                    List<PERecord> peRecords = new List<PERecord>();
-
-                    foreach (var row in rows.Skip(1)) // Skip header row
+                    // Skip header row and process data
+                    foreach (var row in rows.Skip(1))
                     {
                         var peRecord = new PERecord
                         {
@@ -294,19 +327,51 @@ namespace SFCDB.Controllers
 
                         peRecords.Add(peRecord);
                     }
-
-                    _context.PERecords.AddRange(peRecords);
-                    _context.SaveChanges();
                 }
 
-                TempData["Message"] = "Excel data imported successfully!";
+                // Delete the temporary file
+                if (System.IO.File.Exists(fullPath))
+                {
+                    System.IO.File.Delete(fullPath);
+                }
+
+                // Clear existing records and add new ones
+                using (var transaction = await _context.Database.BeginTransactionAsync())
+                {
+                    try
+                    {
+                        // Delete all existing records
+                        _context.PERecords.RemoveRange(_context.PERecords);
+                        await _context.SaveChangesAsync();
+
+                        // Add the new records
+                        await _context.PERecords.AddRangeAsync(peRecords);
+                        await _context.SaveChangesAsync();
+
+                        // Commit the transaction
+                        await transaction.CommitAsync();
+
+                        TempData["Message"] = $"Successfully replaced all records with {peRecords.Count} new records from Excel.";
+                        return RedirectToAction("Index");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Rollback the transaction on error
+                        await transaction.RollbackAsync();
+                        throw; // Rethrow to be caught by outer catch block
+                    }
+                }
             }
             catch (Exception ex)
             {
-                TempData["Message"] = "Error: " + ex.Message;
+                TempData["Message"] = $"Error: {ex.Message}";
+                return RedirectToAction("ImportExcel");
             }
+        }
 
-            return RedirectToAction("Index");
+        private bool PERecordExists(int id)
+        {
+            return _context.PERecords.Any(e => e.ID == id);
         }
     }
 }
