@@ -1,48 +1,265 @@
 @model SystemUser
 @{
     ViewData["Title"] = "Register";
+    Layout = null;
 }
 
-<h1>Complete Registration</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SLT Fiber - Complete Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Index">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" disabled />
-            </div>
-            
-            <div class="form-group">
-                <label asp-for="ServiceId" class="control-label"></label>
-                <input asp-for="ServiceId" class="form-control" disabled />
-            </div>
+        body, html {
+            height: 100%;
+            width: 100%;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, rgba(1, 86, 166, 1),rgba(77, 183, 73, 1));
+        }
 
-            <div class="form-group">
-                <label asp-for="UserRoleId" class="control-label">Role</label>
-                <select asp-for="UserRoleId" class="form-control" asp-items="ViewBag.UserRoleId">
-                    <option value="">-- Select Role --</option>
-                </select>
-                <span asp-validation-for="UserRoleId" class="text-danger"></span>
-            </div>
+        .registration-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeInUp 0.8s ease;
+        }
 
-            <div class="form-group">
-                <label asp-for="WorkGroupId" class="control-label">Work Group</label>
-                <select asp-for="WorkGroupId" class="form-control" asp-items="ViewBag.WorkGroupId">
-                    <option value="">-- Select Work Group --</option>
-                </select>
-                <span asp-validation-for="WorkGroupId" class="text-danger"></span>
-            </div>
+        .registration-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 40px auto;
+        }
 
-            <div class="form-group mt-3">
-                <input type="submit" value="Register" class="btn btn-primary" />
-            </div>
-        </form>
+        h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #444;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1.5px solid #ccc;
+        }
+
+        .form-control:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+            outline: none;
+        }
+
+        .form-control:disabled {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: #4a90e2;
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .text-danger {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Select2 Custom Styles */
+        .select2-container--default .select2-selection--single {
+            height: auto;
+            min-height: 52px;
+            padding: 0.75rem;
+            border: 2px solid #e1e1e1;
+            border-radius: 12px;
+            background-color: white;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: normal;
+            padding: 0;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 52px;
+            right: 10px;
+        }
+
+        .select2-dropdown {
+            margin-top: 5px;
+            border: 2px solid #e1e1e1;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+
+        .select2-search--dropdown {
+            padding: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: white;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .select2-search--dropdown .select2-search__field {
+            display: block !important;
+            width: 100% !important;
+            height: 42px;
+            padding: 8px 12px !important;
+            border: 2px solid #e1e1e1 !important;
+            border-radius: 8px !important;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #4a90e2 !important;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+        }
+
+        .select2-results__option {
+            padding: 12px !important;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #4a90e2 !important;
+            color: white;
+        }
+
+        .select2-results__options {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .registration-card {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="registration-container">
+        <div class="registration-card">
+            <h1>Complete Registration</h1>
+            <form asp-action="Index">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
+                <div class="form-group">
+                    <label asp-for="Name" class="form-label">Full Name</label>
+                    <input asp-for="Name" class="form-control" disabled />
+                </div>
+                
+                <div class="form-group">
+                    <label asp-for="ServiceId" class="form-label">Service ID</label>
+                    <input asp-for="ServiceId" class="form-control" disabled />
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="WorkGroupId" class="form-label">Work Group</label>
+                    <select asp-for="WorkGroupId" class="form-control select2" asp-items="ViewBag.WorkGroupId">
+                        <option value="">-- Select Work Group --</option>
+                    </select>
+                    <span asp-validation-for="WorkGroupId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn-primary">Register</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.select2').select2({
+                theme: 'default',
+                width: '100%',
+                placeholder: 'Select Work Group',
+                allowClear: true,
+                minimumResultsForSearch: 0,
+                dropdownParent: $('.registration-card'),
+                language: {
+                    searching: function() {
+                        return "Type to search..."; // This shows as a message, not a true input placeholder
+                    }
+                }
+            });
+
+            // Set placeholder for the search input field after dropdown opens
+            $('.select2').on('select2:open', function() {
+                setTimeout(function() {
+                    $('.select2-search__field').attr('placeholder', 'Type to search...');
+                }, 0);
+            });
+        });
+    </script>
+</body>
+</html>

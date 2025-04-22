@@ -15,6 +15,14 @@ namespace SFCDashboard.Controllers
             _context = context;
         }
 
+        private static string ExtractServiceId(string email)
+        {
+            if (string.IsNullOrEmpty(email)) 
+                return string.Empty;
+            
+            return email[..Math.Min(email.Length, 6)];
+        }
+
         public IActionResult Index()
         {
             if (!User.Identity?.IsAuthenticated == true)
@@ -22,16 +30,16 @@ namespace SFCDashboard.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            var serviceId = User.GetNameIdentifierId();
-            var name = User.Identity?.Name ?? string.Empty;
+            var email = User.Identity?.Name ?? string.Empty;
+            var serviceId = ExtractServiceId(email);
+            var name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty;
 
-            ViewData["UserRoleId"] = new SelectList(_context.UserRole, "Id", "Name");
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name");
 
             var model = new SystemUser
             {
-                Name = name ?? "",
-                ServiceId = serviceId ?? ""
+                Name = name,
+                ServiceId = serviceId
             };
 
             return View(model);
@@ -39,16 +47,17 @@ namespace SFCDashboard.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index([Bind("UserRoleId,WorkGroupId")] SystemUser user)
+        public async Task<IActionResult> Index(SystemUser user)
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
                 return RedirectToAction("Index", "Home");
             }
 
-            // Set the name and service ID from Azure AD
-            user.Name = User.Identity?.Name ?? "";
-            user.ServiceId = User.GetNameIdentifierId() ?? "";
+            // Get name from Azure AD claims and service ID from email
+            var email = User.Identity?.Name ?? string.Empty;
+            user.ServiceId = ExtractServiceId(email);
+            user.Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty;
 
             if (ModelState.IsValid)
             {
@@ -57,7 +66,6 @@ namespace SFCDashboard.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            ViewData["UserRoleId"] = new SelectList(_context.UserRole, "Id", "Name", user.UserRoleId);
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name", user.WorkGroupId);
             return View(user);
         }
