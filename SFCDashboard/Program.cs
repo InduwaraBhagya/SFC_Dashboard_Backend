@@ -6,15 +6,22 @@ using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
-using SFCDashboard.Interfaces;
 using SFCDashboard.Services;
 using SFCDashboard.Controllers;
+using Microsoft.Extensions.DependencyInjection;
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddScoped<IPlannedEventService, PlannedEventService>();
+
+// First register PERecordSyncService as a singleton so it can be retrieved
+builder.Services.AddSingleton<PERecordSyncService>();
+// Then register it as a hosted service using the same instance
+builder.Services.AddHostedService(provider => provider.GetRequiredService<PERecordSyncService>());
 
 // Load Azure AD Configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
@@ -57,17 +64,14 @@ if (!isDevelopment)
 
 app.UseHttpsRedirection();
 app.UseRouting();
-
 app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
 
 app.MapStaticAssets();
-
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=PERecords}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 app.MapRazorPages()
    .WithStaticAssets();
 

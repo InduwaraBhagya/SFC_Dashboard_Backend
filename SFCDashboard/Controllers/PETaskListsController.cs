@@ -10,22 +10,22 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class PETasksController : Controller
+    public class PETaskListsController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public PETasksController(ApplicationDbContext context)
+        public PETaskListsController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // GET: PETasks
+        // GET: PETaskLists
         public async Task<IActionResult> Index()
         {
-            return View(await _context.PETask.ToListAsync());
+            return View(await _context.PETaskLists.ToListAsync());
         }
 
-        // GET: PETasks/Details/5
+        // GET: PETaskLists/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -33,39 +33,39 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var pETask = await _context.PETask
+            var pETaskList = await _context.PETaskLists
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (pETask == null)
+            if (pETaskList == null)
             {
                 return NotFound();
             }
 
-            return View(pETask);
+            return View(pETaskList);
         }
 
-        // GET: PETasks/Create
+        // GET: PETaskLists/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: PETasks/Create
+        // POST: PETaskLists/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,TaskSeq,PlannedEvent,OLA_Parameters")] PETask pETask)
+        public async Task<IActionResult> Create([Bind("Id,TaskSeq,Name,OLA_Parameters")] PETaskList pETaskList)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(pETask);
+                _context.Add(pETaskList);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(pETask);
+            return View(pETaskList);
         }
 
-        // GET: PETasks/Edit/5
+        // GET: PETaskLists/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -73,22 +73,22 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var pETask = await _context.PETask.FindAsync(id);
-            if (pETask == null)
+            var pETaskList = await _context.PETaskLists.FindAsync(id);
+            if (pETaskList == null)
             {
                 return NotFound();
             }
-            return View(pETask);
+            return View(pETaskList);
         }
 
-        // POST: PETasks/Edit/5
+        // POST: PETaskLists/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,TaskSeq,PlannedEvent,OLA_Parameters")] PETask pETask)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,TaskSeq,Name,OLA_Parameters")] PETaskList pETaskList)
         {
-            if (id != pETask.Id)
+            if (id != pETaskList.Id)
             {
                 return NotFound();
             }
@@ -97,12 +97,12 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    _context.Update(pETask);
+                    _context.Update(pETaskList);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!PETaskExists(pETask.Id))
+                    if (!PETaskListExists(pETaskList.Id))
                     {
                         return NotFound();
                     }
@@ -113,10 +113,10 @@ namespace SFCDashboard.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(pETask);
+            return View(pETaskList);
         }
 
-        // GET: PETasks/Delete/5
+        // GET: PETaskLists/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -124,34 +124,34 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var pETask = await _context.PETask
+            var pETaskList = await _context.PETaskLists
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (pETask == null)
+            if (pETaskList == null)
             {
                 return NotFound();
             }
 
-            return View(pETask);
+            return View(pETaskList);
         }
 
-        // POST: PETasks/Delete/5
+        // POST: PETaskLists/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var pETask = await _context.PETask.FindAsync(id);
-            if (pETask != null)
+            var pETaskList = await _context.PETaskLists.FindAsync(id);
+            if (pETaskList != null)
             {
-                _context.PETask.Remove(pETask);
+                _context.PETaskLists.Remove(pETaskList);
             }
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
-        private bool PETaskExists(int id)
+        private bool PETaskListExists(int id)
         {
-            return _context.PETask.Any(e => e.Id == id);
+            return _context.PETaskLists.Any(e => e.Id == id);
         }
     }
 }

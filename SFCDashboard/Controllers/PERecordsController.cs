@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDB.Models;
-
+using Microsoft.Extensions.DependencyInjection;
 namespace SFCDB.Controllers
 {
     public class PERecordsController : Controller
@@ -363,9 +363,6 @@ namespace SFCDB.Controllers
 
                         // Commit the transaction
                         await transaction.CommitAsync();
-
-                        TempData["Message"] = $"Successfully replaced all records with {peRecords.Count} new records from Excel.";
-                        return RedirectToAction("Index");
                     }
                     catch (Exception ex)
                     {
@@ -374,6 +371,13 @@ namespace SFCDB.Controllers
                         throw; // Rethrow to be caught by outer catch block
                     }
                 }
+
+                // Get the syncService from the DI container
+                var syncService = HttpContext.RequestServices.GetRequiredService<SFCDashboard.Services.PERecordSyncService>();
+                await syncService.SyncPERecordsAsync();
+
+                TempData["Message"] = $"Successfully replaced all records with {peRecords.Count} new records from Excel and synced to all related tables.";
+                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
@@ -381,7 +385,6 @@ namespace SFCDB.Controllers
                 return RedirectToAction("ImportExcel");
             }
         }
-
         private bool PERecordExists(int id)
         {
             return _context.PERecords.Any(e => e.ID == id);

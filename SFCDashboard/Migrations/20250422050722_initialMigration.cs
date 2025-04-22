@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SFCDashboard.Migrations
 {
     /// <inheritdoc />
-    public partial class userRole : Migration
+    public partial class initialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -77,18 +77,18 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PETask",
+                name: "PETaskList",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TaskSeq = table.Column<int>(type: "int", nullable: false),
-                    PlannedEvent = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     OLA_Parameters = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PETask", x => x.Id);
+                    table.PrimaryKey("PK_PETaskList", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -149,33 +149,71 @@ namespace SFCDashboard.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PENumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    JobReferenceNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    SONumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Region = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Area = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Task = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    WorkGroupId = table.Column<int>(type: "int", nullable: true),
-                    NetworkEngineerId = table.Column<int>(type: "int", nullable: true),
-                    Customer = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CurrentStatus = table.Column<int>(type: "int", nullable: false),
-                    IsUrgent = table.Column<bool>(type: "bit", nullable: false),
-                    ScheduledStartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ActualStartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ScheduledEndTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ActualEndTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    TotalDuration = table.Column<TimeSpan>(type: "time", nullable: true),
-                    SideProcessDuration = table.Column<TimeSpan>(type: "time", nullable: true),
-                    Comments = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    LastModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    PROVINCE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    REGION = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RTOM = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RTOM_DESCRIPTION = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    JOB_REFERENCE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CONTRACTOR_NAME = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PE_NUMBER = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    PE_ACTIVITY = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PE_NATURE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PE_TITLE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PE_OBJECTIVE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PE_AREA = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SO_NUMBER = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TASK_SEQ = table.Column<int>(type: "int", nullable: true),
+                    TASK_NAME = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TASK_WG = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    WO_ACTUAL_START_DATE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    REQUEST_REFERENCE_NO = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SO_ID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    REGION_1 = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PROVINCE_1 = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RTOM_1 = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LEA = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CCT_ID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SERVICE_CATEGORY = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SERVICE_TYPE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SO_CREATE_DATE = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ORDER_TYPE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CRM_ORDER = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    WO_ID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PENDING_TASK_NAME = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PENDING_WG = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    WO_STATUS = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    WO_START_DATE = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SERVICE_SPEED = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SERVICE_REQUIRED_DATE = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FIBER_PE_NO = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FIBER_SO_ID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PRODUCT_SO_ID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FIBER_PE_TASK_NAME = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FIBER_PE_TASK_WG = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PE_WO_COMMENTS = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CUSTOMER = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CUS_TYPE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ACCOUNT_MANAGER = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SECTION_HANDLED_BY = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LOCATION_A_ADDRESS = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LOCATION_B_ADDRESS = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    NTU_TYPE = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ACCESS_MEDIUM = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ACCESS_MEDIUM_A_END = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ACCESS_MEDIUM_B_END = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    WO_COMMENTS = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PE_STATUS = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TASK_CREATED_DATE = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SystemUserId = table.Column<int>(type: "int", nullable: true),
+                    WorkGroupId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PlannedEvents", x => x.Id);
+                    table.UniqueConstraint("AK_PlannedEvents_PE_NUMBER", x => x.PE_NUMBER);
                     table.ForeignKey(
-                        name: "FK_PlannedEvents_Users_NetworkEngineerId",
-                        column: x => x.NetworkEngineerId,
+                        name: "FK_PlannedEvents_Users_SystemUserId",
+                        column: x => x.SystemUserId,
                         principalTable: "Users",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -186,7 +224,7 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Notification",
+                name: "Notifications",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -201,17 +239,44 @@ namespace SFCDashboard.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Notification", x => x.Id);
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Notification_PlannedEvents_PlannedEventId",
+                        name: "FK_Notifications_PlannedEvents_PlannedEventId",
                         column: x => x.PlannedEventId,
                         principalTable: "PlannedEvents",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Notification_Users_UserId",
+                        name: "FK_Notifications_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PETasks",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PENumber = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    TaskSeq = table.Column<int>(type: "int", nullable: true),
+                    Task = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TaskWorkGroup = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OLA = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TaskStatus = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TaskCreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TaskCloseDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TaskPhase = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PETasks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PETasks_PlannedEvents_PENumber",
+                        column: x => x.PENumber,
+                        principalTable: "PlannedEvents",
+                        principalColumn: "PE_NUMBER",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -273,8 +338,7 @@ namespace SFCDashboard.Migrations
                         name: "FK_TaskExtensionRequests_Users_ApprovedById",
                         column: x => x.ApprovedById,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_TaskExtensionRequests_Users_RequestedById",
                         column: x => x.RequestedById,
@@ -314,19 +378,24 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Notification_PlannedEventId",
-                table: "Notification",
+                name: "IX_Notifications_PlannedEventId",
+                table: "Notifications",
                 column: "PlannedEventId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Notification_UserId",
-                table: "Notification",
+                name: "IX_Notifications_UserId",
+                table: "Notifications",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlannedEvents_NetworkEngineerId",
+                name: "IX_PETasks_PENumber",
+                table: "PETasks",
+                column: "PENumber");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlannedEvents_SystemUserId",
                 table: "PlannedEvents",
-                column: "NetworkEngineerId");
+                column: "SystemUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlannedEvents_WorkGroupId",
@@ -383,13 +452,16 @@ namespace SFCDashboard.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Notification");
+                name: "Notifications");
 
             migrationBuilder.DropTable(
                 name: "PERecords");
 
             migrationBuilder.DropTable(
-                name: "PETask");
+                name: "PETaskList");
+
+            migrationBuilder.DropTable(
+                name: "PETasks");
 
             migrationBuilder.DropTable(
                 name: "TaskEscalations");

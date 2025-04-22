@@ -12,15 +12,15 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250409053022_forupdate")]
-    partial class forupdate
+    [Migration("20250422050722_initialMigration")]
+    partial class initialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.3")
+                .HasAnnotation("ProductVersion", "9.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -248,7 +248,7 @@ namespace SFCDashboard.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("PERecords");
+                    b.ToTable("PERecords", (string)null);
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
@@ -292,7 +292,7 @@ namespace SFCDashboard.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notification");
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.PETask", b =>
@@ -303,11 +303,53 @@ namespace SFCDashboard.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("OLA_Parameters")
+                    b.Property<string>("OLA")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PENumber")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Task")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TaskCloseDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("TaskCreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TaskPhase")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("TaskSeq")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TaskStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TaskWorkGroup")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PENumber");
+
+                    b.ToTable("PETasks");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.PETaskList", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PlannedEvent")
+                    b.Property<string>("OLA_Parameters")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -316,7 +358,7 @@ namespace SFCDashboard.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PETask");
+                    b.ToTable("PETaskList");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.PlannedEvent", b =>
@@ -327,81 +369,285 @@ namespace SFCDashboard.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("ActualEndTime")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("AccessMedium")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ACCESS_MEDIUM");
 
-                    b.Property<DateTime?>("ActualStartTime")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("AccessMediumAEnd")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ACCESS_MEDIUM_A_END");
 
-                    b.Property<string>("Area")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<string>("AccessMediumBEnd")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ACCESS_MEDIUM_B_END");
 
-                    b.Property<string>("Comments")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                    b.Property<string>("AccountManager")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ACCOUNT_MANAGER");
 
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("CctId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CCT_ID");
 
-                    b.Property<int>("CurrentStatus")
-                        .HasColumnType("int");
+                    b.Property<string>("ContractorName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CONTRACTOR_NAME");
+
+                    b.Property<string>("CrmOrder")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CRM_ORDER");
+
+                    b.Property<string>("CusType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CUS_TYPE");
 
                     b.Property<string>("Customer")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CUSTOMER");
 
-                    b.Property<bool>("IsUrgent")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("JobReferenceNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("LastModifiedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("NetworkEngineerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PENumber")
+                    b.Property<string>("FiberPeNo")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("FIBER_PE_NO");
+
+                    b.Property<string>("FiberPeTaskName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("FIBER_PE_TASK_NAME");
+
+                    b.Property<string>("FiberPeTaskWg")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("FIBER_PE_TASK_WG");
+
+                    b.Property<string>("FiberSoId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("FIBER_SO_ID");
+
+                    b.Property<string>("JobReference")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("JOB_REFERENCE");
+
+                    b.Property<string>("Lea")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("LEA");
+
+                    b.Property<string>("LocationAAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("LOCATION_A_ADDRESS");
+
+                    b.Property<string>("LocationBAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("LOCATION_B_ADDRESS");
+
+                    b.Property<string>("NtuType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("NTU_TYPE");
+
+                    b.Property<string>("OrderType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ORDER_TYPE");
+
+                    b.Property<string>("PEStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PE_STATUS");
+
+                    b.Property<string>("PeActivity")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PE_ACTIVITY");
+
+                    b.Property<string>("PeArea")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PE_AREA");
+
+                    b.Property<string>("PeNature")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PE_NATURE");
+
+                    b.Property<string>("PeNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("PE_NUMBER");
+
+                    b.Property<string>("PeObjective")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PE_OBJECTIVE");
+
+                    b.Property<string>("PeTitle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PE_TITLE");
+
+                    b.Property<string>("PeWoComments")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PE_WO_COMMENTS");
+
+                    b.Property<string>("PendingTaskName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PENDING_TASK_NAME");
+
+                    b.Property<string>("PendingWg")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PENDING_WG");
+
+                    b.Property<string>("ProductSoId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PRODUCT_SO_ID");
+
+                    b.Property<string>("Province")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PROVINCE");
+
+                    b.Property<string>("Province1")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PROVINCE_1");
 
                     b.Property<string>("Region")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("SONumber")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("REGION");
 
-                    b.Property<DateTime?>("ScheduledEndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ScheduledStartTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<TimeSpan?>("SideProcessDuration")
-                        .HasColumnType("time");
-
-                    b.Property<string>("Task")
+                    b.Property<string>("Region1")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("REGION_1");
 
-                    b.Property<TimeSpan?>("TotalDuration")
-                        .HasColumnType("time");
+                    b.Property<string>("RequestReferenceNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("REQUEST_REFERENCE_NO");
+
+                    b.Property<string>("Rtom")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("RTOM");
+
+                    b.Property<string>("Rtom1")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("RTOM_1");
+
+                    b.Property<string>("RtomDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("RTOM_DESCRIPTION");
+
+                    b.Property<string>("SectionHandledBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SECTION_HANDLED_BY");
+
+                    b.Property<string>("ServiceCategory")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SERVICE_CATEGORY");
+
+                    b.Property<DateTime?>("ServiceRequiredDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("SERVICE_REQUIRED_DATE");
+
+                    b.Property<string>("ServiceSpeed")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SERVICE_SPEED");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SERVICE_TYPE");
+
+                    b.Property<DateTime?>("SoCreateDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("SO_CREATE_DATE");
+
+                    b.Property<string>("SoId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SO_ID");
+
+                    b.Property<string>("SoNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SO_NUMBER");
+
+                    b.Property<int?>("SystemUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("TaskCreatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("TASK_CREATED_DATE");
+
+                    b.Property<string>("TaskName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("TASK_NAME");
+
+                    b.Property<int?>("TaskSeq")
+                        .HasColumnType("int")
+                        .HasColumnName("TASK_SEQ");
+
+                    b.Property<string>("TaskWg")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("TASK_WG");
+
+                    b.Property<string>("WoActualStartDate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("WO_ACTUAL_START_DATE");
+
+                    b.Property<string>("WoComments")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("WO_COMMENTS");
+
+                    b.Property<string>("WoId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("WO_ID");
+
+                    b.Property<DateTime?>("WoStartDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("WO_START_DATE");
+
+                    b.Property<string>("WoStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("WO_STATUS");
 
                     b.Property<int?>("WorkGroupId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NetworkEngineerId");
+                    b.HasIndex("SystemUserId");
 
                     b.HasIndex("WorkGroupId");
 
@@ -602,7 +848,7 @@ namespace SFCDashboard.Migrations
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
                 {
                     b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
-                        .WithMany("Notifications")
+                        .WithMany()
                         .HasForeignKey("PlannedEventId");
 
                     b.HasOne("SystemUser", "User")
@@ -614,19 +860,26 @@ namespace SFCDashboard.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.PETask", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
+                        .WithMany()
+                        .HasForeignKey("PENumber")
+                        .HasPrincipalKey("PeNumber")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("PlannedEvent");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.PlannedEvent", b =>
                 {
-                    b.HasOne("SystemUser", "AssignedEngineer")
+                    b.HasOne("SystemUser", null)
                         .WithMany("AssignedEvents")
-                        .HasForeignKey("NetworkEngineerId");
+                        .HasForeignKey("SystemUserId");
 
-                    b.HasOne("SFCDashboard.Models.WorkGroup", "AssignedWorkGroup")
+                    b.HasOne("SFCDashboard.Models.WorkGroup", null)
                         .WithMany("AssignedEvents")
                         .HasForeignKey("WorkGroupId");
-
-                    b.Navigation("AssignedEngineer");
-
-                    b.Navigation("AssignedWorkGroup");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.TaskEscalation", b =>
@@ -638,7 +891,7 @@ namespace SFCDashboard.Migrations
                         .IsRequired();
 
                     b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
-                        .WithMany("Escalations")
+                        .WithMany()
                         .HasForeignKey("PlannedEventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -652,11 +905,10 @@ namespace SFCDashboard.Migrations
                 {
                     b.HasOne("SystemUser", "ApprovedBy")
                         .WithMany("ApprovedExtensions")
-                        .HasForeignKey("ApprovedById")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("ApprovedById");
 
                     b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
-                        .WithMany("ExtensionRequests")
+                        .WithMany()
                         .HasForeignKey("PlannedEventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -677,7 +929,7 @@ namespace SFCDashboard.Migrations
             modelBuilder.Entity("SFCDashboard.Models.TaskHistory", b =>
                 {
                     b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
-                        .WithMany("History")
+                        .WithMany()
                         .HasForeignKey("PlannedEventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -706,17 +958,6 @@ namespace SFCDashboard.Migrations
                     b.Navigation("UserRole");
 
                     b.Navigation("WorkGroup");
-                });
-
-            modelBuilder.Entity("SFCDashboard.Models.PlannedEvent", b =>
-                {
-                    b.Navigation("Escalations");
-
-                    b.Navigation("ExtensionRequests");
-
-                    b.Navigation("History");
-
-                    b.Navigation("Notifications");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.WorkGroup", b =>

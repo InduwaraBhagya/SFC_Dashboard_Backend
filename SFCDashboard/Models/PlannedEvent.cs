@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SFCDashboard.Models
@@ -8,69 +9,170 @@ namespace SFCDashboard.Models
         [Key]
         public int Id { get; set; }
 
-        [Required]
-        [StringLength(50)]
-        public required string PENumber { get; set; }
+        [Column("PROVINCE")]
+        public string Province { get; set; }
 
-        [StringLength(50)]
-        public string? JobReferenceNumber { get; set; }
+        [Column("REGION")]
+        public string Region { get; set; }
 
+        [Column("RTOM")]
+        public string Rtom { get; set; }
 
-        [StringLength(50)]
-        public required string SONumber { get; set; }
+        [Column("RTOM_DESCRIPTION")]
+        public string RtomDescription { get; set; }
 
-        [StringLength(100)]
-        public string? Region { get; set; }
+        [Column("JOB_REFERENCE")]
+        public string JobReference { get; set; }
 
-        [StringLength(100)]
-        public string? Area { get; set; }
+        [Column("CONTRACTOR_NAME")]
+        public string ContractorName { get; set; }
 
-        [StringLength(200)]
-        public required string Task { get; set; }
+        [Column("PE_NUMBER")]
+        public string PeNumber { get; set; }
 
-        public int? WorkGroupId { get; set; }
+        [Column("PE_ACTIVITY")]
+        public string PeActivity { get; set; }
 
-        public int? NetworkEngineerId { get; set; }
+        [Column("PE_NATURE")]
+        public string PeNature { get; set; }
 
-        [StringLength(200)]
-        public required string Customer { get; set; }
+        [Column("PE_TITLE")]
+        public string PeTitle { get; set; }
 
-        public TaskStatus CurrentStatus { get; set; }
+        [Column("PE_OBJECTIVE")]
+        public string PeObjective { get; set; }
 
-        public bool IsUrgent { get; set; }
+        [Column("PE_AREA")]
+        public string PeArea { get; set; }
 
-        public DateTime? ScheduledStartTime { get; set; }
+        [Column("SO_NUMBER")]
+        public string SoNumber { get; set; }
 
-        public DateTime? ActualStartTime { get; set; }
+        [Column("TASK_SEQ")]
+        public int? TaskSeq { get; set; }
 
-        public DateTime? ScheduledEndTime { get; set; }
+        [Column("TASK_NAME")]
+        public string TaskName { get; set; }
 
-        public DateTime? ActualEndTime { get; set; }
+        [Column("TASK_WG")]
+        public string TaskWg { get; set; }
 
-        public TimeSpan? TotalDuration { get; set; }
+        [Column("WO_ACTUAL_START_DATE")]
+        public string WoActualStartDate { get; set; }
 
-        public TimeSpan? SideProcessDuration { get; set; }
+        [Column("REQUEST_REFERENCE_NO")]
+        public string RequestReferenceNo { get; set; }
 
-        [StringLength(500)]
-        public string? Comments { get; set; }
+        [Column("SO_ID")]
+        public string SoId { get; set; }
 
-        public DateTime CreatedDate { get; set; }
+        [Column("REGION_1")]
+        public string Region1 { get; set; }
 
-        public DateTime LastModifiedDate { get; set; }
+        [Column("PROVINCE_1")]
+        public string Province1 { get; set; }
 
-        // Navigation Properties
-        [ForeignKey("WorkGroupId")]
-        public virtual required WorkGroup AssignedWorkGroup { get; set; }
+        [Column("RTOM_1")]
+        public string Rtom1 { get; set; }
 
-        [ForeignKey("NetworkEngineerId")]
-        public virtual SystemUser? AssignedEngineer { get; set; }
+        [Column("LEA")]
+        public string Lea { get; set; }
 
-        public virtual ICollection<TaskEscalation>? Escalations { get; set; }
+        [Column("CCT_ID")]
+        public string CctId { get; set; }
 
-        public virtual ICollection<TaskExtensionRequest>? ExtensionRequests { get; set; }
+        [Column("SERVICE_CATEGORY")]
+        public string ServiceCategory { get; set; }
 
-        public virtual ICollection<TaskHistory>? History { get; set; }
+        [Column("SERVICE_TYPE")]
+        public string ServiceType { get; set; }
 
-        public virtual ICollection<Notification>? Notifications { get; set; }
+        [Column("SO_CREATE_DATE")]
+        public DateTime? SoCreateDate { get; set; }
+
+        [Column("ORDER_TYPE")]
+        public string OrderType { get; set; }
+
+        [Column("CRM_ORDER")]
+        public string CrmOrder { get; set; }
+
+        [Column("WO_ID")]
+        public string WoId { get; set; }
+
+        [Column("PENDING_TASK_NAME")]
+        public string PendingTaskName { get; set; }
+
+        [Column("PENDING_WG")]
+        public string PendingWg { get; set; }
+
+        [Column("WO_STATUS")]
+        public string WoStatus { get; set; }
+
+        [Column("WO_START_DATE")]
+        public DateTime? WoStartDate { get; set; }
+
+        [Column("SERVICE_SPEED")]
+        public string ServiceSpeed { get; set; }
+
+        [Column("SERVICE_REQUIRED_DATE")]
+        public DateTime? ServiceRequiredDate { get; set; }
+
+        [Column("FIBER_PE_NO")]
+        public string FiberPeNo { get; set; }
+
+        [Column("FIBER_SO_ID")]
+        public string FiberSoId { get; set; }
+
+        [Column("PRODUCT_SO_ID")]
+        public string ProductSoId { get; set; }
+
+        [Column("FIBER_PE_TASK_NAME")]
+        public string FiberPeTaskName { get; set; }
+
+        [Column("FIBER_PE_TASK_WG")]
+        public string FiberPeTaskWg { get; set; }
+
+        [Column("PE_WO_COMMENTS")]
+        public string PeWoComments { get; set; }
+
+        [Column("CUSTOMER")]
+        public string Customer { get; set; }
+
+        [Column("CUS_TYPE")]
+        public string CusType { get; set; }
+
+        [Column("ACCOUNT_MANAGER")]
+        public string AccountManager { get; set; }
+
+        [Column("SECTION_HANDLED_BY")]
+        public string SectionHandledBy { get; set; }
+
+        [Column("LOCATION_A_ADDRESS")]
+        public string LocationAAddress { get; set; }
+
+        [Column("LOCATION_B_ADDRESS")]
+        public string LocationBAddress { get; set; }
+
+        [Column("NTU_TYPE")]
+        public string NtuType { get; set; }
+
+        [Column("ACCESS_MEDIUM")]
+        public string AccessMedium { get; set; }
+
+        [Column("ACCESS_MEDIUM_A_END")]
+        public string AccessMediumAEnd { get; set; }
+
+        [Column("ACCESS_MEDIUM_B_END")]
+        public string AccessMediumBEnd { get; set; }
+
+        [Column("WO_COMMENTS")]
+        public string WoComments { get; set; }
+
+        [Column("PE_STATUS")]
+        public string PEStatus { get; set; }
+
+        [Column("TASK_CREATED_DATE")]
+        public DateTime TaskCreatedDate { get; set; }
+
     }
 }
