@@ -1,336 +1,136 @@
 ﻿@model SFCDB.Models.PERecord
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "PE Record Details";
 }
 
-<h1>Details</h1>
-
-<div>
-    <h4>PERecord</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PROVINCE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PROVINCE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.REGION)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.REGION)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.RTOM)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.RTOM)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.RTOM_DESCRIPTION)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.RTOM_DESCRIPTION)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.JOB_REFERENCE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.JOB_REFERENCE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CONTRACTOR_NAME)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CONTRACTOR_NAME)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PE_NUMBER)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PE_NUMBER)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PE_ACTIVITY)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PE_ACTIVITY)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PE_NATURE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PE_NATURE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PE_TITLE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PE_TITLE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PE_OBJECTIVE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PE_OBJECTIVE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PE_AREA)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PE_AREA)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SO_NUMBER)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SO_NUMBER)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.TASK_SEQ)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.TASK_SEQ)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.TASK_NAME)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.TASK_NAME)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.TASK_WG)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.TASK_WG)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.WO_ACTUAL_START_DATE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.WO_ACTUAL_START_DATE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.REQUEST_REFERENCE_NO)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.REQUEST_REFERENCE_NO)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SO_ID)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SO_ID)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.REGION_1)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.REGION_1)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PROVINCE_1)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PROVINCE_1)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.RTOM_1)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.RTOM_1)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.LEA)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.LEA)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CCT_ID)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CCT_ID)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SERVICE_CATEGORY)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SERVICE_CATEGORY)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SERVICE_TYPE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SERVICE_TYPE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SO_CREATE_DATE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SO_CREATE_DATE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ORDER_TYPE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ORDER_TYPE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CRM_ORDER)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CRM_ORDER)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.WO_ID)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.WO_ID)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PENDING_TASK_NAME)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PENDING_TASK_NAME)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PENDING_WG)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PENDING_WG)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.WO_STATUS)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.WO_STATUS)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.WO_START_DATE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.WO_START_DATE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SERVICE_SPEED)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SERVICE_SPEED)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SERVICE_REQUIRED_DATE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SERVICE_REQUIRED_DATE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.FIBER_PE_NO)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.FIBER_PE_NO)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.FIBER_SO_ID)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.FIBER_SO_ID)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PRODUCT_SO_ID)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PRODUCT_SO_ID)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.FIBER_PE_TASK_NAME)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.FIBER_PE_TASK_NAME)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.FIBER_PE_TASK_WG)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.FIBER_PE_TASK_WG)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PE_WO_COMMENTS)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PE_WO_COMMENTS)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CUSTOMER)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CUSTOMER)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CUS_TYPE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CUS_TYPE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ACCOUNT_MANAGER)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ACCOUNT_MANAGER)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SECTION_HANDLED_BY)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SECTION_HANDLED_BY)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.LOCATION_A_ADDRESS)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.LOCATION_A_ADDRESS)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.LOCATION_B_ADDRESS)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.LOCATION_B_ADDRESS)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.NTU_TYPE)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.NTU_TYPE)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ACCESS_MEDIUM)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ACCESS_MEDIUM)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ACCESS_MEDIUM_A_END)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ACCESS_MEDIUM_A_END)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ACCESS_MEDIUM_B_END)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ACCESS_MEDIUM_B_END)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.WO_COMMENTS)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.WO_COMMENTS)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.ID">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">PE Record Details</h2>
+            <div>
+                <a asp-action="Edit" asp-route-id="@Model?.ID" class="btn btn-sm btn-light me-2">
+                    <i class="bi bi-pencil-square"></i> Edit
+                </a>
+                <a asp-action="Index" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <tbody>
+                        <tr>
+                            <th class="bg-light text-primary" style="width: 25%">PE Number (PK)</th>
+                            <td>@Html.DisplayFor(model => model.PE_NUMBER)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Job Reference Number</th>
+                            <td>@Html.DisplayFor(model => model.JOB_REFERENCE)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">SO Number</th>
+                            <td>@Html.DisplayFor(model => model.SO_NUMBER)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Region</th>
+                            <td>@Html.DisplayFor(model => model.REGION)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Area</th>
+                            <td>@Html.DisplayFor(model => model.PE_AREA)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Task</th>
+                            <td>@Html.DisplayFor(model => model.TASK_NAME)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Status</th>
+                            <td>
+                                @{
+                                    string statusClass = Model.WO_STATUS?.ToLower() switch
+                                    {
+                                        "completed" => "badge bg-success",
+                                        "in progress" => "badge bg-warning text-dark",
+                                        "pending" => "badge bg-info",
+                                        _ => "badge bg-secondary"
+                                    };
+                                }
+                                <span class="@statusClass">@Html.DisplayFor(model => model.WO_STATUS)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Start Time</th>
+                            <td>@Html.DisplayFor(model => model.WO_START_DATE)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">End Time</th>
+                            <td>@Html.DisplayFor(model => model.WO_ACTUAL_START_DATE)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Is Urgent</th>
+                            <td>
+                                @{
+                                    string urgentText = Model.SERVICE_SPEED?.ToLower()?.Contains("urgent") == true ? "Yes" : "No";
+                                    string urgentClass = urgentText == "Yes" ? "text-danger fw-bold" : "";
+                                }
+                                <span class="@urgentClass">@urgentText</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">RTOM</th>
+                            <td>@Html.DisplayFor(model => model.RTOM)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Contractor Name</th>
+                            <td>@Html.DisplayFor(model => model.CONTRACTOR_NAME)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">PE Objective</th>
+                            <td>@Html.DisplayFor(model => model.PE_OBJECTIVE)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Order Type</th>
+                            <td>@Html.DisplayFor(model => model.ORDER_TYPE)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Pending Task Name</th>
+                            <td>@Html.DisplayFor(model => model.PENDING_TASK_NAME)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Pending Workgroup</th>
+                            <td>@Html.DisplayFor(model => model.PENDING_WG)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Account Manager</th>
+                            <td>@Html.DisplayFor(model => model.ACCOUNT_MANAGER)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Section Handled By</th>
+                            <td>@Html.DisplayFor(model => model.SECTION_HANDLED_BY)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Service Required Date</th>
+                            <td>@Html.DisplayFor(model => model.SERVICE_REQUIRED_DATE)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Fiber PE Task Workgroup</th>
+                            <td>@Html.DisplayFor(model => model.FIBER_PE_TASK_WG)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between">
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+                <a asp-action="Edit" asp-route-id="@Model?.ID" class="btn btn-primary">
+                    <i class="bi bi-pencil-square"></i> Edit
+                </a>
+            </div>
+        </div>
+    </div>
 </div>

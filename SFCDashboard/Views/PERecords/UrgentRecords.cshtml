@@ -1,61 +1,49 @@
 ﻿@model IEnumerable<SFCDB.Models.PERecord>
 
 @{
-    ViewData["Title"] = "In Progress Records";
+    ViewData["Title"] = "Urgent Records";
 }
 
-<h1>In Progress Records</h1>
+<h1>Urgent Records</h1>
 
-<table class="table">
-    <thead>
+<table class="table table-striped">
+    <thead class="thead-dark">
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.PROVINCE)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.REGION)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.RTOM)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.JOB_REFERENCE)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PE_NUMBER)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.WO_STATUS)
-            </th>
-            <th></th>
+            <th>PE Number</th>
+            <th>Customer</th>
+            <th>Job Reference</th>
+            <th>RTOM</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         @foreach (var item in Model)
         {
             <tr>
+                <td>@Html.DisplayFor(modelItem => item.PE_NUMBER)</td>
+                <td>@Html.DisplayFor(modelItem => item.CUSTOMER)</td>
+                <td>@Html.DisplayFor(modelItem => item.JOB_REFERENCE)</td>
+                <td>@Html.DisplayFor(modelItem => item.RTOM)</td>
+                <td>@Html.DisplayFor(modelItem => item.WO_STATUS)</td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.PROVINCE)
+                    @if (item.WO_COMMENTS != null && item.WO_COMMENTS.Contains("Priority 1"))
+                    {
+                        <span class="badge bg-danger">Priority 1</span>
+                    }
+                    else if (item.WO_COMMENTS != null && item.WO_COMMENTS.Contains("Priority 2"))
+                    {
+                        <span class="badge bg-warning text-dark">Priority 2</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Standard</span>
+                    }
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.REGION)
+                    <a asp-action="Details" asp-route-id="@item.ID" class="btn btn-info btn-sm">Details</a>
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.RTOM)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.JOB_REFERENCE)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PE_NUMBER)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.WO_STATUS)
-                </td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.ID">Details</a>
-                </td>
-
             </tr>
         }
     </tbody>
