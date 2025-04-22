@@ -1,0 +1,73 @@
+﻿@model SFCDB.Models.PERecord
+
+@{
+    ViewData["Title"] = "Confirm Urgent Request";
+}
+
+<h1>Confirm Urgent Request</h1>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Record Details</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">PE Number:</dt>
+                        <dd class="col-sm-9">@Model.PE_NUMBER</dd>
+                        
+                        <dt class="col-sm-3">Customer:</dt>
+                        <dd class="col-sm-9">@Model.CUSTOMER</dd>
+                        
+                        <dt class="col-sm-3">Job Reference:</dt>
+                        <dd class="col-sm-9">@Model.JOB_REFERENCE</dd>
+                        
+                        <dt class="col-sm-3">RTOM:</dt>
+                        <dd class="col-sm-9">@Model.RTOM</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h4>Select Urgent Request Reason</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="ProcessUrgentRequest" method="post">
+                        <input type="hidden" name="id" value="@Model.ID" />
+                        
+                        <div class="form-group mb-4">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony" value="OpeningCeremony" required />
+                                <label class="form-check-label" for="openingCeremony">
+                                    <strong>Opening Ceremony</strong> [Priority 1]
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer" value="CriticalCustomer" />
+                                <label class="form-check-label" for="criticalCustomer">
+                                    <strong>Critical Customer</strong> [Priority 2]
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="urgentReason" id="reject" value="Reject" />
+                                <label class="form-check-label" for="reject">
+                                    <strong>Reject</strong>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <a asp-action="InProgressRecords" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

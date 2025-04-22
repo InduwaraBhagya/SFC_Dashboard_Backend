@@ -1,0 +1,60 @@
+﻿@model IEnumerable<SFCDB.Models.PERecord>
+
+@{
+    ViewData["Title"] = "Confirm Urgent Requests";
+}
+
+<h1>Confirm Urgent Requests</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        No pending urgent requests require confirmation at this time.
+    </div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>PE Number</th>
+                <th>Customer</th>
+                <th>Job Reference</th>
+                <th>RTOM</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@Html.DisplayFor(modelItem => item.PE_NUMBER)</td>
+                    <td>@Html.DisplayFor(modelItem => item.CUSTOMER)</td>
+                    <td>@Html.DisplayFor(modelItem => item.JOB_REFERENCE)</td>
+                    <td>@Html.DisplayFor(modelItem => item.RTOM)</td>
+                    <td>@Html.DisplayFor(modelItem => item.WO_STATUS)</td>
+                    <td>
+                        <a asp-action="UrgentRequestConfirmation" asp-route-id="@item.ID" class="btn btn-primary btn-sm">Review Request</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

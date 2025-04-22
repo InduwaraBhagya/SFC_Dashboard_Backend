@@ -442,5 +442,104 @@ namespace SFCDB.Controllers
             // Placeholder action for HoldRecords
             return View();
         }
+    
+
+// GET: PERecords/UrgentRequestConfirmation/5
+public async Task<IActionResult> UrgentRequestConfirmation(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var pERecord = await _context.PERecords.FindAsync(id);
+            if (pERecord == null)
+            {
+                return NotFound();
+            }
+
+            return View(pERecord);
+        }
+
+        // POST: PERecords/RequestUrgent/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestUrgent(int id)
+        {
+            var pERecord = await _context.PERecords.FindAsync(id);
+            if (pERecord == null)
+            {
+                return NotFound();
+            }
+
+            // Set the status to pending confirmation
+            pERecord.WO_STATUS = "PENDING_URGENT_CONFIRMATION";
+            _context.Update(pERecord);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Urgent request submitted for approval.";
+            return RedirectToAction(nameof(InProgressRecords));
+        }
+
+
+
+        // GET: PERecords/UrgentRequestsList
+        public async Task<IActionResult> UrgentRequestsList()
+        {
+            
+            var pendingRequests = await _context.PERecords
+                .Where(r => r.WO_STATUS == "PENDING_URGENT_CONFIRMATION")
+                .ToListAsync();
+
+            return View(pendingRequests);
+        }
+
+        // POST: PERecords/ProcessUrgentRequest
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
+        {
+            var pERecord = await _context.PERecords.FindAsync(id);
+            if (pERecord == null)
+            {
+                return NotFound();
+            }
+
+            // Process based on the selected reason
+            switch (urgentReason)
+            {
+                case "OpeningCeremony":
+                    pERecord.WO_STATUS = "URGENT";
+                    pERecord.WO_COMMENTS = (pERecord.WO_COMMENTS ?? "") + " [URGENT: Opening Ceremony - Priority 1]";
+                    _context.Update(pERecord);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Urgent request successfully processed with Priority 1.";
+                    break;
+
+                case "CriticalCustomer":
+                    pERecord.WO_STATUS = "URGENT";
+                    pERecord.WO_COMMENTS = (pERecord.WO_COMMENTS ?? "") + " [URGENT: Critical Customer - Priority 2]";
+                    _context.Update(pERecord);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Urgent request successfully processed with Priority 2.";
+                    break;
+
+                case "Reject":
+                    // Keep the record in its current status but update comments
+                    pERecord.WO_STATUS = "IN_PROGRESS"; // Or whatever the standard status should be
+                    pERecord.WO_COMMENTS = (pERecord.WO_COMMENTS ?? "") + " [Urgent Request Rejected]";
+                    _context.Update(pERecord);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Urgent request rejected.";
+                    break;
+
+                default:
+                    // Invalid option selected
+                    TempData["ErrorMessage"] = "Invalid option selected.";
+                    return RedirectToAction(nameof(UrgentRequestsList));
+            }
+
+            return RedirectToAction(nameof(UrgentRequestsList));
+        }
     }
 }
