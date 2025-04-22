@@ -1,0 +1,48 @@
+@model SystemUser
+@{
+    ViewData["Title"] = "Register";
+}
+
+<h1>Complete Registration</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Index">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            
+            <div class="form-group">
+                <label asp-for="Name" class="control-label"></label>
+                <input asp-for="Name" class="form-control" disabled />
+            </div>
+            
+            <div class="form-group">
+                <label asp-for="ServiceId" class="control-label"></label>
+                <input asp-for="ServiceId" class="form-control" disabled />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="UserRoleId" class="control-label">Role</label>
+                <select asp-for="UserRoleId" class="form-control" asp-items="ViewBag.UserRoleId">
+                    <option value="">-- Select Role --</option>
+                </select>
+                <span asp-validation-for="UserRoleId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="WorkGroupId" class="control-label">Work Group</label>
+                <select asp-for="WorkGroupId" class="form-control" asp-items="ViewBag.WorkGroupId">
+                    <option value="">-- Select Work Group --</option>
+                </select>
+                <span asp-validation-for="WorkGroupId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-3">
+                <input type="submit" value="Register" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

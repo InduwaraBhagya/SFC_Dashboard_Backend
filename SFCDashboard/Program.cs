@@ -9,6 +9,8 @@ using SFCDashboard.Data;
 using SFCDashboard.Interfaces;
 using SFCDashboard.Services;
 using SFCDashboard.Controllers;
+using SFCDashboard.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
@@ -60,6 +62,8 @@ app.UseRouting();
 
 app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
+
+app.UseUserRegistration();
 
 app.MapStaticAssets();
 
