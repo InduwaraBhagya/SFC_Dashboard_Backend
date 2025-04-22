@@ -20,7 +20,9 @@ namespace SFCDashboard.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<PERecord> PERecords { get; set; }
 
-        public DbSet<Notification> PETasks{ get; set; }
+        public DbSet<PETaskList> PETaskLists{ get; set; }
+        public DbSet<PETask> PETasks { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,13 +33,19 @@ namespace SFCDashboard.Data
                 .HasForeignKey(t => t.RequestedById)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<TaskExtensionRequest>()
-                .HasOne(t => t.ApprovedBy)
-                .WithMany(u => u.ApprovedExtensions)
-                .HasForeignKey(t => t.ApprovedById)
-                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<PERecord>().ToTable("PERecords");
+
+            // Configure relationship between PETask and PlannedEvent
+            modelBuilder.Entity<PETask>()
+                .HasOne(t => t.PlannedEvent)
+                .WithMany()
+                .HasForeignKey(t => t.PENumber)
+                .HasPrincipalKey(e => e.PeNumber)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
         }
         public DbSet<SFCDashboard.Models.UserRole> UserRole { get; set; } = default!;
-        public DbSet<SFCDashboard.Models.PETask> PETask { get; set; } = default!;
+        public DbSet<SFCDashboard.Models.PETaskList> PETaskList { get; set; } = default!;
     }
 }
