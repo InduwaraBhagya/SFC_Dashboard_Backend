@@ -73,8 +73,6 @@
                         </div>
                         <div id="@item.PE_NUMBER">
                             <div class="card-body">
-                                <!-- Card content (unchanged) -->
-                                <!-- Always visible summary information -->
                                 <div class="row">
                                     <div class="col-md-6">
                                         <dl class="row">
@@ -99,7 +97,111 @@
                                 </div>
 
                                 <div class="collapse" id="collapse-@item.PE_NUMBER">
-                                    <!-- Collapsible content remains unchanged -->
+                                    <hr />
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="section-title">Location Details</h6>
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Province</dt>
+                                                <dd class="col-sm-8">@item.PROVINCE</dd>
+                                                <dt class="col-sm-4">Region</dt>
+                                                <dd class="col-sm-8">@item.REGION</dd>
+                                                <dt class="col-sm-4">RTOM</dt>
+                                                <dd class="col-sm-8">@item.RTOM</dd>
+                                                <dt class="col-sm-4">RTOM Description</dt>
+                                                <dd class="col-sm-8">@item.RTOM_DESCRIPTION</dd>
+                                            </dl>
+
+                                            <h6 class="section-title">Project Details</h6>
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Job Reference</dt>
+                                                <dd class="col-sm-8">@item.JOB_REFERENCE</dd>
+                                                <dt class="col-sm-4">Contractor</dt>
+                                                <dd class="col-sm-8">@item.CONTRACTOR_NAME</dd>
+                                                <dt class="col-sm-4">PE Activity</dt>
+                                                <dd class="col-sm-8">@item.PE_ACTIVITY</dd>
+                                                <dt class="col-sm-4">PE Nature</dt>
+                                                <dd class="col-sm-8">@item.PE_NATURE</dd>
+                                                <dt class="col-sm-4">PE Title</dt>
+                                                <dd class="col-sm-8">@item.PE_TITLE</dd>
+                                                <dt class="col-sm-4">PE Objective</dt>
+                                                <dd class="col-sm-8">@item.PE_OBJECTIVE</dd>
+                                                <dt class="col-sm-4">PE Area</dt>
+                                                <dd class="col-sm-8">@item.PE_AREA</dd>
+                                            </dl>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <h6 class="section-title">Task Information</h6>
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Task Sequence</dt>
+                                                <dd class="col-sm-8">@item.TASK_SEQ</dd>
+                                                <dt class="col-sm-4">Task Name</dt>
+                                                <dd class="col-sm-8">@item.TASK_NAME</dd>
+                                                <dt class="col-sm-4">Task WG</dt>
+                                                <dd class="col-sm-8">@item.TASK_WG</dd>
+                                                <dt class="col-sm-4">Actual Start Date</dt>
+                                                <dd class="col-sm-8">@item.WO_ACTUAL_START_DATE</dd>
+                                            </dl>
+
+                                            <h6 class="section-title">Service Details</h6>
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Service Category</dt>
+                                                <dd class="col-sm-8">@item.SERVICE_CATEGORY</dd>
+                                                <dt class="col-sm-4">Service Speed</dt>
+                                                <dd class="col-sm-8">@item.SERVICE_SPEED</dd>
+                                                <dt class="col-sm-4">Order Type</dt>
+                                                <dd class="col-sm-8">@item.ORDER_TYPE</dd>
+                                                <dt class="col-sm-4">CRM Order</dt>
+                                                <dd class="col-sm-8">@item.CRM_ORDER</dd>
+                                            </dl>
+
+                                            <h6 class="section-title">Customer Information</h6>
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Customer Type</dt>
+                                                <dd class="col-sm-8">@item.CUS_TYPE</dd>
+                                                <dt class="col-sm-4">Account Manager</dt>
+                                                <dd class="col-sm-8">@item.ACCOUNT_MANAGER</dd>
+                                                <dt class="col-sm-4">Section Handled By</dt>
+                                                <dd class="col-sm-8">@item.SECTION_HANDLED_BY</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mt-4">
+                                        <div class="col-12">
+                                            <h6 class="section-title">Location Information</h6>
+                                            <dl class="row">
+                                                <dt class="col-sm-2">Location A</dt>
+                                                <dd class="col-sm-10">@item.LOCATION_A_ADDRESS</dd>
+                                                <dt class="col-sm-2">Location B</dt>
+                                                <dd class="col-sm-10">@item.LOCATION_B_ADDRESS</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(item.PE_WO_COMMENTS) || !string.IsNullOrEmpty(item.WO_COMMENTS))
+                                    {
+                                        <div class="row mt-4">
+                                            <div class="col-12">
+                                                <h6 class="section-title">Comments</h6>
+                                                @if (!string.IsNullOrEmpty(item.PE_WO_COMMENTS))
+                                                {
+                                                    <div class="mb-3">
+                                                        <strong>PE Work Order Comments:</strong>
+                                                        <p class="mb-2">@item.PE_WO_COMMENTS</p>
+                                                    </div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.WO_COMMENTS))
+                                                {
+                                                    <div>
+                                                        <strong>Work Order Comments:</strong>
+                                                        <p class="mb-0">@item.WO_COMMENTS</p>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -403,7 +505,7 @@
                     this.style.setProperty('--ripple-y', y + 'px');
 
                     this.classList.remove('btn-ripple');
-                    void this.offsetWidth; // Force reflow
+                    void this.offsetWidth; 
                     this.classList.add('btn-ripple');
                 });
             }
@@ -1015,3 +1117,4 @@
     .message-item:first-child {
         animation: newMessage 0.5s ease forwards;
     }
+    </style>
