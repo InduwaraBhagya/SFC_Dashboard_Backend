@@ -1,4 +1,4 @@
-﻿@model IEnumerable<SFCDB.Models.PERecord>
+﻿@model IEnumerable<SFCDashboard.Models.PlannedEvent>
 
 @{
     ViewData["Title"] = "Urgent Records";
@@ -22,17 +22,17 @@
         @foreach (var item in Model)
         {
             <tr>
-                <td>@Html.DisplayFor(modelItem => item.PE_NUMBER)</td>
-                <td>@Html.DisplayFor(modelItem => item.CUSTOMER)</td>
-                <td>@Html.DisplayFor(modelItem => item.JOB_REFERENCE)</td>
-                <td>@Html.DisplayFor(modelItem => item.RTOM)</td>
-                <td>@Html.DisplayFor(modelItem => item.WO_STATUS)</td>
+                <td>@item.PeNumber</td>
+                <td>@item.Customer</td>
+                <td>@item.JobReference</td>
+                <td>@item.Rtom</td>
+                <td>@item.PEStatus</td>
                 <td>
-                    @if (item.WO_COMMENTS != null && item.WO_COMMENTS.Contains("Priority 1"))
+                    @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
                     {
                         <span class="badge bg-danger">Priority 1</span>
                     }
-                    else if (item.WO_COMMENTS != null && item.WO_COMMENTS.Contains("Priority 2"))
+                    else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 2"))
                     {
                         <span class="badge bg-warning text-dark">Priority 2</span>
                     }
@@ -42,7 +42,7 @@
                     }
                 </td>
                 <td>
-                    <a asp-action="Details" asp-route-id="@item.ID" class="btn btn-info btn-sm">Details</a>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
                 </td>
             </tr>
         }

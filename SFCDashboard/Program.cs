@@ -70,7 +70,7 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=PERecords}/{action=Index}/{id?}")
+    pattern: "{controller=PlannedEvents}/{action=Index}/{id?}")
     .WithStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();

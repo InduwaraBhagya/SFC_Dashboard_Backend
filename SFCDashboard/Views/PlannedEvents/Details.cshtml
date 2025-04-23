@@ -1,4 +1,4 @@
-﻿@model SFCDB.Models.PERecord
+﻿@model SFCDashboard.Models.PlannedEvent
 
 @{
     ViewData["Title"] = "PE Record Details";
@@ -9,9 +9,7 @@
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h2 class="mb-0">PE Record Details</h2>
             <div>
-                <a asp-action="Edit" asp-route-id="@Model?.ID" class="btn btn-sm btn-light me-2">
-                    <i class="bi bi-pencil-square"></i> Edit
-                </a>
+
                 <a asp-action="Index" class="btn btn-sm btn-light">
                     <i class="bi bi-arrow-left"></i> Back to List
                 </a>
@@ -23,33 +21,33 @@
                     <tbody>
                         <tr>
                             <th class="bg-light text-primary" style="width: 25%">PE Number (PK)</th>
-                            <td>@Html.DisplayFor(model => model.PE_NUMBER)</td>
+                            <td>@Html.DisplayFor(model => model.PeNumber)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Job Reference Number</th>
-                            <td>@Html.DisplayFor(model => model.JOB_REFERENCE)</td>
+                            <td>@Html.DisplayFor(model => model.JobReference)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">SO Number</th>
-                            <td>@Html.DisplayFor(model => model.SO_NUMBER)</td>
+                            <td>@Html.DisplayFor(model => model.SoNumber)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Region</th>
-                            <td>@Html.DisplayFor(model => model.REGION)</td>
+                            <td>@Html.DisplayFor(model => model.Region)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Area</th>
-                            <td>@Html.DisplayFor(model => model.PE_AREA)</td>
+                            <td>@Html.DisplayFor(model => model.PeArea)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Task</th>
-                            <td>@Html.DisplayFor(model => model.TASK_NAME)</td>
+                            <td>@Html.DisplayFor(model => model.TaskName)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Status</th>
                             <td>
                                 @{
-                                    string statusClass = Model.WO_STATUS?.ToLower() switch
+                                    string statusClass = Model.PEStatus?.ToLower() switch
                                     {
                                         "completed" => "badge bg-success",
                                         "in progress" => "badge bg-warning text-dark",
@@ -57,22 +55,22 @@
                                         _ => "badge bg-secondary"
                                     };
                                 }
-                                <span class="@statusClass">@Html.DisplayFor(model => model.WO_STATUS)</span>
+                                <span class="@statusClass">@Html.DisplayFor(model => model.PEStatus)</span>
                             </td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Start Time</th>
-                            <td>@Html.DisplayFor(model => model.WO_START_DATE)</td>
+                            <td>@Html.DisplayFor(model => model.WoStartDate)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">End Time</th>
-                            <td>@Html.DisplayFor(model => model.WO_ACTUAL_START_DATE)</td>
+                            <td>@Html.DisplayFor(model => model.WoActualStartDate)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Is Urgent</th>
                             <td>
                                 @{
-                                    string urgentText = Model.SERVICE_SPEED?.ToLower()?.Contains("urgent") == true ? "Yes" : "No";
+                                    string urgentText = Model.ServiceSpeed?.ToLower()?.Contains("urgent") == true ? "Yes" : "No";
                                     string urgentClass = urgentText == "Yes" ? "text-danger fw-bold" : "";
                                 }
                                 <span class="@urgentClass">@urgentText</span>
@@ -80,57 +78,48 @@
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">RTOM</th>
-                            <td>@Html.DisplayFor(model => model.RTOM)</td>
+                            <td>@Html.DisplayFor(model => model.Rtom)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Contractor Name</th>
-                            <td>@Html.DisplayFor(model => model.CONTRACTOR_NAME)</td>
+                            <td>@Html.DisplayFor(model => model.ContractorName)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">PE Objective</th>
-                            <td>@Html.DisplayFor(model => model.PE_OBJECTIVE)</td>
+                            <td>@Html.DisplayFor(model => model.PeObjective)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Order Type</th>
-                            <td>@Html.DisplayFor(model => model.ORDER_TYPE)</td>
+                            <td>@Html.DisplayFor(model => model.OrderType)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Pending Task Name</th>
-                            <td>@Html.DisplayFor(model => model.PENDING_TASK_NAME)</td>
+                            <td>@Html.DisplayFor(model => model.PendingTaskName)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Pending Workgroup</th>
-                            <td>@Html.DisplayFor(model => model.PENDING_WG)</td>
+                            <td>@Html.DisplayFor(model => model.PendingWg)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Account Manager</th>
-                            <td>@Html.DisplayFor(model => model.ACCOUNT_MANAGER)</td>
+                            <td>@Html.DisplayFor(model => model.AccountManager)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Section Handled By</th>
-                            <td>@Html.DisplayFor(model => model.SECTION_HANDLED_BY)</td>
+                            <td>@Html.DisplayFor(model => model.SectionHandledBy)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Service Required Date</th>
-                            <td>@Html.DisplayFor(model => model.SERVICE_REQUIRED_DATE)</td>
+                            <td>@Html.DisplayFor(model => model.ServiceRequiredDate)</td>
                         </tr>
                         <tr>
                             <th class="bg-light text-primary">Fiber PE Task Workgroup</th>
-                            <td>@Html.DisplayFor(model => model.FIBER_PE_TASK_WG)</td>
+                            <td>@Html.DisplayFor(model => model.FiberPeTaskWg)</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="card-footer">
-            <div class="d-flex justify-content-between">
-                <a asp-action="Index" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to List
-                </a>
-                <a asp-action="Edit" asp-route-id="@Model?.ID" class="btn btn-primary">
-                    <i class="bi bi-pencil-square"></i> Edit
-                </a>
-            </div>
-        </div>
+
     </div>
 </div>

@@ -170,9 +170,11 @@ namespace SFCDashboard.Models
 
         [Column("PE_STATUS")]
         public string PEStatus { get; set; }
+        [Column("PRIORITY")]
+        public string Priority { get; set; }
 
-        [Column("TASK_CREATED_DATE")]
-        public DateTime TaskCreatedDate { get; set; }
+        [Column("PE_CREATED_DATE")]
+        public DateTime PECreatedDate { get; set; }
 
     }
 }

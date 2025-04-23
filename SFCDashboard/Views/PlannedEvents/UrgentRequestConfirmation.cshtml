@@ -1,4 +1,4 @@
-﻿@model SFCDB.Models.PERecord
+﻿@model SFCDashboard.Models.PlannedEvent
 
 @{
     ViewData["Title"] = "Confirm Urgent Request";
@@ -16,28 +16,28 @@
                 <div class="card-body">
                     <dl class="row">
                         <dt class="col-sm-3">PE Number:</dt>
-                        <dd class="col-sm-9">@Model.PE_NUMBER</dd>
-                        
+                        <dd class="col-sm-9">@Model.PeNumber</dd>
+
                         <dt class="col-sm-3">Customer:</dt>
-                        <dd class="col-sm-9">@Model.CUSTOMER</dd>
-                        
+                        <dd class="col-sm-9">@Model.Customer</dd>
+
                         <dt class="col-sm-3">Job Reference:</dt>
-                        <dd class="col-sm-9">@Model.JOB_REFERENCE</dd>
-                        
+                        <dd class="col-sm-9">@Model.JobReference</dd>
+
                         <dt class="col-sm-3">RTOM:</dt>
-                        <dd class="col-sm-9">@Model.RTOM</dd>
+                        <dd class="col-sm-9">@Model.Rtom</dd>
                     </dl>
                 </div>
             </div>
-            
+
             <div class="card">
                 <div class="card-header">
                     <h4>Select Urgent Request Reason</h4>
                 </div>
                 <div class="card-body">
-                    <form asp-action="ProcessUrgentRequest" method="post">
-                        <input type="hidden" name="id" value="@Model.ID" />
-                        
+                    <form asp-controller="PlannedEvents" asp-action="ProcessUrgentRequest" method="post">
+                        <input type="hidden" name="id" value="@Model.Id" />
+
                         <div class="form-group mb-4">
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony" value="OpeningCeremony" required />
@@ -45,14 +45,14 @@
                                     <strong>Opening Ceremony</strong> [Priority 1]
                                 </label>
                             </div>
-                            
+
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer" value="CriticalCustomer" />
                                 <label class="form-check-label" for="criticalCustomer">
                                     <strong>Critical Customer</strong> [Priority 2]
                                 </label>
                             </div>
-                            
+
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="radio" name="urgentReason" id="reject" value="Reject" />
                                 <label class="form-check-label" for="reject">
@@ -60,10 +60,10 @@
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div class="form-group mt-4">
                             <button type="submit" class="btn btn-primary">Submit</button>
-                            <a asp-action="InProgressRecords" class="btn btn-secondary">Cancel</a>
+                            <a asp-action="UrgentRequestsList" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>

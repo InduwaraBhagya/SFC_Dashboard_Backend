@@ -166,7 +166,7 @@ namespace SFCDashboard.Services
             existingEvent.AccessMedium = record.ACCESS_MEDIUM;
             existingEvent.AccessMediumAEnd = record.ACCESS_MEDIUM_A_END;
             existingEvent.AccessMediumBEnd = record.ACCESS_MEDIUM_B_END;
-            existingEvent.WoComments = record.WO_COMMENTS;
+            existingEvent.Priority = record.WO_COMMENTS;
             // Keep PEStatus as is or set to default if null
             existingEvent.PEStatus = existingEvent.PEStatus ?? "ongoing";
         }
@@ -227,9 +227,9 @@ namespace SFCDashboard.Services
                 AccessMedium = record.ACCESS_MEDIUM,
                 AccessMediumAEnd = record.ACCESS_MEDIUM_A_END,
                 AccessMediumBEnd = record.ACCESS_MEDIUM_B_END,
-                WoComments = record.WO_COMMENTS,
+                Priority = record.WO_COMMENTS,
                 PEStatus = "ongoing", // Default status for new records
-                TaskCreatedDate = DateTime.UtcNow
+                PECreatedDate = DateTime.UtcNow
             };
         }
 
