@@ -28,5 +28,20 @@ namespace SFCDashboard.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        public IActionResult Unauthorized()
+        {
+            var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
+            ViewData["ServiceId"] = serviceId;
+            return View();
+        }
+
+        private static string ExtractServiceId(string email)
+        {
+            if (string.IsNullOrEmpty(email)) 
+                return string.Empty;
+            
+            return email[..Math.Min(email.Length, 6)];
+        }
     }
 }
