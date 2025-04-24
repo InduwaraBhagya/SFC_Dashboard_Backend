@@ -233,9 +233,6 @@ namespace SFCDB.Controllers
                     _logger.LogInformation("Starting PE record synchronization");
                     var syncService = HttpContext.RequestServices.GetRequiredService<PERecordSyncService>();
                     
-                    // Try the simplified direct test first
-                    await TestDirectPlannedEventCreation(syncService);
-                    
                     // Then run the full sync
                     await syncService.SyncPERecordsAsync();
                     
@@ -266,53 +263,7 @@ namespace SFCDB.Controllers
             }
         }
         
-        private async Task TestDirectPlannedEventCreation(PERecordSyncService syncService)
-        {
-            try
-            {
-                _logger.LogInformation("Testing direct PlannedEvent creation");
-                
-                // Create a test PlannedEvent directly
-                var testEvent = new SFCDashboard.Models.PlannedEvent
-                {
-                    PeNumber = "TEST-" + DateTime.Now.Ticks,
-                    PeTitle = "Test Event",
-                    Province = "Test Province",
-                    Region = "Test Region",
-                    PEStatus = "ongoing",
-                    PECreatedDate = DateTime.UtcNow
-                };
-                
-                _context.PlannedEvents.Add(testEvent);
-                await _context.SaveChangesAsync();
-                
-                _logger.LogInformation("Test PlannedEvent created successfully with ID: {id}", testEvent.Id);
-                
-                // Create a task for the test event
-                var testTask = new SFCDashboard.Models.PETask
-                {
-                    PENumber = testEvent.PeNumber,
-                    TaskSeq = 1,
-                    Task = "Test Task",
-                    OLA = "1",
-                    TaskStatus = "INPROGRESS",
-                    TaskPhase = "ONGOING",
-                    TaskCreatedDate = DateTime.UtcNow,
-                    TaskCompleteDate = DateTime.UtcNow.AddDays(1),
-                    TaskWorkGroup = "TEST"
-                };
-                
-                _context.PETasks.Add(testTask);
-                await _context.SaveChangesAsync();
-                
-                _logger.LogInformation("Test PETask created successfully with ID: {id}", testTask.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in TestDirectPlannedEventCreation");
-                throw; // Rethrow so the calling method can handle it
-            }
-        }
+        
 
         // Helper method to safely get cell values
         private T GetCellValueSafely<T>(IXLRow row, int columnIndex)
@@ -343,52 +294,6 @@ namespace SFCDB.Controllers
             }
         }
 
-        // GET: PERecords/Diagnostics
-        public async Task<IActionResult> Diagnostics()
-        {
-            var viewModel = new Dictionary<string, object>();
-            
-            // Record counts
-            viewModel["PERecord Count"] = await _context.PERecords.CountAsync();
-            viewModel["PlannedEvent Count"] = await _context.PlannedEvents.CountAsync();
-            viewModel["PETask Count"] = await _context.PETasks.CountAsync();
-            viewModel["PETaskList Count"] = await _context.PETaskLists.CountAsync();
-            
-            // Sample records
-            viewModel["Sample PERecord"] = await _context.PERecords.FirstOrDefaultAsync();
-            viewModel["Sample PlannedEvent"] = await _context.PlannedEvents.FirstOrDefaultAsync();
-            viewModel["Sample PETask"] = await _context.PETasks.FirstOrDefaultAsync();
-            viewModel["Sample PETaskList"] = await _context.PETaskLists.FirstOrDefaultAsync();
-            
-            // Database connection info
-            viewModel["Connection String"] = _context.Database.GetConnectionString()?.Replace("Password=", "Password=***");
-            
-            return View(viewModel);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> TriggerSync()
-        {
-            try
-            {
-                _logger.LogInformation("Manually triggering PE record synchronization");
-                var syncService = HttpContext.RequestServices.GetRequiredService<PERecordSyncService>();
-                await syncService.SyncPERecordsAsync();
-                
-                TempData["Message"] = "Synchronization completed successfully.";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during manual synchronization");
-                TempData["Message"] = $"Synchronization error: {ex.Message}";
-            }
-            
-            return RedirectToAction("Diagnostics");
-        }
-        
-        private bool PERecordExists(int id)
-        {
-            return _context.PERecords.Any(e => e.ID == id);
-        }
+       
     }
 }

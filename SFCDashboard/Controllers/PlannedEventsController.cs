@@ -110,23 +110,32 @@ namespace SFCDashboard.Controllers
             return View(paginatedList);
         }
 
-        // GET: PlannedEvents/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
+// GET: PlannedEvents/Details/5
+public async Task<IActionResult> Details(int? id)
+{
+    if (id == null)
+    {
+        return NotFound();
+    }
 
-            var plannedEvent = await _context.PlannedEvents
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (plannedEvent == null)
-            {
-                return NotFound();
-            }
+    var plannedEvent = await _context.PlannedEvents
+        .FirstOrDefaultAsync(m => m.Id == id);
+        
+    if (plannedEvent == null)
+    {
+        return NotFound();
+    }
 
-            return View(plannedEvent);
-        }
+    // Get related PE tasks for this event
+    var peTasks = await _context.PETasks
+        .Where(t => t.PENumber == plannedEvent.PeNumber)
+        .OrderBy(t => t.TaskSeq)
+        .ToListAsync();
+        
+    ViewBag.PETasks = peTasks;
+
+    return View(plannedEvent);
+}
 
         // GET: PlannedEvents/Create
         public IActionResult Create()
@@ -362,5 +371,6 @@ namespace SFCDashboard.Controllers
             return RedirectToAction(nameof(UrgentRequestsList));
         }
         
+
     }
 }

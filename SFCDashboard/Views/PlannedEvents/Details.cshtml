@@ -5,11 +5,10 @@
 }
 
 <div class="container mt-4">
-    <div class="card">
+    <div class="card mb-4">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h2 class="mb-0">PE Record Details</h2>
             <div>
-
                 <a asp-action="Index" class="btn btn-sm btn-light">
                     <i class="bi bi-arrow-left"></i> Back to List
                 </a>
@@ -120,6 +119,87 @@
                 </table>
             </div>
         </div>
+    </div>
 
+    <!-- PE Tasks Section -->
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">PE Tasks</h3>
+            @if (ViewBag.PETasks == null || ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Count() == 0)
+            {
+                <span class="badge bg-warning text-dark">No tasks found</span>
+            }
+        </div>
+        <div class="card-body">
+            @if (ViewBag.PETasks != null && ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover task-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Seq</th>
+                                <th>Task</th>
+                                <th>Workgroup</th>
+                                <th>OLA</th>
+                                <th>Status</th>
+                                <th>Phase</th>
+                                <th>Created Date</th>
+                                <th>Target Date</th>
+                                <th>Actual Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+                            {
+                                <tr class="@(task.TaskPhase?.ToLower() == "ongoing" ? "table-primary" : 
+                                           task.TaskPhase?.ToLower() == "finish" ? "table-success" : 
+                                           task.TaskPhase?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                    <td>@task.TaskSeq</td>
+                                    <td>@task.Task</td>
+                                    <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                    <td>@task.OLA days</td>
+                                    <td>
+                                        @{
+                                            string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                            {
+                                                "completed" => "badge bg-success",
+                                                "inprogress" => "badge bg-warning text-dark",
+                                                _ => "badge bg-secondary"
+                                            };
+                                        }
+                                        <span class="@taskStatusClass">@task.TaskStatus</span>
+                                    </td>
+                                    <td>
+                                        @{
+                                            string phaseClass = task.TaskPhase?.ToLower() switch
+                                            {
+                                                "finish" => "badge bg-success",
+                                                "ongoing" => "badge bg-primary",
+                                                "waiting" => "badge bg-secondary",
+                                                _ => "badge bg-light text-dark"
+                                            };
+                                        }
+                                        <span class="@phaseClass">@task.TaskPhase</span>
+                                    </td>
+                                    <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No tasks have been assigned to this PE record yet.
+                </div>
+            }
+        </div>
     </div>
 </div>
+
+
+}
