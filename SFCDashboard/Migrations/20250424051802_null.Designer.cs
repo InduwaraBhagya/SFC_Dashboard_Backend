@@ -12,8 +12,8 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250422050722_initialMigration")]
-    partial class initialMigration
+    [Migration("20250424051802_null")]
+    partial class @null
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -303,6 +303,12 @@ namespace SFCDashboard.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ACtualTaskCompleteDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ActualTaskCreatedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("OLA")
                         .HasColumnType("nvarchar(max)");
 
@@ -312,7 +318,7 @@ namespace SFCDashboard.Migrations
                     b.Property<string>("Task")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("TaskCloseDate")
+                    b.Property<DateTime>("TaskCompleteDate")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("TaskCreatedDate")
@@ -370,117 +376,98 @@ namespace SFCDashboard.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AccessMedium")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ACCESS_MEDIUM");
 
                     b.Property<string>("AccessMediumAEnd")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ACCESS_MEDIUM_A_END");
 
                     b.Property<string>("AccessMediumBEnd")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ACCESS_MEDIUM_B_END");
 
                     b.Property<string>("AccountManager")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ACCOUNT_MANAGER");
 
                     b.Property<string>("CctId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("CCT_ID");
 
                     b.Property<string>("ContractorName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("CONTRACTOR_NAME");
 
                     b.Property<string>("CrmOrder")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("CRM_ORDER");
 
                     b.Property<string>("CusType")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("CUS_TYPE");
 
                     b.Property<string>("Customer")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("CUSTOMER");
 
                     b.Property<string>("FiberPeNo")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("FIBER_PE_NO");
 
                     b.Property<string>("FiberPeTaskName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("FIBER_PE_TASK_NAME");
 
                     b.Property<string>("FiberPeTaskWg")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("FIBER_PE_TASK_WG");
 
                     b.Property<string>("FiberSoId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("FIBER_SO_ID");
 
                     b.Property<string>("JobReference")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("JOB_REFERENCE");
 
                     b.Property<string>("Lea")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("LEA");
 
                     b.Property<string>("LocationAAddress")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("LOCATION_A_ADDRESS");
 
                     b.Property<string>("LocationBAddress")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("LOCATION_B_ADDRESS");
 
                     b.Property<string>("NtuType")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("NTU_TYPE");
 
                     b.Property<string>("OrderType")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ORDER_TYPE");
 
+                    b.Property<DateTime>("PECreatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("PE_CREATED_DATE");
+
                     b.Property<string>("PEStatus")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PE_STATUS");
 
                     b.Property<string>("PeActivity")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PE_ACTIVITY");
 
                     b.Property<string>("PeArea")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PE_AREA");
 
                     b.Property<string>("PeNature")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PE_NATURE");
 
@@ -490,82 +477,70 @@ namespace SFCDashboard.Migrations
                         .HasColumnName("PE_NUMBER");
 
                     b.Property<string>("PeObjective")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PE_OBJECTIVE");
 
                     b.Property<string>("PeTitle")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PE_TITLE");
 
                     b.Property<string>("PeWoComments")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PE_WO_COMMENTS");
 
                     b.Property<string>("PendingTaskName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PENDING_TASK_NAME");
 
                     b.Property<string>("PendingWg")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PENDING_WG");
 
+                    b.Property<string>("Priority")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PRIORITY");
+
                     b.Property<string>("ProductSoId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PRODUCT_SO_ID");
 
                     b.Property<string>("Province")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PROVINCE");
 
                     b.Property<string>("Province1")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("PROVINCE_1");
 
                     b.Property<string>("Region")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("REGION");
 
                     b.Property<string>("Region1")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("REGION_1");
 
                     b.Property<string>("RequestReferenceNo")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("REQUEST_REFERENCE_NO");
 
                     b.Property<string>("Rtom")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("RTOM");
 
                     b.Property<string>("Rtom1")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("RTOM_1");
 
                     b.Property<string>("RtomDescription")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("RTOM_DESCRIPTION");
 
                     b.Property<string>("SectionHandledBy")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("SECTION_HANDLED_BY");
 
                     b.Property<string>("ServiceCategory")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("SERVICE_CATEGORY");
 
@@ -574,12 +549,10 @@ namespace SFCDashboard.Migrations
                         .HasColumnName("SERVICE_REQUIRED_DATE");
 
                     b.Property<string>("ServiceSpeed")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("SERVICE_SPEED");
 
                     b.Property<string>("ServiceType")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("SERVICE_TYPE");
 
@@ -588,24 +561,17 @@ namespace SFCDashboard.Migrations
                         .HasColumnName("SO_CREATE_DATE");
 
                     b.Property<string>("SoId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("SO_ID");
 
                     b.Property<string>("SoNumber")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("SO_NUMBER");
 
                     b.Property<int?>("SystemUserId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("TaskCreatedDate")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("TASK_CREATED_DATE");
-
                     b.Property<string>("TaskName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("TASK_NAME");
 
@@ -614,22 +580,18 @@ namespace SFCDashboard.Migrations
                         .HasColumnName("TASK_SEQ");
 
                     b.Property<string>("TaskWg")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("TASK_WG");
 
                     b.Property<string>("WoActualStartDate")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("WO_ACTUAL_START_DATE");
 
                     b.Property<string>("WoComments")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("WO_COMMENTS");
 
                     b.Property<string>("WoId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("WO_ID");
 
@@ -638,7 +600,6 @@ namespace SFCDashboard.Migrations
                         .HasColumnName("WO_START_DATE");
 
                     b.Property<string>("WoStatus")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("WO_STATUS");
 

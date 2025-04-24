@@ -361,5 +361,6 @@ namespace SFCDashboard.Controllers
             TempData["SuccessMessage"] = "Urgent request processed.";
             return RedirectToAction(nameof(UrgentRequestsList));
         }
+        
     }
 }
