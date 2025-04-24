@@ -76,7 +76,7 @@ namespace SFCDashboard.Services
                 const int batchSize = 100;
 
                 foreach (var batch in sourceRecords.Where(r => !string.IsNullOrEmpty(r.PE_NUMBER))
-                                                 .Where(r => !processedPENumbers.Contains(r.PE_NUMBER))
+                                                 .Where(r => r.PE_NUMBER != null && !processedPENumbers.Contains(r.PE_NUMBER))
                                                  .Chunk(batchSize))
                 {
                     // Use a new context for each batch
@@ -89,7 +89,10 @@ namespace SFCDashboard.Services
 
                     foreach (var record in batch)
                     {
-                        processedPENumbers.Add(record.PE_NUMBER);
+                        if (!string.IsNullOrEmpty(record.PE_NUMBER))
+                        {
+                            processedPENumbers.Add(record.PE_NUMBER);
+                        }
                         var existingEvent = existingEvents.FirstOrDefault(pe => pe.PeNumber == record.PE_NUMBER);
 
                         if (existingEvent != null)
