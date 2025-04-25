@@ -131,6 +131,11 @@
             }
         </div>
         <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+            }
+
             @if (ViewBag.PETasks != null && ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Any())
             {
                 <div class="table-responsive">
@@ -142,18 +147,20 @@
                                 <th>Workgroup</th>
                                 <th>OLA</th>
                                 <th>Status</th>
-                                <th>Phase</th>
                                 <th>Created Date</th>
                                 <th>Target Date</th>
                                 <th>Actual Date</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
                             {
-                                <tr class="@(task.TaskPhase?.ToLower() == "ongoing" ? "table-primary" : 
-                                           task.TaskPhase?.ToLower() == "finish" ? "table-success" : 
-                                           task.TaskPhase?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                <tr class="@(task.IsUrgent ? "table-warning" : 
+                                           task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                           task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                           task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
                                     <td>@task.TaskSeq</td>
                                     <td>@task.Task</td>
                                     <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
@@ -169,21 +176,34 @@
                                         }
                                         <span class="@taskStatusClass">@task.TaskStatus</span>
                                     </td>
-                                    <td>
-                                        @{
-                                            string phaseClass = task.TaskPhase?.ToLower() switch
-                                            {
-                                                "finish" => "badge bg-success",
-                                                "ongoing" => "badge bg-primary",
-                                                "waiting" => "badge bg-secondary",
-                                                _ => "badge bg-light text-dark"
-                                            };
-                                        }
-                                        <span class="@phaseClass">@task.TaskPhase</span>
-                                    </td>
                                     <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
                                     <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
                                     <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+                                    
+                                    <!-- Priority column showing Urgent status -->
+                                    <td>
+                                        @if (task.IsUrgent)
+                                        {
+                                            <span class="badge bg-danger">URGENT</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(task.Priority))
+                                        {
+                                            <small class="d-block text-muted mt-1">@task.Priority</small>
+                                        }
+                                    </td>
+                                    
+                                    <!-- Actions column with Request Urgent button -->
+                                    <td>
+                                        @if (task.TaskStatus?.ToUpper() != "COMPLETED" && !task.IsUrgent)
+                                        {
+                                            <form asp-controller="PETasks" asp-action="RequestUrgent" method="post">
+                                                <input type="hidden" name="id" value="@task.Id" />
+                                                <button type="submit" class="btn btn-warning btn-sm w-100">
+                                                    <i class="bi bi-exclamation-triangle"></i> Request Urgent
+                                                </button>
+                                            </form>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -200,6 +220,3 @@
         </div>
     </div>
 </div>
-
-
-}

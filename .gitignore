@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 SFCDashboard/SFCDashboard.sln
 SFCDashboard/appsettings.json
+/SFCDashboard/Migrations/20250424091238_urgent.Designer.cs
+/SFCDashboard/Migrations/20250424091238_urgent.cs

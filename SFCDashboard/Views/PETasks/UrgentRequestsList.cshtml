@@ -1,0 +1,67 @@
+@model IEnumerable<SFCDashboard.Models.PETask>
+
+@{
+    ViewData["Title"] = "Pending Task Urgent Requests";
+}
+
+<div class="container mt-4">
+    <h1>Pending Task Urgent Requests</h1>
+    
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+    
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No pending urgent requests at this time.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>PE Number</th>
+                        <th>Task Seq</th>
+                        <th>Task Name</th>
+                        <th>Workgroup</th>
+                        <th>Created Date</th>
+                        <th>Target Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.PENumber</td>
+                            <td>@item.TaskSeq</td>
+                            <td>@item.Task</td>
+                            <td>@item.TaskWorkGroup</td>
+                            <td>@item.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                            <td>@item.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <a asp-action="UrgentRequestConfirmation" asp-route-id="@item.Id" class="btn btn-warning btn-sm">
+                                    Review
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    
+    <div>
+        <a asp-controller="PlannedEvents" asp-action="Details" class="btn btn-secondary">Back</a>
+    </div>
+</div>
