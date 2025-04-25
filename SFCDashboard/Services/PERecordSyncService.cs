@@ -556,7 +556,7 @@ namespace SFCDashboard.Services
                 if (existingTasks.Any())
                 {
                     _logger.LogInformation("Tasks already exist for PE {peNumber}. Skipping task creation.", plannedEvent.PeNumber);
-                    return; // Skip if tasks already exist
+                    return;
                 }
 
                 // Create tasks without tracking the parent event
@@ -566,46 +566,35 @@ namespace SFCDashboard.Services
                 {
                     try
                     {
-                        _logger.LogInformation("Adding {count} tasks for PE {peNumber}", tasksToCreate.Count, plannedEvent.PeNumber);
+                        _logger.LogInformation("Adding {count} tasks for PE {peNumber} in batches", tasksToCreate.Count, plannedEvent.PeNumber);
                         
-                        // Detach PlannedEvent references to avoid tracking conflicts
-                        foreach (var task in tasksToCreate)
+                        // Process in batches of 100
+                        const int batchSize = 100;
+                        for (int i = 0; i < tasksToCreate.Count; i += batchSize)
                         {
-                            task.PlannedEvent = null; // Don't track the parent event
-                        }
-                        
-                        // Save tasks individually to identify problematic records
-                        foreach (var task in tasksToCreate)
-                        {
-                            try
+                            var batch = tasksToCreate.Skip(i).Take(batchSize).ToList();
+                            
+                            // Validate batch before adding
+                            var validBatch = batch.Where(task => !string.IsNullOrEmpty(task.PENumber)).ToList();
+                            
+                            if (validBatch.Any())
                             {
-                                // Validate task before adding
-                                if (string.IsNullOrEmpty(task.PENumber))
-                                {
-                                    _logger.LogWarning("Skipping task with null PENumber");
-                                    continue;
-                                }
-                                
-                                dbContext.PETasks.Add(task);
+                                dbContext.PETasks.AddRange(validBatch);
                                 await dbContext.SaveChangesAsync();
+                                
+                                _logger.LogInformation("Saved batch of {count} tasks for PE {peNumber}", 
+                                    validBatch.Count, plannedEvent.PeNumber);
                             }
-                            catch (Exception ex)
+                            
+                            // Log any skipped tasks
+                            var skippedCount = batch.Count - validBatch.Count;
+                            if (skippedCount > 0)
                             {
-                                _logger.LogError(ex, "Failed to add task {taskName} for PE {peNumber}", 
-                                    task.Task, task.PENumber);
-                                
-                                // Log detailed information about the failing record
-                                _logger.LogError("Task data: PENumber={PENumber}, TaskSeq={TaskSeq}, Task={Task}, " +
-                                    "TaskWorkGroup={TaskWorkGroup}, OLA={OLA}, TaskStatus={TaskStatus}, " +
-                                    "TaskCreatedDate={TaskCreatedDate}, TaskCompleteDate={TaskCompleteDate}",
-                                    task.PENumber, task.TaskSeq, task.Task, task.TaskWorkGroup, task.OLA,
-                                    task.TaskStatus, task.TaskCreatedDate, task.TaskCompleteDate);
-                                
-                                // Continue with other tasks
+                                _logger.LogWarning("Skipped {count} invalid tasks in batch", skippedCount);
                             }
                         }
                         
-                        _logger.LogInformation("Successfully processed tasks for PE {peNumber}", plannedEvent.PeNumber);
+                        _logger.LogInformation("Successfully processed all tasks for PE {peNumber}", plannedEvent.PeNumber);
                     }
                     catch (Exception ex)
                     {
@@ -621,7 +610,7 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating tasks for PE {peNumber}", plannedEvent.PeNumber);
-                throw; // Rethrow to be caught by the calling method
+                throw;
             }
         }
 
