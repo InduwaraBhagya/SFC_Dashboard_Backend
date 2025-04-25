@@ -216,46 +216,42 @@ namespace SFCDashboard.Services
                     WHERE TASK_NAME IS NOT NULL
                 )
                 UPDATE pt
-                SET TaskPhase = CASE
-                    WHEN pt.Task = (SELECT TOP 1 TaskName 
-                                   FROM CurrentTasks ct 
-                                   WHERE ct.PENumber = pt.PENumber) 
-                    THEN 'ONGOING'
-                    WHEN pt.TaskSeq < (SELECT TOP 1 pt2.TaskSeq 
-                                      FROM PETasks pt2 
-                                      INNER JOIN CurrentTasks ct ON ct.PENumber = pt2.PENumber
-                                      WHERE pt2.PENumber = pt.PENumber 
-                                      AND pt2.Task = ct.TaskName) 
-                    THEN 'FINISH'
-                    ELSE 'WAITING'
-                END,
-                TaskStatus = CASE
-                    WHEN TaskPhase = 'FINISH' THEN 'COMPLETED'
-                    ELSE pt.TaskStatus
-                END,
-                TaskWorkGroup = CASE
-                    WHEN pt.Task = (SELECT TOP 1 TaskName 
-                                   FROM CurrentTasks ct 
-                                   WHERE ct.PENumber = pt.PENumber) 
-                    THEN (SELECT TOP 1 TaskWg 
-                          FROM CurrentTasks ct 
-                          WHERE ct.PENumber = pt.PENumber)
-                    ELSE pt.TaskWorkGroup
-                END,
-                ActualTaskCreatedDate = CASE
-                    WHEN pt.Task = (SELECT TOP 1 TaskName 
-                                   FROM CurrentTasks ct 
-                                   WHERE ct.PENumber = pt.PENumber) 
-                    AND pt.ActualTaskCreatedDate IS NULL 
-                    THEN GETUTCDATE()
-                    ELSE pt.ActualTaskCreatedDate
-                END,
-                ActualTaskCompleteDate = CASE
-                    WHEN TaskPhase = 'FINISH' 
-                    AND pt.ActualTaskCompleteDate IS NULL 
-                    THEN GETUTCDATE()
-                    ELSE pt.ActualTaskCompleteDate
-                END
+                SET TaskStatus = CASE
+                        WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                       FROM CurrentTasks ct 
+                                       WHERE ct.PENumber = pt.PENumber) 
+                        THEN 'ONGOING'
+                        WHEN pt.TaskSeq < (SELECT TOP 1 pt2.TaskSeq 
+                                          FROM PETasks pt2 
+                                          INNER JOIN CurrentTasks ct ON ct.PENumber = pt2.PENumber
+                                          WHERE pt2.PENumber = pt.PENumber 
+                                          AND pt2.Task = ct.TaskName) 
+                        THEN 'COMPLETED'
+                        ELSE 'WAITING'
+                    END,
+                    TaskWorkGroup = CASE
+                        WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                       FROM CurrentTasks ct 
+                                       WHERE ct.PENumber = pt.PENumber) 
+                        THEN (SELECT TOP 1 TaskWg 
+                              FROM CurrentTasks ct 
+                              WHERE ct.PENumber = pt.PENumber)
+                        ELSE pt.TaskWorkGroup
+                    END,
+                    ActualTaskCreatedDate = CASE
+                        WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                       FROM CurrentTasks ct 
+                                       WHERE ct.PENumber = pt.PENumber) 
+                        AND pt.ActualTaskCreatedDate IS NULL 
+                        THEN GETUTCDATE()
+                        ELSE pt.ActualTaskCreatedDate
+                    END,
+                    ActualTaskCompleteDate = CASE
+                        WHEN TaskStatus = 'COMPLETED' 
+                        AND pt.ActualTaskCompleteDate IS NULL 
+                        THEN GETUTCDATE()
+                        ELSE pt.ActualTaskCompleteDate
+                    END
                 FROM PETasks pt
                 WHERE EXISTS (SELECT 1 FROM CurrentTasks ct WHERE ct.PENumber = pt.PENumber)";
 
@@ -441,6 +437,18 @@ namespace SFCDashboard.Services
                         // For the next task, its created date will be this task's complete date
                         previousTaskCompleteDate = taskCompleteDate;
 
+                        // Determine initial status based on current task
+                        string initialStatus = "WAITING"; // Default status is waiting
+                        
+                        if (taskTemplate.Name == record.TASK_NAME)
+                        {
+                            initialStatus = "ONGOING"; // This is the current task
+                        }
+                        else if (orderedTaskTemplates.IndexOf(taskTemplate) < orderedTaskTemplates.FindIndex(t => t.Name == record.TASK_NAME))
+                        {
+                            initialStatus = "COMPLETED"; // This task comes before the current task
+                        }
+
                         // Create task for this PE, safely handling nullable fields
                         var peTask = new PETask
                         {
@@ -448,14 +456,14 @@ namespace SFCDashboard.Services
                             TaskSeq = taskTemplate.TaskSeq,
                             Task = taskTemplate.Name ?? string.Empty,
                             OLA = taskTemplate.OLA_Parameters ?? string.Empty,
-                            TaskStatus = "INPROGRESS",
-                            TaskPhase = "ONGOING",
+                            TaskStatus = initialStatus,
                             TaskCreatedDate = taskCreatedDate,
                             TaskCompleteDate = taskCompleteDate,
                             TaskWorkGroup = "NULL", // Default value
                             // Initialize optional fields to avoid database null constraint violations
                             ActualTaskCreatedDate = null,
-                            ACtualTaskCompleteDate = null
+                            ACtualTaskCompleteDate = null,
+                            IsUrgent = false
                         };
 
                         // If this is the current task in the PE record, set actual dates and work group
@@ -463,12 +471,11 @@ namespace SFCDashboard.Services
                         {
                             peTask.TaskWorkGroup = record.TASK_WG ?? "NULL";
                             peTask.ActualTaskCreatedDate = currentDate;
-
-                            // Only set ActualTaskCompleteDate if the status would be ongoing
-                            if (peTask.TaskPhase == "ONGOING")
-                            {
-                                peTask.ACtualTaskCompleteDate = currentDate;
-                            }
+                        }
+                        // If this task is completed, set the actual complete date
+                        else if (initialStatus == "COMPLETED")
+                        {
+                            peTask.ACtualTaskCompleteDate = currentDate;
                         }
 
                         tasksToCreate.Add(peTask);
@@ -613,7 +620,7 @@ namespace SFCDashboard.Services
                                 if (task.Task == currentTaskName)
                                 {
                                     // This is the current task
-                                    task.TaskPhase = "ONGOING";
+                                    task.TaskStatus = "ONGOING";
                                     task.TaskWorkGroup = plannedEvent.TaskWg ?? task.TaskWorkGroup ?? "NULL";
                                     currentTaskFound = true;
                                     hasChanges = true;
@@ -627,7 +634,6 @@ namespace SFCDashboard.Services
                                 else if (!currentTaskFound)
                                 {
                                     // Tasks before the current task are finished
-                                    task.TaskPhase = "FINISH";
                                     task.TaskStatus = "COMPLETED";
                                     hasChanges = true;
                                     
@@ -640,7 +646,7 @@ namespace SFCDashboard.Services
                                 else
                                 {
                                     // Tasks after the current task are waiting
-                                    task.TaskPhase = "WAITING";
+                                    task.TaskStatus = "WAITING";
                                     hasChanges = true;
                                 }
                             }
