@@ -41,32 +41,36 @@ namespace SFCDashboard.Controllers
             return View(task);
         }
 
-        // POST: PETasks/RequestUrgent/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RequestUrgent(int id)
         {
             var task = await _context.PETasks.FindAsync(id);
-            if (task == null || task.TaskStatus != "INPROGRESS")
+            if (task == null || task.TaskStatus?.ToUpper() == "COMPLETED" || task.IsUrgent)
             {
                 return NotFound();
             }
 
-            // Mark the task as pending urgent confirmation
-            task.TaskStatus = "PENDING_URGENT_CONFIRMATION";
+            // Mark the task with UrgentRequested flag instead of changing status
+            task.UrgentRequested = true;
+            task.Priority = (task.Priority ?? "") + " [URGENT REQUEST PENDING]";
+            
+            // Keep the original task status
+            string originalStatus = task.TaskStatus;
+            
             _context.Update(task);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Task ID {taskId} marked as pending urgent confirmation", id);
+            _logger.LogInformation("Task ID {taskId} marked with urgent request flag, status remains {status}", id, originalStatus);
             TempData["SuccessMessage"] = "Urgent request submitted for approval.";
-            
+
             // Return to the referring page or planned event details
             string referer = Request.Headers["Referer"].ToString();
             if (!string.IsNullOrEmpty(referer))
             {
                 return Redirect(referer);
             }
-            
+
             return RedirectToAction("Details", "PlannedEvents", new { id = task.PlannedEvent?.Id });
         }
 
@@ -80,7 +84,7 @@ namespace SFCDashboard.Controllers
 
             var task = await _context.PETasks
                 .Include(t => t.PlannedEvent)
-                .FirstOrDefaultAsync(t => t.Id == id && t.TaskStatus == "PENDING_URGENT_CONFIRMATION");
+                .FirstOrDefaultAsync(t => t.Id == id && t.UrgentRequested && !t.IsUrgent);
 
             if (task == null)
             {
@@ -94,7 +98,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> UrgentRequestsList()
         {
             var pendingRequests = await _context.PETasks
-                .Where(t => t.TaskStatus == "PENDING_URGENT_CONFIRMATION")
+                .Where(t => t.UrgentRequested && !t.IsUrgent)
                 .Include(t => t.PlannedEvent)
                 .OrderBy(t => t.PENumber)
                 .ToListAsync();
@@ -109,33 +113,36 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
         {
             var task = await _context.PETasks.FindAsync(id);
-            if (task == null || task.TaskStatus != "PENDING_URGENT_CONFIRMATION")
+            if (task == null || !task.UrgentRequested)
             {
                 return NotFound();
             }
 
+            // Clear the urgent requested flag
+            task.UrgentRequested = false;
+            
+            // Remove the pending marker from the priority
+            task.Priority = task.Priority?.Replace("[URGENT REQUEST PENDING]", "").Trim();
+
             switch (urgentReason)
             {
                 case "OpeningCeremony":
-                    task.TaskStatus = "INPROGRESS";
                     task.IsUrgent = true;
                     task.Priority = (task.Priority ?? "") + " [URGENT: Opening Ceremony - Priority 1]";
                     break;
 
                 case "CriticalCustomer":
-                    task.TaskStatus = "INPROGRESS";
                     task.IsUrgent = true;
                     task.Priority = (task.Priority ?? "") + " [URGENT: Critical Customer - Priority 2]";
                     break;
 
                 case "NetworkOutage":
-                    task.TaskStatus = "INPROGRESS";
                     task.IsUrgent = true;
                     task.Priority = (task.Priority ?? "") + " [URGENT: Network Outage - Priority 0]";
                     break;
 
                 case "Reject":
-                    task.TaskStatus = "INPROGRESS";
+                    // Just clearing the UrgentRequested flag and adding rejection note
                     task.Priority = (task.Priority ?? "") + " [Urgent Request Rejected]";
                     break;
 

@@ -186,15 +186,25 @@
                                         {
                                             <span class="badge bg-danger">URGENT</span>
                                         }
+                                        @if (task.UrgentRequested && !task.IsUrgent)
+                                        {
+                                            <span class="badge bg-warning">URGENT REQUESTED</span>
+                                        }
                                         @if (!string.IsNullOrEmpty(task.Priority))
                                         {
                                             <small class="d-block text-muted mt-1">@task.Priority</small>
                                         }
                                     </td>
-                                    
+
                                     <!-- Actions column with Request Urgent button -->
                                     <td>
-                                        @if (task.TaskStatus?.ToUpper() != "COMPLETED" && !task.IsUrgent)
+                                        @if (task.UrgentRequested && !task.IsUrgent)
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-hourglass-split"></i> Awaiting Approval
+                                            </span>
+                                        }
+                                        else if (task.TaskStatus?.ToUpper() != "COMPLETED" && !task.IsUrgent)
                                         {
                                             <form asp-controller="PETasks" asp-action="RequestUrgent" method="post">
                                                 <input type="hidden" name="id" value="@task.Id" />

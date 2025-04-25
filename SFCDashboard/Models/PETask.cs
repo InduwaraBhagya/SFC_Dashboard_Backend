@@ -31,7 +31,9 @@ namespace SFCDashboard.Models
         public DateTime? ACtualTaskCompleteDate { get; set; }
 
         public bool IsUrgent { get; set; }
+        public bool UrgentRequested { get; set; } = false;
         public string? Priority { get; set; }
         public PlannedEvent? PlannedEvent { get; set; }
+
     }
 }

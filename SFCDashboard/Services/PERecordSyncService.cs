@@ -62,108 +62,142 @@ namespace SFCDashboard.Services
                 {
                     var loadingContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     var dataLoadingTasks = await LoadDataAsync(loadingContext);
-                    (sourceRecords, existingEvents, existingTasks, taskTemplates) = dataLoadingTasks;
+                    sourceRecords = dataLoadingTasks.sourceRecords;
+                    existingEvents = dataLoadingTasks.existingEvents;
+                    existingTasks = dataLoadingTasks.existingTasks;
+                    taskTemplates = dataLoadingTasks.taskTemplates;
                 }
 
                 if (sourceRecords.Count == 0 || taskTemplates.Count == 0)
                 {
-                    _logger.LogWarning("Required data missing. Aborting synchronization.");
+                    _logger.LogWarning("Source records or task templates are empty. Cannot proceed with synchronization.");
                     return;
                 }
 
-                // Process records in batches
-                var processedPENumbers = new HashSet<string>();
-                const int batchSize = 100;
+                // Group records by PE_NUMBER to handle duplicates
+                var groupedRecords = sourceRecords.GroupBy(r => r.PE_NUMBER)
+                    .ToDictionary(g => g.Key, g => g.ToList());
 
-                foreach (var batch in sourceRecords.Where(r => !string.IsNullOrEmpty(r.PE_NUMBER))
-                                                 .Where(r => r.PE_NUMBER != null && !processedPENumbers.Contains(r.PE_NUMBER))
-                                                 .Chunk(batchSize))
+                _logger.LogInformation("Grouped {sourceCount} source records into {groupCount} unique PE numbers", 
+                    sourceRecords.Count, groupedRecords.Count);
+
+                // Create lookup dictionary for faster searching
+                var existingEventsByPeNumber = existingEvents.ToDictionary(
+                    pe => pe.PeNumber, 
+                    pe => pe, 
+                    StringComparer.OrdinalIgnoreCase); // Case insensitive comparison
+
+                using (var scope = _serviceProvider.CreateScope())
                 {
-                    // Use a new context for each batch
-                    using var scope = _serviceProvider.CreateScope();
                     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    
+                    // Track metrics
+                    int newEventCount = 0;
+                    int updatedEventCount = 0;
+                    int duplicateCount = 0;
 
-                    var newEvents = new List<PlannedEvent>();
-                    var updatedEvents = new List<PlannedEvent>();
-                    var newTasks = new List<PETask>();
-
-                    foreach (var record in batch)
+                    // Process each unique PE_NUMBER group
+                    foreach (var group in groupedRecords)
                     {
-                        if (!string.IsNullOrEmpty(record.PE_NUMBER))
+                        try
                         {
-                            processedPENumbers.Add(record.PE_NUMBER);
-                        }
-                        var existingEvent = existingEvents.FirstOrDefault(pe => pe.PeNumber == record.PE_NUMBER);
+                            string peNumber = group.Key;
+                            var records = group.Value;
 
-                        if (existingEvent != null)
-                        {
-                            var trackedEvent = await dbContext.PlannedEvents
-                                .FirstOrDefaultAsync(pe => pe.PeNumber == record.PE_NUMBER);
-                            
-                            if (trackedEvent != null)
+                            if (string.IsNullOrEmpty(peNumber))
                             {
-                                UpdatePlannedEvent(trackedEvent, record);
-                                updatedEvents.Add(trackedEvent);
+                                _logger.LogWarning("Skipping group with null or empty PE_NUMBER");
+                                continue;
+                            }
 
-                                if (!existingTasks.Any(t => t.PENumber == record.PE_NUMBER))
+                            if (records.Count > 1)
+                            {
+                                _logger.LogWarning("Found {count} duplicate records for PE_NUMBER: {peNumber}", 
+                                    records.Count, peNumber);
+                                duplicateCount += records.Count - 1;
+                                
+                                // Use the most recent record in case of duplicates
+                                // This assumes there's a timestamp field to determine which is most recent
+                                // If not, you might need a different strategy
+                                var mostRecentRecord = records.OrderByDescending(r => r.SO_CREATE_DATE ?? DateTime.MinValue).First();
+                                records = new List<PERecord> { mostRecentRecord };
+                            }
+
+                            // Now process the single/most recent record
+                            var record = records.First();
+                            bool eventExists = existingEventsByPeNumber.TryGetValue(peNumber, out PlannedEvent existingEvent);
+
+                            if (eventExists)
+                            {
+                                _logger.LogDebug("Found existing event for PE_NUMBER: {peNumber}", peNumber);
+                                
+                                // Fetch the actual entity from database to update it
+                                var trackedEvent = await dbContext.PlannedEvents
+                                    .FirstOrDefaultAsync(pe => pe.PeNumber == peNumber);
+                                    
+                                if (trackedEvent != null)
                                 {
-                                    var tasks = CreateTasksForEvent(trackedEvent, record, taskTemplates);
-                                    if (tasks != null)
+                                    // Update existing entity
+                                    UpdatePlannedEvent(trackedEvent, record);
+                                    await dbContext.SaveChangesAsync();
+                                    updatedEventCount++;
+                                    
+                                    // Check if tasks need to be created
+                                    if (!existingTasks.Any(t => t.PENumber == peNumber))
                                     {
-                                        newTasks.AddRange(tasks);
+                                        await CreatePETasksForEvent(dbContext, trackedEvent, record, taskTemplates);
                                     }
                                 }
                             }
-                        }
-                        else
-                        {
-                            var newEvent = CreatePlannedEventFromRecord(record);
-                            if (newEvent != null)
+                            else
                             {
-                                newEvents.Add(newEvent);
-                                var tasks = CreateTasksForEvent(newEvent, record, taskTemplates);
-                                if (tasks != null)
+                                _logger.LogInformation("Creating new event for PE_NUMBER: {peNumber}", peNumber);
+                                
+                                // Do a final duplicate check to be safe
+                                var duplicateCheck = await dbContext.PlannedEvents
+                                    .FirstOrDefaultAsync(pe => pe.PeNumber == peNumber);
+                                    
+                                if (duplicateCheck == null)
                                 {
-                                    newTasks.AddRange(tasks);
+                                    // Create new event
+                                    var newEvent = CreatePlannedEventFromRecord(record);
+                                    dbContext.PlannedEvents.Add(newEvent);
+                                    
+                                    // Save immediately to get the ID before creating tasks
+                                    await dbContext.SaveChangesAsync();
+                                    newEventCount++;
+                                    
+                                    // Create tasks for the new event
+                                    await CreatePETasksForEvent(dbContext, newEvent, record, taskTemplates);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("Found duplicate for PE_NUMBER: {peNumber} despite not being in initial list", peNumber);
+                                    // Update the existing record that was found
+                                    UpdatePlannedEvent(duplicateCheck, record);
+                                    await dbContext.SaveChangesAsync();
+                                    updatedEventCount++;
                                 }
                             }
                         }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error processing record group with PE_NUMBER: {peNumber}", group.Key);
+                            // Continue with next group
+                        }
                     }
 
-                    // Save changes for this batch
-                    if (newEvents.Count > 0)
-                    {
-                        await SaveEntitiesInBatches(dbContext, newEvents, "PlannedEvents");
-                    }
-
-                    if (updatedEvents.Count > 0)
-                    {
-                        await SaveEntitiesInBatches(dbContext, updatedEvents, "Updated PlannedEvents");
-                    }
-
-                    if (newTasks.Count > 0)
-                    {
-                        await SaveEntitiesInBatches(dbContext, newTasks, "PETasks");
-                    }
+                    _logger.LogInformation("Sync completed. New events: {newCount}, Updated: {updatedCount}, Duplicates handled: {duplicateCount}",
+                        newEventCount, updatedEventCount, duplicateCount);
                 }
-
-                // Update task phases with a new context
-                using (var scope = _serviceProvider.CreateScope())
-                {
-                    var phaseContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    await UpdateTaskPhasesEfficiently(phaseContext);
-                }
-
-                _logger.LogInformation("PE records synchronization completed successfully");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during PE records synchronization");
-                throw;
             }
         }
 
-        private static async Task<(List<PERecord>, List<PlannedEvent>, List<PETask>, List<PETaskList>)> LoadDataAsync(ApplicationDbContext dbContext)
+        private static async Task<(List<PERecord> sourceRecords, List<PlannedEvent> existingEvents, List<PETask> existingTasks, List<PETaskList> taskTemplates)> LoadDataAsync(ApplicationDbContext dbContext)
         {
             try 
             {
@@ -252,6 +286,7 @@ namespace SFCDashboard.Services
                         THEN GETUTCDATE()
                         ELSE pt.ActualTaskCompleteDate
                     END
+                    -- UrgentRequested and IsUrgent are preserved and not modified by this update
                 FROM PETasks pt
                 WHERE EXISTS (SELECT 1 FROM CurrentTasks ct WHERE ct.PENumber = pt.PENumber)";
 
@@ -463,7 +498,9 @@ namespace SFCDashboard.Services
                             // Initialize optional fields to avoid database null constraint violations
                             ActualTaskCreatedDate = null,
                             ACtualTaskCompleteDate = null,
-                            IsUrgent = false
+                            IsUrgent = false,
+                            UrgentRequested = false, // Initialize UrgentRequested flag
+                            Priority = string.Empty // Initialize Priority field
                         };
 
                         // If this is the current task in the PE record, set actual dates and work group
@@ -522,6 +559,7 @@ namespace SFCDashboard.Services
                     return; // Skip if tasks already exist
                 }
 
+                // Create tasks without tracking the parent event
                 var tasksToCreate = CreateTasksForEvent(plannedEvent, record, taskListTemplates);
 
                 if (tasksToCreate.Count > 0)
@@ -529,6 +567,12 @@ namespace SFCDashboard.Services
                     try
                     {
                         _logger.LogInformation("Adding {count} tasks for PE {peNumber}", tasksToCreate.Count, plannedEvent.PeNumber);
+                        
+                        // Detach PlannedEvent references to avoid tracking conflicts
+                        foreach (var task in tasksToCreate)
+                        {
+                            task.PlannedEvent = null; // Don't track the parent event
+                        }
                         
                         // Save tasks individually to identify problematic records
                         foreach (var task in tasksToCreate)

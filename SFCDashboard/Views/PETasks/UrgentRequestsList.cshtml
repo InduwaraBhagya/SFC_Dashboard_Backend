@@ -36,23 +36,54 @@
                         <th>Workgroup</th>
                         <th>Created Date</th>
                         <th>Target Date</th>
+                        <th>Priority</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model)
+                    @foreach (var task in Model)
                     {
                         <tr>
-                            <td>@item.PENumber</td>
-                            <td>@item.TaskSeq</td>
-                            <td>@item.Task</td>
-                            <td>@item.TaskWorkGroup</td>
-                            <td>@item.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
-                            <td>@item.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                            <td>@task.PENumber</td>
+                            <td>@task.TaskSeq</td>
+                            <td>@task.Task</td>
+                            <td>@task.TaskWorkGroup</td>
+                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+
+                            <!-- Priority column showing Urgent status -->
                             <td>
-                                <a asp-action="UrgentRequestConfirmation" asp-route-id="@item.Id" class="btn btn-warning btn-sm">
-                                    Review
-                                </a>
+                                @if (task.IsUrgent)
+                                {
+                                    <span class="badge bg-danger">URGENT</span>
+                                }
+                                @if (task.UrgentRequested && !task.IsUrgent)
+                                {
+                                    <span class="badge bg-warning">URGENT REQUESTED</span>
+                                }
+                                @if (!string.IsNullOrEmpty(task.Priority))
+                                {
+                                    <small class="d-block text-muted mt-1">@task.Priority</small>
+                                }
+                            </td>
+
+                            <!-- Actions column with Request Urgent button -->
+                            <td>
+                                @if (task.UrgentRequested && !task.IsUrgent)
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-hourglass-split"></i> Awaiting Approval
+                                    </span>
+                                }
+                                else if (task.TaskStatus?.ToUpper() != "COMPLETED" && !task.IsUrgent)
+                                {
+                                    <form asp-controller="PETasks" asp-action="RequestUrgent" method="post">
+                                        <input type="hidden" name="id" value="@task.Id" />
+                                        <button type="submit" class="btn btn-warning btn-sm w-100">
+                                            <i class="bi bi-exclamation-triangle"></i> Request Urgent
+                                        </button>
+                                    </form>
+                                }
                             </td>
                         </tr>
                     }
