@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using SFCDB.Models;
 using SFCDashboard.Models;
 using SFCDashboard.Data;
+using NuGet.Packaging;
 
 namespace SFCDashboard.Services
 {
@@ -47,155 +48,218 @@ namespace SFCDashboard.Services
 
         public async Task SyncPERecordsAsync()
         {
-            using (var scope = _serviceProvider.CreateScope())
+            try
             {
-                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                
-                try
+                _logger.LogInformation("Starting PE records synchronization");
+
+                // Load data with a dedicated context
+                List<PERecord> sourceRecords;
+                List<PlannedEvent> existingEvents;
+                List<PETask> existingTasks;
+                List<PETaskList> taskTemplates;
+
+                using (var scope = _serviceProvider.CreateScope())
                 {
-                    _logger.LogInformation("Starting PE records synchronization");
-                    
-                    // Get all PE records from the source table
-                    var sourceRecords = await dbContext.PERecords.ToListAsync();
-                    _logger.LogInformation("Found {count} PE records in source table", sourceRecords.Count);
-                    
-                    // Get all existing planned events
-                    var existingPlannedEvents = await dbContext.PlannedEvents.ToListAsync();
-                    _logger.LogInformation("Found {count} existing planned events", existingPlannedEvents.Count);
-                    
-                    // Get all existing PE tasks
-                    var existingPETasks = await dbContext.PETasks.ToListAsync();
-                    _logger.LogInformation("Found {count} existing PE tasks", existingPETasks.Count);
-                    
-                    // Get all task list templates
-                    var taskListTemplates = await dbContext.PETaskLists.ToListAsync();
-                    _logger.LogInformation("Found {count} task list templates", taskListTemplates.Count);
-                    
-                    if (sourceRecords.Count == 0)
-                    {
-                        _logger.LogWarning("No source records found. Aborting synchronization.");
-                        return;
-                    }
-                    
-                    if (taskListTemplates.Count == 0)
-                    {
-                        _logger.LogWarning("No task list templates found. Aborting synchronization.");
-                        return;
-                    }
-                    
-                    // Track processed PE numbers to avoid duplicates
-                    var processedPENumbers = new HashSet<string>();
-                    int newEventsCreated = 0;
-                    int eventsUpdated = 0;
-                    
-                    foreach (var record in sourceRecords)
-                    {
-                        if (string.IsNullOrEmpty(record.PE_NUMBER))
-                        {
-                            _logger.LogWarning("Skipping record with empty PE_NUMBER");
-                            continue;
-                        }
-                        
-                        if (processedPENumbers.Contains(record.PE_NUMBER))
-                        {
-                            _logger.LogDebug("Skipping duplicate PE_NUMBER: {peNumber}", record.PE_NUMBER);
-                            continue;
-                        }
-                        
-                        processedPENumbers.Add(record.PE_NUMBER);
-                        
-                        try
-                        {
-                            // Check if this PE number already exists
-                            var existingEvent = existingPlannedEvents.FirstOrDefault(pe => pe.PeNumber == record.PE_NUMBER);
-                            
-                            if (existingEvent != null)
-                            {
-                                _logger.LogDebug("Updating existing planned event for PE: {peNumber}", record.PE_NUMBER);
-                                // Update existing record with new data
-                                UpdatePlannedEvent(existingEvent, record);
-                                dbContext.PlannedEvents.Update(existingEvent);
-                                
-                                try 
-                                {
-                                    await dbContext.SaveChangesAsync(); // Save to ensure changes are persisted
-                                    eventsUpdated++;
-                                    
-                                    // Check if tasks exist for this event
-                                    bool tasksExist = existingPETasks.Any(t => t.PENumber == record.PE_NUMBER);
-                                    
-                                    // Create tasks if they don't exist
-                                    if (!tasksExist)
-                                    {
-                                        _logger.LogInformation("Creating tasks for existing event: {peNumber}", record.PE_NUMBER);
-                                        await CreatePETasksForEvent(dbContext, existingEvent, record, taskListTemplates);
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogDbContextError(ex, $"Error saving updated planned event for PE: {record.PE_NUMBER}");
-                                }
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    _logger.LogInformation("Creating new planned event for PE: {peNumber}", record.PE_NUMBER);
-                                    // Create new planned event
-                                    var newEvent = CreatePlannedEventFromRecord(record);
-                                    
-                                    // Validate the new event before adding
-                                    if (string.IsNullOrEmpty(newEvent.PeNumber))
-                                    {
-                                        _logger.LogWarning("Skipping creation of planned event with empty PeNumber");
-                                        continue;
-                                    }
-                                    
-                                    // Try to add the new event
-                                    dbContext.PlannedEvents.Add(newEvent);
-                                    
-                                    try
-                                    {
-                                        await dbContext.SaveChangesAsync(); // Save to generate ID
-                                        newEventsCreated++;
-                                        _logger.LogInformation("Successfully created planned event for PE: {peNumber}", record.PE_NUMBER);
-                                        
-                                        // Create associated tasks
-                                        await CreatePETasksForEvent(dbContext, newEvent, record, taskListTemplates);
-                                    }
-                                    catch (DbUpdateException dbEx)
-                                    {
-                                        LogDbContextError(dbEx, $"Failed to save new planned event for PE: {record.PE_NUMBER}");
-                                        
-                                        // Log detailed information about the failing record
-                                        _logger.LogError("PlannedEvent data: PeNumber={PeNumber}, TaskName={TaskName}, TaskWg={TaskWg}", 
-                                            newEvent.PeNumber, newEvent.TaskName, newEvent.TaskWg);
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex, "Error creating planned event for PE: {peNumber}", record.PE_NUMBER);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error processing record with PE_NUMBER: {peNumber}", record.PE_NUMBER);
-                        }
-                    }
-                    
-                    // Update task phases based on current task status
-                    await UpdateTaskPhases(dbContext);
-                    
-                    _logger.LogInformation("PE records synchronization completed. Created {new} new events, updated {updated} existing events", 
-                        newEventsCreated, eventsUpdated);
+                    var loadingContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var dataLoadingTasks = await LoadDataAsync(loadingContext);
+                    (sourceRecords, existingEvents, existingTasks, taskTemplates) = dataLoadingTasks;
                 }
-                catch (Exception ex)
+
+                if (sourceRecords.Count == 0 || taskTemplates.Count == 0)
                 {
-                    _logger.LogError(ex, "Error during PE records synchronization");
-                    throw; // Rethrow so the error is visible
+                    _logger.LogWarning("Required data missing. Aborting synchronization.");
+                    return;
+                }
+
+                // Process records in batches
+                var processedPENumbers = new HashSet<string>();
+                const int batchSize = 100;
+
+                foreach (var batch in sourceRecords.Where(r => !string.IsNullOrEmpty(r.PE_NUMBER))
+                                                 .Where(r => r.PE_NUMBER != null && !processedPENumbers.Contains(r.PE_NUMBER))
+                                                 .Chunk(batchSize))
+                {
+                    // Use a new context for each batch
+                    using var scope = _serviceProvider.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                    var newEvents = new List<PlannedEvent>();
+                    var updatedEvents = new List<PlannedEvent>();
+                    var newTasks = new List<PETask>();
+
+                    foreach (var record in batch)
+                    {
+                        if (!string.IsNullOrEmpty(record.PE_NUMBER))
+                        {
+                            processedPENumbers.Add(record.PE_NUMBER);
+                        }
+                        var existingEvent = existingEvents.FirstOrDefault(pe => pe.PeNumber == record.PE_NUMBER);
+
+                        if (existingEvent != null)
+                        {
+                            var trackedEvent = await dbContext.PlannedEvents
+                                .FirstOrDefaultAsync(pe => pe.PeNumber == record.PE_NUMBER);
+                            
+                            if (trackedEvent != null)
+                            {
+                                UpdatePlannedEvent(trackedEvent, record);
+                                updatedEvents.Add(trackedEvent);
+
+                                if (!existingTasks.Any(t => t.PENumber == record.PE_NUMBER))
+                                {
+                                    var tasks = CreateTasksForEvent(trackedEvent, record, taskTemplates);
+                                    if (tasks != null)
+                                    {
+                                        newTasks.AddRange(tasks);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var newEvent = CreatePlannedEventFromRecord(record);
+                            if (newEvent != null)
+                            {
+                                newEvents.Add(newEvent);
+                                var tasks = CreateTasksForEvent(newEvent, record, taskTemplates);
+                                if (tasks != null)
+                                {
+                                    newTasks.AddRange(tasks);
+                                }
+                            }
+                        }
+                    }
+
+                    // Save changes for this batch
+                    if (newEvents.Count > 0)
+                    {
+                        await SaveEntitiesInBatches(dbContext, newEvents, "PlannedEvents");
+                    }
+
+                    if (updatedEvents.Count > 0)
+                    {
+                        await SaveEntitiesInBatches(dbContext, updatedEvents, "Updated PlannedEvents");
+                    }
+
+                    if (newTasks.Count > 0)
+                    {
+                        await SaveEntitiesInBatches(dbContext, newTasks, "PETasks");
+                    }
+                }
+
+                // Update task phases with a new context
+                using (var scope = _serviceProvider.CreateScope())
+                {
+                    var phaseContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    await UpdateTaskPhasesEfficiently(phaseContext);
+                }
+
+                _logger.LogInformation("PE records synchronization completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during PE records synchronization");
+                throw;
+            }
+        }
+
+        private static async Task<(List<PERecord>, List<PlannedEvent>, List<PETask>, List<PETaskList>)> LoadDataAsync(ApplicationDbContext dbContext)
+        {
+            try 
+            {
+                // Execute queries sequentially to avoid concurrent operations
+                var sourceRecords = await dbContext.PERecords.AsNoTracking().ToListAsync();
+                var existingEvents = await dbContext.PlannedEvents.AsNoTracking().ToListAsync();
+                var existingTasks = await dbContext.PETasks.AsNoTracking().ToListAsync();
+                var taskTemplates = await dbContext.PETaskLists.AsNoTracking().ToListAsync();
+
+                return (sourceRecords, existingEvents, existingTasks, taskTemplates);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Error loading data from database", ex);
+            }
+        }
+
+        private async Task SaveEntitiesInBatches<T>(DbContext context, List<T> entities, string entityType, int batchSize = 100) where T : class
+        {
+            try
+            {
+                var batches = entities.Chunk(batchSize);
+                var totalSaved = 0;
+
+                foreach (var batch in batches)
+                {
+                    if (context.Entry(batch.First()).State == EntityState.Added)
+                        context.Set<T>().AddRange(batch);
+                    else
+                        context.Set<T>().UpdateRange(batch);
+
+                    await context.SaveChangesAsync();
+                    totalSaved += batch.Length;
+                    _logger.LogDebug("Saved {count}/{total} {type}", totalSaved, entities.Count, entityType);
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving {type} batch", entityType);
+                throw;
+            }
+        }
+
+        private async Task UpdateTaskPhasesEfficiently(ApplicationDbContext dbContext)
+        {
+            var sql = @"
+                WITH CurrentTasks AS (
+                    SELECT PE_NUMBER as PENumber, TASK_NAME as TaskName, TASK_WG as TaskWg
+                    FROM PlannedEvents
+                    WHERE TASK_NAME IS NOT NULL
+                )
+                UPDATE pt
+                SET TaskPhase = CASE
+                    WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                   FROM CurrentTasks ct 
+                                   WHERE ct.PENumber = pt.PENumber) 
+                    THEN 'ONGOING'
+                    WHEN pt.TaskSeq < (SELECT TOP 1 pt2.TaskSeq 
+                                      FROM PETasks pt2 
+                                      INNER JOIN CurrentTasks ct ON ct.PENumber = pt2.PENumber
+                                      WHERE pt2.PENumber = pt.PENumber 
+                                      AND pt2.Task = ct.TaskName) 
+                    THEN 'FINISH'
+                    ELSE 'WAITING'
+                END,
+                TaskStatus = CASE
+                    WHEN TaskPhase = 'FINISH' THEN 'COMPLETED'
+                    ELSE pt.TaskStatus
+                END,
+                TaskWorkGroup = CASE
+                    WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                   FROM CurrentTasks ct 
+                                   WHERE ct.PENumber = pt.PENumber) 
+                    THEN (SELECT TOP 1 TaskWg 
+                          FROM CurrentTasks ct 
+                          WHERE ct.PENumber = pt.PENumber)
+                    ELSE pt.TaskWorkGroup
+                END,
+                ActualTaskCreatedDate = CASE
+                    WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                   FROM CurrentTasks ct 
+                                   WHERE ct.PENumber = pt.PENumber) 
+                    AND pt.ActualTaskCreatedDate IS NULL 
+                    THEN GETUTCDATE()
+                    ELSE pt.ActualTaskCreatedDate
+                END,
+                ActualTaskCompleteDate = CASE
+                    WHEN TaskPhase = 'FINISH' 
+                    AND pt.ActualTaskCompleteDate IS NULL 
+                    THEN GETUTCDATE()
+                    ELSE pt.ActualTaskCompleteDate
+                END
+                FROM PETasks pt
+                WHERE EXISTS (SELECT 1 FROM CurrentTasks ct WHERE ct.PENumber = pt.PENumber)";
+
+            await dbContext.Database.ExecuteSqlRawAsync(sql);
         }
 
         private void UpdatePlannedEvent(PlannedEvent existingEvent, PERecord record)
@@ -267,10 +331,10 @@ namespace SFCDashboard.Services
 
         private PlannedEvent CreatePlannedEventFromRecord(PERecord record)
         {
-            try 
+            try
             {
                 _logger.LogDebug("Creating PlannedEvent from record with PE_NUMBER: {peNumber}", record.PE_NUMBER);
-                
+
                 // Create the event with null safety for all fields
                 var plannedEvent = new PlannedEvent
                 {
@@ -330,7 +394,7 @@ namespace SFCDashboard.Services
                     PEStatus = "ongoing", // Default status for new records
                     PECreatedDate = DateTime.UtcNow
                 };
-        
+
                 return plannedEvent;
             }
             catch (Exception ex)
@@ -338,6 +402,92 @@ namespace SFCDashboard.Services
                 _logger.LogError(ex, "Error creating PlannedEvent from record with PE_NUMBER: {peNumber}", record.PE_NUMBER);
                 throw; // Rethrow to be caught by caller
             }
+        }
+
+        private List<PETask> CreateTasksForEvent(PlannedEvent plannedEvent, PERecord record, List<PETaskList> taskListTemplates)
+        {
+            var tasksToCreate = new List<PETask>();
+            DateTime currentDate = DateTime.UtcNow;
+            DateTime previousTaskCompleteDate = currentDate; // Start with the current date for the first task
+
+            // Order task templates by sequence
+            var orderedTaskTemplates = taskListTemplates
+                .Where(t => !string.IsNullOrEmpty(t.OLA_Parameters)) // Only include templates with OLA values
+                .OrderBy(t => t.TaskSeq)
+                .ToList();
+
+            _logger.LogInformation("Found {count} ordered task templates with OLA values for PE {peNumber}",
+                orderedTaskTemplates.Count, plannedEvent.PeNumber);
+
+            foreach (var taskTemplate in orderedTaskTemplates)
+            {
+                try
+                {
+                    // Calculate OLA close date - assume OLA_Parameters contains days
+                    int olaDays = 0;
+                    bool validOla = int.TryParse(taskTemplate.OLA_Parameters, out olaDays);
+
+                    if (validOla)
+                    {
+                        _logger.LogDebug("Processing task template: {name} with OLA: {ola} days",
+                            taskTemplate.Name, olaDays);
+
+                        // Set up creation date (current date for first task, or previous task complete date for subsequent tasks)
+                        DateTime taskCreatedDate = previousTaskCompleteDate;
+
+                        // Calculate complete date based on OLA
+                        DateTime taskCompleteDate = taskCreatedDate.AddDays(olaDays);
+
+                        // For the next task, its created date will be this task's complete date
+                        previousTaskCompleteDate = taskCompleteDate;
+
+                        // Create task for this PE, safely handling nullable fields
+                        var peTask = new PETask
+                        {
+                            PENumber = plannedEvent.PeNumber ?? string.Empty,
+                            TaskSeq = taskTemplate.TaskSeq,
+                            Task = taskTemplate.Name ?? string.Empty,
+                            OLA = taskTemplate.OLA_Parameters ?? string.Empty,
+                            TaskStatus = "INPROGRESS",
+                            TaskPhase = "ONGOING",
+                            TaskCreatedDate = taskCreatedDate,
+                            TaskCompleteDate = taskCompleteDate,
+                            TaskWorkGroup = "NULL", // Default value
+                            // Initialize optional fields to avoid database null constraint violations
+                            ActualTaskCreatedDate = null,
+                            ACtualTaskCompleteDate = null
+                        };
+
+                        // If this is the current task in the PE record, set actual dates and work group
+                        if (taskTemplate.Name == record.TASK_NAME)
+                        {
+                            peTask.TaskWorkGroup = record.TASK_WG ?? "NULL";
+                            peTask.ActualTaskCreatedDate = currentDate;
+
+                            // Only set ActualTaskCompleteDate if the status would be ongoing
+                            if (peTask.TaskPhase == "ONGOING")
+                            {
+                                peTask.ACtualTaskCompleteDate = currentDate;
+                            }
+                        }
+
+                        tasksToCreate.Add(peTask);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Invalid OLA parameter for task template {name}: {ola}",
+                            taskTemplate.Name, taskTemplate.OLA_Parameters);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing task template {name} for PE {peNumber}",
+                        taskTemplate.Name, plannedEvent.PeNumber);
+                    // Continue processing other templates
+                }
+            }
+
+            return tasksToCreate;
         }
 
         private async Task CreatePETasksForEvent(ApplicationDbContext dbContext, PlannedEvent plannedEvent, PERecord record, List<PETaskList> taskListTemplates)
@@ -365,86 +515,7 @@ namespace SFCDashboard.Services
                     return; // Skip if tasks already exist
                 }
 
-                List<PETask> tasksToCreate = new List<PETask>();
-                DateTime currentDate = DateTime.UtcNow;
-                DateTime previousTaskCompleteDate = currentDate; // Start with the current date for the first task
-
-                // Order task templates by sequence
-                var orderedTaskTemplates = taskListTemplates
-                    .Where(t => !string.IsNullOrEmpty(t.OLA_Parameters)) // Only include templates with OLA values
-                    .OrderBy(t => t.TaskSeq)
-                    .ToList();
-
-                _logger.LogInformation("Found {count} ordered task templates with OLA values for PE {peNumber}", 
-                    orderedTaskTemplates.Count, plannedEvent.PeNumber);
-
-                foreach (var taskTemplate in orderedTaskTemplates)
-                {
-                    try
-                    {
-                        // Calculate OLA close date - assume OLA_Parameters contains days
-                        int olaDays = 0;
-                        bool validOla = int.TryParse(taskTemplate.OLA_Parameters, out olaDays);
-                        
-                        if (validOla)
-                        {
-                            _logger.LogDebug("Processing task template: {name} with OLA: {ola} days", 
-                                taskTemplate.Name, olaDays);
-                            
-                            // Set up creation date (current date for first task, or previous task complete date for subsequent tasks)
-                            DateTime taskCreatedDate = previousTaskCompleteDate;
-                            
-                            // Calculate complete date based on OLA
-                            DateTime taskCompleteDate = taskCreatedDate.AddDays(olaDays);
-                            
-                            // For the next task, its created date will be this task's complete date
-                            previousTaskCompleteDate = taskCompleteDate;
-
-                            // Create task for this PE, safely handling nullable fields
-                            var peTask = new PETask
-                            {
-                                PENumber = plannedEvent.PeNumber ?? string.Empty,
-                                TaskSeq = taskTemplate.TaskSeq,
-                                Task = taskTemplate.Name ?? string.Empty,
-                                OLA = taskTemplate.OLA_Parameters ?? string.Empty,
-                                TaskStatus = "INPROGRESS",
-                                TaskPhase = "ONGOING",
-                                TaskCreatedDate = taskCreatedDate,
-                                TaskCompleteDate = taskCompleteDate,
-                                TaskWorkGroup = "NULL", // Default value
-                                // Initialize optional fields to avoid database null constraint violations
-                                ActualTaskCreatedDate = null,
-                                ACtualTaskCompleteDate = null
-                            };
-
-                            // If this is the current task in the PE record, set actual dates and work group
-                            if (taskTemplate.Name == record.TASK_NAME)
-                            {
-                                peTask.TaskWorkGroup = record.TASK_WG ?? "NULL";
-                                peTask.ActualTaskCreatedDate = currentDate;
-                                
-                                // Only set ActualTaskCompleteDate if the status would be ongoing
-                                if (peTask.TaskPhase == "ONGOING")
-                                {
-                                    peTask.ACtualTaskCompleteDate = currentDate;
-                                }
-                            }
-
-                            tasksToCreate.Add(peTask);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Invalid OLA parameter for task template {name}: {ola}", 
-                                taskTemplate.Name, taskTemplate.OLA_Parameters);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error processing task template {name} for PE {peNumber}", 
-                            taskTemplate.Name, plannedEvent.PeNumber);
-                        // Continue processing other templates
-                    }
-                }
+                var tasksToCreate = CreateTasksForEvent(plannedEvent, record, taskListTemplates);
 
                 if (tasksToCreate.Count > 0)
                 {
