@@ -10,169 +10,171 @@ namespace SFCDashboard.Models
         public int Id { get; set; }
 
         [Column("PROVINCE")]
-        public string Province { get; set; }
+        public string? Province { get; set; }
 
         [Column("REGION")]
-        public string Region { get; set; }
+        public string? Region { get; set; }
 
         [Column("RTOM")]
-        public string Rtom { get; set; }
+        public string? Rtom { get; set; }
 
         [Column("RTOM_DESCRIPTION")]
-        public string RtomDescription { get; set; }
+        public string? RtomDescription { get; set; }
 
         [Column("JOB_REFERENCE")]
-        public string JobReference { get; set; }
+        public string? JobReference { get; set; }
 
         [Column("CONTRACTOR_NAME")]
-        public string ContractorName { get; set; }
+        public string? ContractorName { get; set; }
 
         [Column("PE_NUMBER")]
-        public string PeNumber { get; set; }
+        public string? PeNumber { get; set; }
 
         [Column("PE_ACTIVITY")]
-        public string PeActivity { get; set; }
+        public string? PeActivity { get; set; }
 
         [Column("PE_NATURE")]
-        public string PeNature { get; set; }
+        public string? PeNature { get; set; }
 
         [Column("PE_TITLE")]
-        public string PeTitle { get; set; }
+        public string? PeTitle { get; set; }
 
         [Column("PE_OBJECTIVE")]
-        public string PeObjective { get; set; }
+        public string? PeObjective { get; set; }
 
         [Column("PE_AREA")]
-        public string PeArea { get; set; }
+        public string? PeArea { get; set; }
 
         [Column("SO_NUMBER")]
-        public string SoNumber { get; set; }
+        public string? SoNumber { get; set; }
 
         [Column("TASK_SEQ")]
         public int? TaskSeq { get; set; }
 
         [Column("TASK_NAME")]
-        public string TaskName { get; set; }
+        public string? TaskName { get; set; }
 
         [Column("TASK_WG")]
-        public string TaskWg { get; set; }
+        public string? TaskWg { get; set; }
 
         [Column("WO_ACTUAL_START_DATE")]
-        public string WoActualStartDate { get; set; }
+        public string? WoActualStartDate { get; set; }
 
         [Column("REQUEST_REFERENCE_NO")]
-        public string RequestReferenceNo { get; set; }
+        public string? RequestReferenceNo { get; set; }
 
         [Column("SO_ID")]
-        public string SoId { get; set; }
+        public string? SoId { get; set; }
 
         [Column("REGION_1")]
-        public string Region1 { get; set; }
+        public string? Region1 { get; set; }
 
         [Column("PROVINCE_1")]
-        public string Province1 { get; set; }
+        public string? Province1 { get; set; }
 
         [Column("RTOM_1")]
-        public string Rtom1 { get; set; }
+        public string? Rtom1 { get; set; }
 
         [Column("LEA")]
-        public string Lea { get; set; }
+        public string? Lea { get; set; }
 
         [Column("CCT_ID")]
-        public string CctId { get; set; }
+        public string? CctId { get; set; }
 
         [Column("SERVICE_CATEGORY")]
-        public string ServiceCategory { get; set; }
+        public string? ServiceCategory { get; set; }
 
         [Column("SERVICE_TYPE")]
-        public string ServiceType { get; set; }
+        public string? ServiceType { get; set; }
 
         [Column("SO_CREATE_DATE")]
         public DateTime? SoCreateDate { get; set; }
 
         [Column("ORDER_TYPE")]
-        public string OrderType { get; set; }
+        public string? OrderType { get; set; }
 
         [Column("CRM_ORDER")]
-        public string CrmOrder { get; set; }
+        public string? CrmOrder { get; set; }
 
         [Column("WO_ID")]
-        public string WoId { get; set; }
+        public string? WoId { get; set; }
 
         [Column("PENDING_TASK_NAME")]
-        public string PendingTaskName { get; set; }
+        public string? PendingTaskName { get; set; }
 
         [Column("PENDING_WG")]
-        public string PendingWg { get; set; }
+        public string? PendingWg { get; set; }
 
         [Column("WO_STATUS")]
-        public string WoStatus { get; set; }
+        public string? WoStatus { get; set; }
 
         [Column("WO_START_DATE")]
         public DateTime? WoStartDate { get; set; }
 
         [Column("SERVICE_SPEED")]
-        public string ServiceSpeed { get; set; }
+        public string? ServiceSpeed { get; set; }
 
         [Column("SERVICE_REQUIRED_DATE")]
         public DateTime? ServiceRequiredDate { get; set; }
 
         [Column("FIBER_PE_NO")]
-        public string FiberPeNo { get; set; }
+        public string? FiberPeNo { get; set; }
 
         [Column("FIBER_SO_ID")]
-        public string FiberSoId { get; set; }
+        public string? FiberSoId { get; set; }
 
         [Column("PRODUCT_SO_ID")]
-        public string ProductSoId { get; set; }
+        public string? ProductSoId { get; set; }
 
         [Column("FIBER_PE_TASK_NAME")]
-        public string FiberPeTaskName { get; set; }
+        public string? FiberPeTaskName { get; set; }
 
         [Column("FIBER_PE_TASK_WG")]
-        public string FiberPeTaskWg { get; set; }
+        public string? FiberPeTaskWg { get; set; }
 
         [Column("PE_WO_COMMENTS")]
-        public string PeWoComments { get; set; }
+        public string? PeWoComments { get; set; }
 
         [Column("CUSTOMER")]
-        public string Customer { get; set; }
+        public string? Customer { get; set; }
 
         [Column("CUS_TYPE")]
-        public string CusType { get; set; }
+        public string? CusType { get; set; }
 
         [Column("ACCOUNT_MANAGER")]
-        public string AccountManager { get; set; }
+        public string? AccountManager { get; set; }
 
         [Column("SECTION_HANDLED_BY")]
-        public string SectionHandledBy { get; set; }
+        public string? SectionHandledBy { get; set; }
 
         [Column("LOCATION_A_ADDRESS")]
-        public string LocationAAddress { get; set; }
+        public string? LocationAAddress { get; set; }
 
         [Column("LOCATION_B_ADDRESS")]
-        public string LocationBAddress { get; set; }
+        public string? LocationBAddress { get; set; }
 
         [Column("NTU_TYPE")]
-        public string NtuType { get; set; }
+        public string? NtuType { get; set; }
 
         [Column("ACCESS_MEDIUM")]
-        public string AccessMedium { get; set; }
+        public string? AccessMedium { get; set; }
 
         [Column("ACCESS_MEDIUM_A_END")]
-        public string AccessMediumAEnd { get; set; }
+        public string? AccessMediumAEnd { get; set; }
 
         [Column("ACCESS_MEDIUM_B_END")]
-        public string AccessMediumBEnd { get; set; }
+        public string? AccessMediumBEnd { get; set; }
 
         [Column("WO_COMMENTS")]
-        public string WoComments { get; set; }
+        public string? WoComments { get; set; }
 
         [Column("PE_STATUS")]
-        public string PEStatus { get; set; }
+        public string? PEStatus { get; set; }
+        [Column("PRIORITY")]
+        public string? Priority { get; set; }
 
-        [Column("TASK_CREATED_DATE")]
-        public DateTime TaskCreatedDate { get; set; }
+        [Column("PE_CREATED_DATE")]
+        public DateTime PECreatedDate { get; set; }
 
     }
 }

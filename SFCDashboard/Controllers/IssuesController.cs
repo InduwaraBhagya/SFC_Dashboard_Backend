@@ -326,9 +326,9 @@ namespace YourNamespace.Controllers
         public int IssueId { get; set; }
         public int ReceiverId { get; set; }
         public int SenderId { get; set; }
-        public string Status { get; set; }
+        public string? Status { get; set; }
         public DateTime CreatedDate { get; set; }
-        public string IssueText { get; set; }
+        public string? IssueText { get; set; }
         public string Remarks { get; set; }
         public User Sender { get; set; }
         public User Receiver { get; set; }

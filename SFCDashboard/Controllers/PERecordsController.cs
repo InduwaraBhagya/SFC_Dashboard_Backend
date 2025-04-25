@@ -9,227 +9,46 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
 using SFCDB.Models;
 using Microsoft.Extensions.DependencyInjection;
+using SFCDashboard.Services;
+
 namespace SFCDB.Controllers
 {
     public class PERecordsController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly ILogger<PERecordsController> _logger;
 
-        public PERecordsController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
+        public PERecordsController(
+            ApplicationDbContext context, 
+            IWebHostEnvironment webHostEnvironment,
+            ILogger<PERecordsController> logger)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
+            _logger = logger;
         }
 
         // GET: PERecords
-        public async Task<IActionResult> Index(string searchType, string peNumber, string customer,
-            string jobReference, string soNumber, int pageIndex = 1)
+        public async Task<IActionResult> Index()
         {
-            var query = from r in _context.PERecords
-                        select r;
-
-            // Store current filters in ViewData
-            ViewData["SearchType"] = searchType ?? "peNumber";
-            ViewData["PENumberFilter"] = peNumber;
-            ViewData["CustomerFilter"] = customer;
-            ViewData["JobReferenceFilter"] = jobReference;
-            ViewData["SONumberFilter"] = soNumber;
-
-            // Determine the search string based on the search type
-            string searchString = searchType switch
-            {
-                "customer" => customer,
-                "jobReference" => jobReference,
-                "soNumber" => soNumber,
-                _ => peNumber
-            };
-
-            // Calculate counts for dashboard boxes
-            var today = DateTime.Today;
-            ViewData["InProgressCount"] = await _context.PERecords
-                .Where(p => p.WO_STATUS == "INPROGRESS")
-                .CountAsync();
-
-            ViewData["OLAViolateCount"] = await _context.PERecords
-                .Where(p => p.WO_START_DATE.HasValue && p.WO_START_DATE.Value.AddDays(30) < today)
-                .CountAsync();
-            ViewData["UrgentCount"] = await _context.PERecords
-                .Where(p => p.WO_STATUS == "URGENT")
-                .CountAsync();
-
-            // Apply search filters based on type
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                switch (searchType)
-                {
-                    case "customer":
-                        query = query.Where(p => p.CUSTOMER != null && p.CUSTOMER.Contains(customer));
-                        break;
-                    case "jobReference":
-                        query = query.Where(p => p.JOB_REFERENCE != null && p.JOB_REFERENCE.Contains(jobReference));
-                        break;
-                    case "soNumber":
-                        query = query.Where(p => p.SO_NUMBER != null && p.SO_NUMBER.Contains(soNumber));
-                        break;
-                    default: // peNumber
-                        query = query.Where(p => p.PE_NUMBER != null && p.PE_NUMBER.Contains(peNumber));
-                        break;
-                }
-            }
-
-            // Return empty list if no search criteria provided
-            if (string.IsNullOrEmpty(peNumber) &&
-                string.IsNullOrEmpty(customer) &&
-                string.IsNullOrEmpty(jobReference) &&
-                string.IsNullOrEmpty(soNumber))
-            {
-                return View(new PaginatedList<PERecord>(new List<PERecord>(), 0, pageIndex, 10));
-            }
-
-            // Order results
-            query = query.OrderByDescending(p => p.WO_START_DATE)
-                        .ThenBy(p => p.PE_NUMBER);
-
-            int pageSize = 10;
-            var paginatedList = await PaginatedList<PERecord>.CreateAsync(query.AsNoTracking(), pageIndex, pageSize);
-
-            // Log the number of records found
-            Console.WriteLine($"Total records found: {paginatedList.Count}");
-
-            // Pass search parameters back to the view for maintaining the search state
-            ViewData["SearchType"] = searchType;
-            ViewData["SearchString"] = searchString;
-
-            return View(paginatedList);
-        }
-
-        // GET: PERecords/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var pERecord = await _context.PERecords
-                .FirstOrDefaultAsync(m => m.ID == id);
-            if (pERecord == null)
-            {
-                return NotFound();
-            }
-
-            return View(pERecord);
-        }
-
-        // GET: PERecords/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: PERecords/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,PROVINCE,REGION,RTOM,RTOM_DESCRIPTION,JOB_REFERENCE,CONTRACTOR_NAME,PE_NUMBER,PE_ACTIVITY,PE_NATURE,PE_TITLE,PE_OBJECTIVE,PE_AREA,SO_NUMBER,TASK_SEQ,TASK_NAME,TASK_WG,WO_ACTUAL_START_DATE,REQUEST_REFERENCE_NO,SO_ID,REGION_1,PROVINCE_1,RTOM_1,LEA,CCT_ID,SERVICE_CATEGORY,SERVICE_TYPE,SO_CREATE_DATE,ORDER_TYPE,CRM_ORDER,WO_ID,PENDING_TASK_NAME,PENDING_WG,WO_STATUS,WO_START_DATE,SERVICE_SPEED,SERVICE_REQUIRED_DATE,FIBER_PE_NO,FIBER_SO_ID,PRODUCT_SO_ID,FIBER_PE_TASK_NAME,FIBER_PE_TASK_WG,PE_WO_COMMENTS,CUSTOMER,CUS_TYPE,ACCOUNT_MANAGER,SECTION_HANDLED_BY,LOCATION_A_ADDRESS,LOCATION_B_ADDRESS,NTU_TYPE,ACCESS_MEDIUM,ACCESS_MEDIUM_A_END,ACCESS_MEDIUM_B_END,WO_COMMENTS")] PERecord pERecord)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Add(pERecord);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(pERecord);
-        }
-
-        // GET: PERecords/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var pERecord = await _context.PERecords.FindAsync(id);
-            if (pERecord == null)
-            {
-                return NotFound();
-            }
-            return View(pERecord);
-        }
-
-        // POST: PERecords/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,PROVINCE,REGION,RTOM,RTOM_DESCRIPTION,JOB_REFERENCE,CONTRACTOR_NAME,PE_NUMBER,PE_ACTIVITY,PE_NATURE,PE_TITLE,PE_OBJECTIVE,PE_AREA,SO_NUMBER,TASK_SEQ,TASK_NAME,TASK_WG,WO_ACTUAL_START_DATE,REQUEST_REFERENCE_NO,SO_ID,REGION_1,PROVINCE_1,RTOM_1,LEA,CCT_ID,SERVICE_CATEGORY,SERVICE_TYPE,SO_CREATE_DATE,ORDER_TYPE,CRM_ORDER,WO_ID,PENDING_TASK_NAME,PENDING_WG,WO_STATUS,WO_START_DATE,SERVICE_SPEED,SERVICE_REQUIRED_DATE,FIBER_PE_NO,FIBER_SO_ID,PRODUCT_SO_ID,FIBER_PE_TASK_NAME,FIBER_PE_TASK_WG,PE_WO_COMMENTS,CUSTOMER,CUS_TYPE,ACCOUNT_MANAGER,SECTION_HANDLED_BY,LOCATION_A_ADDRESS,LOCATION_B_ADDRESS,NTU_TYPE,ACCESS_MEDIUM,ACCESS_MEDIUM_A_END,ACCESS_MEDIUM_B_END,WO_COMMENTS")] PERecord pERecord)
-        {
-            if (id != pERecord.ID)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(pERecord);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!PERecordExists(pERecord.ID))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(pERecord);
-        }
-
-        // GET: PERecords/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var pERecord = await _context.PERecords
-                .FirstOrDefaultAsync(m => m.ID == id);
-            if (pERecord == null)
-            {
-                return NotFound();
-            }
-
-            return View(pERecord);
-        }
-
-        // POST: PERecords/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var pERecord = await _context.PERecords.FindAsync(id);
-            if (pERecord != null)
-            {
-                _context.PERecords.Remove(pERecord);
-            }
-
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            _logger.LogInformation("Retrieving all PE Records");
+            return View(await _context.PERecords.ToListAsync());
         }
 
         // GET: PERecords/ImportExcel
         public IActionResult ImportExcel()
         {
+            // Prepare diagnostic info for the view
+            ViewBag.PERecordsCount = _context.PERecords.Count();
+            ViewBag.PlannedEventsCount = _context.PlannedEvents.Count();
+            ViewBag.PETasksCount = _context.PETasks.Count();
+            ViewBag.TaskTemplatesCount = _context.PETaskLists.Count();
+            
             return View();
         }
 
@@ -252,6 +71,8 @@ namespace SFCDB.Controllers
 
             try
             {
+                _logger.LogInformation("Starting import of Excel file: {fileName}", excelFile.FileName);
+                
                 // Create temp file path
                 var fileName = Path.GetFileName(excelFile.FileName);
                 var filePath = Path.Combine(_webHostEnvironment.WebRootPath, "temp");
@@ -270,6 +91,8 @@ namespace SFCDB.Controllers
                     await excelFile.CopyToAsync(fileStream);
                 }
 
+                _logger.LogInformation("Excel file saved temporarily at: {path}", fullPath);
+                
                 List<PERecord> peRecords = new List<PERecord>();
 
                 // Process the Excel file
@@ -277,71 +100,91 @@ namespace SFCDB.Controllers
                 {
                     var worksheet = workbook.Worksheet(1); // Read the first worksheet
                     var rows = worksheet.RowsUsed();
+                    
+                    _logger.LogInformation("Processing {count} rows from Excel", rows.Count());
 
                     // Skip header row and process data
                     foreach (var row in rows.Skip(1))
                     {
-                        var peRecord = new PERecord
+                        try 
                         {
-                            PROVINCE = row.Cell(1).GetValue<string>(),
-                            REGION = row.Cell(2).GetValue<string>(),
-                            RTOM = row.Cell(3).GetValue<string>(),
-                            RTOM_DESCRIPTION = row.Cell(4).GetValue<string>(),
-                            JOB_REFERENCE = row.Cell(5).GetValue<string>(),
-                            CONTRACTOR_NAME = row.Cell(6).GetValue<string>(),
-                            PE_NUMBER = row.Cell(7).GetValue<string>(),
-                            PE_ACTIVITY = row.Cell(8).GetValue<string>(),
-                            PE_NATURE = row.Cell(9).GetValue<string>(),
-                            PE_TITLE = row.Cell(10).GetValue<string>(),
-                            PE_OBJECTIVE = row.Cell(11).GetValue<string>(),
-                            PE_AREA = row.Cell(12).GetValue<string>(),
-                            SO_NUMBER = row.Cell(13).GetValue<string>(),
-                            TASK_SEQ = row.Cell(14).GetValue<int?>(),
-                            TASK_NAME = row.Cell(15).GetValue<string>(),
-                            TASK_WG = row.Cell(16).GetValue<string>(),
-                            WO_ACTUAL_START_DATE = row.Cell(17).GetValue<string>(),
-                            REQUEST_REFERENCE_NO = row.Cell(18).GetValue<string>(),
-                            SO_ID = row.Cell(19).GetValue<string>(),
-                            REGION_1 = row.Cell(20).GetValue<string>(),
-                            PROVINCE_1 = row.Cell(21).GetValue<string>(),
-                            RTOM_1 = row.Cell(22).GetValue<string>(),
-                            LEA = row.Cell(23).GetValue<string>(),
-                            CCT_ID = row.Cell(24).GetValue<string>(),
-                            SERVICE_CATEGORY = row.Cell(25).GetValue<string>(),
-                            SERVICE_TYPE = row.Cell(26).GetValue<string>(),
-                            SO_CREATE_DATE = row.Cell(27).GetValue<DateTime?>(),
-                            ORDER_TYPE = row.Cell(28).GetValue<string>(),
-                            CRM_ORDER = row.Cell(29).GetValue<string>(),
-                            WO_ID = row.Cell(30).GetValue<string>(),
-                            PENDING_TASK_NAME = row.Cell(31).GetValue<string>(),
-                            PENDING_WG = row.Cell(32).GetValue<string>(),
-                            WO_STATUS = row.Cell(33).GetValue<string>(),
-                            WO_START_DATE = row.Cell(34).GetValue<DateTime?>(),
-                            SERVICE_SPEED = row.Cell(35).GetValue<string>(),
-                            SERVICE_REQUIRED_DATE = row.Cell(36).GetValue<DateTime?>(),
-                            FIBER_PE_NO = row.Cell(37).GetValue<string>(),
-                            FIBER_SO_ID = row.Cell(38).GetValue<string>(),
-                            PRODUCT_SO_ID = row.Cell(39).GetValue<string>(),
-                            FIBER_PE_TASK_NAME = row.Cell(40).GetValue<string>(),
-                            FIBER_PE_TASK_WG = row.Cell(41).GetValue<string>(),
-                            PE_WO_COMMENTS = row.Cell(42).GetValue<string>(),
-                            CUSTOMER = row.Cell(43).GetValue<string>(),
-                            CUS_TYPE = row.Cell(44).GetValue<string>(),
-                            ACCOUNT_MANAGER = row.Cell(45).GetValue<string>(),
-                            SECTION_HANDLED_BY = row.Cell(46).GetValue<string>(),
-                            LOCATION_A_ADDRESS = row.Cell(47).GetValue<string>(),
-                            LOCATION_B_ADDRESS = row.Cell(48).GetValue<string>(),
-                            NTU_TYPE = row.Cell(49).GetValue<string>(),
-                            ACCESS_MEDIUM = row.Cell(50).GetValue<string>(),
-                            ACCESS_MEDIUM_A_END = row.Cell(51).GetValue<string>(),
-                            ACCESS_MEDIUM_B_END = row.Cell(52).GetValue<string>(),
-                            WO_COMMENTS = row.Cell(53).GetValue<string>()
-                        };
+                            var peNumber = row.Cell(7).GetValue<string>();
+                            
+                            // Skip rows with empty PE_NUMBER as they're essential
+                            if (string.IsNullOrWhiteSpace(peNumber))
+                            {
+                                _logger.LogWarning("Skipping row with empty PE_NUMBER at row {rowNumber}", row.RowNumber());
+                                continue;
+                            }
+                            
+                            var peRecord = new PERecord
+                            {
+                                PROVINCE = GetCellValueSafely<string>(row, 1),
+                                REGION = GetCellValueSafely<string>(row, 2),
+                                RTOM = GetCellValueSafely<string>(row, 3),
+                                RTOM_DESCRIPTION = GetCellValueSafely<string>(row, 4),
+                                JOB_REFERENCE = GetCellValueSafely<string>(row, 5),
+                                CONTRACTOR_NAME = GetCellValueSafely<string>(row, 6),
+                                PE_NUMBER = peNumber,
+                                PE_ACTIVITY = GetCellValueSafely<string>(row, 8),
+                                PE_NATURE = GetCellValueSafely<string>(row, 9),
+                                PE_TITLE = GetCellValueSafely<string>(row, 10),
+                                PE_OBJECTIVE = GetCellValueSafely<string>(row, 11),
+                                PE_AREA = GetCellValueSafely<string>(row, 12),
+                                SO_NUMBER = GetCellValueSafely<string>(row, 13),
+                                TASK_SEQ = GetCellValueSafely<int?>(row, 14),
+                                TASK_NAME = GetCellValueSafely<string>(row, 15),
+                                TASK_WG = GetCellValueSafely<string>(row, 16),
+                                WO_ACTUAL_START_DATE = GetCellValueSafely<string>(row, 17),
+                                REQUEST_REFERENCE_NO = GetCellValueSafely<string>(row, 18),
+                                SO_ID = GetCellValueSafely<string>(row, 19),
+                                REGION_1 = GetCellValueSafely<string>(row, 20),
+                                PROVINCE_1 = GetCellValueSafely<string>(row, 21),
+                                RTOM_1 = GetCellValueSafely<string>(row, 22),
+                                LEA = GetCellValueSafely<string>(row, 23),
+                                CCT_ID = GetCellValueSafely<string>(row, 24),
+                                SERVICE_CATEGORY = GetCellValueSafely<string>(row, 25),
+                                SERVICE_TYPE = GetCellValueSafely<string>(row, 26),
+                                SO_CREATE_DATE = GetCellValueSafely<DateTime?>(row, 27),
+                                ORDER_TYPE = GetCellValueSafely<string>(row, 28),
+                                CRM_ORDER = GetCellValueSafely<string>(row, 29),
+                                WO_ID = GetCellValueSafely<string>(row, 30),
+                                PENDING_TASK_NAME = GetCellValueSafely<string>(row, 31),
+                                PENDING_WG = GetCellValueSafely<string>(row, 32),
+                                WO_STATUS = GetCellValueSafely<string>(row, 33),
+                                WO_START_DATE = GetCellValueSafely<DateTime?>(row, 34),
+                                SERVICE_SPEED = GetCellValueSafely<string>(row, 35),
+                                SERVICE_REQUIRED_DATE = GetCellValueSafely<DateTime?>(row, 36),
+                                FIBER_PE_NO = GetCellValueSafely<string>(row, 37),
+                                FIBER_SO_ID = GetCellValueSafely<string>(row, 38),
+                                PRODUCT_SO_ID = GetCellValueSafely<string>(row, 39),
+                                FIBER_PE_TASK_NAME = GetCellValueSafely<string>(row, 40),
+                                FIBER_PE_TASK_WG = GetCellValueSafely<string>(row, 41),
+                                PE_WO_COMMENTS = GetCellValueSafely<string>(row, 42),
+                                CUSTOMER = GetCellValueSafely<string>(row, 43),
+                                CUS_TYPE = GetCellValueSafely<string>(row, 44),
+                                ACCOUNT_MANAGER = GetCellValueSafely<string>(row, 45),
+                                SECTION_HANDLED_BY = GetCellValueSafely<string>(row, 46),
+                                LOCATION_A_ADDRESS = GetCellValueSafely<string>(row, 47),
+                                LOCATION_B_ADDRESS = GetCellValueSafely<string>(row, 48),
+                                NTU_TYPE = GetCellValueSafely<string>(row, 49),
+                                ACCESS_MEDIUM = GetCellValueSafely<string>(row, 50),
+                                ACCESS_MEDIUM_A_END = GetCellValueSafely<string>(row, 51),
+                                ACCESS_MEDIUM_B_END = GetCellValueSafely<string>(row, 52),
+                                WO_COMMENTS = GetCellValueSafely<string>(row, 53)
+                            };
 
-                        peRecords.Add(peRecord);
+                            peRecords.Add(peRecord);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error processing row {rowNumber}", row.RowNumber());
+                        }
                     }
                 }
 
+                _logger.LogInformation("Successfully processed {count} valid records from Excel", peRecords.Count);
+                
                 // Delete the temporary file
                 if (System.IO.File.Exists(fullPath))
                 {
@@ -353,196 +196,104 @@ namespace SFCDB.Controllers
                 {
                     try
                     {
+                        _logger.LogInformation("Removing existing PE records");
                         // Delete all existing records
                         _context.PERecords.RemoveRange(_context.PERecords);
                         await _context.SaveChangesAsync();
 
+                        _logger.LogInformation("Adding {count} new PE records", peRecords.Count);
                         // Add the new records
                         await _context.PERecords.AddRangeAsync(peRecords);
                         await _context.SaveChangesAsync();
 
                         // Commit the transaction
                         await transaction.CommitAsync();
+                        _logger.LogInformation("Transaction committed successfully");
                     }
                     catch (Exception ex)
                     {
+                        _logger.LogError(ex, "Error during database transaction");
                         // Rollback the transaction on error
                         await transaction.RollbackAsync();
                         throw; // Rethrow to be caught by outer catch block
                     }
                 }
 
-                // Get the syncService from the DI container
-                var syncService = HttpContext.RequestServices.GetRequiredService<SFCDashboard.Services.PERecordSyncService>();
-                await syncService.SyncPERecordsAsync();
+                // First check if task templates exist
+                var templateCount = await _context.PETaskLists.CountAsync();
+                if (templateCount == 0)
+                {
+                    TempData["Message"] = "Warning: PETaskList templates are missing. Please add task templates before syncing.";
+                    return RedirectToAction("ImportExcel");
+                }
 
-                TempData["Message"] = $"Successfully replaced all records with {peRecords.Count} new records from Excel and synced to all related tables.";
-                return RedirectToAction("Index");
+                try
+                {
+                    // Get the syncService from the DI container
+                    _logger.LogInformation("Starting PE record synchronization");
+                    var syncService = HttpContext.RequestServices.GetRequiredService<PERecordSyncService>();
+                    
+                    // Then run the full sync
+                    await syncService.SyncPERecordsAsync();
+                    
+                    // Check counts after sync
+                    var peCount = await _context.PERecords.CountAsync();
+                    var plannedEventCount = await _context.PlannedEvents.CountAsync();
+                    var peTaskCount = await _context.PETasks.CountAsync();
+                    
+                    _logger.LogInformation("Sync completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}", 
+                        peCount, plannedEventCount, peTaskCount);
+
+                    TempData["Message"] = $"Successfully replaced all records with {peRecords.Count} new records from Excel and synced to all related tables. " +
+                        $"PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during synchronization");
+                    TempData["Message"] = $"Records imported but sync failed: {ex.Message}. Inner error: {ex.InnerException?.Message}";
+                }
+                
+                return RedirectToAction("ImportExcel");
             }
             catch (Exception ex)
             {
-                TempData["Message"] = $"Error: {ex.Message}";
+                _logger.LogError(ex, "Error in ImportExcel action");
+                TempData["Message"] = $"Error: {ex.Message}. Inner error: {ex.InnerException?.Message}";
                 return RedirectToAction("ImportExcel");
             }
         }
-        private bool PERecordExists(int id)
+        
+        
+
+        // Helper method to safely get cell values
+        private T GetCellValueSafely<T>(IXLRow row, int columnIndex)
         {
-            return _context.PERecords.Any(e => e.ID == id);
-        }
-        public async Task<IActionResult> InProgressRecords()
-        {
-            var inProgressRecords = await _context.PERecords
-                .Where(p => p.WO_STATUS == "INPROGRESS")
-                .ToListAsync();
-
-            // Log the count of records found
-            Console.WriteLine($"Total INPROGRESS records found: {inProgressRecords.Count}");
-
-
-            return View(inProgressRecords);
-        }
-        public async Task<IActionResult> OLAViolateRecords()
-        {
-            var today = DateTime.Today;
-            var OLAViolateRecords = await _context.PERecords
-                .Where(p => p.WO_START_DATE.HasValue && p.WO_START_DATE.Value.AddDays(30) < today)
-                .ToListAsync();
-
-            // Log the count of records found
-            Console.WriteLine($"Total OLA Violate records found: {OLAViolateRecords.Count}");
-
-            return View(OLAViolateRecords);
-        }
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkAsUrgent(int id)
-        {
-            var pERecord = await _context.PERecords.FindAsync(id);
-            if (pERecord == null)
+            try
             {
-                return NotFound();
+                var cell = row.Cell(columnIndex);
+                
+                // For strings, handle empty cells as empty strings
+                if (typeof(T) == typeof(string))
+                {
+                    if (cell.IsEmpty())
+                        return (T)(object)string.Empty;
+                    
+                    return cell.GetValue<T>();
+                }
+                
+                // For other types, return default if cell is empty
+                if (cell.IsEmpty())
+                    return default(T);
+                
+                return cell.GetValue<T>();
             }
-
-            pERecord.WO_STATUS = "URGENT";
-            _context.Update(pERecord);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction(nameof(Index));
-        }
-        public async Task<IActionResult> UrgentRecords()
-        {
-            var urgentRecords = await _context.PERecords
-                .Where(p => p.WO_STATUS == "URGENT")
-                .ToListAsync();
-
-            // Log the count of records found
-            Console.WriteLine($"Total URGENT records found: {urgentRecords.Count}");
-
-            return View(urgentRecords);
-        }
-        public IActionResult HoldRecords()
-        {
-            // Placeholder action for HoldRecords
-            return View();
-        }
-    
-
-// GET: PERecords/UrgentRequestConfirmation/5
-public async Task<IActionResult> UrgentRequestConfirmation(int? id)
-        {
-            if (id == null)
+            catch
             {
-                return NotFound();
+                // If there's any error, return default value for that type
+                return default(T);
             }
-
-            var pERecord = await _context.PERecords.FindAsync(id);
-            if (pERecord == null)
-            {
-                return NotFound();
-            }
-
-            return View(pERecord);
         }
 
-        // POST: PERecords/RequestUrgent/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RequestUrgent(int id)
-        {
-            var pERecord = await _context.PERecords.FindAsync(id);
-            if (pERecord == null)
-            {
-                return NotFound();
-            }
-
-            // Set the status to pending confirmation
-            pERecord.WO_STATUS = "PENDING_URGENT_CONFIRMATION";
-            _context.Update(pERecord);
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Urgent request submitted for approval.";
-            return RedirectToAction(nameof(InProgressRecords));
-        }
-
-
-
-        // GET: PERecords/UrgentRequestsList
-        public async Task<IActionResult> UrgentRequestsList()
-        {
-            
-            var pendingRequests = await _context.PERecords
-                .Where(r => r.WO_STATUS == "PENDING_URGENT_CONFIRMATION")
-                .ToListAsync();
-
-            return View(pendingRequests);
-        }
-
-        // POST: PERecords/ProcessUrgentRequest
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
-        {
-            var pERecord = await _context.PERecords.FindAsync(id);
-            if (pERecord == null)
-            {
-                return NotFound();
-            }
-
-            // Process based on the selected reason
-            switch (urgentReason)
-            {
-                case "OpeningCeremony":
-                    pERecord.WO_STATUS = "URGENT";
-                    pERecord.WO_COMMENTS = (pERecord.WO_COMMENTS ?? "") + " [URGENT: Opening Ceremony - Priority 1]";
-                    _context.Update(pERecord);
-                    await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "Urgent request successfully processed with Priority 1.";
-                    break;
-
-                case "CriticalCustomer":
-                    pERecord.WO_STATUS = "URGENT";
-                    pERecord.WO_COMMENTS = (pERecord.WO_COMMENTS ?? "") + " [URGENT: Critical Customer - Priority 2]";
-                    _context.Update(pERecord);
-                    await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "Urgent request successfully processed with Priority 2.";
-                    break;
-
-                case "Reject":
-                    // Keep the record in its current status but update comments
-                    pERecord.WO_STATUS = "IN_PROGRESS"; // Or whatever the standard status should be
-                    pERecord.WO_COMMENTS = (pERecord.WO_COMMENTS ?? "") + " [Urgent Request Rejected]";
-                    _context.Update(pERecord);
-                    await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "Urgent request rejected.";
-                    break;
-
-                default:
-                    // Invalid option selected
-                    TempData["ErrorMessage"] = "Invalid option selected.";
-                    return RedirectToAction(nameof(UrgentRequestsList));
-            }
-
-            return RedirectToAction(nameof(UrgentRequestsList));
-        }
+       
     }
 }

@@ -1,0 +1,51 @@
+﻿@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "In Progress Records";
+}
+
+<h1>In Progress Records</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Province)</th>
+            <th>@Html.DisplayNameFor(model => model.Region)</th>
+            <th>@Html.DisplayNameFor(model => model.Rtom)</th>
+            <th>@Html.DisplayNameFor(model => model.JobReference)</th>
+            <th>@Html.DisplayNameFor(model => model.PeNumber)</th>
+            <th>@Html.DisplayNameFor(model => model.PEStatus)</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.Province)</td>
+                <td>@Html.DisplayFor(modelItem => item.Region)</td>
+                <td>@Html.DisplayFor(modelItem => item.Rtom)</td>
+                <td>@Html.DisplayFor(modelItem => item.JobReference)</td>
+                <td>@Html.DisplayFor(modelItem => item.PeNumber)</td>
+                <td>@Html.DisplayFor(modelItem => item.PEStatus)</td>
+                <td>
+                    <form asp-controller="PlannedEvents" asp-action="RequestUrgent" asp-route-id="@item.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">Urgent Request</button>
+                    </form>
+                </td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,205 @@
+﻿@model SFCDashboard.Models.PlannedEvent
+
+@{
+    ViewData["Title"] = "PE Record Details";
+}
+
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">PE Record Details</h2>
+            <div>
+                <a asp-action="Index" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <tbody>
+                        <tr>
+                            <th class="bg-light text-primary" style="width: 25%">PE Number (PK)</th>
+                            <td>@Html.DisplayFor(model => model.PeNumber)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Job Reference Number</th>
+                            <td>@Html.DisplayFor(model => model.JobReference)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">SO Number</th>
+                            <td>@Html.DisplayFor(model => model.SoNumber)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Region</th>
+                            <td>@Html.DisplayFor(model => model.Region)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Area</th>
+                            <td>@Html.DisplayFor(model => model.PeArea)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Task</th>
+                            <td>@Html.DisplayFor(model => model.TaskName)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Status</th>
+                            <td>
+                                @{
+                                    string statusClass = Model.PEStatus?.ToLower() switch
+                                    {
+                                        "completed" => "badge bg-success",
+                                        "in progress" => "badge bg-warning text-dark",
+                                        "pending" => "badge bg-info",
+                                        _ => "badge bg-secondary"
+                                    };
+                                }
+                                <span class="@statusClass">@Html.DisplayFor(model => model.PEStatus)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Start Time</th>
+                            <td>@Html.DisplayFor(model => model.WoStartDate)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">End Time</th>
+                            <td>@Html.DisplayFor(model => model.WoActualStartDate)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Is Urgent</th>
+                            <td>
+                                @{
+                                    string urgentText = Model.ServiceSpeed?.ToLower()?.Contains("urgent") == true ? "Yes" : "No";
+                                    string urgentClass = urgentText == "Yes" ? "text-danger fw-bold" : "";
+                                }
+                                <span class="@urgentClass">@urgentText</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">RTOM</th>
+                            <td>@Html.DisplayFor(model => model.Rtom)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Contractor Name</th>
+                            <td>@Html.DisplayFor(model => model.ContractorName)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">PE Objective</th>
+                            <td>@Html.DisplayFor(model => model.PeObjective)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Order Type</th>
+                            <td>@Html.DisplayFor(model => model.OrderType)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Pending Task Name</th>
+                            <td>@Html.DisplayFor(model => model.PendingTaskName)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Pending Workgroup</th>
+                            <td>@Html.DisplayFor(model => model.PendingWg)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Account Manager</th>
+                            <td>@Html.DisplayFor(model => model.AccountManager)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Section Handled By</th>
+                            <td>@Html.DisplayFor(model => model.SectionHandledBy)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Service Required Date</th>
+                            <td>@Html.DisplayFor(model => model.ServiceRequiredDate)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Fiber PE Task Workgroup</th>
+                            <td>@Html.DisplayFor(model => model.FiberPeTaskWg)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PE Tasks Section -->
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">PE Tasks</h3>
+            @if (ViewBag.PETasks == null || ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Count() == 0)
+            {
+                <span class="badge bg-warning text-dark">No tasks found</span>
+            }
+        </div>
+        <div class="card-body">
+            @if (ViewBag.PETasks != null && ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover task-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Seq</th>
+                                <th>Task</th>
+                                <th>Workgroup</th>
+                                <th>OLA</th>
+                                <th>Status</th>
+                                <th>Phase</th>
+                                <th>Created Date</th>
+                                <th>Target Date</th>
+                                <th>Actual Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+                            {
+                                <tr class="@(task.TaskPhase?.ToLower() == "ongoing" ? "table-primary" : 
+                                           task.TaskPhase?.ToLower() == "finish" ? "table-success" : 
+                                           task.TaskPhase?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                    <td>@task.TaskSeq</td>
+                                    <td>@task.Task</td>
+                                    <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                    <td>@task.OLA days</td>
+                                    <td>
+                                        @{
+                                            string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                            {
+                                                "completed" => "badge bg-success",
+                                                "inprogress" => "badge bg-warning text-dark",
+                                                _ => "badge bg-secondary"
+                                            };
+                                        }
+                                        <span class="@taskStatusClass">@task.TaskStatus</span>
+                                    </td>
+                                    <td>
+                                        @{
+                                            string phaseClass = task.TaskPhase?.ToLower() switch
+                                            {
+                                                "finish" => "badge bg-success",
+                                                "ongoing" => "badge bg-primary",
+                                                "waiting" => "badge bg-secondary",
+                                                _ => "badge bg-light text-dark"
+                                            };
+                                        }
+                                        <span class="@phaseClass">@task.TaskPhase</span>
+                                    </td>
+                                    <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No tasks have been assigned to this PE record yet.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+
+}
