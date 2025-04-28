@@ -17,10 +17,9 @@
 <table class="table">
     <thead>
         <tr>
-            <th>@Html.DisplayNameFor(model => model.Province)</th>
             <th>@Html.DisplayNameFor(model => model.Region)</th>
-            <th>@Html.DisplayNameFor(model => model.Rtom)</th>
-            <th>@Html.DisplayNameFor(model => model.JobReference)</th>
+            <th>@Html.DisplayNameFor(model => model.Province)</th>            
+            <th>@Html.DisplayNameFor(model => model.RequestReferenceNo)</th>
             <th>@Html.DisplayNameFor(model => model.PeNumber)</th>
             <th>@Html.DisplayNameFor(model => model.PEStatus)</th>
             <th></th>
@@ -30,10 +29,10 @@
         @foreach (var item in Model)
         {
             <tr>
+
+                <th>@Html.DisplayFor(modelItem => item.Region)</th>
                 <td>@Html.DisplayFor(modelItem => item.Province)</td>
-                <td>@Html.DisplayFor(modelItem => item.Region)</td>
-                <td>@Html.DisplayFor(modelItem => item.Rtom)</td>
-                <td>@Html.DisplayFor(modelItem => item.JobReference)</td>
+                <td>@Html.DisplayFor(modelItem => item.RequestReferenceNo)</td>
                 <td>@Html.DisplayFor(modelItem => item.PeNumber)</td>
                 <td>@Html.DisplayFor(modelItem => item.PEStatus)</td>
                 <td>

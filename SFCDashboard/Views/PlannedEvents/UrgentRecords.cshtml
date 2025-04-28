@@ -1,19 +1,19 @@
 ﻿@model IEnumerable<SFCDashboard.Models.PlannedEvent>
-
 @{
     ViewData["Title"] = "Urgent Records";
+    int rowNumber = 1; // Initialize counter for row numbers
 }
-
 <h1>Urgent Records</h1>
-
+<p>Total Urgent Requests: @Model.Count()</p> <!-- Display the total count -->
 <table class="table table-striped">
     <thead class="thead-dark">
         <tr>
+            <th>#</th> <!-- New column for row numbers -->
             <th>PE Number</th>
             <th>Customer</th>
-            <th>Job Reference</th>
-            <th>RTOM</th>
-            <th>Status</th>
+            <th>Request Reference No</th>
+            <th>Region</th>
+            <th>Service Required Date</th>
             <th>Priority</th>
             <th>Actions</th>
         </tr>
@@ -22,11 +22,13 @@
         @foreach (var item in Model)
         {
             <tr>
+                <td>@(rowNumber++)</td> <!-- Display and increment row number -->
                 <td>@item.PeNumber</td>
                 <td>@item.Customer</td>
-                <td>@item.JobReference</td>
-                <td>@item.Rtom</td>
-                <td>@item.PEStatus</td>
+                <td>@item.RequestReferenceNo</td>
+                <td>@item.Region</td>
+                <td>@item.ServiceRequiredDate</td>
+
                 <td>
                     @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
                     {
