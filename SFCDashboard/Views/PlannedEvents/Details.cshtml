@@ -206,12 +206,13 @@
                                         }
                                         else if (task.TaskStatus?.ToUpper() != "COMPLETED" && !task.IsUrgent)
                                         {
-                                            <form asp-controller="PETasks" asp-action="RequestUrgent" method="post">
-                                                <input type="hidden" name="id" value="@task.Id" />
-                                                <button type="submit" class="btn btn-warning btn-sm w-100">
-                                                    <i class="bi bi-exclamation-triangle"></i> Request Urgent
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-warning btn-sm w-100 show-urgent-modal" 
+                                                    data-task-id="@task.Id" 
+                                                    data-pe-number="@task.PENumber" 
+                                                    data-task-name="@task.Task"
+                                                    data-customer="@Model.Customer">
+                                                <i class="bi bi-exclamation-triangle"></i> Request Urgent
+                                            </button>
                                         }
                                     </td>
                                 </tr>
@@ -230,3 +231,112 @@
         </div>
     </div>
 </div>
+
+<!-- Urgent Request Modal for Planned Event -->
+<div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="urgentPEModalLabel">Request Urgent Status for Planned Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>PE Number:</strong> <span id="modalPeNumberValue"></span><br>
+                    <strong>Customer:</strong> <span id="modalCustomerValue"></span>
+                </div>
+                <form id="urgentPERequestForm" method="post">
+                    <input type="hidden" name="id" id="peIdField" />
+                    
+                    <div class="form-group mb-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony" value="OpeningCeremony" required />
+                            <label class="form-check-label" for="openingCeremony">
+                                <strong>Opening Ceremony</strong> [Priority 1]
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer" value="CriticalCustomer" />
+                            <label class="form-check-label" for="criticalCustomer">
+                                <strong>Critical Customer</strong> [Priority 2]
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmPEUrgentRequest">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle showing the PE urgent modal (for the whole Planned Event)
+            document.querySelectorAll('.show-pe-urgent-modal').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const peId = this.getAttribute('data-pe-id');
+                    const peNumber = this.getAttribute('data-pe-number');
+                    const customer = this.getAttribute('data-customer');
+                    
+                    document.getElementById('peIdField').value = peId;
+                    document.getElementById('modalPeNumberValue').textContent = peNumber;
+                    document.getElementById('modalCustomerValue').textContent = customer;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('urgentPEModal'));
+                    modal.show();
+                });
+            });
+            
+            // Handle showing the Task urgent modal (for individual tasks)
+            document.querySelectorAll('.show-urgent-modal').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const taskId = this.getAttribute('data-task-id');
+                    const peNumber = this.getAttribute('data-pe-number');
+                    const taskName = this.getAttribute('data-task-name');
+                    
+                    document.getElementById('taskIdField').value = taskId;
+                    document.getElementById('modalTaskPeNumberValue').textContent = peNumber;
+                    document.getElementById('modalTaskNameValue').textContent = taskName;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('urgentTaskModal'));
+                    modal.show();
+                });
+            });
+            
+            // Handle form submission from the PE modal
+            document.getElementById('confirmPEUrgentRequest').addEventListener('click', function () {
+                // Check if a radio button is selected
+                const selectedReason = document.querySelector('#urgentPERequestForm input[name="urgentReason"]:checked');
+                if (!selectedReason) {
+                    alert('Please select a reason for the urgent request.');
+                    return;
+                }
+                
+                // Submit the form
+                const form = document.getElementById('urgentPERequestForm');
+                form.action = '@Url.Action("RequestUrgentWithReason", "PlannedEvents")';
+                form.submit();
+            });
+            
+            // Handle form submission from the Task modal
+            document.getElementById('confirmTaskUrgentRequest').addEventListener('click', function () {
+                // Check if a radio button is selected
+                const selectedReason = document.querySelector('#urgentTaskRequestForm input[name="urgentReason"]:checked');
+                if (!selectedReason) {
+                    alert('Please select a reason for the urgent request.');
+                    return;
+                }
+                
+                // Submit the form
+                const form = document.getElementById('urgentTaskRequestForm');
+                form.action = '@Url.Action("RequestUrgentWithReason", "PETasks")';
+                form.submit();
+            });
+        });
+    </script>
+}

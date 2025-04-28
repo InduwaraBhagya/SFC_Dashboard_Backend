@@ -301,57 +301,45 @@ public async Task<IActionResult> Details(int? id)
 
             return View(plannedEvent);
         }
-
-        // POST: PlannedEvents/RequestUrgent/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RequestUrgent(int id)
-        {
-            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
-            if (plannedEvent == null || plannedEvent.PEStatus != "ongoing")
-            {
-                return NotFound();
-            }
-
-            plannedEvent.PEStatus = "PENDING_URGENT_CONFIRMATION";
-            _context.Update(plannedEvent);
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Urgent request submitted for approval.";
-            return RedirectToAction(nameof(InProgressRecords));
-        }
-
-        // GET: PlannedEvents/UrgentRequestsList
+        // GET: PETasks/UrgentRequestsList
         public async Task<IActionResult> UrgentRequestsList()
         {
             var pendingRequests = await _context.PlannedEvents
-                .Where(r => r.PEStatus == "PENDING_URGENT_CONFIRMATION")
+                .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
+                .OrderBy(p => p.PeNumber)
                 .ToListAsync();
 
+            _logger.LogInformation("Retrieved {count} pending urgent PE requests", pendingRequests.Count);
             return View(pendingRequests);
         }
-
         // POST: PlannedEvents/ProcessUrgentRequest
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
         {
             var plannedEvent = await _context.PlannedEvents.FindAsync(id);
-            if (plannedEvent == null || plannedEvent.PEStatus != "PENDING_URGENT_CONFIRMATION")
+            if (plannedEvent == null || plannedEvent.PEStatus == "COMPLETED")
             {
                 return NotFound();
             }
 
+            bool markAsUrgent = false;
+            string priorityMessage = "";
+
             switch (urgentReason)
             {
                 case "OpeningCeremony":
+                    markAsUrgent = true;
                     plannedEvent.PEStatus = "URGENT";
-                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT: Opening Ceremony - Priority 1]";
+                    priorityMessage = " [URGENT: Opening Ceremony - Priority 1]";
+                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + priorityMessage;
                     break;
 
                 case "CriticalCustomer":
+                    markAsUrgent = true;
                     plannedEvent.PEStatus = "URGENT";
-                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT: Critical Customer - Priority 2]";
+                    priorityMessage = " [URGENT: Critical Customer - Priority 2]";
+                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + priorityMessage;
                     break;
 
                 case "Reject":
@@ -367,10 +355,85 @@ public async Task<IActionResult> Details(int? id)
             _context.Update(plannedEvent);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Urgent request processed.";
-            return RedirectToAction(nameof(UrgentRequestsList));
+            // If PE was marked as urgent, update all its tasks to be urgent as well
+            if (markAsUrgent)
+            {
+                var relatedTasks = await _context.PETasks
+                    .Where(t => t.PENumber == plannedEvent.PeNumber)
+                    .ToListAsync();
+                    
+                foreach (var task in relatedTasks)
+                {
+                    task.IsUrgent = true;
+                    task.UrgentRequested = false; // Clear any pending urgent requests
+                    task.Priority = (task.Priority ?? "") + priorityMessage + " (Inherited from PE)";
+                }
+                
+                if (relatedTasks.Any())
+                {
+                    _context.UpdateRange(relatedTasks);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Marked {count} tasks as urgent for PE {peNumber}", 
+                        relatedTasks.Count, plannedEvent.PeNumber);
+                }
+            }
+
+            TempData["SuccessMessage"] = markAsUrgent 
+                ? "Planned Event marked as urgent. All related tasks have also been marked as urgent."
+                : "Urgent request processed.";
+                
+            return RedirectToAction("Details", new { id = plannedEvent.Id });
         }
-        
+
+        [HttpGet]
+public async Task<IActionResult> RequestUrgent(int id)
+{
+    var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+    if (plannedEvent == null)
+    {
+        return NotFound();
+    }
+
+    // Redirect to the details page which has the urgent request form
+    return RedirectToAction("Details", new { id = id });
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> RequestUrgentWithReason(int id, string urgentReason)
+{
+    var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+    if (plannedEvent == null || plannedEvent.PEStatus?.ToUpper() == "COMPLETED" || plannedEvent.PEStatus?.ToUpper() == "URGENT")
+    {
+        return NotFound();
+    }
+
+    // Update PE status and priority based on the selected reason
+    switch (urgentReason)
+    {
+        case "OpeningCeremony":
+            plannedEvent.PEStatus = "PENDING_URGENT_CONFIRMATION";
+            plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT REQUEST PENDING: Opening Ceremony]";
+            break;
+
+        case "CriticalCustomer":
+            plannedEvent.PEStatus = "PENDING_URGENT_CONFIRMATION";
+            plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT REQUEST PENDING: Critical Customer]";
+            break;
+
+        default:
+            TempData["ErrorMessage"] = "Invalid urgency reason selected.";
+            return RedirectToAction("InProgressRecords");
+    }
+
+    _context.Update(plannedEvent);
+    await _context.SaveChangesAsync();
+
+    _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason}", id, urgentReason);
+    TempData["SuccessMessage"] = "Urgent request submitted for approval.";
+    
+    return RedirectToAction("InProgressRecords");
+}
 
     }
 }

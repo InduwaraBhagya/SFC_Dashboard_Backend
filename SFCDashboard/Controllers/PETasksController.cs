@@ -45,24 +45,43 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RequestUrgent(int id)
         {
-            var task = await _context.PETasks.FindAsync(id);
+            var task = await _context.PETasks
+                .Include(t => t.PlannedEvent) // Include the parent PlannedEvent
+                .FirstOrDefaultAsync(t => t.Id == id);
+                
             if (task == null || task.TaskStatus?.ToUpper() == "COMPLETED" || task.IsUrgent)
             {
                 return NotFound();
             }
 
-            // Mark the task with UrgentRequested flag instead of changing status
-            task.UrgentRequested = true;
-            task.Priority = (task.Priority ?? "") + " [URGENT REQUEST PENDING]";
-            
-            // Keep the original task status
-            string originalStatus = task.TaskStatus;
-            
-            _context.Update(task);
-            await _context.SaveChangesAsync();
+            // Check if the parent PlannedEvent is already urgent
+            if (task.PlannedEvent != null && task.PlannedEvent.PEStatus?.ToUpper() == "URGENT")
+            {
+                // Parent is already urgent, so just mark this task as urgent directly
+                task.IsUrgent = true;
+                task.Priority = (task.Priority ?? "") + " [URGENT: Inherited from PE]";
+                
+                _context.Update(task);
+                await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Task ID {taskId} marked with urgent request flag, status remains {status}", id, originalStatus);
-            TempData["SuccessMessage"] = "Urgent request submitted for approval.";
+                _logger.LogInformation("Task ID {taskId} automatically marked as urgent because parent PE is urgent", id);
+                TempData["SuccessMessage"] = "Task marked as urgent because the parent Planned Event is already urgent.";
+            }
+            else
+            {
+                // Standard request process - only the task is being requested as urgent
+                task.UrgentRequested = true;
+                task.Priority = (task.Priority ?? "") + " [URGENT REQUEST PENDING]";
+                
+                // Keep the original task status
+                string originalStatus = task.TaskStatus;
+                
+                _context.Update(task);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Task ID {taskId} marked with urgent request flag, status remains {status}", id, originalStatus);
+                TempData["SuccessMessage"] = "Urgent request submitted for approval.";
+            }
 
             // Return to the referring page or planned event details
             string referer = Request.Headers["Referer"].ToString();
@@ -118,6 +137,18 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
+            // Extract the originally requested reason from Priority field if it exists
+            string originalReason = "";
+            if (task.Priority?.Contains("URGENT REQUEST PENDING: ") == true)
+            {
+                var startIndex = task.Priority.IndexOf("URGENT REQUEST PENDING: ") + "URGENT REQUEST PENDING: ".Length;
+                var endIndex = task.Priority.IndexOf("]", startIndex);
+                if (endIndex > startIndex)
+                {
+                    originalReason = task.Priority.Substring(startIndex, endIndex - startIndex);
+                }
+            }
+
             // Clear the urgent requested flag
             task.UrgentRequested = false;
             
@@ -127,17 +158,17 @@ namespace SFCDashboard.Controllers
             switch (urgentReason)
             {
                 case "OpeningCeremony":
-                    task.IsUrgent = true;
+                    task.IsUrgent = true;  // Only mark THIS task as urgent
                     task.Priority = (task.Priority ?? "") + " [URGENT: Opening Ceremony - Priority 1]";
                     break;
 
                 case "CriticalCustomer":
-                    task.IsUrgent = true;
+                    task.IsUrgent = true;  // Only mark THIS task as urgent
                     task.Priority = (task.Priority ?? "") + " [URGENT: Critical Customer - Priority 2]";
                     break;
 
                 case "NetworkOutage":
-                    task.IsUrgent = true;
+                    task.IsUrgent = true;  // Only mark THIS task as urgent
                     task.Priority = (task.Priority ?? "") + " [URGENT: Network Outage - Priority 0]";
                     break;
 

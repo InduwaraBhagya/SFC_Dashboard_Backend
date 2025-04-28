@@ -30,6 +30,16 @@
                     
                     <dt class="col-sm-3">Target Date:</dt>
                     <dd class="col-sm-9">@Model.TaskCompleteDate.ToString("yyyy-MM-dd")</dd>
+                    
+                    @if (!string.IsNullOrEmpty(Model.Priority) && Model.Priority.Contains("URGENT REQUEST PENDING"))
+                    {
+                        <dt class="col-sm-3">Requested Reason:</dt>
+                        <dd class="col-sm-9 text-danger">
+                            @(Model.Priority.Contains("Opening Ceremony") ? "Opening Ceremony - Priority 1" : 
+                              Model.Priority.Contains("Critical Customer") ? "Critical Customer - Priority 2" :
+                              Model.Priority.Contains("Network Outage") ? "Network Outage - Priority 0" : "Unspecified")
+                        </dd>
+                    }
                 </dl>
             </div>
             
@@ -37,23 +47,11 @@
                 <input type="hidden" name="id" value="@Model.Id" />
                 
                 <div class="form-group mb-3">
-                    <label class="form-label">Select Urgency Reason:</label>
+                    <label class="form-label fw-bold">Review Urgency Request:</label>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony" value="OpeningCeremony">
-                        <label class="form-check-label" for="openingCeremony">
-                            Opening Ceremony (Priority 1)
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer" value="CriticalCustomer">
-                        <label class="form-check-label" for="criticalCustomer">
-                            Critical Customer (Priority 2)
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="urgentReason" id="networkOutage" value="NetworkOutage">
-                        <label class="form-check-label" for="networkOutage">
-                            Network Outage (Priority 0)
+                        <input class="form-check-input" type="radio" name="urgentReason" id="approve" value="Approve">
+                        <label class="form-check-label" for="approve">
+                            Approve Request
                         </label>
                     </div>
                     <div class="form-check">

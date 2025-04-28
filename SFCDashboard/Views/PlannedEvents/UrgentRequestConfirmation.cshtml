@@ -10,7 +10,7 @@
     <div class="row">
         <div class="col-md-8">
             <div class="card mb-4">
-                <div class="card-header">
+                <div class="card-header bg-info text-white">
                     <h4>Record Details</h4>
                 </div>
                 <div class="card-body">
@@ -26,48 +26,62 @@
 
                         <dt class="col-sm-3">RTOM:</dt>
                         <dd class="col-sm-9">@Model.Rtom</dd>
+
+                        @if (!string.IsNullOrEmpty(Model.Priority) && Model.Priority.Contains("URGENT REQUEST PENDING"))
+                        {
+                            <dt class="col-sm-3">Requested Reason:</dt>
+                            <dd class="col-sm-9 text-danger">
+                                @(Model.Priority.Contains("Opening Ceremony") ? "Opening Ceremony - Priority 1" : 
+                                  Model.Priority.Contains("Critical Customer") ? "Critical Customer - Priority 2" : "Unspecified")
+                            </dd>
+                        }
                     </dl>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header">
-                    <h4>Select Urgent Request Reason</h4>
+                <div class="card-header bg-primary text-white">
+                    <h4>Review Urgent Request</h4>
                 </div>
                 <div class="card-body">
                     <form asp-controller="PlannedEvents" asp-action="ProcessUrgentRequest" method="post">
                         <input type="hidden" name="id" value="@Model.Id" />
+                        
+                        <!-- Extract the original reason from the Priority field -->
+                        @{
+                            string extractedReason = "OpeningCeremony"; // Default
+                            if (Model.Priority?.Contains("Opening Ceremony") == true)
+                            {
+                                extractedReason = "OpeningCeremony";
+                            }
+                            else if (Model.Priority?.Contains("Critical Customer") == true)
+                            {
+                                extractedReason = "CriticalCustomer";
+                            }
+                        }
 
                         <div class="form-group mb-4">
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony" value="OpeningCeremony" required />
-                                <label class="form-check-label" for="openingCeremony">
-                                    <strong>Opening Ceremony</strong> [Priority 1]
-                                </label>
+                            <div class="alert alert-warning">
+                                <strong>Please review the urgent request and decide whether to approve or reject it.</strong>
                             </div>
 
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer" value="CriticalCustomer" />
-                                <label class="form-check-label" for="criticalCustomer">
-                                    <strong>Critical Customer</strong> [Priority 2]
-                                </label>
+                            <div class="d-flex justify-content-around mt-4">
+                                <button type="submit" name="urgentReason" value="@extractedReason" class="btn btn-success btn-lg">
+                                    <i class="bi bi-check-circle-fill me-2"></i> Approve
+                                </button>
+                                
+                                <button type="submit" name="urgentReason" value="Reject" class="btn btn-danger btn-lg">
+                                    <i class="bi bi-x-circle-fill me-2"></i> Reject
+                                </button>
                             </div>
-
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="reject" value="Reject" />
-                                <label class="form-check-label" for="reject">
-                                    <strong>Reject</strong>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="form-group mt-4">
-                            <button type="submit" class="btn btn-primary">Submit</button>
-                            <a asp-action="UrgentRequestsList" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<div class="alert alert-warning mt-4">
+    <strong>Note:</strong> Making this Planned Event urgent will automatically mark all its tasks as urgent as well.
 </div>
