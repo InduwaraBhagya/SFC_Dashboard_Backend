@@ -23,7 +23,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddSingleton<PERecordSyncService>();
 // Then register it as a hosted service using the same instance
 builder.Services.AddHostedService(provider => provider.GetRequiredService<PERecordSyncService>());
-
+builder.Services.AddHostedService<OLAViolationService>();
 // Load Azure AD Configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
 var isDevelopment = builder.Environment.IsDevelopment();

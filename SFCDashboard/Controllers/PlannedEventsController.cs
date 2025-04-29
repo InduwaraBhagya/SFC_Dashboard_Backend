@@ -28,7 +28,7 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: PlannedEvents/Index
-        public async Task<IActionResult> Index(string searchType, string peNumber, string customer,
+        public async Task<IActionResult> Index(string searchType, string peNumber, string customer, 
             string jobReference, string soNumber, int pageIndex = 1)
         {
             var query = from r in _context.PlannedEvents
@@ -51,18 +51,42 @@ namespace SFCDashboard.Controllers
             };
 
             // Calculate counts for dashboard boxes
-            var today = DateTime.Today;
+            ViewData["UrgentCount"] = await _context.PlannedEvents
+                .Where(p => p.PEStatus == "urgent")
+                .CountAsync();
+                
             ViewData["InProgressCount"] = await _context.PlannedEvents
                 .Where(p => p.PEStatus == "ongoing")
                 .CountAsync();
-
-            //ViewData["OLAViolateCount"] = await _context.PlannedEvents
-            //    .Where(p => p.PECreatedDate.HasValue && p.PECreatedDate.Value.AddDays(30) < today)
-            //    .CountAsync();
-
-            ViewData["UrgentCount"] = await _context.PlannedEvents
-                .Where(p => p.PEStatus == "URGENT")
+                
+            // Count OLA violations
+            var currentDate = DateTime.Today;
+            ViewData["OLAViolateCount"] = await _context.PETasks
+                .Where(t => t.TaskStatus != "COMPLETED" && 
+                           t.TaskCompleteDate.Date < currentDate)
                 .CountAsync();
+            
+            // Get top OLA violations - first get data
+            var violationsData = await _context.PETasks
+                .Where(t => t.TaskStatus != "COMPLETED" && 
+                           t.TaskCompleteDate.Date < currentDate)
+                .OrderBy(t => t.TaskCompleteDate)
+                .Take(5)
+                .Include(t => t.PlannedEvent)
+                .ToListAsync();
+            
+            // Then transform it in memory
+            var topViolations = violationsData
+                .Select(t => new {
+                    PENumber = t.PENumber,
+                    TaskName = t.Task,
+                    DueDate = t.TaskCompleteDate,
+                    DaysOverdue = (currentDate - t.TaskCompleteDate.Date).Days,
+                    PlannedEventId = t.PlannedEvent?.Id
+                })
+                .ToList();
+            
+            ViewData["TopOLAViolations"] = topViolations;
 
             // Apply search filters based on type
             if (!string.IsNullOrEmpty(searchString))
@@ -255,17 +279,58 @@ public async Task<IActionResult> Details(int? id)
             return View(inProgressRecords);
         }
 
-        //public async Task<IActionResult> OLAViolateRecords()
-        //{
-        //    var today = DateTime.Today;
-        //    var OLAViolateRecords = await _context.PlannedEvents
-        //        .Where(p => p.PECreatedDate.HasValue && p.PECreatedDate.Value.AddDays(30) < today)
-        //        .ToListAsync();
+        // GET: PlannedEvents/OLAViolateRecords
+        public async Task<IActionResult> OLAViolateRecords()
+        {
+            try
+            {
+                var currentDate = DateTime.Today;
 
-        //    _logger.LogInformation($"Total OLA Violate records found: {OLAViolateRecords.Count}");
+                // Get all PE records with OLA violations (tasks past their due date)
+                var olaViolatingTasks = await _context.PETasks
+                    .Where(t => t.TaskStatus != "COMPLETED" && 
+                               t.TaskCompleteDate.Date < currentDate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
 
-        //    return View(OLAViolateRecords);
-        //}
+                // Get the actual PE records
+                var olaViolateRecords = await _context.PlannedEvents
+                    .Where(p => olaViolatingTasks.Contains(p.PeNumber))
+                    .OrderBy(p => p.PeNumber)
+                    .ToListAsync();
+
+                // Create a dictionary to store violation details - do this calculation in memory
+                var violatingTasksList = await _context.PETasks
+                    .Where(t => t.TaskStatus != "COMPLETED" && 
+                               t.TaskCompleteDate.Date < currentDate)
+                    .ToListAsync();
+
+                // Group and calculate in memory instead of in the query
+                var violationDetails = violatingTasksList
+                    .GroupBy(t => t.PENumber)
+                    .ToDictionary(
+                        g => g.Key, 
+                        g => new {
+                            TasksCount = g.Count(),
+                            MaxDaysOverdue = g.Max(t => (currentDate - t.TaskCompleteDate.Date).Days),
+                            OldestViolation = g.OrderBy(t => t.TaskCompleteDate).FirstOrDefault()?.TaskCompleteDate
+                        }
+                    );
+
+                ViewBag.ViolationDetails = violationDetails;
+                
+                _logger.LogInformation("Retrieved {count} OLA violated records", olaViolateRecords.Count);
+                
+                return View(olaViolateRecords);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving OLA violated records");
+                TempData["ErrorMessage"] = "An error occurred while retrieving OLA violated records.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
 
         public IActionResult HoldRecords()
         {

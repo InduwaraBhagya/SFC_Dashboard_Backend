@@ -204,15 +204,14 @@
                                                 <i class="bi bi-hourglass-split"></i> Awaiting Approval
                                             </span>
                                         }
-                                        else if (task.TaskStatus?.ToUpper() != "COMPLETED" && !task.IsUrgent)
+                                        else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
                                         {
-                                            <button type="button" class="btn btn-warning btn-sm w-100 show-urgent-modal" 
-                                                    data-task-id="@task.Id" 
-                                                    data-pe-number="@task.PENumber" 
-                                                    data-task-name="@task.Task"
-                                                    data-customer="@Model.Customer">
-                                                <i class="bi bi-exclamation-triangle"></i> Request Urgent
-                                            </button>
+                                            <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post">
+                                                <input type="hidden" name="id" value="@task.Id" />
+                                                <button type="submit" class="btn btn-warning btn-sm w-100">
+                                                    <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
+                                                </button>
+                                            </form>
                                         }
                                     </td>
                                 </tr>

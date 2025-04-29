@@ -274,6 +274,23 @@
                             <div class="mt-2">
                                 <span class="badge bg-light text-dark" style="font-size: 1.2rem;">@ViewData["OLAViolateCount"] Tasks</span>
                             </div>
+                            
+                            @if (((IEnumerable<dynamic>)ViewData["TopOLAViolations"]).Any())
+                            {
+                                <div class="ola-preview mt-2">
+                                    <div class="top-violations">
+                                        @foreach (var violation in (IEnumerable<dynamic>)ViewData["TopOLAViolations"])
+                                        {
+                                            <div class="violation-item">
+                                                <small title="PE: @violation.PENumber, Task: @violation.TaskName">
+                                                    <span class="text-warning">@violation.PENumber</span> - 
+                                                    <span class="text-danger">@violation.DaysOverdue days</span>
+                                                </small>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
                         </div>
                         <div class="img-container">
                             <img src="~/images/ola _Validate.png" alt="OLA Violate" class="dashboard-img" />
