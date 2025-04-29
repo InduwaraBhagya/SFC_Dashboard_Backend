@@ -131,6 +131,28 @@ namespace SFCDashboard.Controllers
             ViewData["SearchType"] = searchType;
             ViewData["SearchString"] = searchString;
 
+            // Get pending urgent requests for the message inbox
+            var pendingUrgentRequests = await _context.PlannedEvents
+                .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
+                .OrderByDescending(p => p.PECreatedDate)
+                .Take(10)
+                .ToListAsync();
+                
+            ViewData["PendingUrgentRequests"] = pendingUrgentRequests;
+            
+            // Get pending task urgent requests as well
+            var pendingTaskRequests = await _context.PETasks
+                .Where(t => t.UrgentRequested && !t.IsUrgent)
+                .Include(t => t.PlannedEvent)
+                .OrderByDescending(t => t.TaskCreatedDate)
+                .Take(5)
+                .ToListAsync();
+                
+            ViewData["PendingTaskRequests"] = pendingTaskRequests;
+            
+            // Total message count for the badge - remove the +5 since we're removing the static messages
+            ViewData["TotalMessages"] = pendingUrgentRequests.Count + pendingTaskRequests.Count;
+            
             return View(paginatedList);
         }
 
@@ -498,6 +520,62 @@ public async Task<IActionResult> RequestUrgentWithReason(int id, string urgentRe
     TempData["SuccessMessage"] = "Urgent request submitted for approval.";
     
     return RedirectToAction("InProgressRecords");
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> MarkOLARecordUrgent(int id)
+{
+    try
+    {
+        var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+        
+        if (plannedEvent == null)
+        {
+            TempData["ErrorMessage"] = "Record not found.";
+            return RedirectToAction(nameof(OLAViolateRecords));
+        }
+        
+        var currentDate = DateTime.Today;
+        
+        // Find the violating tasks for this PE
+        var violatingTasks = await _context.PETasks
+            .Where(t => t.PENumber == plannedEvent.PeNumber && 
+                      t.TaskStatus != "COMPLETED" &&
+                      t.TaskCompleteDate.Date < currentDate)
+            .OrderBy(t => t.TaskCompleteDate)  // Start with the most overdue
+            .ToListAsync();
+            
+        if (violatingTasks.Any())
+        {
+            // Mark the first/most overdue violating task as urgent
+            var mostOverdueTask = violatingTasks.First();
+            mostOverdueTask.IsUrgent = true;
+            mostOverdueTask.Priority = (mostOverdueTask.Priority ?? "") + " [URGENT: OLA VIOLATED]";
+            _context.Update(mostOverdueTask);
+            
+            // Update PE status to urgent
+            plannedEvent.PEStatus = "urgent";
+            _context.Update(plannedEvent);
+            
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("PE {peNumber} with OLA violation marked as urgent", plannedEvent.PeNumber);
+            TempData["SuccessMessage"] = $"PE {plannedEvent.PeNumber} marked as urgent due to OLA violation.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = "No violating tasks found for this PE.";
+        }
+        
+        return RedirectToAction(nameof(OLAViolateRecords));
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error marking OLA record as urgent");
+        TempData["ErrorMessage"] = "An error occurred while marking the record as urgent.";
+        return RedirectToAction(nameof(OLAViolateRecords));
+    }
 }
 
     }

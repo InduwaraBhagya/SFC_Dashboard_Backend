@@ -1,58 +1,98 @@
 ﻿@model IEnumerable<SFCDashboard.Models.PlannedEvent>
 
 @{
-    ViewData["Title"] = "In Progress Records";
+    ViewData["Title"] = "Regular Records";
 }
 
-<h1>In Progress Records</h1>
-
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-list-task text-success me-3"></i>Regular Records
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
     </div>
-}
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>@Html.DisplayNameFor(model => model.Region)</th>
-            <th>@Html.DisplayNameFor(model => model.Province)</th>            
-            <th>@Html.DisplayNameFor(model => model.RequestReferenceNo)</th>
-            <th>@Html.DisplayNameFor(model => model.PeNumber)</th>
-            <th>@Html.DisplayNameFor(model => model.PEStatus)</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
-                <th>@Html.DisplayFor(modelItem => item.Region)</th>
-                <td>@Html.DisplayFor(modelItem => item.Province)</td>
-                <td>@Html.DisplayFor(modelItem => item.RequestReferenceNo)</td>
-                <td>@Html.DisplayFor(modelItem => item.PeNumber)</td>
-                <td>@Html.DisplayFor(modelItem => item.PEStatus)</td>
-                <td>
-                    <!-- Replace form with button that triggers modal -->
-                    <button type="button" class="btn btn-danger urgent-request-btn" 
-                            data-pe-id="@item.Id" 
-                            data-pe-number="@item.PeNumber" 
-                            data-customer="@item.Customer">
-                        <i class="bi bi-exclamation-triangle"></i> Urgent Request
-                    </button>
-                </td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Regular Records</h5>
+                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 10%;">PE Number</th>
+                            <th style="width: 10%;">Region</th>
+                            <th style="width: 15%;">Request Reference</th>
+                            <th style="width: 15%;">Customer</th>
+                            <th style="width: 15%;">Required Date</th>
+                            <th style="width: 15%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{int rowNumber = 1;}
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@(rowNumber++)</td>
+                                <td>@Html.DisplayFor(modelItem => item.PeNumber)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Region)</td>
+                                <td>@Html.DisplayFor(modelItem => item.RequestReferenceNo)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Customer)</td>
+                                <td>
+                                    @if (item.ServiceRequiredDate.HasValue)
+                                    {
+                                        @item.ServiceRequiredDate.Value.ToString("yyyy-MM-dd")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">
+                                            <i class="bi bi-eye"></i> Details
+                                        </a>
+                                        <button type="button" class="btn btn-danger btn-sm urgent-request-btn" 
+                                                data-pe-id="@item.Id" 
+                                                data-pe-number="@item.PeNumber" 
+                                                data-customer="@item.Customer">
+                                            <i class="bi bi-exclamation-triangle"></i> Urgent
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i> No regular records found.
+                </div>
+            }
+        </div>
+    </div>
+</div>
 
-<!-- Add this modal at the bottom of your page -->
+<!-- Keep your existing modal and scripts section unchanged -->
 <div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">

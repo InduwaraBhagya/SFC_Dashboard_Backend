@@ -103,6 +103,7 @@
                 <p class="text-muted">This will move the record to the urgent list for immediate attention.</p>
                 
                 <form id="markUrgentForm" asp-action="MarkOLARecordUrgent" method="post">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" id="peIdField" name="id" />
                 </form>
             </div>

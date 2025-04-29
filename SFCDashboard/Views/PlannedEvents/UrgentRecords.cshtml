@@ -1,52 +1,104 @@
 ﻿@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
 @{
     ViewData["Title"] = "Urgent Records";
-    int rowNumber = 1; // Initialize counter for row numbers
 }
-<h1>Urgent Records</h1>
-<p>Total Urgent Requests: @Model.Count()</p> <!-- Display the total count -->
-<table class="table table-striped">
-    <thead class="thead-dark">
-        <tr>
-            <th>#</th> <!-- New column for row numbers -->
-            <th>PE Number</th>
-            <th>Customer</th>
-            <th>Request Reference No</th>
-            <th>Region</th>
-            <th>Service Required Date</th>
-            <th>Priority</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@(rowNumber++)</td> <!-- Display and increment row number -->
-                <td>@item.PeNumber</td>
-                <td>@item.Customer</td>
-                <td>@item.RequestReferenceNo</td>
-                <td>@item.Region</td>
-                <td>@item.ServiceRequiredDate</td>
 
-                <td>
-                    @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
-                    {
-                        <span class="badge bg-danger">Priority 1</span>
-                    }
-                    else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 2"))
-                    {
-                        <span class="badge bg-warning text-dark">Priority 2</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary">Standard</span>
-                    }
-                </td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-exclamation-triangle text-danger me-3"></i>Urgent Records
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>Urgent Records</h5>
+                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 10%;">PE Number</th>
+                            <th style="width: 15%;">Customer</th>
+                            <th style="width: 15%;">Request Reference</th>
+                            <th style="width: 10%;">Region</th>
+                            <th style="width: 15%;">Required Date</th>
+                            <th style="width: 15%;">Priority</th>
+                            <th style="width: 15%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{int rowNumber = 1;}
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@(rowNumber++)</td>
+                                <td>@item.PeNumber</td>
+                                <td>@item.Customer</td>
+                                <td>@item.RequestReferenceNo</td>
+                                <td>@item.Region</td>
+                                <td>
+                                    @if (item.ServiceRequiredDate.HasValue)
+                                    {
+                                        @item.ServiceRequiredDate.Value.ToString("yyyy-MM-dd")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
+                                    {
+                                        <span class="badge bg-danger">Priority 1</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 2"))
+                                    {
+                                        <span class="badge bg-warning text-dark">Priority 2</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("URGENT"))
+                                    {
+                                        <span class="badge bg-danger">URGENT</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Standard</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i> No urgent records found.
+                </div>
+            }
+        </div>
+    </div>
+</div>
