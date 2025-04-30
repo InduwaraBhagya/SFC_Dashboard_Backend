@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Services;
 using SFCDashboard.Controllers;
+using SFCDashboard.Middleware;
+
 using Microsoft.Extensions.DependencyInjection;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 
@@ -66,6 +68,8 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
+
+app.UseUserRegistration();
 
 app.MapStaticAssets();
 app.MapControllerRoute(

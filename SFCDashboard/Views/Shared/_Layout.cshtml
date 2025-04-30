@@ -51,6 +51,16 @@
                     </li>
 
                 </ul>
+                @* <ul class="navbar-nav">
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item">
+                            <form class="form-inline" asp-area="AzureAD" asp-controller="Account" asp-action="SignOut">
+                                <button type="submit" class="nav-link btn btn-link text-white">Sign Out</button>
+                            </form>
+                        </li>
+                    }
+                </ul> *@
                 <partial name="_LoginPartial" />
             </div>
         </div>
