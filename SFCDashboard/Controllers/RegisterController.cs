@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
@@ -23,7 +24,7 @@ namespace SFCDashboard.Controllers
             return email[..Math.Min(email.Length, 6)];
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
@@ -32,17 +33,24 @@ namespace SFCDashboard.Controllers
 
             var email = User.Identity?.Name ?? string.Empty;
             var serviceId = ExtractServiceId(email);
-            var name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty;
+
+            // Get existing user details from database
+            var existingUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+
+            if (existingUser == null)
+            {
+                // If user doesn't exist, create new user object
+                var name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty;
+                existingUser = new SystemUser
+                {
+                    Name = name,
+                    ServiceId = serviceId
+                };
+            }
 
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name");
-
-            var model = new SystemUser
-            {
-                Name = name,
-                ServiceId = serviceId
-            };
-
-            return View(model);
+            return View(existingUser);
         }
 
         [HttpPost]
@@ -54,16 +62,38 @@ namespace SFCDashboard.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Get name from Azure AD claims and service ID from email
             var email = User.Identity?.Name ?? string.Empty;
-            user.ServiceId = ExtractServiceId(email);
-            user.Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty;
+            var serviceId = ExtractServiceId(email);
+
+            // Get existing user
+            var existingUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+
+            if (existingUser != null)
+            {
+                // Update existing user's WorkGroup
+                existingUser.WorkGroupId = user.WorkGroupId;
+                _context.Update(existingUser);
+            }
+            else
+            {
+                // Create new user if doesn't exist
+                user.ServiceId = serviceId;
+                user.Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty;
+                _context.Add(user);
+            }
 
             if (ModelState.IsValid)
             {
-                _context.Add(user);
-                await _context.SaveChangesAsync();
-                return RedirectToAction("Index", "Home");
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction("Index", "Home");
+                }
+                catch (DbUpdateException)
+                {
+                    ModelState.AddModelError("", "Unable to save changes. Please try again.");
+                }
             }
 
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name", user.WorkGroupId);
