@@ -18,11 +18,12 @@ namespace SFCDashboard.Middleware
             if (context.User.Identity?.IsAuthenticated == true)
             {
                 var serviceId = ExtractServiceId(context.User.Identity.Name ?? string.Empty);
+                var azureAdName = context.User.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
 
                 // First check if user exists in database
-                var userExists = await dbContext.Users.AnyAsync(u => u.ServiceId == serviceId);
+                var user = await dbContext.Users.FirstOrDefaultAsync(u => u.ServiceId == serviceId);
 
-                if (!userExists)
+                if (user == null)
                 {
                     // If user doesn't exist and trying to access Register page, redirect to unauthorized
                     if (!context.Request.Path.StartsWithSegments("/Home/Unauthorized"))
@@ -31,11 +32,17 @@ namespace SFCDashboard.Middleware
                         return;
                     }
                 }
-                else if (!context.Request.Path.StartsWithSegments("/Register"))
+                else 
                 {
-                    // If user exists but hasn't completed registration (no workgroup assigned)
-                    var user = await dbContext.Users.FirstOrDefaultAsync(u => u.ServiceId == serviceId);
-                    if (user?.WorkGroupId == null)
+                    // Update user's name from Azure AD if it has changed
+                    if (!string.IsNullOrEmpty(azureAdName) && user.Name != azureAdName)
+                    {
+                        user.Name = azureAdName;
+                        await dbContext.SaveChangesAsync();
+                    }
+
+                    // Check if registration is complete
+                    if (!context.Request.Path.StartsWithSegments("/Register") && user.WorkGroupId == null)
                     {
                         context.Response.Redirect("/Register");
                         return;
