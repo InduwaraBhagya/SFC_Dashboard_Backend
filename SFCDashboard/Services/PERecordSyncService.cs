@@ -62,108 +62,142 @@ namespace SFCDashboard.Services
                 {
                     var loadingContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     var dataLoadingTasks = await LoadDataAsync(loadingContext);
-                    (sourceRecords, existingEvents, existingTasks, taskTemplates) = dataLoadingTasks;
+                    sourceRecords = dataLoadingTasks.sourceRecords;
+                    existingEvents = dataLoadingTasks.existingEvents;
+                    existingTasks = dataLoadingTasks.existingTasks;
+                    taskTemplates = dataLoadingTasks.taskTemplates;
                 }
 
                 if (sourceRecords.Count == 0 || taskTemplates.Count == 0)
                 {
-                    _logger.LogWarning("Required data missing. Aborting synchronization.");
+                    _logger.LogWarning("Source records or task templates are empty. Cannot proceed with synchronization.");
                     return;
                 }
 
-                // Process records in batches
-                var processedPENumbers = new HashSet<string>();
-                const int batchSize = 100;
+                // Group records by PE_NUMBER to handle duplicates
+                var groupedRecords = sourceRecords.GroupBy(r => r.PE_NUMBER)
+                    .ToDictionary(g => g.Key, g => g.ToList());
 
-                foreach (var batch in sourceRecords.Where(r => !string.IsNullOrEmpty(r.PE_NUMBER))
-                                                 .Where(r => r.PE_NUMBER != null && !processedPENumbers.Contains(r.PE_NUMBER))
-                                                 .Chunk(batchSize))
+                _logger.LogInformation("Grouped {sourceCount} source records into {groupCount} unique PE numbers", 
+                    sourceRecords.Count, groupedRecords.Count);
+
+                // Create lookup dictionary for faster searching
+                var existingEventsByPeNumber = existingEvents.ToDictionary(
+                    pe => pe.PeNumber, 
+                    pe => pe, 
+                    StringComparer.OrdinalIgnoreCase); // Case insensitive comparison
+
+                using (var scope = _serviceProvider.CreateScope())
                 {
-                    // Use a new context for each batch
-                    using var scope = _serviceProvider.CreateScope();
                     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    
+                    // Track metrics
+                    int newEventCount = 0;
+                    int updatedEventCount = 0;
+                    int duplicateCount = 0;
 
-                    var newEvents = new List<PlannedEvent>();
-                    var updatedEvents = new List<PlannedEvent>();
-                    var newTasks = new List<PETask>();
-
-                    foreach (var record in batch)
+                    // Process each unique PE_NUMBER group
+                    foreach (var group in groupedRecords)
                     {
-                        if (!string.IsNullOrEmpty(record.PE_NUMBER))
+                        try
                         {
-                            processedPENumbers.Add(record.PE_NUMBER);
-                        }
-                        var existingEvent = existingEvents.FirstOrDefault(pe => pe.PeNumber == record.PE_NUMBER);
+                            string peNumber = group.Key;
+                            var records = group.Value;
 
-                        if (existingEvent != null)
-                        {
-                            var trackedEvent = await dbContext.PlannedEvents
-                                .FirstOrDefaultAsync(pe => pe.PeNumber == record.PE_NUMBER);
-                            
-                            if (trackedEvent != null)
+                            if (string.IsNullOrEmpty(peNumber))
                             {
-                                UpdatePlannedEvent(trackedEvent, record);
-                                updatedEvents.Add(trackedEvent);
+                                _logger.LogWarning("Skipping group with null or empty PE_NUMBER");
+                                continue;
+                            }
 
-                                if (!existingTasks.Any(t => t.PENumber == record.PE_NUMBER))
+                            if (records.Count > 1)
+                            {
+                                _logger.LogWarning("Found {count} duplicate records for PE_NUMBER: {peNumber}", 
+                                    records.Count, peNumber);
+                                duplicateCount += records.Count - 1;
+                                
+                                // Use the most recent record in case of duplicates
+                                // This assumes there's a timestamp field to determine which is most recent
+                                // If not, you might need a different strategy
+                                var mostRecentRecord = records.OrderByDescending(r => r.SO_CREATE_DATE ?? DateTime.MinValue).First();
+                                records = new List<PERecord> { mostRecentRecord };
+                            }
+
+                            // Now process the single/most recent record
+                            var record = records.First();
+                            bool eventExists = existingEventsByPeNumber.TryGetValue(peNumber, out PlannedEvent existingEvent);
+
+                            if (eventExists)
+                            {
+                                _logger.LogDebug("Found existing event for PE_NUMBER: {peNumber}", peNumber);
+                                
+                                // Fetch the actual entity from database to update it
+                                var trackedEvent = await dbContext.PlannedEvents
+                                    .FirstOrDefaultAsync(pe => pe.PeNumber == peNumber);
+                                    
+                                if (trackedEvent != null)
                                 {
-                                    var tasks = CreateTasksForEvent(trackedEvent, record, taskTemplates);
-                                    if (tasks != null)
+                                    // Update existing entity
+                                    UpdatePlannedEvent(trackedEvent, record);
+                                    await dbContext.SaveChangesAsync();
+                                    updatedEventCount++;
+                                    
+                                    // Check if tasks need to be created
+                                    if (!existingTasks.Any(t => t.PENumber == peNumber))
                                     {
-                                        newTasks.AddRange(tasks);
+                                        await CreatePETasksForEvent(dbContext, trackedEvent, record, taskTemplates);
                                     }
                                 }
                             }
-                        }
-                        else
-                        {
-                            var newEvent = CreatePlannedEventFromRecord(record);
-                            if (newEvent != null)
+                            else
                             {
-                                newEvents.Add(newEvent);
-                                var tasks = CreateTasksForEvent(newEvent, record, taskTemplates);
-                                if (tasks != null)
+                                _logger.LogInformation("Creating new event for PE_NUMBER: {peNumber}", peNumber);
+                                
+                                // Do a final duplicate check to be safe
+                                var duplicateCheck = await dbContext.PlannedEvents
+                                    .FirstOrDefaultAsync(pe => pe.PeNumber == peNumber);
+                                    
+                                if (duplicateCheck == null)
                                 {
-                                    newTasks.AddRange(tasks);
+                                    // Create new event
+                                    var newEvent = CreatePlannedEventFromRecord(record);
+                                    dbContext.PlannedEvents.Add(newEvent);
+                                    
+                                    // Save immediately to get the ID before creating tasks
+                                    await dbContext.SaveChangesAsync();
+                                    newEventCount++;
+                                    
+                                    // Create tasks for the new event
+                                    await CreatePETasksForEvent(dbContext, newEvent, record, taskTemplates);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("Found duplicate for PE_NUMBER: {peNumber} despite not being in initial list", peNumber);
+                                    // Update the existing record that was found
+                                    UpdatePlannedEvent(duplicateCheck, record);
+                                    await dbContext.SaveChangesAsync();
+                                    updatedEventCount++;
                                 }
                             }
                         }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error processing record group with PE_NUMBER: {peNumber}", group.Key);
+                            // Continue with next group
+                        }
                     }
 
-                    // Save changes for this batch
-                    if (newEvents.Count > 0)
-                    {
-                        await SaveEntitiesInBatches(dbContext, newEvents, "PlannedEvents");
-                    }
-
-                    if (updatedEvents.Count > 0)
-                    {
-                        await SaveEntitiesInBatches(dbContext, updatedEvents, "Updated PlannedEvents");
-                    }
-
-                    if (newTasks.Count > 0)
-                    {
-                        await SaveEntitiesInBatches(dbContext, newTasks, "PETasks");
-                    }
+                    _logger.LogInformation("Sync completed. New events: {newCount}, Updated: {updatedCount}, Duplicates handled: {duplicateCount}",
+                        newEventCount, updatedEventCount, duplicateCount);
                 }
-
-                // Update task phases with a new context
-                using (var scope = _serviceProvider.CreateScope())
-                {
-                    var phaseContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    await UpdateTaskPhasesEfficiently(phaseContext);
-                }
-
-                _logger.LogInformation("PE records synchronization completed successfully");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during PE records synchronization");
-                throw;
             }
         }
 
-        private static async Task<(List<PERecord>, List<PlannedEvent>, List<PETask>, List<PETaskList>)> LoadDataAsync(ApplicationDbContext dbContext)
+        private static async Task<(List<PERecord> sourceRecords, List<PlannedEvent> existingEvents, List<PETask> existingTasks, List<PETaskList> taskTemplates)> LoadDataAsync(ApplicationDbContext dbContext)
         {
             try 
             {
@@ -216,46 +250,43 @@ namespace SFCDashboard.Services
                     WHERE TASK_NAME IS NOT NULL
                 )
                 UPDATE pt
-                SET TaskPhase = CASE
-                    WHEN pt.Task = (SELECT TOP 1 TaskName 
-                                   FROM CurrentTasks ct 
-                                   WHERE ct.PENumber = pt.PENumber) 
-                    THEN 'ONGOING'
-                    WHEN pt.TaskSeq < (SELECT TOP 1 pt2.TaskSeq 
-                                      FROM PETasks pt2 
-                                      INNER JOIN CurrentTasks ct ON ct.PENumber = pt2.PENumber
-                                      WHERE pt2.PENumber = pt.PENumber 
-                                      AND pt2.Task = ct.TaskName) 
-                    THEN 'FINISH'
-                    ELSE 'WAITING'
-                END,
-                TaskStatus = CASE
-                    WHEN TaskPhase = 'FINISH' THEN 'COMPLETED'
-                    ELSE pt.TaskStatus
-                END,
-                TaskWorkGroup = CASE
-                    WHEN pt.Task = (SELECT TOP 1 TaskName 
-                                   FROM CurrentTasks ct 
-                                   WHERE ct.PENumber = pt.PENumber) 
-                    THEN (SELECT TOP 1 TaskWg 
-                          FROM CurrentTasks ct 
-                          WHERE ct.PENumber = pt.PENumber)
-                    ELSE pt.TaskWorkGroup
-                END,
-                ActualTaskCreatedDate = CASE
-                    WHEN pt.Task = (SELECT TOP 1 TaskName 
-                                   FROM CurrentTasks ct 
-                                   WHERE ct.PENumber = pt.PENumber) 
-                    AND pt.ActualTaskCreatedDate IS NULL 
-                    THEN GETUTCDATE()
-                    ELSE pt.ActualTaskCreatedDate
-                END,
-                ActualTaskCompleteDate = CASE
-                    WHEN TaskPhase = 'FINISH' 
-                    AND pt.ActualTaskCompleteDate IS NULL 
-                    THEN GETUTCDATE()
-                    ELSE pt.ActualTaskCompleteDate
-                END
+                SET TaskStatus = CASE
+                        WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                       FROM CurrentTasks ct 
+                                       WHERE ct.PENumber = pt.PENumber) 
+                        THEN 'ONGOING'
+                        WHEN pt.TaskSeq < (SELECT TOP 1 pt2.TaskSeq 
+                                          FROM PETasks pt2 
+                                          INNER JOIN CurrentTasks ct ON ct.PENumber = pt2.PENumber
+                                          WHERE pt2.PENumber = pt.PENumber 
+                                          AND pt2.Task = ct.TaskName) 
+                        THEN 'COMPLETED'
+                        ELSE 'WAITING'
+                    END,
+                    TaskWorkGroup = CASE
+                        WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                       FROM CurrentTasks ct 
+                                       WHERE ct.PENumber = pt.PENumber) 
+                        THEN (SELECT TOP 1 TaskWg 
+                              FROM CurrentTasks ct 
+                              WHERE ct.PENumber = pt.PENumber)
+                        ELSE pt.TaskWorkGroup
+                    END,
+                    ActualTaskCreatedDate = CASE
+                        WHEN pt.Task = (SELECT TOP 1 TaskName 
+                                       FROM CurrentTasks ct 
+                                       WHERE ct.PENumber = pt.PENumber) 
+                        AND pt.ActualTaskCreatedDate IS NULL 
+                        THEN GETUTCDATE()
+                        ELSE pt.ActualTaskCreatedDate
+                    END,
+                    ActualTaskCompleteDate = CASE
+                        WHEN TaskStatus = 'COMPLETED' 
+                        AND pt.ActualTaskCompleteDate IS NULL 
+                        THEN GETUTCDATE()
+                        ELSE pt.ActualTaskCompleteDate
+                    END
+                    -- UrgentRequested and IsUrgent are preserved and not modified by this update
                 FROM PETasks pt
                 WHERE EXISTS (SELECT 1 FROM CurrentTasks ct WHERE ct.PENumber = pt.PENumber)";
 
@@ -441,6 +472,18 @@ namespace SFCDashboard.Services
                         // For the next task, its created date will be this task's complete date
                         previousTaskCompleteDate = taskCompleteDate;
 
+                        // Determine initial status based on current task
+                        string initialStatus = "WAITING"; // Default status is waiting
+                        
+                        if (taskTemplate.Name == record.TASK_NAME)
+                        {
+                            initialStatus = "ONGOING"; // This is the current task
+                        }
+                        else if (orderedTaskTemplates.IndexOf(taskTemplate) < orderedTaskTemplates.FindIndex(t => t.Name == record.TASK_NAME))
+                        {
+                            initialStatus = "COMPLETED"; // This task comes before the current task
+                        }
+
                         // Create task for this PE, safely handling nullable fields
                         var peTask = new PETask
                         {
@@ -448,14 +491,16 @@ namespace SFCDashboard.Services
                             TaskSeq = taskTemplate.TaskSeq,
                             Task = taskTemplate.Name ?? string.Empty,
                             OLA = taskTemplate.OLA_Parameters ?? string.Empty,
-                            TaskStatus = "INPROGRESS",
-                            TaskPhase = "ONGOING",
+                            TaskStatus = initialStatus,
                             TaskCreatedDate = taskCreatedDate,
                             TaskCompleteDate = taskCompleteDate,
                             TaskWorkGroup = "NULL", // Default value
                             // Initialize optional fields to avoid database null constraint violations
                             ActualTaskCreatedDate = null,
-                            ACtualTaskCompleteDate = null
+                            ACtualTaskCompleteDate = null,
+                            IsUrgent = false,
+                            UrgentRequested = false, // Initialize UrgentRequested flag
+                            Priority = string.Empty // Initialize Priority field
                         };
 
                         // If this is the current task in the PE record, set actual dates and work group
@@ -463,12 +508,11 @@ namespace SFCDashboard.Services
                         {
                             peTask.TaskWorkGroup = record.TASK_WG ?? "NULL";
                             peTask.ActualTaskCreatedDate = currentDate;
-
-                            // Only set ActualTaskCompleteDate if the status would be ongoing
-                            if (peTask.TaskPhase == "ONGOING")
-                            {
-                                peTask.ACtualTaskCompleteDate = currentDate;
-                            }
+                        }
+                        // If this task is completed, set the actual complete date
+                        else if (initialStatus == "COMPLETED")
+                        {
+                            peTask.ACtualTaskCompleteDate = currentDate;
                         }
 
                         tasksToCreate.Add(peTask);
@@ -512,49 +556,45 @@ namespace SFCDashboard.Services
                 if (existingTasks.Any())
                 {
                     _logger.LogInformation("Tasks already exist for PE {peNumber}. Skipping task creation.", plannedEvent.PeNumber);
-                    return; // Skip if tasks already exist
+                    return;
                 }
 
+                // Create tasks without tracking the parent event
                 var tasksToCreate = CreateTasksForEvent(plannedEvent, record, taskListTemplates);
 
                 if (tasksToCreate.Count > 0)
                 {
                     try
                     {
-                        _logger.LogInformation("Adding {count} tasks for PE {peNumber}", tasksToCreate.Count, plannedEvent.PeNumber);
+                        _logger.LogInformation("Adding {count} tasks for PE {peNumber} in batches", tasksToCreate.Count, plannedEvent.PeNumber);
                         
-                        // Save tasks individually to identify problematic records
-                        foreach (var task in tasksToCreate)
+                        // Process in batches of 100
+                        const int batchSize = 100;
+                        for (int i = 0; i < tasksToCreate.Count; i += batchSize)
                         {
-                            try
+                            var batch = tasksToCreate.Skip(i).Take(batchSize).ToList();
+                            
+                            // Validate batch before adding
+                            var validBatch = batch.Where(task => !string.IsNullOrEmpty(task.PENumber)).ToList();
+                            
+                            if (validBatch.Any())
                             {
-                                // Validate task before adding
-                                if (string.IsNullOrEmpty(task.PENumber))
-                                {
-                                    _logger.LogWarning("Skipping task with null PENumber");
-                                    continue;
-                                }
-                                
-                                dbContext.PETasks.Add(task);
+                                dbContext.PETasks.AddRange(validBatch);
                                 await dbContext.SaveChangesAsync();
+                                
+                                _logger.LogInformation("Saved batch of {count} tasks for PE {peNumber}", 
+                                    validBatch.Count, plannedEvent.PeNumber);
                             }
-                            catch (Exception ex)
+                            
+                            // Log any skipped tasks
+                            var skippedCount = batch.Count - validBatch.Count;
+                            if (skippedCount > 0)
                             {
-                                _logger.LogError(ex, "Failed to add task {taskName} for PE {peNumber}", 
-                                    task.Task, task.PENumber);
-                                
-                                // Log detailed information about the failing record
-                                _logger.LogError("Task data: PENumber={PENumber}, TaskSeq={TaskSeq}, Task={Task}, " +
-                                    "TaskWorkGroup={TaskWorkGroup}, OLA={OLA}, TaskStatus={TaskStatus}, " +
-                                    "TaskCreatedDate={TaskCreatedDate}, TaskCompleteDate={TaskCompleteDate}",
-                                    task.PENumber, task.TaskSeq, task.Task, task.TaskWorkGroup, task.OLA,
-                                    task.TaskStatus, task.TaskCreatedDate, task.TaskCompleteDate);
-                                
-                                // Continue with other tasks
+                                _logger.LogWarning("Skipped {count} invalid tasks in batch", skippedCount);
                             }
                         }
                         
-                        _logger.LogInformation("Successfully processed tasks for PE {peNumber}", plannedEvent.PeNumber);
+                        _logger.LogInformation("Successfully processed all tasks for PE {peNumber}", plannedEvent.PeNumber);
                     }
                     catch (Exception ex)
                     {
@@ -570,7 +610,7 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating tasks for PE {peNumber}", plannedEvent.PeNumber);
-                throw; // Rethrow to be caught by the calling method
+                throw;
             }
         }
 
@@ -613,7 +653,7 @@ namespace SFCDashboard.Services
                                 if (task.Task == currentTaskName)
                                 {
                                     // This is the current task
-                                    task.TaskPhase = "ONGOING";
+                                    task.TaskStatus = "ONGOING";
                                     task.TaskWorkGroup = plannedEvent.TaskWg ?? task.TaskWorkGroup ?? "NULL";
                                     currentTaskFound = true;
                                     hasChanges = true;
@@ -627,7 +667,6 @@ namespace SFCDashboard.Services
                                 else if (!currentTaskFound)
                                 {
                                     // Tasks before the current task are finished
-                                    task.TaskPhase = "FINISH";
                                     task.TaskStatus = "COMPLETED";
                                     hasChanges = true;
                                     
@@ -640,7 +679,7 @@ namespace SFCDashboard.Services
                                 else
                                 {
                                     // Tasks after the current task are waiting
-                                    task.TaskPhase = "WAITING";
+                                    task.TaskStatus = "WAITING";
                                     hasChanges = true;
                                 }
                             }

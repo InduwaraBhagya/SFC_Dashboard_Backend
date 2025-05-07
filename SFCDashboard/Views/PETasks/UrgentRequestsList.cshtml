@@ -1,0 +1,98 @@
+@model IEnumerable<SFCDashboard.Models.PETask>
+
+@{
+    ViewData["Title"] = "Pending Task Urgent Requests";
+}
+
+<div class="container mt-4">
+    <h1>Pending Task Urgent Requests</h1>
+    
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+    
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No pending urgent requests at this time.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>PE Number</th>
+                        <th>Task Seq</th>
+                        <th>Task Name</th>
+                        <th>Workgroup</th>
+                        <th>Created Date</th>
+                        <th>Target Date</th>
+                        <th>Priority</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var task in Model)
+                    {
+                        <tr>
+                            <td>@task.PENumber</td>
+                            <td>@task.TaskSeq</td>
+                            <td>@task.Task</td>
+                            <td>@task.TaskWorkGroup</td>
+                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+
+                            <!-- Priority column showing Urgent status -->
+                            <td>
+                                @if (task.IsUrgent)
+                                {
+                                    <span class="badge bg-danger">URGENT</span>
+                                }
+                                @if (task.UrgentRequested && !task.IsUrgent)
+                                {
+                                    <span class="badge bg-warning">URGENT REQUESTED</span>
+                                }
+                                @if (!string.IsNullOrEmpty(task.Priority))
+                                {
+                                    <small class="d-block text-muted mt-1">@task.Priority</small>
+                                }
+                            </td>
+
+                            <!-- Actions column with Review Request button -->
+                            <td>
+                                @if (task.UrgentRequested && !task.IsUrgent)
+                                {
+                                    <a asp-controller="PETasks" asp-action="UrgentRequestConfirmation" asp-route-id="@task.Id" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-check-circle"></i> Review Request
+                                    </a>
+                                }
+                                else if (task.TaskStatus?.ToUpper() != "COMPLETED" && !task.IsUrgent)
+                                {
+                                    <form asp-controller="PETasks" asp-action="RequestUrgent" method="post">
+                                        <input type="hidden" name="id" value="@task.Id" />
+                                        <button type="submit" class="btn btn-warning btn-sm w-100">
+                                            <i class="bi bi-exclamation-triangle"></i> Request Urgent
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    
+    <div>
+        <a asp-controller="PlannedEvents" asp-action="Index" class="btn btn-secondary">Back</a>
+    </div>
+</div>
