@@ -230,5 +230,45 @@ namespace SFCDashboard.Controllers
             
             return RedirectToAction(nameof(OLAViolationsList));
         }
+
+        // Add this to your PETasksController
+        [HttpGet]
+        public async Task<IActionResult> GetUrgentRequestDetails(int id)
+        {
+            var task = await _context.PETasks
+                .Include(t => t.PlannedEvent)
+                .FirstOrDefaultAsync(t => t.Id == id);
+                
+            if (task == null)
+            {
+                return NotFound();
+            }
+
+            var details = new
+            {
+                id = task.Id,
+                peNumber = task.PENumber,
+                customer = task.PlannedEvent?.Customer,
+                taskName = task.Task,
+                priority = task.Priority,
+                urgentRequestReason = ExtractUrgentRequestReason(task.Priority)
+            };
+
+            return Json(details);
+        }
+
+        private string ExtractUrgentRequestReason(string priority)
+        {
+            if (string.IsNullOrEmpty(priority))
+                return null;
+                
+            if (priority.Contains("Opening Ceremony"))
+                return "Opening Ceremony - Priority 1";
+                
+            if (priority.Contains("Critical Customer"))
+                return "Critical Customer - Priority 2";
+                
+            return null;
+        }
     }
 }

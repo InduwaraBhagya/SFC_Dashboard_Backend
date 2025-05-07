@@ -9,6 +9,39 @@
 }
 
 <div class="container-fluid mt-4">
+    <!-- Add this workgroup filter section above your search form -->
+    <div class="workgroup-filter-section mb-3">
+        <form id="workgroupFilterForm" method="get" asp-action="Index">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <label for="workgroupFilter" class="form-label mb-0"><i class="bi bi-filter"></i> Filter by Workgroup:</label>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="applyWorkgroupFilter()">
+                        <option value="">All Workgroups</option>
+                        @foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
+                        {
+                            <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
+                                @workgroup.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel-fill me-1"></i> Apply Filter
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i> Clear Filter
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Your existing search form -->
     <div class="row">
         <!-- Left Column - Existing Content -->
         <div class="col-lg-8">
@@ -336,11 +369,21 @@
 
             <div class="row mb-4">
                 <div class="col-md-6 mb-3">
-                    <a asp-action="UrgentRecords" class="dashboard-card urgent-card">
+                    <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card urgent-card">
                         <div class="card-content">
                             <h4>Urgent Records</h4>
                             <div class="mt-2">
-                                <span class="badge bg-light text-danger" style="font-size: 1.2rem;">@ViewData["UrgentCount"] Tasks</span>
+                                <span class="badge bg-light text-danger" style="font-size: 1.2rem;">
+                                    @ViewData["UrgentCount"] Tasks
+                                </span>
+                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                {
+                                    <div class="mt-1 filter-badge">
+                                        <span class="badge bg-danger text-white">
+                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
+                                        </span>
+                                    </div>
+                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -349,11 +392,21 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a asp-action="InProgressRecords" class="dashboard-card inprogress-card">
+                    <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card inprogress-card">
                         <div class="card-content">
                             <h4>Regular Records</h4>
                             <div class="mt-2">
-                                <span class="badge bg-light text-success" style="font-size: 1.2rem;">@ViewData["InProgressCount"] Tasks</span>
+                                <span class="badge bg-light text-success" style="font-size: 1.2rem;">
+                                    @ViewData["InProgressCount"] Tasks
+                                </span>
+                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                {
+                                    <div class="mt-1 filter-badge">
+                                        <span class="badge bg-success text-white">
+                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
+                                        </span>
+                                    </div>
+                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -362,11 +415,21 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a asp-action="OLAViolateRecords" class="dashboard-card ola-card">
+                    <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card ola-card">
                         <div class="card-content">
                             <h4>OLA Violate Records</h4>
                             <div class="mt-2">
-                                <span class="badge bg-light text-dark" style="font-size: 1.2rem;">@ViewData["OLAViolateCount"] Tasks</span>
+                                <span class="badge bg-light text-dark" style="font-size: 1.2rem;">
+                                    @ViewData["OLAViolateCount"] Tasks
+                                </span>
+                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                {
+                                    <div class="mt-1 filter-badge">
+                                        <span class="badge bg-dark text-white">
+                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
+                                        </span>
+                                    </div>
+                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -375,15 +438,25 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a asp-action="HoldRecords" class="dashboard-card hold-card">
+                    <a href="@Url.Action("HoldRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card hold-card">
                         <div class="card-content">
                             <h4>Hold Records</h4>
                             <div class="mt-2">
-                                <span class="badge bg-light text-warning" style="font-size: 1.2rem;">0 Tasks</span>
+                                <span class="badge bg-light text-warning" style="font-size: 1.2rem;">
+                                    @(ViewData["HoldCount"] != null ? ViewData["HoldCount"] : 0) Tasks
+                                </span>
+                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                {
+                                    <div class="mt-1 filter-badge">
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
+                                        </span>
+                                    </div>
+                                }
                             </div>
                         </div>
                         <div class="img-container">
-                            <img src="~/images/hold.png" alt="Hold" class="dashboard-img" />
+                            <img src="~/images/hold.png" alt="Hold Records" class="dashboard-img" />
                         </div>
                     </a>
                 </div>
@@ -466,91 +539,6 @@
                             </div>
                         }
                     }
-
-                    <!-- Your existing static messages -->
-                    <div class="message-item unread system" data-message-id="1">
-                        <div class="message-indicator"></div>
-                        <div class="message-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="message-sender">ATNC Service Team</h6>
-                                <span class="message-time">10:45 AM</span>
-                            </div>
-                            <div class="message-subject">New Urgent PE Record Added</div>
-                            <div class="message-preview">A new urgent PE record has been added that requires your attention...</div>
-                        </div>
-                    </div>
-
-                    <!-- Unread Important message -->
-                    <div class="message-item unread important" data-message-id="2">
-                        <div class="message-indicator"></div>
-                        <div class="message-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="message-sender">System Admin</h6>
-                                <span class="message-time">Yesterday</span>
-                            </div>
-                            <div class="message-subject">OLA Violation Alert</div>
-                            <div class="message-preview">Multiple records are approaching OLA violation status. Please review...</div>
-                        </div>
-                    </div>
-
-                    <!-- Read message -->
-                    <div class="message-item" data-message-id="3">
-                        <div class="message-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="message-sender">Customer Support</h6>
-                                <span class="message-time">Apr 19</span>
-                            </div>
-                            <div class="message-subject">Customer Feedback: XYZ Corporation</div>
-                            <div class="message-preview">Customer XYZ Corporation has provided feedback on their recent service...</div>
-                        </div>
-                    </div>
-
-                    <!-- Important read message -->
-                    <div class="message-item important" data-message-id="4">
-                        <div class="message-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="message-sender">Project Manager</h6>
-                                <span class="message-time">Apr 18</span>
-                            </div>
-                            <div class="message-subject">Project Status Update</div>
-                            <div class="message-preview">The status of the current project has been updated. Please review the...</div>
-                        </div>
-                    </div>
-
-                    <!-- Read message -->
-                    <div class="message-item" data-message-id="5">
-                        <div class="message-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="message-sender">Technical Support</h6>
-                                <span class="message-time">Apr 17</span>
-                            </div>
-                            <div class="message-subject">System Maintenance Notice</div>
-                            <div class="message-preview">The system will be undergoing scheduled maintenance on Sunday...</div>
-                        </div>
-                    </div>
-
-                    <!-- Multiple more messages -->
-                    <div class="message-item" data-message-id="6">
-                        <div class="message-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="message-sender">Operations Team</h6>
-                                <span class="message-time">Apr 16</span>
-                            </div>
-                            <div class="message-subject">Weekly Report Available</div>
-                            <div class="message-preview">The weekly operations report is now available for review in...</div>
-                        </div>
-                    </div>
-
-                    <div class="message-item" data-message-id="7">
-                        <div class="message-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="message-sender">HR Department</h6>
-                                <span class="message-time">Apr 15</span>
-                            </div>
-                            <div class="message-subject">New Training Modules</div>
-                            <div class="message-preview">New training modules have been added to the system...</div>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="inbox-footer mt-3">
@@ -568,96 +556,80 @@
 
 @section Scripts {
     <script>
-        // Original search fields toggle function
-        function toggleSearchFields() {
-            const searchType = document.getElementById('searchType').value;
-            const searchFields = document.querySelectorAll('.search-field');
-
-            // Hide all search fields with animation
-            searchFields.forEach(field => {
-                if (!field.classList.contains('d-none')) {
-                    field.style.opacity = '0';
-                    field.style.maxHeight = '0';
-
-                    setTimeout(() => {
-                        field.classList.add('d-none');
-
-                        // Clear the input when hiding
-                        const input = field.querySelector('input');
-                        if (input && field.id !== searchType + 'Field') {
-                            input.value = '';
-                        }
-                    }, 300);
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize message inbox
+            initializeMessageInbox();
+            
+            // Refresh inbox button
+            document.getElementById('refreshInbox').addEventListener('click', function() {
+                window.location.reload();
+            });
+            
+            // Accept button handler
+            document.getElementById('acceptUrgentRequestBtn').addEventListener('click', function() {
+                const requestType = document.getElementById('urgentRequestType').value;
+                const requestId = document.getElementById('urgentRequestId').value;
+                
+                // Submit the form to the appropriate endpoint
+                const form = document.getElementById('urgentRequestForm');
+                
+                // Create hidden field for urgentReason
+                const reasonField = document.createElement('input');
+                reasonField.type = 'hidden';
+                reasonField.name = 'urgentReason';
+                
+                // Default to OpeningCeremony 
+                // (backend will use the original reason from the request)
+                reasonField.value = 'OpeningCeremony';
+                
+                form.appendChild(reasonField);
+                
+                if (requestType === 'pe') {
+                    form.action = '/PlannedEvents/ProcessUrgentRequest';
+                } else {
+                    form.action = '/PETasks/ProcessUrgentRequest';
                 }
+                
+                form.submit();
             });
-
-            // Show selected search field with animation
-            setTimeout(() => {
-                const selectedField = document.getElementById(searchType + 'Field');
-                selectedField.classList.remove('d-none');
-
-                // Trigger reflow
-                void selectedField.offsetWidth;
-
-                // Animate in
-                selectedField.style.opacity = '1';
-                selectedField.style.maxHeight = '100px';
-
-                // Focus on the input after animation
-                setTimeout(() => {
-                    const input = selectedField.querySelector('input');
-                    if (input) input.focus();
-                }, 300);
-            }, 350);
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize the search field toggle
-            toggleSearchFields();
-
-            // Add ripple effect to search button
-            const searchButton = document.querySelector('.search-section .btn-primary');
-
-            if (searchButton) {
-                searchButton.addEventListener('mousedown', function(e) {
-                    const rect = this.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
-                    this.style.setProperty('--ripple-x', x + 'px');
-                    this.style.setProperty('--ripple-y', y + 'px');
-
-                    this.classList.remove('btn-ripple');
-                    void this.offsetWidth; 
-                    this.classList.add('btn-ripple');
-                });
-            }
-
-            // Add animation for form controls
-            const formControls = document.querySelectorAll('.search-section .form-control, .search-section .form-select');
-
-            formControls.forEach(control => {
-                control.addEventListener('focus', function() {
-                    const label = this.parentElement.querySelector('.form-label');
-                    if (label) {
-                        label.style.color = '#4a89dc';
-                    }
-                });
-
-                control.addEventListener('blur', function() {
-                    const label = this.parentElement.querySelector('.form-label');
-                    if (label) {
-                        label.style.color = '#495057';
-                    }
-                });
+            
+            // Reject button handler
+            document.getElementById('rejectUrgentRequestBtn').addEventListener('click', function() {
+                const requestType = document.getElementById('urgentRequestType').value;
+                const requestId = document.getElementById('urgentRequestId').value;
+                
+                // Submit the form to the appropriate endpoint
+                const form = document.getElementById('urgentRequestForm');
+                
+                // Create hidden field for urgentReason with Reject value
+                const reasonField = document.createElement('input');
+                reasonField.type = 'hidden';
+                reasonField.name = 'urgentReason';
+                reasonField.value = 'Reject';
+                
+                form.appendChild(reasonField);
+                
+                if (requestType === 'pe') {
+                    form.action = '/PlannedEvents/ProcessUrgentRequest';
+                } else {
+                    form.action = '/PETasks/ProcessUrgentRequest';
+                }
+                
+                form.submit();
             });
-
-            // Message inbox functionality
+        });
+        
+        function initializeMessageInbox() {
             const messageItems = document.querySelectorAll('.message-item');
             const filterButtons = document.querySelectorAll('.inbox-filters button');
             const inboxSearch = document.querySelector('.inbox-search');
+            
+            // Ensure all messages are visible on first load
+            messageItems.forEach(item => {
+                item.style.display = 'flex';
+            });
 
-            // Message filtering - updated to include urgent requests
+            // Message filtering
             filterButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     // Remove active class from all buttons
@@ -681,104 +653,125 @@
                     });
                 });
             });
+            
+            // Handle search functionality
+            if (inboxSearch) {
+                inboxSearch.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    
+                    messageItems.forEach(item => {
+                        const content = item.textContent.toLowerCase();
+                        if (content.includes(searchTerm)) {
+                            item.style.display = 'flex';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
 
-            // Handle urgent request message clicks
-            document.querySelectorAll('.urgent-request, .task-urgent-request').forEach(item => {
+            // Handle message clicks for urgent requests
+            document.querySelectorAll('.urgent-request').forEach(item => {
                 item.addEventListener('click', function() {
+                    // Extract the ID from data-message-id attribute
                     const messageId = this.getAttribute('data-message-id');
-                    const isPeRequest = messageId.startsWith('urgent-pe-');
-                    const isTaskRequest = messageId.startsWith('urgent-task-');
-                    const id = messageId.split('-').pop(); // Extract the ID
+                    const peId = messageId.replace('urgent-pe-', '');
                     
-                    // Set up the modal based on request type
-                    document.getElementById('urgentRequestId').value = id;
-                    document.getElementById('urgentRequestType').value = isPeRequest ? 'pe' : 'task';
-                    
-                    let detailsHtml = '';
-                    
-                    if (isPeRequest) {
-                        // Find the PE data
-                        const peSender = this.querySelector('.message-sender').textContent;
-                        const peCustomer = this.querySelector('.message-preview').textContent;
-                        const peReason = this.querySelector('.message-preview').textContent.split('-')[1]?.trim() || 'No reason provided';
-                        
-                        detailsHtml = `
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-circle me-2"></i>
-                                This PE record requires urgent processing.
-                            </div>
-                            <dl class="row">
-                                <dt class="col-sm-4">PE Number</dt>
-                                <dd class="col-sm-8">${peSender.replace('Urgent Request: ', '')}</dd>
-                                <dt class="col-sm-4">Customer</dt>
-                                <dd class="col-sm-8">${peCustomer.split('-')[0].replace('Customer:', '').trim()}</dd>
-                                <dt class="col-sm-4">Reason</dt>
-                                <dd class="col-sm-8">${peReason}</dd>
-                            </dl>
-                        `;
-                    } else if (isTaskRequest) {
-                        // Find the Task data
-                        const taskPe = this.querySelector('.message-sender').textContent.replace('Task Urgent Request: ', '');
-                        const taskName = this.querySelector('.message-subject').textContent.replace('Task', '').replace('Needs Priority', '').trim();
-                        const taskReason = this.querySelector('.message-preview').textContent.trim();
-                        
-                        detailsHtml = `
-                            <div class="alert alert-warning">
-                                <i class="fas fa-tasks me-2"></i>
-                                This task requires urgent prioritization.
-                            </div>
-                            <dl class="row">
-                                <dt class="col-sm-4">PE Number</dt>
-                                <dd class="col-sm-8">${taskPe}</dd>
-                                <dt class="col-sm-4">Task</dt>
-                                <dd class="col-sm-8">${taskName}</dd>
-                                <dt class="col-sm-4">Reason</dt>
-                                <dd class="col-sm-8">${taskReason}</dd>
-                            </dl>
-                        `;
-                    }
-                    
-                    // Update modal content
-                    document.getElementById('urgentRequestDetails').innerHTML = detailsHtml;
-                    
-                    // Show the modal
-                    const modal = new bootstrap.Modal(document.getElementById('urgentRequestModal'));
-                    modal.show();
-                    
-                    // Mark as read
-                    this.classList.remove('unread');
+                    // Show PE urgent confirmation modal with details
+                    showUrgentRequestModal('pe', peId);
                 });
             });
 
-            // Handle urgent request form submission
-            document.getElementById('confirmUrgentRequestBtn').addEventListener('click', function() {
-                // Validate that a radio button is selected
-                const selectedReason = document.querySelector('input[name="urgentReason"]:checked');
-                if (!selectedReason) {
-                    alert('Please select an action before submitting.');
-                    return;
-                }
-                
-                const id = document.getElementById('urgentRequestId').value;
-                const requestType = document.getElementById('urgentRequestType').value;
-                
-                // Set the form action based on the request type
-                const form = document.getElementById('urgentRequestForm');
-                if (requestType === 'pe') {
-                    form.action = '@Url.Action("ProcessUrgentRequest", "PlannedEvents")';
-                } else {
-                    form.action = '@Url.Action("ProcessUrgentRequest", "PETasks")';
-                }
-                
-                // Submit the form
-                form.submit();
+            // Handle task urgent request clicks
+            document.querySelectorAll('.task-urgent-request').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Extract the ID from data-message-id attribute
+                    const messageId = this.getAttribute('data-message-id');
+                    const taskId = messageId.replace('urgent-task-', '');
+                    
+                    // Show task urgent confirmation modal
+                    showUrgentRequestModal('task', taskId);
+                });
             });
-
-            // Refresh inbox button
-            document.getElementById('refreshInbox').addEventListener('click', function() {
-                window.location.reload();
-            });
-        });
+        }
+        
+        // Add function to show urgent request details modal
+        function showUrgentRequestModal(type, id) {
+            // Set the form values
+            document.getElementById('urgentRequestType').value = type;
+            document.getElementById('urgentRequestId').value = id;
+            
+            // Fetch record details based on type (PE or Task)
+            let url = '';
+            if (type === 'pe') {
+                url = '/PlannedEvents/GetUrgentRequestDetails/' + id;
+            } else {
+                url = '/PETasks/GetUrgentRequestDetails/' + id;
+            }
+            
+            // Show loading indicator
+            document.getElementById('urgentRequestDetails').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading details...</p></div>';
+            
+            // Show the modal while fetching details
+            const modal = new bootstrap.Modal(document.getElementById('urgentRequestModal'));
+            modal.show();
+            
+            // Fetch details from server
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update the modal with details
+                    let detailsHtml = `
+                        <div class="alert alert-info mb-3">
+                            <div class="row">
+                                <div class="col-sm-4 fw-bold">PE Number:</div>
+                                <div class="col-sm-8">${data.peNumber}</div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-sm-4 fw-bold">Customer:</div>
+                                <div class="col-sm-8">${data.customer || 'Not specified'}</div>
+                            </div>`;
+                            
+                    if (type === 'task') {
+                        detailsHtml += `
+                            <div class="row mt-2">
+                                <div class="col-sm-4 fw-bold">Task:</div>
+                                <div class="col-sm-8">${data.taskName}</div>
+                            </div>`;
+                    }
+                    
+                    detailsHtml += `
+                        <div class="row mt-2">
+                            <div class="col-sm-4 fw-bold">Priority:</div>
+                            <div class="col-sm-8">${data.priority || 'Not specified'}</div>
+                        </div>
+                    </div>`;
+                    
+                    // Show request reason if available
+                    if (data.urgentRequestReason) {
+                        detailsHtml += `
+                        <div class="alert alert-warning">
+                            <h6 class="fw-bold">Request Reason:</h6>
+                            <p>${data.urgentRequestReason}</p>
+                        </div>`;
+                    }
+                    
+                    document.getElementById('urgentRequestDetails').innerHTML = detailsHtml;
+                })
+                .catch(error => {
+                    console.error('Error fetching urgent request details:', error);
+                    document.getElementById('urgentRequestDetails').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Failed to load request details. Please try again.
+                        </div>`;
+                });
+        }
     </script>
 }
 
@@ -1324,9 +1317,27 @@
 .message-item.task-urgent-request.unread::before {
     background-color: #ffc107;
 }
+
+/* Workgroup filter styles */
+.workgroup-filter-section {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.filter-badge {
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+.filter-badge .badge {
+    padding: 0.3rem 0.6rem;
+}
 </style>
 
-<!-- Add this just before your existing message detail modal -->
+<!-- Simplify the modal with just Accept/Reject buttons -->
 <div class="modal fade" id="urgentRequestModal" tabindex="-1" aria-labelledby="urgentRequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -1345,36 +1356,15 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="urgentRequestId" name="id" />
                     <input type="hidden" id="urgentRequestType" name="requestType" />
-                    
-                    <div class="mb-3 mt-4">
-                        <label class="form-label fw-bold">Select Action:</label>
-                        <div class="d-flex flex-column gap-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="OpeningCeremony" value="OpeningCeremony">
-                                <label class="form-check-label" for="OpeningCeremony">
-                                    Approve - Opening Ceremony (Priority 1)
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="CriticalCustomer" value="CriticalCustomer">
-                                <label class="form-check-label" for="CriticalCustomer">
-                                    Approve - Critical Customer (Priority 2)
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="Reject" value="Reject">
-                                <label class="form-check-label" for="Reject">
-                                    Reject Urgent Request
-                                </label>
-                            </div>
-                        </div>
-                    </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmUrgentRequestBtn">
-                    <i class="fas fa-check-circle me-2"></i>Submit Decision
+                <button type="button" class="btn btn-success" id="acceptUrgentRequestBtn">
+                    <i class="fas fa-check-circle me-2"></i>Accept
+                </button>
+                <button type="button" class="btn btn-danger" id="rejectUrgentRequestBtn">
+                    <i class="fas fa-times-circle me-2"></i>Reject
                 </button>
             </div>
         </div>

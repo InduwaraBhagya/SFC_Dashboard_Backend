@@ -14,11 +14,47 @@
         </a>
     </div>
 
+    <!-- Add workgroup filter section here with null check -->
+    @if (ViewData["Workgroups"] != null)
+    {
+        <div class="workgroup-filter-section mb-3">
+            <form id="workgroupFilterForm" method="get" asp-action="OLAViolateRecords">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <label for="workgroupFilter" class="form-label mb-0"><i class="bi bi-filter"></i> Filter by Workgroup:</label>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
+                            <option value="">All Workgroups</option>
+                            @foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
+                            {
+                                <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
+                                    @workgroup.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    }
+
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             @TempData["SuccessMessage"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (ViewData["FilteredWorkgroup"] != null)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-funnel-fill me-2"></i> 
+            Filtered by Workgroup: <strong>@ViewData["FilteredWorkgroup"]</strong>
+            <a href="@Url.Action("OLAViolateRecords")" class="btn btn-sm btn-outline-secondary ms-3">
+                <i class="bi bi-x-circle me-1"></i> Clear Filter
+            </a>
         </div>
     }
 
