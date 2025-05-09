@@ -31,17 +31,21 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> Index(string searchType, string peNumber, string customer, 
             string jobReference, string soNumber, int? workgroupId, int pageIndex = 1)
         {
-            // Load all available workgroups for the dropdown
-            var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-            ViewData["Workgroups"] = workgroups;
-            ViewData["SelectedWorkgroupId"] = workgroupId;
+            // Always use the logged-in user's workgroup
+            if (!workgroupId.HasValue)
+                workgroupId = GetCurrentUserWorkGroupId();
 
-            if (workgroupId.HasValue)
-            {
-                // Get the selected workgroup name for display
-                var selectedWorkgroup = workgroups.FirstOrDefault(w => w.Id == workgroupId);
-                ViewData["SelectedWorkgroupName"] = selectedWorkgroup?.Name;
-            }
+            // // Load all available workgroups for the dropdown
+            // var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+            // ViewData["Workgroups"] = workgroups;
+            // ViewData["SelectedWorkgroupId"] = workgroupId;
+
+            // if (workgroupId.HasValue)
+            // {
+            //     // Get the selected workgroup name for display
+            //     var selectedWorkgroup = workgroups.FirstOrDefault(w => w.Id == workgroupId);
+            //     ViewData["SelectedWorkgroupName"] = selectedWorkgroup?.Name;
+            // }
 
             // Rest of your search setup
             var query = from r in _context.PlannedEvents
@@ -338,6 +342,9 @@ public async Task<IActionResult> Details(int? id)
 
         public async Task<IActionResult> InProgressRecords(int? workgroupId)
         {
+            if (!workgroupId.HasValue)
+                workgroupId = GetCurrentUserWorkGroupId();
+
             try
             {
                 // Load workgroups for the dropdown (this was missing)
@@ -350,7 +357,6 @@ public async Task<IActionResult> Details(int? id)
                 // Apply workgroup filter if selected
                 if (workgroupId.HasValue)
                 {
-                    // Get workgroup name
                     var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
                     if (workgroup != null)
                     {
@@ -377,6 +383,9 @@ public async Task<IActionResult> Details(int? id)
         // GET: PlannedEvents/OLAViolateRecords
         public async Task<IActionResult> OLAViolateRecords(int? workgroupId)
         {
+            if (!workgroupId.HasValue)
+                workgroupId = GetCurrentUserWorkGroupId();
+
             try
             {
                 // Load workgroups for the dropdown
@@ -420,6 +429,18 @@ public async Task<IActionResult> Details(int? id)
 
                 ViewBag.ViolationDetails = violationDetails;
                 
+                // When getting violatingTasksList, filter by workgroup:
+                if (workgroupId.HasValue)
+                {
+                    var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+                    if (workgroup != null)
+                    {
+                        violatingTasksList = violatingTasksList
+                            .Where(t => t.TaskWorkGroup != null && t.TaskWorkGroup.Contains(workgroup.Name))
+                            .ToList();
+                    }
+                }
+                
                 _logger.LogInformation("Retrieved {count} OLA violated records", olaViolateRecords.Count);
                 
                 return View(olaViolateRecords);
@@ -452,7 +473,6 @@ public async Task<IActionResult> Details(int? id)
                 // Apply workgroup filter if selected
                 if (workgroupId.HasValue)
                 {
-                    // Get workgroup name
                     var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
                     if (workgroup != null)
                     {
@@ -717,6 +737,16 @@ private string ExtractUrgentRequestReason(string priority)
         return "Critical Customer - Priority 2";
         
     return null;
+}
+
+private int? GetCurrentUserWorkGroupId()
+{
+    var serviceId = User.Identity?.Name;
+    if (string.IsNullOrEmpty(serviceId))
+        return null;
+
+    var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
+    return user?.WorkGroupId;
 }
     }
 }

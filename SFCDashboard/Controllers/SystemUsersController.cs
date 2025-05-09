@@ -101,7 +101,18 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    _context.Update(systemUser);
+                    var existingUser = await _context.Users.FindAsync(id);
+                    if (existingUser == null)
+                    {
+                        return NotFound();
+                    }
+
+                    // Update only the properties you want to allow editing
+                    existingUser.Name = systemUser.Name;
+                    existingUser.ServiceId = systemUser.ServiceId;
+                    existingUser.UserRoleId = systemUser.UserRoleId;
+                    existingUser.WorkGroupId = systemUser.WorkGroupId;
+
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
