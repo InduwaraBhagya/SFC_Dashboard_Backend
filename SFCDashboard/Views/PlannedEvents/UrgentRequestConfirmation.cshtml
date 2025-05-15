@@ -49,7 +49,7 @@
                         
                         <!-- Extract the original reason from the Priority field -->
                         @{
-                            string extractedReason = "OpeningCeremony"; // Default
+                            string extractedReason = ""; // Default
                             if (Model.Priority?.Contains("Opening Ceremony") == true)
                             {
                                 extractedReason = "OpeningCeremony";
