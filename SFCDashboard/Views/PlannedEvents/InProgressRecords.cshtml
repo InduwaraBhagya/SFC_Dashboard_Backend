@@ -21,14 +21,16 @@
             <form id="workgroupFilterForm" method="get" asp-action="InProgressRecords">
                 <div class="row align-items-center">
                     <div class="col-auto">
-                        <label for="workgroupFilter" class="form-label mb-0"><i class="bi bi-filter"></i> Filter by Workgroup:</label>
+                        <label for="workgroupFilter" class="form-label mb-0"><i class="bi bi-filter"></i> Filter by
+                            Workgroup:</label>
                     </div>
                     <div class="col-md-3">
                         <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
                             <option value="">All Workgroups</option>
                             @foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
                             {
-                                <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
+                                <option value="@workgroup.Id"
+                                    selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
                                     @workgroup.Name
                                 </option>
                             }
@@ -50,7 +52,7 @@
     @if (ViewData["FilteredWorkgroup"] != null)
     {
         <div class="alert alert-info">
-            <i class="bi bi-funnel-fill me-2"></i> 
+            <i class="bi bi-funnel-fill me-2"></i>
             Filtered by Workgroup: <strong>@ViewData["FilteredWorkgroup"]</strong>
             <a href="@Url.Action("UrgentRecords")" class="btn btn-sm btn-outline-secondary ms-3">
                 <i class="bi bi-x-circle me-1"></i> Clear Filter
@@ -80,7 +82,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @{int rowNumber = 1;}
+                        @{
+                            int rowNumber = 1;
+                        }
                         @foreach (var item in Model)
                         {
                             <tr>
@@ -101,13 +105,14 @@
                                 </td>
                                 <td>
                                     <div class="btn-group">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">
-                                            <i class="bi bi-eye"></i> Details
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                            asp-route-returnUrl="@Url.Action("InProgressRecords")"
+                                            class="btn btn-primary btn-sm">
+                                            <i class="bi bi-eye"></i> View Details
                                         </a>
-                                        <button type="button" class="btn btn-danger btn-sm urgent-request-btn" 
-                                                data-pe-id="@item.Id" 
-                                                data-pe-number="@item.PeNumber" 
-                                                data-customer="@item.Customer">
+                                        <button type="button" class="btn btn-danger btn-sm urgent-request-btn"
+                                            data-pe-id="@item.Id" data-pe-number="@item.PeNumber"
+                                            data-customer="@item.Customer">
                                             <i class="bi bi-exclamation-triangle"></i> Urgent
                                         </button>
                                     </div>
@@ -117,7 +122,7 @@
                     </tbody>
                 </table>
             </div>
-            
+
             @if (!Model.Any())
             {
                 <div class="alert alert-info mt-3">
@@ -133,12 +138,12 @@
 <!-- 
 <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="applyWorkgroupFilter()">
     <option value="">All Workgroups</option>
-    @foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
-    {
-        <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
-            @workgroup.Name
-        </option>
-    }
+@foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
+{
+            <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
+                @workgroup.Name
+            </option>
+}
 </select>
 -->
 
@@ -158,18 +163,21 @@
                 <form id="urgentPERequestForm" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" id="peIdField" />
-                    
+
                     <div class="form-group mb-4">
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony" value="OpeningCeremony" required />
+                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
+                                value="OpeningCeremony" required />
                             <label class="form-check-label" for="openingCeremony">
                                 <strong>Opening Ceremony</strong> [Priority 1]
                             </label>
-                            <small class="form-text text-muted d-block">Highest priority for events that will receive public attention</small>
+                            <small class="form-text text-muted d-block">Highest priority for events that will receive
+                                public attention</small>
                         </div>
 
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer" value="CriticalCustomer" />
+                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer"
+                                value="CriticalCustomer" />
                             <label class="form-check-label" for="criticalCustomer">
                                 <strong>Critical Customer</strong> [Priority 2]
                             </label>
@@ -190,33 +198,33 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             console.log('DOM loaded, setting up modal handlers');
-            
+
             // Ensure Bootstrap is loaded
             if (typeof bootstrap !== 'undefined') {
                 console.log('Bootstrap is loaded properly');
             } else {
                 console.error('Bootstrap is not loaded!');
             }
-            
+
             // Handle showing the PE urgent modal - use a more specific class
             const buttons = document.querySelectorAll('.urgent-request-btn');
             console.log('Found ' + buttons.length + ' urgent request buttons');
-            
+
             buttons.forEach(function (button) {
                 button.addEventListener('click', function (event) {
                     console.log('Button clicked!');
                     event.preventDefault();
-                    
+
                     const peId = this.getAttribute('data-pe-id');
                     const peNumber = this.getAttribute('data-pe-number');
                     const customer = this.getAttribute('data-customer');
-                    
+
                     console.log('PE ID: ' + peId + ', Number: ' + peNumber + ', Customer: ' + customer);
-                    
+
                     document.getElementById('peIdField').value = peId;
                     document.getElementById('modalPeNumberValue').textContent = peNumber;
                     document.getElementById('modalCustomerValue').textContent = customer || 'Not specified';
-                    
+
                     // Try direct DOM method first
                     try {
                         const modalElement = document.getElementById('urgentPEModal');
@@ -233,7 +241,7 @@
                     }
                 });
             });
-            
+
             // Handle form submission from the modal
             document.getElementById('confirmPEUrgentRequest').addEventListener('click', function () {
                 // Check if a radio button is selected
@@ -242,14 +250,14 @@
                     alert('Please select a reason for the urgent request.');
                     return;
                 }
-                
+
                 // Hide the modal immediately
                 const modalElement = document.getElementById('urgentPEModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalElement);
                 modalInstance.hide();
-                
+
                 // Submit the form with a slight delay to allow modal to close
-                setTimeout(function() {
+                setTimeout(function () {
                     const form = document.getElementById('urgentPERequestForm');
                     form.action = '@Url.Action("RequestUrgentWithReason", "PlannedEvents")';
                     form.submit();

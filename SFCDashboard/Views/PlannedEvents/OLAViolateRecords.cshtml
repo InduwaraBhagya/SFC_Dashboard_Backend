@@ -1,3 +1,4 @@
+@using SFCDashboard.Models
 @model IEnumerable<SFCDashboard.Models.PlannedEvent>
 
 @{
@@ -98,8 +99,7 @@
                                         <span class="badge bg-danger">@violations.MaxDaysOverdue days</span>
                                     </td>
                                     <td>
-                                        <a asp-action="Details" asp-route-id="@item.Id" 
-                                           class="btn btn-primary btn-sm">
+                                        <a asp-action="Details" asp-route-id="@item.Id" asp-route-returnUrl="@Url.Action("OLAViolateRecords")" class="btn btn-primary btn-sm">
                                             <i class="bi bi-eye"></i> View Details
                                         </a>
                                         <button type="button" class="btn btn-warning btn-sm ms-1"

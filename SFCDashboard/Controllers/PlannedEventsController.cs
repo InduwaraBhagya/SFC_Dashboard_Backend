@@ -28,7 +28,7 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: PlannedEvents/Index
-        public async Task<IActionResult> Index(string searchType, string peNumber, string customer, 
+        public async Task<IActionResult> Index(string searchType, string peNumber, string customer,
             string jobReference, string soNumber, int? workgroupId, int pageIndex = 1)
         {
             // Always use the logged-in user's workgroup
@@ -69,7 +69,7 @@ namespace SFCDashboard.Controllers
             var urgentQuery = _context.PlannedEvents.Where(p => p.PEStatus == "urgent");
             if (workgroupId.HasValue)
             {
-                urgentQuery = urgentQuery.Where(p => p.TaskWg != null && 
+                urgentQuery = urgentQuery.Where(p => p.TaskWg != null &&
                     _context.WorkGroups.Any(w => w.Id == workgroupId && p.TaskWg.Contains(w.Name)));
             }
             ViewData["UrgentCount"] = await urgentQuery.CountAsync();
@@ -77,7 +77,7 @@ namespace SFCDashboard.Controllers
             var inProgressQuery = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing");
             if (workgroupId.HasValue)
             {
-                inProgressQuery = inProgressQuery.Where(p => p.TaskWg != null && 
+                inProgressQuery = inProgressQuery.Where(p => p.TaskWg != null &&
                     _context.WorkGroups.Any(w => w.Id == workgroupId && p.TaskWg.Contains(w.Name)));
             }
             ViewData["InProgressCount"] = await inProgressQuery.CountAsync();
@@ -177,7 +177,7 @@ namespace SFCDashboard.Controllers
 
                 if (workgroupId.HasValue)
                 {
-                    query = query.Where(p => p.TaskWg != null && 
+                    query = query.Where(p => p.TaskWg != null &&
                         _context.WorkGroups.Any(w => w.Id == workgroupId && p.TaskWg.Contains(w.Name)));
                 }
 
@@ -187,17 +187,17 @@ namespace SFCDashboard.Controllers
                 int pageSize = 10;
                 var paginatedList = await PaginatedList<PlannedEvent>.CreateAsync(query.AsNoTracking(), pageIndex, pageSize);
 
-// --- PETasksByPeNumber population ---
-var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
-var allTasks = await _context.PETasks
-    .Where(t => peNumbers.Contains(t.PENumber))
-    .OrderBy(t => t.TaskSeq)
-    .ToListAsync();
-var peTasksByPeNumber = allTasks
-    .GroupBy(t => t.PENumber)
-    .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
-ViewBag.PETasksByPeNumber = peTasksByPeNumber;
-// --- END PETasksByPeNumber population ---
+                // --- PETasksByPeNumber population ---
+                var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
+                var allTasks = await _context.PETasks
+                    .Where(t => peNumbers.Contains(t.PENumber))
+                    .OrderBy(t => t.TaskSeq)
+                    .ToListAsync();
+                var peTasksByPeNumber = allTasks
+                    .GroupBy(t => t.PENumber)
+                    .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
+                ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+                // --- END PETasksByPeNumber population ---
 
                 return View(paginatedList);
             }
@@ -209,32 +209,26 @@ ViewBag.PETasksByPeNumber = peTasksByPeNumber;
             }
         }
 
-// GET: PlannedEvents/Details/5
-public async Task<IActionResult> Details(int? id)
-{
-    if (id == null)
-    {
-        return NotFound();
-    }
+        // GET: PlannedEvents/Details/5
+        public async Task<IActionResult> Details(int id, string returnUrl = null)
+        {
+            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+            if (plannedEvent == null)
+            {
+                return NotFound();
+            }
 
-    var plannedEvent = await _context.PlannedEvents
-        .FirstOrDefaultAsync(m => m.Id == id);
-        
-    if (plannedEvent == null)
-    {
-        return NotFound();
-    }
+            // Get related PE tasks for this event
+            var peTasks = await _context.PETasks
+                .Where(t => t.PENumber == plannedEvent.PeNumber)
+                .OrderBy(t => t.TaskSeq)
+                .ToListAsync();
 
-    // Get related PE tasks for this event
-    var peTasks = await _context.PETasks
-        .Where(t => t.PENumber == plannedEvent.PeNumber)
-        .OrderBy(t => t.TaskSeq)
-        .ToListAsync();
-        
-    ViewBag.PETasks = peTasks;
+            ViewBag.PETasks = peTasks;
 
-    return View(plannedEvent);
-}
+            ViewBag.ReturnUrl = returnUrl;
+            return View(plannedEvent);
+        }
 
         // GET: PlannedEvents/Create
         public IActionResult Create()
@@ -354,9 +348,9 @@ public async Task<IActionResult> Details(int? id)
                 var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
                 ViewData["Workgroups"] = workgroups;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
-                
+
                 var query = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing");
-                
+
                 // Apply workgroup filter if selected
                 if (workgroupId.HasValue)
                 {
@@ -367,12 +361,12 @@ public async Task<IActionResult> Details(int? id)
                         query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
                     }
                 }
-                
+
                 var inProgressRecords = await query.ToListAsync();
-                
-                _logger.LogInformation("Total INPROGRESS records found: {Count} (Workgroup filter: {workgroupId})", 
+
+                _logger.LogInformation("Total INPROGRESS records found: {Count} (Workgroup filter: {workgroupId})",
                     inProgressRecords.Count, workgroupId.HasValue ? workgroupId.Value.ToString() : "None");
-                
+
                 return View(inProgressRecords);
             }
             catch (Exception ex)
@@ -395,12 +389,12 @@ public async Task<IActionResult> Details(int? id)
                 var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
                 ViewData["Workgroups"] = workgroups;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
-                
+
                 var currentDate = DateTime.Today;
 
                 // Get all PE records with OLA violations (tasks past their due date)
                 var olaViolatingTasks = await _context.PETasks
-                    .Where(t => t.TaskStatus != "COMPLETED" && 
+                    .Where(t => t.TaskStatus != "COMPLETED" &&
                                t.TaskCompleteDate.Date < currentDate)
                     .Select(t => t.PENumber)
                     .Distinct()
@@ -414,7 +408,7 @@ public async Task<IActionResult> Details(int? id)
 
                 // Create a dictionary to store violation details - do this calculation in memory
                 var violatingTasksList = await _context.PETasks
-                    .Where(t => t.TaskStatus != "COMPLETED" && 
+                    .Where(t => t.TaskStatus != "COMPLETED" &&
                                t.TaskCompleteDate.Date < currentDate)
                     .ToListAsync();
 
@@ -422,8 +416,9 @@ public async Task<IActionResult> Details(int? id)
                 var violationDetails = violatingTasksList
                     .GroupBy(t => t.PENumber)
                     .ToDictionary(
-                        g => g.Key, 
-                        g => new {
+                        g => g.Key,
+                        g => new
+                        {
                             TasksCount = g.Count(),
                             MaxDaysOverdue = g.Max(t => (currentDate - t.TaskCompleteDate.Date).Days),
                             OldestViolation = g.OrderBy(t => t.TaskCompleteDate).FirstOrDefault()?.TaskCompleteDate
@@ -431,7 +426,7 @@ public async Task<IActionResult> Details(int? id)
                     );
 
                 ViewBag.ViolationDetails = violationDetails;
-                
+
                 // When getting violatingTasksList, filter by workgroup:
                 if (workgroupId.HasValue)
                 {
@@ -443,9 +438,9 @@ public async Task<IActionResult> Details(int? id)
                             .ToList();
                     }
                 }
-                
+
                 _logger.LogInformation("Retrieved {count} OLA violated records", olaViolateRecords.Count);
-                
+
                 return View(olaViolateRecords);
             }
             catch (Exception ex)
@@ -470,9 +465,9 @@ public async Task<IActionResult> Details(int? id)
                 var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
                 ViewData["Workgroups"] = workgroups;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
-                
+
                 var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent");
-                
+
                 // Apply workgroup filter if selected
                 if (workgroupId.HasValue)
                 {
@@ -483,12 +478,12 @@ public async Task<IActionResult> Details(int? id)
                         query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
                     }
                 }
-                
+
                 var urgentRecords = await query.ToListAsync();
-                
-                _logger.LogInformation("Total URGENT records found: {Count} (Workgroup filter: {workgroup})", 
+
+                _logger.LogInformation("Total URGENT records found: {Count} (Workgroup filter: {workgroup})",
                     urgentRecords.Count, workgroupId.HasValue ? workgroupId.Value.ToString() : "None");
-                
+
                 return View(urgentRecords);
             }
             catch (Exception ex)
@@ -576,181 +571,181 @@ public async Task<IActionResult> Details(int? id)
                 var relatedTasks = await _context.PETasks
                     .Where(t => t.PENumber == plannedEvent.PeNumber)
                     .ToListAsync();
-                    
+
                 foreach (var task in relatedTasks)
                 {
                     task.IsUrgent = true;
                     task.UrgentRequested = false; // Clear any pending urgent requests
                     task.Priority = (task.Priority ?? "") + priorityMessage + " (Inherited from PE)";
                 }
-                
+
                 if (relatedTasks.Any())
                 {
                     _context.UpdateRange(relatedTasks);
                     await _context.SaveChangesAsync();
-                    _logger.LogInformation("Marked {count} tasks as urgent for PE {peNumber}", 
+                    _logger.LogInformation("Marked {count} tasks as urgent for PE {peNumber}",
                         relatedTasks.Count, plannedEvent.PeNumber);
                 }
             }
 
-            TempData["SuccessMessage"] = markAsUrgent 
+            TempData["SuccessMessage"] = markAsUrgent
                 ? "Planned Event marked as urgent. All related tasks have also been marked as urgent."
                 : "Urgent request processed.";
-                
+
             return RedirectToAction("Details", new { id = plannedEvent.Id });
         }
 
         [HttpGet]
-public async Task<IActionResult> RequestUrgent(int id)
-{
-    var plannedEvent = await _context.PlannedEvents.FindAsync(id);
-    if (plannedEvent == null)
-    {
-        return NotFound();
-    }
-
-    // Redirect to the details page which has the urgent request form
-    return RedirectToAction("Details", new { id = id });
-}
-
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> RequestUrgentWithReason(int id, string urgentReason)
-{
-    var plannedEvent = await _context.PlannedEvents.FindAsync(id);
-    if (plannedEvent == null || plannedEvent.PEStatus?.ToUpper() == "COMPLETED" || plannedEvent.PEStatus?.ToUpper() == "URGENT")
-    {
-        return NotFound();
-    }
-
-    // Update PE status and priority based on the selected reason
-    switch (urgentReason)
-    {
-        case "OpeningCeremony":
-            plannedEvent.PEStatus = "PENDING_URGENT_CONFIRMATION";
-            plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT REQUEST PENDING: Opening Ceremony]";
-            break;
-
-        case "CriticalCustomer":
-            plannedEvent.PEStatus = "PENDING_URGENT_CONFIRMATION";
-            plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT REQUEST PENDING: Critical Customer]";
-            break;
-
-        default:
-            TempData["ErrorMessage"] = "Invalid urgency reason selected.";
-            return RedirectToAction("InProgressRecords");
-    }
-
-    _context.Update(plannedEvent);
-    await _context.SaveChangesAsync();
-
-    _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason}", id, urgentReason);
-    TempData["SuccessMessage"] = "Urgent request submitted for approval.";
-    
-    return RedirectToAction("InProgressRecords");
-}
-
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> MarkOLARecordUrgent(int id)
-{
-    try
-    {
-        var plannedEvent = await _context.PlannedEvents.FindAsync(id);
-        
-        if (plannedEvent == null)
+        public async Task<IActionResult> RequestUrgent(int id)
         {
-            TempData["ErrorMessage"] = "Record not found.";
-            return RedirectToAction(nameof(OLAViolateRecords));
+            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+            if (plannedEvent == null)
+            {
+                return NotFound();
+            }
+
+            // Redirect to the details page which has the urgent request form
+            return RedirectToAction("Details", new { id = id });
         }
-        
-        var currentDate = DateTime.Today;
-        
-        // Find the violating tasks for this PE
-        var violatingTasks = await _context.PETasks
-            .Where(t => t.PENumber == plannedEvent.PeNumber && 
-                      t.TaskStatus != "COMPLETED" &&
-                      t.TaskCompleteDate.Date < currentDate)
-            .OrderBy(t => t.TaskCompleteDate)  // Start with the most overdue
-            .ToListAsync();
-            
-        if (violatingTasks.Any())
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestUrgentWithReason(int id, string urgentReason)
         {
-            // Mark the first/most overdue violating task as urgent
-            var mostOverdueTask = violatingTasks.First();
-            mostOverdueTask.IsUrgent = true;
-            mostOverdueTask.Priority = (mostOverdueTask.Priority ?? "") + " [URGENT: OLA VIOLATED]";
-            _context.Update(mostOverdueTask);
-            
-            // Update PE status to urgent
-            plannedEvent.PEStatus = "urgent";
+            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+            if (plannedEvent == null || plannedEvent.PEStatus?.ToUpper() == "COMPLETED" || plannedEvent.PEStatus?.ToUpper() == "URGENT")
+            {
+                return NotFound();
+            }
+
+            // Update PE status and priority based on the selected reason
+            switch (urgentReason)
+            {
+                case "OpeningCeremony":
+                    plannedEvent.PEStatus = "PENDING_URGENT_CONFIRMATION";
+                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT REQUEST PENDING: Opening Ceremony]";
+                    break;
+
+                case "CriticalCustomer":
+                    plannedEvent.PEStatus = "PENDING_URGENT_CONFIRMATION";
+                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [URGENT REQUEST PENDING: Critical Customer]";
+                    break;
+
+                default:
+                    TempData["ErrorMessage"] = "Invalid urgency reason selected.";
+                    return RedirectToAction("InProgressRecords");
+            }
+
             _context.Update(plannedEvent);
-            
             await _context.SaveChangesAsync();
-            
-            _logger.LogInformation("PE {peNumber} with OLA violation marked as urgent", plannedEvent.PeNumber);
-            TempData["SuccessMessage"] = $"PE {plannedEvent.PeNumber} marked as urgent due to OLA violation.";
+
+            _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason}", id, urgentReason);
+            TempData["SuccessMessage"] = "Urgent request submitted for approval.";
+
+            return RedirectToAction("InProgressRecords");
         }
-        else
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkOLARecordUrgent(int id)
         {
-            TempData["ErrorMessage"] = "No violating tasks found for this PE.";
+            try
+            {
+                var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+
+                if (plannedEvent == null)
+                {
+                    TempData["ErrorMessage"] = "Record not found.";
+                    return RedirectToAction(nameof(OLAViolateRecords));
+                }
+
+                var currentDate = DateTime.Today;
+
+                // Find the violating tasks for this PE
+                var violatingTasks = await _context.PETasks
+                    .Where(t => t.PENumber == plannedEvent.PeNumber &&
+                              t.TaskStatus != "COMPLETED" &&
+                              t.TaskCompleteDate.Date < currentDate)
+                    .OrderBy(t => t.TaskCompleteDate)  // Start with the most overdue
+                    .ToListAsync();
+
+                if (violatingTasks.Any())
+                {
+                    // Mark the first/most overdue violating task as urgent
+                    var mostOverdueTask = violatingTasks.First();
+                    mostOverdueTask.IsUrgent = true;
+                    mostOverdueTask.Priority = (mostOverdueTask.Priority ?? "") + " [URGENT: OLA VIOLATED]";
+                    _context.Update(mostOverdueTask);
+
+                    // Update PE status to urgent
+                    plannedEvent.PEStatus = "urgent";
+                    _context.Update(plannedEvent);
+
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation("PE {peNumber} with OLA violation marked as urgent", plannedEvent.PeNumber);
+                    TempData["SuccessMessage"] = $"PE {plannedEvent.PeNumber} marked as urgent due to OLA violation.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "No violating tasks found for this PE.";
+                }
+
+                return RedirectToAction(nameof(OLAViolateRecords));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking OLA record as urgent");
+                TempData["ErrorMessage"] = "An error occurred while marking the record as urgent.";
+                return RedirectToAction(nameof(OLAViolateRecords));
+            }
         }
-        
-        return RedirectToAction(nameof(OLAViolateRecords));
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error marking OLA record as urgent");
-        TempData["ErrorMessage"] = "An error occurred while marking the record as urgent.";
-        return RedirectToAction(nameof(OLAViolateRecords));
-    }
-}
 
-// Add this to your PlannedEventsController
-[HttpGet]
-public async Task<IActionResult> GetUrgentRequestDetails(int id)
-{
-    var plannedEvent = await _context.PlannedEvents.FindAsync(id);
-    if (plannedEvent == null)
-    {
-        return NotFound();
-    }
+        // Add this to your PlannedEventsController
+        [HttpGet]
+        public async Task<IActionResult> GetUrgentRequestDetails(int id)
+        {
+            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+            if (plannedEvent == null)
+            {
+                return NotFound();
+            }
 
-    var details = new
-    {
-        id = plannedEvent.Id,
-        peNumber = plannedEvent.PeNumber,
-        customer = plannedEvent.Customer,
-        priority = plannedEvent.Priority,
-        urgentRequestReason = ExtractUrgentRequestReason(plannedEvent.Priority)
-    };
+            var details = new
+            {
+                id = plannedEvent.Id,
+                peNumber = plannedEvent.PeNumber,
+                customer = plannedEvent.Customer,
+                priority = plannedEvent.Priority,
+                urgentRequestReason = ExtractUrgentRequestReason(plannedEvent.Priority)
+            };
 
-    return Json(details);
-}
+            return Json(details);
+        }
 
-private string ExtractUrgentRequestReason(string priority)
-{
-    if (string.IsNullOrEmpty(priority))
-        return null;
-        
-    if (priority.Contains("Opening Ceremony"))
-        return "Opening Ceremony - Priority 1";
-        
-    if (priority.Contains("Critical Customer"))
-        return "Critical Customer - Priority 2";
-        
-    return null;
-}
+        private string ExtractUrgentRequestReason(string priority)
+        {
+            if (string.IsNullOrEmpty(priority))
+                return null;
 
-private int? GetCurrentUserWorkGroupId()
-{
-    var serviceId = User.Identity?.Name;
-    if (string.IsNullOrEmpty(serviceId))
-        return null;
+            if (priority.Contains("Opening Ceremony"))
+                return "Opening Ceremony - Priority 1";
 
-    var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
-    return user?.WorkGroupId;
-}
+            if (priority.Contains("Critical Customer"))
+                return "Critical Customer - Priority 2";
+
+            return null;
+        }
+
+        private int? GetCurrentUserWorkGroupId()
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return null;
+
+            var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
+            return user?.WorkGroupId;
+        }
 
         public async Task<IActionResult> GlobalSearch(string searchType, string peNumber, string customer, string jobReference, string soNumber, int pageIndex = 1)
         {
@@ -783,25 +778,25 @@ private int? GetCurrentUserWorkGroupId()
             var result = await PaginatedList<PlannedEvent>.CreateAsync(query.OrderByDescending(x => x.PECreatedDate), pageIndex, pageSize);
 
             // --- Add this block to provide PETasksByPeNumber for the view ---
-    var peNumbers = result.Select(pe => pe.PeNumber).ToList();
-    var allTasks = await _context.PETasks
-        .Where(t => peNumbers.Contains(t.PENumber))
-        .OrderBy(t => t.TaskSeq)
-        .ToListAsync();
-    var peTasksByPeNumber = allTasks
-        .GroupBy(t => t.PENumber)
-        .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
-    ViewBag.PETasksByPeNumber = peTasksByPeNumber;
-    // --- End PETasksByPeNumber block ---
+            var peNumbers = result.Select(pe => pe.PeNumber).ToList();
+            var allTasks = await _context.PETasks
+                .Where(t => peNumbers.Contains(t.PENumber))
+                .OrderBy(t => t.TaskSeq)
+                .ToListAsync();
+            var peTasksByPeNumber = allTasks
+                .GroupBy(t => t.PENumber)
+                .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
+            ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+            // --- End PETasksByPeNumber block ---
 
-    ViewData["SearchType"] = searchType;
-    ViewData["PENumberFilter"] = peNumber;
-    ViewData["CustomerFilter"] = customer;
-    ViewData["JobReferenceFilter"] = jobReference;
-    ViewData["SONumberFilter"] = soNumber;
+            ViewData["SearchType"] = searchType;
+            ViewData["PENumberFilter"] = peNumber;
+            ViewData["CustomerFilter"] = customer;
+            ViewData["JobReferenceFilter"] = jobReference;
+            ViewData["SONumberFilter"] = soNumber;
 
-    return View(result);
-}
+            return View(result);
+        }
     }
 }
 

@@ -9,7 +9,7 @@
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h2 class="mb-0">PE Record Details</h2>
             <div>
-                <a asp-action="UrgentRecords" class="btn btn-sm btn-light">
+                <a href="@(ViewBag.ReturnUrl ?? Url.Action("InProgressRecords"))" class="btn btn-sm btn-light">
                     <i class="bi bi-arrow-left"></i> Back to List
                 </a>
             </div>
@@ -69,7 +69,8 @@
                             <th class="bg-light text-primary">Is Urgent</th>
                             <td>
                                 @{
-                                    string urgentText = Model.ServiceSpeed?.ToLower()?.Contains("urgent") == true ? "Yes" : "No";
+                                    string urgentText = Model.ServiceSpeed?.ToLower()?.Contains("urgent") == true ? "Yes" :
+                                    "No";
                                     string urgentClass = urgentText == "Yes" ? "text-danger fw-bold" : "";
                                 }
                                 <span class="@urgentClass">@urgentText</span>
@@ -158,15 +159,15 @@
                             @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
                             {
                                 <tr class="@(task.IsUrgent ? "table-warning" : 
-                                           task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
-                                           task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
-                                           task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
-                                    <td>@task.TaskSeq</td>
-                                    <td>@task.Task</td>
-                                    <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
-                                    <td>@task.OLA days</td>
-                                    <td>
-                                        @{
+                                                                               task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                                                               task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                                                               task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                            <td>@task.TaskSeq</td>
+                            <td>@task.Task</td>
+                            <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                            <td>@task.OLA days</td>
+                            <td>
+                                @{
                                             string taskStatusClass = task.TaskStatus?.ToLower() switch
                                             {
                                                 "completed" => "badge bg-success",
@@ -178,11 +179,12 @@
                                     </td>
                                     <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
                                     <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
-                                    <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
-                                    
-                                    <!-- Priority column showing Urgent status -->
-                                    <td>
-                                        @if (task.IsUrgent)
+                                    <td>@(task.ACtualTaskCompleteDate != null ?
+                                                                        task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+
+                            <!-- Priority column showing Urgent status -->
+                            <td>
+                                @if (task.IsUrgent)
                                         {
                                             <span class="badge bg-danger">URGENT</span>
                                         }
@@ -246,17 +248,19 @@
                 </div>
                 <form id="urgentPERequestForm" method="post">
                     <input type="hidden" name="id" id="peIdField" />
-                    
+
                     <div class="form-group mb-4">
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony" value="OpeningCeremony" required />
+                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
+                                value="OpeningCeremony" required />
                             <label class="form-check-label" for="openingCeremony">
                                 <strong>Opening Ceremony</strong> [Priority 1]
                             </label>
                         </div>
 
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer" value="CriticalCustomer" />
+                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer"
+                                value="CriticalCustomer" />
                             <label class="form-check-label" for="criticalCustomer">
                                 <strong>Critical Customer</strong> [Priority 2]
                             </label>
@@ -281,32 +285,32 @@
                     const peId = this.getAttribute('data-pe-id');
                     const peNumber = this.getAttribute('data-pe-number');
                     const customer = this.getAttribute('data-customer');
-                    
+
                     document.getElementById('peIdField').value = peId;
                     document.getElementById('modalPeNumberValue').textContent = peNumber;
                     document.getElementById('modalCustomerValue').textContent = customer;
-                    
+
                     const modal = new bootstrap.Modal(document.getElementById('urgentPEModal'));
                     modal.show();
                 });
             });
-            
+
             // Handle showing the Task urgent modal (for individual tasks)
             document.querySelectorAll('.show-urgent-modal').forEach(function (button) {
                 button.addEventListener('click', function () {
                     const taskId = this.getAttribute('data-task-id');
                     const peNumber = this.getAttribute('data-pe-number');
                     const taskName = this.getAttribute('data-task-name');
-                    
+
                     document.getElementById('taskIdField').value = taskId;
                     document.getElementById('modalTaskPeNumberValue').textContent = peNumber;
                     document.getElementById('modalTaskNameValue').textContent = taskName;
-                    
+
                     const modal = new bootstrap.Modal(document.getElementById('urgentTaskModal'));
                     modal.show();
                 });
             });
-            
+
             // Handle form submission from the PE modal
             document.getElementById('confirmPEUrgentRequest').addEventListener('click', function () {
                 // Check if a radio button is selected
@@ -315,13 +319,13 @@
                     alert('Please select a reason for the urgent request.');
                     return;
                 }
-                
+
                 // Submit the form
                 const form = document.getElementById('urgentPERequestForm');
                 form.action = '@Url.Action("RequestUrgentWithReason", "PlannedEvents")';
                 form.submit();
             });
-            
+
             // Handle form submission from the Task modal
             document.getElementById('confirmTaskUrgentRequest').addEventListener('click', function () {
                 // Check if a radio button is selected
@@ -330,7 +334,7 @@
                     alert('Please select a reason for the urgent request.');
                     return;
                 }
-                
+
                 // Submit the form
                 const form = document.getElementById('urgentTaskRequestForm');
                 form.action = '@Url.Action("RequestUrgentWithReason", "PETasks")';

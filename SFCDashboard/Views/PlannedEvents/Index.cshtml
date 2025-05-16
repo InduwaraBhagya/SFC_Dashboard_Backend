@@ -9,43 +9,7 @@
                              !string.IsNullOrEmpty(ViewData["SONumberFilter"]?.ToString());
 }
 
-<div class="container-fluid mt-4">
-    <!-- Add this workgroup filter section above your search form -->
-<div class="workgroup-filter-section mb-3">
-    <form id="workgroupFilterForm" method="get" asp-action="Index">
-        <div class="row align-items-center">
-            <div class="col-auto">
-                <label for="workgroupFilter" class="form-label mb-0">
-                    <i class="bi bi-filter"></i> Filter by Workgroup:
-                </label>
-            </div>
-            <div class="col-md-3">
-                <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
-                    <option value="">All Workgroups</option>
-                    @if (ViewData["Workgroups"] is IEnumerable<WorkGroup> workgroups)
-                    {
-                        foreach (var workgroup in workgroups)
-                        {
-                            <option value="@workgroup.Id" @@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString() ? "selected" : "")>
-                                @workgroup.Name
-                            </option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-outline-primary">
-                    <i class="bi bi-funnel-fill me-1"></i> Apply Filter
-                </button>
-            </div>
-            <div class="col-auto">
-                <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle me-1"></i> Clear Filter
-                </a>
-            </div>
-        </div>
-    </form>
-</div>
+
     <!-- Your existing search form -->
     <div class="row">
         <!-- Left Column - Existing Content -->
@@ -97,6 +61,44 @@
                     </div>
                 </form>
             </div>
+
+            <div class="container-fluid mt-4"></div>
+    <!-- Add this workgroup filter section above your search form -->
+<div class="workgroup-filter-section mb-3">
+    <form id="workgroupFilterForm" method="get" asp-action="Index">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <label for="workgroupFilter" class="form-label mb-0">
+                    <i class="bi bi-filter"></i> Filter by Workgroup:
+                </label>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
+                    <option value="">All Workgroups</option>
+                    @if (ViewData["Workgroups"] is IEnumerable<WorkGroup> workgroups)
+                    {
+                        foreach (var workgroup in workgroups)
+                        {
+                            <option value="@workgroup.Id" @@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString() ? "selected" : "")>
+                                @workgroup.Name
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-funnel-fill me-1"></i> Apply Filter
+                </button>
+            </div>
+            <div class="col-auto">
+                <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i> Clear Filter
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
 
             @if (Model != null && Model.Any())
             {
