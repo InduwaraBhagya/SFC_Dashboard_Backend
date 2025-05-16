@@ -9,7 +9,7 @@ namespace SFCDashboard.Models
         public int Id { get; set; }
 
         [ForeignKey("PE")]
-        public string? PENumber { get; set; }
+        public required string PENumber { get; set; }
 
         public int? TaskSeq { get; set; }
 

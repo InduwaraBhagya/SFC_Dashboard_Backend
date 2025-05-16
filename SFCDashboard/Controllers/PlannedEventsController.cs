@@ -51,14 +51,12 @@ namespace SFCDashboard.Controllers
             var query = from r in _context.PlannedEvents
                         select r;
 
-            // Store current filters in ViewData
             ViewData["SearchType"] = searchType ?? "peNumber";
             ViewData["PENumberFilter"] = peNumber;
             ViewData["CustomerFilter"] = customer;
             ViewData["JobReferenceFilter"] = jobReference;
             ViewData["SONumberFilter"] = soNumber;
 
-            // Determine the search string based on the search type
             string searchString = searchType switch
             {
                 "customer" => customer,
@@ -67,43 +65,40 @@ namespace SFCDashboard.Controllers
                 _ => peNumber
             };
 
-            // Calculate counts for dashboard boxes with workgroup filter
-            // For urgent tasks
+            // Dashboard counts (same as before)
             var urgentQuery = _context.PlannedEvents.Where(p => p.PEStatus == "urgent");
-            
-            // Apply workgroup filter if selected
             if (workgroupId.HasValue)
             {
                 urgentQuery = urgentQuery.Where(p => p.TaskWg != null && 
                     _context.WorkGroups.Any(w => w.Id == workgroupId && p.TaskWg.Contains(w.Name)));
             }
-            
             ViewData["UrgentCount"] = await urgentQuery.CountAsync();
-            
-            // For in-progress tasks
+
             var inProgressQuery = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing");
-            
             if (workgroupId.HasValue)
             {
                 inProgressQuery = inProgressQuery.Where(p => p.TaskWg != null && 
                     _context.WorkGroups.Any(w => w.Id == workgroupId && p.TaskWg.Contains(w.Name)));
             }
-            
             ViewData["InProgressCount"] = await inProgressQuery.CountAsync();
-            
-            // For OLA violations
+
             var currentDate = DateTime.Today;
             var olaViolationQuery = _context.PETasks
                 .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate);
-                
+
             if (workgroupId.HasValue)
             {
-                olaViolationQuery = olaViolationQuery.Where(t => t.TaskWorkGroup != null && 
+                olaViolationQuery = olaViolationQuery.Where(t => t.TaskWorkGroup != null &&
                     _context.WorkGroups.Any(w => w.Id == workgroupId && t.TaskWorkGroup.Contains(w.Name)));
             }
-            
-            ViewData["OLAViolateCount"] = await olaViolationQuery.CountAsync();
-            
+
+            // Count unique PE Numbers (i.e., unique PEs with at least one violating task)
+            ViewData["OLAViolateCount"] = await olaViolationQuery
+                .Select(t => t.PENumber)
+                .Distinct()
+                .CountAsync();
+
+
             // Get top OLA violations with workgroup filter
             IOrderedQueryable<PETask> violationsQuery;
 
@@ -112,7 +107,7 @@ namespace SFCDashboard.Controllers
                 // Apply both filter and ordering in one step
                 violationsQuery = _context.PETasks
                     .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate)
-                    .Where(t => t.TaskWorkGroup != null && 
+                    .Where(t => t.TaskWorkGroup != null &&
                         _context.WorkGroups.Any(w => w.Id == workgroupId && t.TaskWorkGroup.Contains(w.Name)))
                     .OrderBy(t => t.TaskCompleteDate);
             }
@@ -131,7 +126,8 @@ namespace SFCDashboard.Controllers
 
             // Then transform it in memory
             var topViolations = violationsData
-                .Select(t => new {
+                .Select(t => new
+                {
                     PENumber = t.PENumber,
                     TaskName = t.Task,
                     DueDate = t.TaskCompleteDate,
@@ -139,29 +135,25 @@ namespace SFCDashboard.Controllers
                     PlannedEventId = t.PlannedEvent?.Id
                 })
                 .ToList();
-            
+
             ViewData["TopOLAViolations"] = topViolations;
 
-            // IMPORTANT: Get pending urgent requests for the message inbox - ALWAYS run these
+            // Pending urgent requests (same as before)
             var pendingUrgentRequests = await _context.PlannedEvents
                 .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
-                .OrderByDescending(p => p.PECreatedDate)  // Add this line
+                .OrderByDescending(p => p.PECreatedDate)
                 .Take(10)
                 .ToListAsync();
-                
             ViewData["PendingUrgentRequests"] = pendingUrgentRequests;
-            
-            // Get pending task urgent requests as well - ALWAYS run these
+
             var pendingTaskRequests = await _context.PETasks
                 .Where(t => t.UrgentRequested && !t.IsUrgent)
                 .Include(t => t.PlannedEvent)
                 .OrderByDescending(t => t.TaskCreatedDate)
                 .Take(5)
                 .ToListAsync();
-                
             ViewData["PendingTaskRequests"] = pendingTaskRequests;
-            
-            // Total message count for the badge - ALWAYS calculate this
+
             ViewData["TotalMessages"] = pendingUrgentRequests.Count + pendingTaskRequests.Count;
 
             // Apply search filters based on type
@@ -182,26 +174,37 @@ namespace SFCDashboard.Controllers
                         query = query.Where(p => p.PeNumber != null && p.PeNumber.Contains(peNumber));
                         break;
                 }
-                
-                // Apply workgroup filter if selected
+
                 if (workgroupId.HasValue)
                 {
                     query = query.Where(p => p.TaskWg != null && 
                         _context.WorkGroups.Any(w => w.Id == workgroupId && p.TaskWg.Contains(w.Name)));
                 }
-                
-                // Order and paginate
+
                 query = query.OrderByDescending(p => p.PECreatedDate)
                             .ThenBy(p => p.PeNumber);
-                
+
                 int pageSize = 10;
                 var paginatedList = await PaginatedList<PlannedEvent>.CreateAsync(query.AsNoTracking(), pageIndex, pageSize);
-                
+
+// --- PETasksByPeNumber population ---
+var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
+var allTasks = await _context.PETasks
+    .Where(t => peNumbers.Contains(t.PENumber))
+    .OrderBy(t => t.TaskSeq)
+    .ToListAsync();
+var peTasksByPeNumber = allTasks
+    .GroupBy(t => t.PENumber)
+    .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
+ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+// --- END PETasksByPeNumber population ---
+
                 return View(paginatedList);
             }
             else
             {
                 // Return empty list but still show dashboard data
+                ViewBag.PETasksByPeId = new Dictionary<int, IEnumerable<PETask>>();
                 return View(new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, 10));
             }
         }
@@ -555,7 +558,7 @@ public async Task<IActionResult> Details(int? id)
                     break;
 
                 case "Reject":
-                    plannedEvent.PEStatus = "IN_PROGRESS";
+                    plannedEvent.PEStatus = "ongoing";
                     plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [Urgent Request Rejected]";
                     break;
 
@@ -748,5 +751,6 @@ private int? GetCurrentUserWorkGroupId()
     var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
     return user?.WorkGroupId;
 }
+
     }
 }
