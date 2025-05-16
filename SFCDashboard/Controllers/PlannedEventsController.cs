@@ -79,35 +79,49 @@ namespace SFCDashboard.Controllers
             var currentDate = DateTime.Today;
             var olaViolationQuery = _context.PETasks
                 .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate);
+
             if (workgroupId.HasValue)
             {
-                olaViolationQuery = olaViolationQuery.Where(t => t.TaskWorkGroup != null && 
+                olaViolationQuery = olaViolationQuery.Where(t => t.TaskWorkGroup != null &&
                     _context.WorkGroups.Any(w => w.Id == workgroupId && t.TaskWorkGroup.Contains(w.Name)));
             }
-            ViewData["OLAViolateCount"] = await olaViolationQuery.CountAsync();
 
-            // Top OLA violations (same as before)
+            // Count unique PE Numbers (i.e., unique PEs with at least one violating task)
+            ViewData["OLAViolateCount"] = await olaViolationQuery
+                .Select(t => t.PENumber)
+                .Distinct()
+                .CountAsync();
+
+
+            // Get top OLA violations with workgroup filter
             IOrderedQueryable<PETask> violationsQuery;
+
             if (workgroupId.HasValue)
             {
+                // Apply both filter and ordering in one step
                 violationsQuery = _context.PETasks
                     .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate)
-                    .Where(t => t.TaskWorkGroup != null && 
+                    .Where(t => t.TaskWorkGroup != null &&
                         _context.WorkGroups.Any(w => w.Id == workgroupId && t.TaskWorkGroup.Contains(w.Name)))
                     .OrderBy(t => t.TaskCompleteDate);
             }
             else
             {
+                // No workgroup filter, just apply the basic filter and ordering
                 violationsQuery = _context.PETasks
                     .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate)
                     .OrderBy(t => t.TaskCompleteDate);
             }
+
             var violationsData = await violationsQuery
                 .Take(5)
                 .Include(t => t.PlannedEvent)
                 .ToListAsync();
+
+            // Then transform it in memory
             var topViolations = violationsData
-                .Select(t => new {
+                .Select(t => new
+                {
                     PENumber = t.PENumber,
                     TaskName = t.Task,
                     DueDate = t.TaskCompleteDate,
@@ -115,6 +129,7 @@ namespace SFCDashboard.Controllers
                     PlannedEventId = t.PlannedEvent?.Id
                 })
                 .ToList();
+
             ViewData["TopOLAViolations"] = topViolations;
 
             // Pending urgent requests (same as before)
