@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using ClosedXML.Excel;
 using System.Collections.Generic;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace SFCDashboard.Controllers
 {
@@ -138,6 +139,15 @@ namespace SFCDashboard.Controllers
 
             ViewData["TopOLAViolations"] = topViolations;
 
+    //int currentUserId = int.Parse(User.FindFirst("UserId").Value); // Adjust as needed
+
+    //var inboxIssues = _context.PEIssues
+    //    .Where(i => i.ReceiverId == currentUserId)
+    //    .OrderByDescending(i => i.CreatedAt)
+    //    .ToList();
+
+    //ViewData["InboxIssues"] = inboxIssues;
+    
             // Pending urgent requests (same as before)
             var pendingUrgentRequests = await _context.PlannedEvents
                 .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
@@ -219,7 +229,7 @@ public async Task<IActionResult> Details(int? id)
 
     var plannedEvent = await _context.PlannedEvents
         .FirstOrDefaultAsync(m => m.Id == id);
-        
+
     if (plannedEvent == null)
     {
         return NotFound();
@@ -230,8 +240,28 @@ public async Task<IActionResult> Details(int? id)
         .Where(t => t.PENumber == plannedEvent.PeNumber)
         .OrderBy(t => t.TaskSeq)
         .ToListAsync();
-        
     ViewBag.PETasks = peTasks;
+
+    // Find PETaskListId for the current task name
+    var taskList = await _context.PETaskLists
+        .FirstOrDefaultAsync(tl => tl.Name == plannedEvent.TaskName);
+    ViewBag.CurrentTaskListId = taskList?.Id;
+
+    // Load issues/subtasks for this PE (assuming you use PEIssue or Subtask table)
+    var issues = await _context.PEIssues
+        .Where(i => i.PlannedEventId == plannedEvent.Id)
+        .OrderByDescending(i => i.CreatedAt)
+        .Select(i => new PEIssueViewModel
+        {
+            SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault(),
+            ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault(),
+            IssueText = i.IssueText,
+            AttachmentPath = i.AttachmentPath,
+            CreatedAt = i.CreatedAt
+        })
+        .ToListAsync();
+
+    ViewBag.PEReportedIssues = issues;
 
     return View(plannedEvent);
 }
@@ -456,11 +486,43 @@ public async Task<IActionResult> Details(int? id)
             }
         }
 
-        public IActionResult HoldRecords()
+public async Task<IActionResult> HoldRecords(int? workgroupId)
+{
+    if (!workgroupId.HasValue)
+        workgroupId = GetCurrentUserWorkGroupId();
+
+    try
+    {
+        // Load workgroups for the dropdown
+        var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+        ViewData["Workgroups"] = workgroups;
+        ViewData["SelectedWorkgroupId"] = workgroupId;
+
+        var query = _context.PlannedEvents.Where(p => p.PEStatus.ToLower() == "hold");
+
+        // Apply workgroup filter if selected
+        if (workgroupId.HasValue)
         {
-            // Placeholder action for HoldRecords
-            return View();
+            var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+            if (workgroup != null)
+            {
+                ViewData["FilteredWorkgroup"] = workgroup.Name;
+                query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
+            }
         }
+
+        var holdRecords = await query.ToListAsync();
+        ViewData["HoldCount"] = holdRecords.Count;
+
+        return View(holdRecords);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error loading hold records with workgroup filter {workgroupId}", workgroupId);
+        TempData["ErrorMessage"] = "An error occurred while loading records.";
+        return View(new List<PlannedEvent>());
+    }
+}
 
         public async Task<IActionResult> UrgentRecords(int? workgroupId)
         {
@@ -742,15 +804,16 @@ private string ExtractUrgentRequestReason(string priority)
     return null;
 }
 
-private int? GetCurrentUserWorkGroupId()
-{
-    var serviceId = User.Identity?.Name;
-    if (string.IsNullOrEmpty(serviceId))
-        return null;
+        private int? GetCurrentUserWorkGroupId()
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return null;
 
-    var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
-    return user?.WorkGroupId;
-}
+            var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
+            return user?.WorkGroupId;
+        }
+
 
     }
 }

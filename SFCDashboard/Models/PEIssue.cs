@@ -1,0 +1,33 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace SFCDashboard.Models
+{
+    public class PEIssue
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int PlannedEventId { get; set; }
+
+        [Required]
+        public int PETaskId { get; set; } // Link to the task list/subtask
+
+        [Required]
+        public int ReceiverId { get; set; } // SystemUser Id
+
+        [Required]
+        public int SenderId { get; set; } // SystemUser Id
+
+        [Required]
+        public string IssueText { get; set; }
+
+        public string? AttachmentPath { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        public bool IsRead { get; set; } = false;
+    }
+}

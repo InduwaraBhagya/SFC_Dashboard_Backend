@@ -270,5 +270,14 @@ namespace SFCDashboard.Controllers
                 
             return null;
         }
+        [HttpGet]
+public IActionResult GetForPE(string peNumber)
+{
+    var tasks = _context.PETasks
+        .Where(t => t.PENumber == peNumber)
+        .Select(t => new { id = t.Id, name = t.Task })
+        .ToList();
+    return Json(tasks);
+}
     }
 }
