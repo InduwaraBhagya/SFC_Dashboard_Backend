@@ -132,173 +132,95 @@
                                 <!-- Replace the existing collapse section with this improved version -->
                                 <div class="collapse" id="collapse-@item.PeNumber">
                                     <hr class="details-divider" />
-                                    
+
                                     <!-- Details Header -->
                                     <div class="details-header mb-3">
-                                        <h5 class="details-title">PE Details: @item.PeNumber</h5>
+                                        <h5 class="details-title text-primary">
+                                            <i class="bi bi-file-earmark-text me-2"></i>
+                                            PE Details: <span class="text-dark">@item.PeNumber</span>
+                                        </h5>
                                     </div>
-                                    
+
                                     <!-- Details Content -->
                                     <div class="details-content">
                                         <div class="row g-4">
                                             <!-- Location Details Card -->
                                             <div class="col-md-6">
-                                                <div class="details-card">
-                                                    <div class="details-card-header">
+                                                <div class="details-card shadow-sm border-start border-4 border-info bg-light mb-3">
+                                                    <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
                                                         <i class="bi bi-geo-alt me-2"></i>
-                                                        <h6>Location Details</h6>
+                                                        <span>Location Details</span>
                                                     </div>
-                                                    <div class="details-card-body">
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Province:</span>
-                                                            <span class="detail-value">@item.Province</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Region:</span>
-                                                            <span class="detail-value">@item.Region</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">RTOM:</span>
-                                                            <span class="detail-value">@item.Rtom</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">RTOM Description:</span>
-                                                            <span class="detail-value">@item.RtomDescription</span>
-                                                        </div>
+                                                    <div class="details-card-body px-3 py-2">
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Province:</span> <span class="detail-value fw-semibold">@item.Province</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Region:</span> <span class="detail-value fw-semibold">@item.Region</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">RTOM:</span> <span class="detail-value fw-semibold">@item.Rtom</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">RTOM Description:</span> <span class="detail-value">@item.RtomDescription</span></div>
                                                     </div>
                                                 </div>
-
-                                                <!-- Project Details Card -->
-                                                <div class="details-card mt-3">
-                                                    <div class="details-card-header">
+                                                <div class="details-card shadow-sm border-start border-4 border-success bg-light mb-3">
+                                                    <div class="details-card-header bg-success text-white rounded-top px-3 py-2">
                                                         <i class="bi bi-clipboard-data me-2"></i>
-                                                        <h6>Project Details</h6>
+                                                        <span>Project Details</span>
                                                     </div>
-                                                    <div class="details-card-body">
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Job Reference:</span>
-                                                            <span class="detail-value">@item.JobReference</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Contractor:</span>
-                                                            <span class="detail-value">@item.ContractorName</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">PE Activity:</span>
-                                                            <span class="detail-value">@item.PeActivity</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">PE Nature:</span>
-                                                            <span class="detail-value">@item.PeNature</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">PE Title:</span>
-                                                            <span class="detail-value">@item.PeTitle</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">PE Objective:</span>
-                                                            <span class="detail-value">@item.PeObjective</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">PE Area:</span>
-                                                            <span class="detail-value">@item.PeArea</span>
-                                                        </div>
+                                                    <div class="details-card-body px-3 py-2">
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Job Reference:</span> <span class="detail-value">@item.JobReference</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Contractor:</span> <span class="detail-value">@item.ContractorName</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">PE Activity:</span> <span class="detail-value">@item.PeActivity</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">PE Nature:</span> <span class="detail-value">@item.PeNature</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">PE Title:</span> <span class="detail-value">@item.PeTitle</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">PE Objective:</span> <span class="detail-value">@item.PeObjective</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">PE Area:</span> <span class="detail-value">@item.PeArea</span></div>
                                                     </div>
                                                 </div>
                                             </div>
-
                                             <div class="col-md-6">
-                                                <!-- Task Information Card -->
-                                                <div class="details-card">
-                                                    <div class="details-card-header">
+                                                <div class="details-card shadow-sm border-start border-4 border-warning bg-light mb-3">
+                                                    <div class="details-card-header bg-warning text-dark rounded-top px-3 py-2">
                                                         <i class="bi bi-list-task me-2"></i>
-                                                        <h6>Task Information</h6>
+                                                        <span>Task Information</span>
                                                     </div>
-                                                    <div class="details-card-body">
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Task Sequence:</span>
-                                                            <span class="detail-value">@item.TaskSeq</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Task Name:</span>
-                                                            <span class="detail-value">@item.TaskName</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Task Workgroup:</span>
-                                                            <span class="detail-value">@item.TaskWg</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Actual Start Date:</span>
-                                                            <span class="detail-value">@item.WoActualStartDate</span>
-                                                        </div>
+                                                    <div class="details-card-body px-3 py-2">
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Task Sequence:</span> <span class="detail-value">@item.TaskSeq</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Task Name:</span> <span class="detail-value">@item.TaskName</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Task Workgroup:</span> <span class="detail-value">@item.TaskWg</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Actual Start Date:</span> <span class="detail-value">@item.WoActualStartDate</span></div>
                                                     </div>
                                                 </div>
-
-                                                <!-- Service Details Card -->
-                                                <div class="details-card mt-3">
-                                                    <div class="details-card-header">
+                                                <div class="details-card shadow-sm border-start border-4 border-primary bg-light mb-3">
+                                                    <div class="details-card-header bg-primary text-white rounded-top px-3 py-2">
                                                         <i class="bi bi-gear-fill me-2"></i>
-                                                        <h6>Service Details</h6>
+                                                        <span>Service Details</span>
                                                     </div>
-                                                    <div class="details-card-body">
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Service Category:</span>
-                                                            <span class="detail-value">@item.ServiceCategory</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Service Speed:</span>
-                                                            <span class="detail-value">@item.ServiceSpeed</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Order Type:</span>
-                                                            <span class="detail-value">@item.OrderType</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">CRM Order:</span>
-                                                            <span class="detail-value">@item.CrmOrder</span>
-                                                        </div>
+                                                    <div class="details-card-body px-3 py-2">
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Service Category:</span> <span class="detail-value">@item.ServiceCategory</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Service Speed:</span> <span class="detail-value">@item.ServiceSpeed</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Order Type:</span> <span class="detail-value">@item.OrderType</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">CRM Order:</span> <span class="detail-value">@item.CrmOrder</span></div>
                                                     </div>
                                                 </div>
-
-                                                <!-- Customer Information Card -->
-                                                <div class="details-card mt-3">
-                                                    <div class="details-card-header">
+                                                <div class="details-card shadow-sm border-start border-4 border-secondary bg-light mb-3">
+                                                    <div class="details-card-header bg-secondary text-white rounded-top px-3 py-2">
                                                         <i class="bi bi-person me-2"></i>
-                                                        <h6>Customer Information</h6>
+                                                        <span>Customer Information</span>
                                                     </div>
-                                                    <div class="details-card-body">
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Customer Type:</span>
-                                                            <span class="detail-value">@item.CusType</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Account Manager:</span>
-                                                            <span class="detail-value">@item.AccountManager</span>
-                                                        </div>
-                                                        <div class="detail-item">
-                                                            <span class="detail-label">Section Handled By:</span>
-                                                            <span class="detail-value">@item.SectionHandledBy</span>
-                                                        </div>
+                                                    <div class="details-card-body px-3 py-2">
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Customer Type:</span> <span class="detail-value">@item.CusType</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Account Manager:</span> <span class="detail-value">@item.AccountManager</span></div>
+                                                        <div class="detail-item"><span class="detail-label text-secondary">Section Handled By:</span> <span class="detail-value">@item.SectionHandledBy</span></div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-
                                         <!-- Location Information Section -->
-                                        <div class="details-card mt-3">
-                                            <div class="details-card-header">
+                                        <div class="details-card shadow-sm border-start border-4 border-info bg-light mt-3">
+                                            <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
                                                 <i class="bi bi-pin-map me-2"></i>
-                                                <h6>Location Information</h6>
+                                                <span>Location Information</span>
                                             </div>
-                                            <div class="details-card-body">
-                                                <div class="detail-item">
-                                                    <span class="detail-label">Location A:</span>
-                                                    <span class="detail-value">@item.LocationAAddress</span>
-                                                </div>
-                                                <div class="detail-item">
-                                                    <span class="detail-label">Location B:</span>
-                                                    <span class="detail-value">@item.LocationBAddress</span>
-                                                </div>
+                                            <div class="details-card-body px-3 py-2">
+                                                <div class="detail-item"><span class="detail-label text-secondary">Location A:</span> <span class="detail-value">@item.LocationAAddress</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Location B:</span> <span class="detail-value">@item.LocationBAddress</span></div>
                                             </div>
                                         </div>
 
@@ -328,6 +250,94 @@
                                                 </div>
                                             </div>
                                         }
+
+                                        <!-- PE Tasks Table (like Details.cshtml) -->
+                                        <div class="card mt-4">
+                                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">PE Tasks</h6>
+                                                @{
+                                                    var peTasks = ViewBag.PETasksByPeNumber != null && ViewBag.PETasksByPeNumber.ContainsKey(item.PeNumber)
+                                                        ? (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasksByPeNumber[item.PeNumber]
+                                                        : null;
+                                                }
+                                                @if (peTasks == null || !peTasks.Any())
+                                                {
+                                                    <span class="badge bg-warning text-dark">No tasks found</span>
+                                                }
+                                            </div>
+                                            <div class="card-body">
+                                                @if (peTasks != null && peTasks.Any())
+                                                {
+                                                    <div class="table-responsive">
+                                                        <table class="table table-hover task-table">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Seq</th>
+                                                                    <th>Task</th>
+                                                                    <th>Workgroup</th>
+                                                                    <th>OLA</th>
+                                                                    <th>Status</th>
+                                                                    <th>Created Date</th>
+                                                                    <th>Target Date</th>
+                                                                    <th>Actual Date</th>
+                                                                    <th>Priority</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach (var task in peTasks)
+                                                                {
+                                                                    <tr class="@(task.IsUrgent ? "table-warning" : 
+                                                                               task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                                                               task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                                                               task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                                                        <td>@task.TaskSeq</td>
+                                                                        <td>@task.Task</td>
+                                                                        <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                                                        <td>@task.OLA days</td>
+                                                                        <td>
+                                                                            @{
+                                                                                string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                                                                {
+                                                                                    "completed" => "badge bg-success",
+                                                                                    "inprogress" => "badge bg-warning text-dark",
+                                                                                    _ => "badge bg-secondary"
+                                                                                };
+                                                                            }
+                                                                            <span class="@taskStatusClass">@task.TaskStatus</span>
+                                                                        </td>
+                                                                        <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                                                                        <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                                                        <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+                                                                        <td>
+                                                                            @if (task.IsUrgent)
+                                                                            {
+                                                                                <span class="badge bg-danger">URGENT</span>
+                                                                            }
+                                                                            @if (task.UrgentRequested && !task.IsUrgent)
+                                                                            {
+                                                                                <span class="badge bg-warning">URGENT REQUESTED</span>
+                                                                            }
+                                                                            @if (!string.IsNullOrEmpty(task.Priority))
+                                                                            {
+                                                                                <small class="d-block text-muted mt-1">@task.Priority</small>
+                                                                            }
+                                                                        </td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="alert alert-info">
+                                                        <i class="bi bi-info-circle me-2"></i>
+                                                        No tasks have been assigned to this PE record yet.
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                        <!-- End PE Tasks Table -->
                                     </div>
                                 </div>
                             </div>
@@ -515,7 +525,7 @@
                             </div>
                         }
                     }
-                    
+
                     <!-- Task Urgent Requests -->
                     @if (ViewData["PendingTaskRequests"] != null)
                     {
@@ -559,71 +569,71 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Initialize message inbox
             initializeMessageInbox();
-            
+
             // Refresh inbox button
             document.getElementById('refreshInbox').addEventListener('click', function() {
                 window.location.reload();
             });
-            
+
             // Accept button handler
             document.getElementById('acceptUrgentRequestBtn').addEventListener('click', function() {
                 const requestType = document.getElementById('urgentRequestType').value;
                 const requestId = document.getElementById('urgentRequestId').value;
-                
+
                 // Submit the form to the appropriate endpoint
                 const form = document.getElementById('urgentRequestForm');
-                
+
                 // Create hidden field for urgentReason
                 const reasonField = document.createElement('input');
                 reasonField.type = 'hidden';
                 reasonField.name = 'urgentReason';
-                
-                // Default to OpeningCeremony 
+
+                // Default to OpeningCeremony
                 // (backend will use the original reason from the request)
                 reasonField.value = 'OpeningCeremony';
-                
+
                 form.appendChild(reasonField);
-                
+
                 if (requestType === 'pe') {
                     form.action = '/PlannedEvents/ProcessUrgentRequest';
                 } else {
                     form.action = '/PETasks/ProcessUrgentRequest';
                 }
-                
+
                 form.submit();
             });
-            
+
             // Reject button handler
             document.getElementById('rejectUrgentRequestBtn').addEventListener('click', function() {
                 const requestType = document.getElementById('urgentRequestType').value;
                 const requestId = document.getElementById('urgentRequestId').value;
-                
+
                 // Submit the form to the appropriate endpoint
                 const form = document.getElementById('urgentRequestForm');
-                
+
                 // Create hidden field for urgentReason with Reject value
                 const reasonField = document.createElement('input');
                 reasonField.type = 'hidden';
                 reasonField.name = 'urgentReason';
                 reasonField.value = 'Reject';
-                
+
                 form.appendChild(reasonField);
-                
+
                 if (requestType === 'pe') {
                     form.action = '/PlannedEvents/ProcessUrgentRequest';
                 } else {
                     form.action = '/PETasks/ProcessUrgentRequest';
                 }
-                
+
                 form.submit();
             });
         });
-        
+
         function initializeMessageInbox() {
             const messageItems = document.querySelectorAll('.message-item');
             const filterButtons = document.querySelectorAll('.inbox-filters button');
             const inboxSearch = document.querySelector('.inbox-search');
-            
+
             // Ensure all messages are visible on first load
             messageItems.forEach(item => {
                 item.style.display = 'flex';
@@ -653,12 +663,12 @@
                     });
                 });
             });
-            
+
             // Handle search functionality
             if (inboxSearch) {
                 inboxSearch.addEventListener('input', function() {
                     const searchTerm = this.value.toLowerCase();
-                    
+
                     messageItems.forEach(item => {
                         const content = item.textContent.toLowerCase();
                         if (content.includes(searchTerm)) {
@@ -676,7 +686,7 @@
                     // Extract the ID from data-message-id attribute
                     const messageId = this.getAttribute('data-message-id');
                     const peId = messageId.replace('urgent-pe-', '');
-                    
+
                     // Show PE urgent confirmation modal with details
                     showUrgentRequestModal('pe', peId);
                 });
@@ -688,90 +698,81 @@
                     // Extract the ID from data-message-id attribute
                     const messageId = this.getAttribute('data-message-id');
                     const taskId = messageId.replace('urgent-task-', '');
-                    
+
                     // Show task urgent confirmation modal
                     showUrgentRequestModal('task', taskId);
                 });
             });
         }
-        
+
         // Add function to show urgent request details modal
         function showUrgentRequestModal(type, id) {
-            // Set the form values
             document.getElementById('urgentRequestType').value = type;
             document.getElementById('urgentRequestId').value = id;
-            
-            // Fetch record details based on type (PE or Task)
+
             let url = '';
             if (type === 'pe') {
                 url = '/PlannedEvents/GetUrgentRequestDetails/' + id;
             } else {
                 url = '/PETasks/GetUrgentRequestDetails/' + id;
             }
-            
-            // Show loading indicator
+
             document.getElementById('urgentRequestDetails').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading details...</p></div>';
-            
-            // Show the modal while fetching details
+
             const modal = new bootstrap.Modal(document.getElementById('urgentRequestModal'));
             modal.show();
-            
-            // Fetch details from server
+
             fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    // Update the modal with details
+                    // Extract the original reason from priority
+                    let extractedReason = "OpeningCeremony";
+                    if (data.priority && data.priority.toLowerCase().includes("critical customer")) {
+                        extractedReason = "CriticalCustomer";
+                    } else if (data.priority && data.priority.toLowerCase().includes("opening ceremony")) {
+                        extractedReason = "OpeningCeremony";
+                    }
+                    document.getElementById('extractedUrgentReason').value = extractedReason;
+
                     let detailsHtml = `
-                        <div class="alert alert-info mb-3">
-                            <div class="row">
-                                <div class="col-sm-4 fw-bold">PE Number:</div>
-                                <div class="col-sm-8">${data.peNumber}</div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-sm-4 fw-bold">Customer:</div>
-                                <div class="col-sm-8">${data.customer || 'Not specified'}</div>
-                            </div>`;
-                            
-                    if (type === 'task') {
-                        detailsHtml += `
-                            <div class="row mt-2">
-                                <div class="col-sm-4 fw-bold">Task:</div>
-                                <div class="col-sm-8">${data.taskName}</div>
-                            </div>`;
-                    }
-                    
-                    detailsHtml += `
-                        <div class="row mt-2">
-                            <div class="col-sm-4 fw-bold">Priority:</div>
-                            <div class="col-sm-8">${data.priority || 'Not specified'}</div>
-                        </div>
-                    </div>`;
-                    
-                    // Show request reason if available
-                    if (data.urgentRequestReason) {
-                        detailsHtml += `
-                        <div class="alert alert-warning">
-                            <h6 class="fw-bold">Request Reason:</h6>
-                            <p>${data.urgentRequestReason}</p>
-                        </div>`;
-                    }
-                    
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">PE Number:</dt>
+                            <dd class="col-sm-7">${data.peNumber || '-'}</dd>
+                            <dt class="col-sm-5">Customer:</dt>
+                            <dd class="col-sm-7">${data.customer || '-'}</dd>
+                            ${type === 'task' ? `
+                                <dt class="col-sm-5">Task:</dt>
+                                <dd class="col-sm-7">${data.taskName || '-'}</dd>
+                            ` : ''}
+                            <dt class="col-sm-5">Priority:</dt>
+                            <dd class="col-sm-7">${data.priority || '-'}</dd>
+                            ${data.urgentRequestReason ? `
+                                <dt class="col-sm-5">Requested Reason:</dt>
+                                <dd class="col-sm-7 text-danger">${data.urgentRequestReason}</dd>
+                            ` : ''}
+                        </dl>
+                    `;
                     document.getElementById('urgentRequestDetails').innerHTML = detailsHtml;
-                })
-                .catch(error => {
-                    console.error('Error fetching urgent request details:', error);
-                    document.getElementById('urgentRequestDetails').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Failed to load request details. Please try again.
-                        </div>`;
+
+                    // Set form action
+                    if (type === 'pe') {
+                        document.getElementById('urgentRequestForm').action = '/PlannedEvents/ProcessUrgentRequest';
+                    } else {
+                        document.getElementById('urgentRequestForm').action = '/PETasks/ProcessUrgentRequest';
+                    }
                 });
         }
+
+        // Approve button submits form with extracted reason
+        document.getElementById('approveUrgentBtn').onclick = function () {
+            // Form already has correct urgentReason
+        };
+
+        // Reject button submits form with urgentReason=Reject
+        document.getElementById('rejectUrgentBtn').onclick = function () {
+            document.getElementById('extractedUrgentReason').value = 'Reject';
+            document.getElementById('urgentRequestForm').submit();
+        };
     </script>
 }
 
@@ -996,18 +997,15 @@
     }
 
     @@keyframes ripple {
-        from
+        from {
+            transform: scale(0);
+            opacity: 1;
+        }
 
-    {
-        transform: scale(0);
-        opacity: 1;
-    }
-
-    to {
-        transform: scale(40);
-        opacity: 0;
-    }
-
+        to {
+            transform: scale(40);
+            opacity: 0;
+        }
     }
 
     /* Message Inbox Styles */
@@ -1214,31 +1212,25 @@
 
     /* Mobile responsiveness */
     @@media (max-width: 992px) {
-        .message-inbox-container
-
-    {
-        margin-top: 2rem;
-        position: relative;
-        max-height: 600px;
-    }
-
+        .message-inbox-container {
+            margin-top: 2rem;
+            position: relative;
+            max-height: 600px;
+        }
     }
 
     @@media (max-width: 768px) {
-        .message-inbox-container
+        .message-inbox-container {
+            padding: 1rem;
+        }
 
-    {
-        padding: 1rem;
-    }
+        .message-item {
+            padding: 0.75rem;
+        }
 
-    .message-item {
-        padding: 0.75rem;
-    }
-
-    .inbox-header h3 {
-        font-size: 1.3rem;
-    }
-
+        .inbox-header h3 {
+            font-size: 1.3rem;
+        }
     }
 
     /* Custom scrollbar for messages container */
@@ -1262,18 +1254,15 @@
 
     /* Animation for new messages */
     @@keyframes newMessage {
-        0%
+        0% {
+            transform: translateX(-20px);
+            opacity: 0;
+        }
 
-    {
-        transform: translateX(-20px);
-        opacity: 0;
-    }
-
-    100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-
+        100% {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
 
     .message-item:first-child {
@@ -1281,60 +1270,94 @@
     }
 
     /* Additional styles for urgent request messages */
-.message-item.urgent-request {
-    background-color: rgba(220, 53, 69, 0.08);
-    border-left: 3px solid #dc3545;
-}
+    .message-item.urgent-request {
+        background-color: rgba(220, 53, 69, 0.08);
+        border-left: 3px solid #dc3545;
+    }
 
-.message-item.task-urgent-request {
-    background-color: rgba(255, 193, 7, 0.08);
-    border-left: 3px solid #ffc107;
-}
+    .message-item.task-urgent-request {
+        background-color: rgba(255, 193, 7, 0.08);
+        border-left: 3px solid #ffc107;
+    }
 
-.message-item.urgent-request:hover,
-.message-item.task-urgent-request:hover {
-    background-color: rgba(220, 53, 69, 0.15);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.15);
-}
+        .message-item.urgent-request:hover,
+        .message-item.task-urgent-request:hover {
+            background-color: rgba(220, 53, 69, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.15);
+        }
 
-/* Notification dot for unread messages */
-.message-item.unread::before {
-    content: '';
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 8px;
-    height: 8px;
-    background-color: #4a89dc;
-    border-radius: 50%;
-}
+    /* Notification dot for unread messages */
+    .message-item.unread::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 8px;
+        height: 8px;
+        background-color: #4a89dc;
+        border-radius: 50%;
+    }
 
-.message-item.urgent-request.unread::before {
-    background-color: #dc3545;
-}
+    .message-item.urgent-request.unread::before {
+        background-color: #dc3545;
+    }
 
-.message-item.task-urgent-request.unread::before {
-    background-color: #ffc107;
-}
+    .message-item.task-urgent-request.unread::before {
+        background-color: #ffc107;
+    }
 
-/* Workgroup filter styles */
-.workgroup-filter-section {
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
+    /* Workgroup filter styles */
+    .workgroup-filter-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
 
-.filter-badge {
-    font-size: 0.8rem;
-    display: inline-flex;
-    align-items: center;
-}
+    .filter-badge {
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+    }
 
-.filter-badge .badge {
-    padding: 0.3rem 0.6rem;
-}
+        .filter-badge .badge {
+            padding: 0.3rem 0.6rem;
+        }
+
+    .details-card {
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        background: #f8fafd;
+    }
+
+    .details-card-header {
+        font-weight: 600;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+
+    .details-card-body {
+        padding: 0.75rem 1rem;
+    }
+
+    .detail-item {
+        margin-bottom: 0.4rem;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .detail-label {
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .detail-value {
+        font-weight: 600;
+        color: #212529;
+    }
 </style>
 
 <!-- Simplify the modal with just Accept/Reject buttons -->
@@ -1351,21 +1374,28 @@
                 <div id="urgentRequestDetails">
                     <!-- Details will be loaded here -->
                 </div>
-
                 <form id="urgentRequestForm" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="urgentRequestId" name="id" />
                     <input type="hidden" id="urgentRequestType" name="requestType" />
+                    <input type="hidden" id="extractedUrgentReason" name="urgentReason" />
+                    <div class="form-group mb-4">
+                        <div class="alert alert-warning">
+                            <strong>Please review the urgent request and decide whether to approve or reject it.</strong>
+                        </div>
+                        <div class="d-flex justify-content-around mt-4">
+                            <button type="submit" id="approveUrgentBtn" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle-fill me-2"></i> Approve
+                            </button>
+                            <button type="button" id="rejectUrgentBtn" class="btn btn-danger btn-lg">
+                                <i class="bi bi-x-circle-fill me-2"></i> Reject
+                            </button>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="acceptUrgentRequestBtn">
-                    <i class="fas fa-check-circle me-2"></i>Accept
-                </button>
-                <button type="button" class="btn btn-danger" id="rejectUrgentRequestBtn">
-                    <i class="fas fa-times-circle me-2"></i>Reject
-                </button>
             </div>
         </div>
     </div>

@@ -349,7 +349,6 @@ namespace SFCDashboard.Services
                 existingEvent.AccessMedium = record.ACCESS_MEDIUM ?? existingEvent.AccessMedium ?? string.Empty;
                 existingEvent.AccessMediumAEnd = record.ACCESS_MEDIUM_A_END ?? existingEvent.AccessMediumAEnd ?? string.Empty;
                 existingEvent.AccessMediumBEnd = record.ACCESS_MEDIUM_B_END ?? existingEvent.AccessMediumBEnd ?? string.Empty;
-                existingEvent.Priority = record.WO_COMMENTS ?? existingEvent.Priority ?? string.Empty;
                 
                 // Keep PEStatus as is or set to default if null
                 existingEvent.PEStatus = existingEvent.PEStatus ?? "ongoing";
@@ -421,7 +420,6 @@ namespace SFCDashboard.Services
                     AccessMedium = record.ACCESS_MEDIUM ?? string.Empty,
                     AccessMediumAEnd = record.ACCESS_MEDIUM_A_END ?? string.Empty,
                     AccessMediumBEnd = record.ACCESS_MEDIUM_B_END ?? string.Empty,
-                    Priority = record.WO_COMMENTS ?? string.Empty,
                     PEStatus = "ongoing", // Default status for new records
                     PECreatedDate = DateTime.UtcNow
                 };
