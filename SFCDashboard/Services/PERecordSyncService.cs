@@ -147,6 +147,8 @@ namespace SFCDashboard.Services
                                     {
                                         await CreatePETasksForEvent(dbContext, trackedEvent, record, taskTemplates);
                                     }
+                                    // Added line to update tasks for the existing event
+                                    await UpdatePETasksForEvent(dbContext, trackedEvent, record, taskTemplates);
                                 }
                             }
                             else
@@ -421,7 +423,7 @@ namespace SFCDashboard.Services
                     AccessMedium = record.ACCESS_MEDIUM ?? string.Empty,
                     AccessMediumAEnd = record.ACCESS_MEDIUM_A_END ?? string.Empty,
                     AccessMediumBEnd = record.ACCESS_MEDIUM_B_END ?? string.Empty,
-                    Priority = record.WO_COMMENTS ?? string.Empty,
+                    //Priority = record.WO_COMMENTS ?? string.Empty,
                     PEStatus = "ongoing", // Default status for new records
                     PECreatedDate = DateTime.UtcNow
                 };
@@ -611,6 +613,69 @@ namespace SFCDashboard.Services
             {
                 _logger.LogError(ex, "Error creating tasks for PE {peNumber}", plannedEvent.PeNumber);
                 throw;
+            }
+        }
+
+        private async Task UpdatePETasksForEvent(
+            ApplicationDbContext dbContext,
+            PlannedEvent plannedEvent,
+            PERecord record,
+            List<PETaskList> taskTemplates)
+        {
+            try
+            {
+                var peNumber = plannedEvent.PeNumber;
+                if (string.IsNullOrEmpty(peNumber))
+                    return;
+
+                // Get all existing tasks for this PE
+                var existingTasks = await dbContext.PETasks
+                    .Where(t => t.PENumber == peNumber)
+                    .ToListAsync();
+
+                // Build the latest set of tasks from templates
+                var templateTasks = CreateTasksForEvent(plannedEvent, record, taskTemplates);
+
+                foreach (var templateTask in templateTasks)
+                {
+                    var existingTask = existingTasks
+                        .FirstOrDefault(t => t.TaskSeq == templateTask.TaskSeq && t.Task == templateTask.Task);
+
+                    if (existingTask != null)
+                    {
+                        // Update fields from template/task record
+                        existingTask.OLA = templateTask.OLA;
+                        existingTask.TaskWorkGroup = templateTask.TaskWorkGroup;
+                        existingTask.TaskStatus = templateTask.TaskStatus;
+                        existingTask.TaskCreatedDate = templateTask.TaskCreatedDate;
+                        existingTask.TaskCompleteDate = templateTask.TaskCompleteDate;
+                        existingTask.Priority = templateTask.Priority;
+                        // Only set actual dates if not already set
+                        if (!existingTask.ActualTaskCreatedDate.HasValue && templateTask.ActualTaskCreatedDate.HasValue)
+                            existingTask.ActualTaskCreatedDate = templateTask.ActualTaskCreatedDate;
+                        if (!existingTask.ACtualTaskCompleteDate.HasValue && templateTask.ACtualTaskCompleteDate.HasValue)
+                            existingTask.ACtualTaskCompleteDate = templateTask.ACtualTaskCompleteDate;
+                        // Preserve IsUrgent and UrgentRequested
+                    }
+                    else
+                    {
+                        // New task, add it
+                        dbContext.PETasks.Add(templateTask);
+                    }
+                }
+
+                // Optionally, remove tasks that are no longer in the template
+                // var obsoleteTasks = existingTasks
+                //     .Where(et => !templateTasks.Any(tt => tt.TaskSeq == et.TaskSeq && tt.Task == et.Task))
+                //     .ToList();
+                // if (obsoleteTasks.Any())
+                //     dbContext.PETasks.RemoveRange(obsoleteTasks);
+
+                await dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating PETasks for PE {peNumber}", plannedEvent.PeNumber);
             }
         }
 
