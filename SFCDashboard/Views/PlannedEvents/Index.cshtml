@@ -1,4 +1,5 @@
-﻿@model PaginatedList<SFCDashboard.Models.PlannedEvent>
+﻿@using SFCDashboard.Models
+@model PaginatedList<SFCDashboard.Models.PlannedEvent>
 
 @{
     ViewData["Title"] = "PE Records";
@@ -14,14 +15,16 @@
     <form id="workgroupFilterForm" method="get" asp-action="Index">
         <div class="row align-items-center">
             <div class="col-auto">
-                <label for="workgroupFilter" class="form-label mb-0"><i class="bi bi-filter"></i> Filter by Workgroup:</label>
+                <label for="workgroupFilter" class="form-label mb-0">
+                    <i class="bi bi-filter"></i> Filter by Workgroup:
+                </label>
             </div>
             <div class="col-md-3">
                 <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
                     <option value="">All Workgroups</option>
-                    @if (ViewData["Workgroups"] != null)
+                    @if (ViewData["Workgroups"] is IEnumerable<WorkGroup> workgroups)
                     {
-                        foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
+                        foreach (var workgroup in workgroups)
                         {
                             <option value="@workgroup.Id" @@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString() ? "selected" : "")>
                                 @workgroup.Name

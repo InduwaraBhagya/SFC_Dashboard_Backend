@@ -29,9 +29,9 @@
                 <span asp-validation-for="UserRoleId" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="WorkGroupId" class="control-label"></label>
-                <select asp-for="WorkGroupId" class="form-control" asp-items="ViewBag.WorkGroupId"></select>
-                <span asp-validation-for="WorkGroupId" class="text-danger"></span>
+                <label for="workgroup-search" class="control-label">WorkGroup</label>
+                <input id="workgroup-search" class="form-control" placeholder="Type to search workgroups" />
+                <input id="selected-workgroup-id" name="WorkGroupId" type="hidden" />
             </div>
             <div class="form-group">
                 <input type="submit" value="Save" class="btn btn-primary" />
@@ -46,4 +46,38 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <!-- jQuery UI CSS for autocomplete styling -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <!-- jQuery and jQuery UI scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $("#workgroup-search").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "/SystemUsers/SearchWorkgroups",
+                        data: { term: request.term },
+                        type: "GET",
+                        success: function(data) {
+                            // Remove duplicates from the response
+                            let uniqueData = [...new Map(data.map(item => [item.label, item])).values()];
+                            response(uniqueData);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error:", status, error);
+                        }
+                    });
+                },
+                minLength: 2,
+                select: function(event, ui) {
+                    $("#workgroup-search").val(ui.item.label);
+                    $("#selected-workgroup-id").val(ui.item.id);
+                    return false;
+                }
+            });
+        });
+    </script>
 }

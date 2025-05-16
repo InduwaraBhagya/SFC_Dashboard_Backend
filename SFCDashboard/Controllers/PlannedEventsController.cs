@@ -35,17 +35,17 @@ namespace SFCDashboard.Controllers
             if (!workgroupId.HasValue)
                 workgroupId = GetCurrentUserWorkGroupId();
 
-            // // Load all available workgroups for the dropdown
-            // var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-            // ViewData["Workgroups"] = workgroups;
-            // ViewData["SelectedWorkgroupId"] = workgroupId;
+            // Load all available workgroups for the dropdown
+            var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+            ViewData["Workgroups"] = workgroups;
+            ViewData["SelectedWorkgroupId"] = workgroupId;
 
-            // if (workgroupId.HasValue)
-            // {
-            //     // Get the selected workgroup name for display
-            //     var selectedWorkgroup = workgroups.FirstOrDefault(w => w.Id == workgroupId);
-            //     ViewData["SelectedWorkgroupName"] = selectedWorkgroup?.Name;
-            // }
+            if (workgroupId.HasValue)
+            {
+                // Get the selected workgroup name for display
+                var selectedWorkgroup = workgroups.FirstOrDefault(w => w.Id == workgroupId);
+                ViewData["SelectedWorkgroupName"] = selectedWorkgroup?.Name;
+            }
 
             // Rest of your search setup
             var query = from r in _context.PlannedEvents
@@ -752,5 +752,56 @@ private int? GetCurrentUserWorkGroupId()
     return user?.WorkGroupId;
 }
 
+        public async Task<IActionResult> GlobalSearch(string searchType, string peNumber, string customer, string jobReference, string soNumber, int pageIndex = 1)
+        {
+            var query = _context.PlannedEvents.AsQueryable(); // No workgroup restriction
+
+            if (!string.IsNullOrEmpty(searchType))
+            {
+                switch (searchType)
+                {
+                    case "peNumber":
+                        if (!string.IsNullOrEmpty(peNumber))
+                            query = query.Where(x => x.PeNumber.Contains(peNumber));
+                        break;
+                    case "customer":
+                        if (!string.IsNullOrEmpty(customer))
+                            query = query.Where(x => x.Customer.Contains(customer));
+                        break;
+                    case "jobReference":
+                        if (!string.IsNullOrEmpty(jobReference))
+                            query = query.Where(x => x.JobReference.Contains(jobReference));
+                        break;
+                    case "soNumber":
+                        if (!string.IsNullOrEmpty(soNumber))
+                            query = query.Where(x => x.SoNumber.Contains(soNumber));
+                        break;
+                }
+            }
+
+            int pageSize = 20;
+            var result = await PaginatedList<PlannedEvent>.CreateAsync(query.OrderByDescending(x => x.PECreatedDate), pageIndex, pageSize);
+
+            // --- Add this block to provide PETasksByPeNumber for the view ---
+    var peNumbers = result.Select(pe => pe.PeNumber).ToList();
+    var allTasks = await _context.PETasks
+        .Where(t => peNumbers.Contains(t.PENumber))
+        .OrderBy(t => t.TaskSeq)
+        .ToListAsync();
+    var peTasksByPeNumber = allTasks
+        .GroupBy(t => t.PENumber)
+        .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
+    ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+    // --- End PETasksByPeNumber block ---
+
+    ViewData["SearchType"] = searchType;
+    ViewData["PENumberFilter"] = peNumber;
+    ViewData["CustomerFilter"] = customer;
+    ViewData["JobReferenceFilter"] = jobReference;
+    ViewData["SONumberFilter"] = soNumber;
+
+    return View(result);
+}
     }
 }
+
