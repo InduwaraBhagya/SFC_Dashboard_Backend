@@ -32,7 +32,7 @@ namespace SFCDashboard.Controllers
             var task = await _context.PETasks
                 .Include(t => t.PlannedEvent)
                 .FirstOrDefaultAsync(m => m.Id == id);
-                
+
             if (task == null)
             {
                 return NotFound();
@@ -48,7 +48,7 @@ namespace SFCDashboard.Controllers
             var task = await _context.PETasks
                 .Include(t => t.PlannedEvent)
                 .FirstOrDefaultAsync(t => t.Id == id);
-                
+
             if (task == null || task.TaskStatus?.ToUpper() != "ONGOING")
             {
                 return NotFound();
@@ -58,16 +58,16 @@ namespace SFCDashboard.Controllers
             task.IsUrgent = true;
             task.UrgentRequested = false;
             task.Priority = (task.Priority ?? "") + " [URGENT]";
-            
+
             _context.Update(task);
-            
+
             // Also update the parent PE status to urgent
             if (task.PlannedEvent != null)
             {
                 task.PlannedEvent.PEStatus = "urgent";
                 _context.Update(task.PlannedEvent);
             }
-            
+
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Task ID {taskId} marked as urgent directly", id);
@@ -77,7 +77,7 @@ namespace SFCDashboard.Controllers
             return RedirectToAction("Details", "PlannedEvents", new { id = task.PlannedEvent?.Id });
         }
 
- 
+
 
         // GET: PETasks/UrgentRequestsList
         public async Task<IActionResult> UrgentRequestsList()
@@ -117,7 +117,7 @@ namespace SFCDashboard.Controllers
 
             // Clear the urgent requested flag
             task.UrgentRequested = false;
-            
+
             // Remove the pending marker from the priority
             task.Priority = task.Priority?.Replace("[URGENT REQUEST PENDING]", "").Trim();
 
@@ -160,13 +160,13 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> OLAViolationsList()
         {
             var currentDate = DateTime.Today;
-            
+
             // Find all tasks that:
             // 1. Are not completed (status is not "COMPLETED")
             // 2. Have a TaskCompleteDate in the past
             var violatingTasks = await _context.PETasks
                 .Include(t => t.PlannedEvent)
-                .Where(t => t.TaskStatus != "COMPLETED" && 
+                .Where(t => t.TaskStatus != "COMPLETED" &&
                            t.TaskCompleteDate.Date < currentDate)
                 .OrderBy(t => t.TaskCompleteDate)  // Show oldest violations first
                 .ToListAsync();
@@ -198,7 +198,7 @@ namespace SFCDashboard.Controllers
             var task = await _context.PETasks
                 .Include(t => t.PlannedEvent)
                 .FirstOrDefaultAsync(m => m.Id == id);
-                
+
             if (task == null)
             {
                 return NotFound();
@@ -207,14 +207,14 @@ namespace SFCDashboard.Controllers
             // Mark task as completed
             task.TaskStatus = "COMPLETED";
             task.ACtualTaskCompleteDate = DateTime.Now;
-            
+
             // Check if there are other violated tasks for this PE
             var otherViolationsExist = await _context.PETasks
-                .AnyAsync(t => t.PENumber == task.PENumber && 
+                .AnyAsync(t => t.PENumber == task.PENumber &&
                               t.Id != task.Id &&
                               t.TaskStatus != "COMPLETED" &&
                               t.TaskCompleteDate.Date < DateTime.Today);
-                              
+
             // If no other violations exist, update the PE status
             if (!otherViolationsExist && task.PlannedEvent != null && task.PlannedEvent.PEStatus == "ola-violated")
             {
@@ -222,12 +222,12 @@ namespace SFCDashboard.Controllers
                 task.PlannedEvent.PEStatus = "ongoing";
                 _context.Update(task.PlannedEvent);
             }
-            
+
             _context.Update(task);
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Task marked as completed successfully.";
-            
+
             return RedirectToAction(nameof(OLAViolationsList));
         }
 
@@ -238,7 +238,7 @@ namespace SFCDashboard.Controllers
             var task = await _context.PETasks
                 .Include(t => t.PlannedEvent)
                 .FirstOrDefaultAsync(t => t.Id == id);
-                
+
             if (task == null)
             {
                 return NotFound();
@@ -261,14 +261,64 @@ namespace SFCDashboard.Controllers
         {
             if (string.IsNullOrEmpty(priority))
                 return null;
-                
+
             if (priority.Contains("Opening Ceremony"))
                 return "Opening Ceremony - Priority 1";
-                
+
             if (priority.Contains("Critical Customer"))
                 return "Critical Customer - Priority 2";
-                
+
             return null;
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateEstimatedTime(int taskId, DateTime estimatedTime)
+        {
+            var task = await _context.PETasks.FindAsync(taskId);
+            if (task == null)
+                return NotFound();
+
+            task.EstimatedTime = estimatedTime;
+            await _context.SaveChangesAsync();
+
+            // For AJAX: return 200 OK with no content
+            return Ok();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, [Bind("Id,PENumber,TaskSeq,Task,TaskWorkGroup,OLA,TaskStatus,TaskCreatedDate,TaskCompleteDate,ActualTaskCreatedDate,ACtualTaskCompleteDate,IsUrgent,UrgentRequested,Priority,EstimatedTime")] PETask pETask)
+        {
+            if (id != pETask.Id)
+            {
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Update(pETask);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Task updated successfully.";
+                    // Redirect to the PETask details page
+                    return RedirectToAction("Details", new { id = pETask.Id });
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!_context.PETasks.Any(e => e.Id == pETask.Id))
+                    {
+                        return NotFound();
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+            // If model state is invalid, stay on edit page
+            return View(pETask);
         }
     }
 }

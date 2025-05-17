@@ -1,4 +1,5 @@
-﻿@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+﻿@using SFCDashboard.Models
+@model IEnumerable<SFCDashboard.Models.PlannedEvent>
 
 @{
     ViewData["Title"] = "Regular Records";
@@ -140,9 +141,9 @@
     <option value="">All Workgroups</option>
 @foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
 {
-            <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
-                @workgroup.Name
-            </option>
+                <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
+                    @workgroup.Name
+                </option>
 }
 </select>
 -->
@@ -266,5 +267,3 @@
         });
     </script>
 }
-
-

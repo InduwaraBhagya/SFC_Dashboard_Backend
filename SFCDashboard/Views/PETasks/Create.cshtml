@@ -1,0 +1,20 @@
+@model SFCDashboard.Models.PETask
+
+@{
+    ViewData["Title"] = "Create PETask";
+}
+
+<h2>Create PETask</h2>
+
+<form asp-action="Create">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <!-- Add your other fields here -->
+
+    <div class="form-group mb-3">
+        <label asp-for="EstimatedTime" class="control-label">Estimated Time</label>
+        <input asp-for="EstimatedTime" class="form-control" type="time" step="1" />
+        <span asp-validation-for="EstimatedTime" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+</form>

@@ -219,12 +219,7 @@ namespace SFCDashboard.Controllers
             }
 
             // Get related PE tasks for this event
-            var peTasks = await _context.PETasks
-                .Where(t => t.PENumber == plannedEvent.PeNumber)
-                .OrderBy(t => t.TaskSeq)
-                .ToListAsync();
-
-            ViewBag.PETasks = peTasks;
+            ViewBag.PETasks = await _context.PETasks.Where(t => t.PENumber == plannedEvent.PeNumber).ToListAsync();
 
             ViewBag.ReturnUrl = returnUrl;
             return View(plannedEvent);

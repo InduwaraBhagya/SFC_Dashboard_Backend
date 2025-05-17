@@ -2,7 +2,134 @@
 
 @{
     ViewData["Title"] = "PE Record Details";
+    // Calculate dates for the timeline
+    var startDate = Model.PECreatedDate;
+    var targetDate = Model.ServiceRequiredDate ?? Model.PECreatedDate.AddDays(7); // fallback if null
+    var today = DateTime.Now.Date;
+    var totalDays = (targetDate - startDate).TotalDays;
+    var daysPassed = (today - startDate).TotalDays;
+    var daysLeft = (targetDate - today).TotalDays;
+    var isViolated = today > targetDate;
+    var daysExceeded = isViolated ? (today - targetDate).TotalDays : 0;
 }
+
+<!-- Estimated Time Section (Moved to Top) -->
+@if (ViewBag.PETasks != null && ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Any())
+{
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <strong>Add or Update Estimated Time for a Task</strong>
+        </div>
+        <div class="card-body">
+            <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" method="post" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label for="taskId" class="col-form-label">Task:</label>
+                </div>
+                <div class="col-auto">
+                    <select name="taskId" id="taskId" class="form-select" required>
+                        <option value="">-- Select Task --</option>
+                        @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+                        {
+                            <option value="@task.Id">@task.TaskSeq - @task.Task</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label for="estimatedTime" class="col-form-label">Estimated Date:</label>
+                </div>
+                <div class="col-auto">
+                    <input type="date" name="estimatedTime" id="estimatedTime" class="form-control" required />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Timeline/Gantt Chart Section (Moved to Top) -->
+<div class="timeline-container mb-4">
+    <div class="timeline-labels d-flex justify-content-between mb-1">
+        <span>
+            <i class="bi bi-flag-fill text-success"></i>
+            Start: @startDate.ToString("yyyy-MM-dd")
+        </span>
+        <span>
+            <i class="bi bi-calendar-event text-primary"></i>
+            Today: @today.ToString("yyyy-MM-dd")
+        </span>
+        <span>
+            <i class="bi bi-flag-fill text-danger"></i>
+            Target: @targetDate.ToString("yyyy-MM-dd")
+        </span>
+    </div>
+    <div class="timeline-bar position-relative" style="height: 32px;">
+        <!-- Background bar -->
+        <div style="position:absolute;left:0;top:12px;width:100%;height:8px;background:#e9ecef;border-radius:4px;"></div>
+        <!-- Progress bar -->
+        <div style="position:absolute;left:0;top:12px;height:8px;
+            background:@(isViolated ? "#dc3545" : "#198754");
+            border-radius:4px;
+            width:@(Math.Min(100, Math.Round((daysPassed/totalDays)*100)))%;"></div>
+        <!-- Today marker -->
+        <div style="position:absolute;top:0;left:@(Math.Min(100, Math.Round((daysPassed/totalDays)*100)))%;transform:translateX(-50%);">
+            <span class="badge bg-primary">Today</span>
+        </div>
+        <!-- Target marker -->
+        <div style="position:absolute;top:24px;left:100%;transform:translateX(-50%);">
+            <span class="badge bg-danger">Deadline</span>
+        </div>
+        <!-- Start marker -->
+        <div style="position:absolute;top:24px;left:0;">
+            <span class="badge bg-success">Start</span>
+        </div>
+    </div>
+    <div class="timeline-info mt-3">
+        @if (!isViolated)
+        {
+            <span class="text-success">
+                <i class="bi bi-hourglass-split"></i>
+                @if (daysPassed < 1)
+                {
+                    <strong>Just started!</strong>
+                }
+                else
+                {
+                    <strong>@daysPassed.ToString("0") days passed</strong>
+                }
+                &nbsp;|&nbsp;
+                <strong>@daysLeft.ToString("0") days left</strong> until deadline.
+            </span>
+        }
+        else
+        {
+            <span class="text-danger fw-bold">
+                <i class="bi bi-exclamation-triangle"></i>
+                Unable to give service on the service required date. Exceeded by <strong>@daysExceeded.ToString("0") days</strong>.
+            </span>
+        }
+    </div>
+</div>
+<style>
+    .timeline-container {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem 1rem 1rem 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .timeline-labels span {
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    .timeline-bar {
+        min-width: 250px;
+        margin-bottom: 0.5rem;
+    }
+    .timeline-info {
+        font-size: 1.1rem;
+    }
+</style>
 
 <div class="container mt-4">
     <div class="card mb-4">
@@ -152,6 +279,7 @@
                                 <th>Target Date</th>
                                 <th>Actual Date</th>
                                 <th>Priority</th>
+                                <th>Estimated Time</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -198,6 +326,11 @@
                                         }
                                     </td>
 
+                                    <!-- Estimated Time column -->
+                                    <td>
+                                        @(task.EstimatedTime.HasValue ? task.EstimatedTime.Value.ToString("yyyy-MM-dd") : "-")
+                                    </td>
+
                                     <!-- Actions column with Request Urgent button -->
                                     <td>
                                         @if (task.UrgentRequested && !task.IsUrgent)
@@ -231,46 +364,89 @@
             }
         </div>
     </div>
-</div>
 
-<!-- Urgent Request Modal for Planned Event -->
-<div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title" id="urgentPEModalLabel">Request Urgent Status for Planned Event</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <strong>PE Number:</strong> <span id="modalPeNumberValue"></span><br>
-                    <strong>Customer:</strong> <span id="modalCustomerValue"></span>
+    <!-- Urgent Request Modal for Planned Event -->
+    <div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="urgentPEModalLabel">Request Urgent Status for Planned Event</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="urgentPERequestForm" method="post">
-                    <input type="hidden" name="id" id="peIdField" />
-
-                    <div class="form-group mb-4">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
-                                value="OpeningCeremony" required />
-                            <label class="form-check-label" for="openingCeremony">
-                                <strong>Opening Ceremony</strong> [Priority 1]
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer"
-                                value="CriticalCustomer" />
-                            <label class="form-check-label" for="criticalCustomer">
-                                <strong>Critical Customer</strong> [Priority 2]
-                            </label>
-                        </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <strong>PE Number:</strong> <span id="modalPeNumberValue"></span><br>
+                        <strong>Customer:</strong> <span id="modalCustomerValue"></span>
                     </div>
-                </form>
+                    <form id="urgentPERequestForm" method="post">
+                        <input type="hidden" name="id" id="peIdField" />
+
+                        <div class="form-group mb-4">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
+                                    value="OpeningCeremony" required />
+                                <label class="form-check-label" for="openingCeremony">
+                                    <strong>Opening Ceremony</strong> [Priority 1]
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer"
+                                    value="CriticalCustomer" />
+                                <label class="form-check-label" for="criticalCustomer">
+                                    <strong>Critical Customer</strong> [Priority 2]
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmPEUrgentRequest">Submit Request</button>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmPEUrgentRequest">Submit Request</button>
+        </div>
+    </div>
+
+    @* Urgent Request Modal for Task *@
+    <div class="modal fade" id="urgentTaskModal" tabindex="-1" aria-labelledby="urgentTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="urgentTaskModalLabel">Request Urgent Status for Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <strong>PE Number:</strong> <span id="modalTaskPeNumberValue"></span><br>
+                        <strong>Task Name:</strong> <span id="modalTaskNameValue"></span>
+                    </div>
+                    <form id="urgentTaskRequestForm" method="post">
+                        <input type="hidden" name="id" id="taskIdField" />
+
+                        <div class="form-group mb-4">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="urgentReason" id="taskOpeningCeremony"
+                                    value="OpeningCeremony" required />
+                                <label class="form-check-label" for="taskOpeningCeremony">
+                                    <strong>Opening Ceremony</strong> [Priority 1]
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="urgentReason" id="taskCriticalCustomer"
+                                    value="CriticalCustomer" />
+                                <label class="form-check-label" for="taskCriticalCustomer">
+                                    <strong>Critical Customer</strong> [Priority 2]
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmTaskUrgentRequest">Submit Request</button>
+                </div>
             </div>
         </div>
     </div>
@@ -340,6 +516,31 @@
                 form.action = '@Url.Action("RequestUrgentWithReason", "PETasks")';
                 form.submit();
             });
+
+            // AJAX for Estimated Time Save
+            const estimatedTimeForm = document.getElementById('estimatedTimeForm');
+            if (estimatedTimeForm) {
+                estimatedTimeForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const formData = new FormData(estimatedTimeForm);
+                    fetch(estimatedTimeForm.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Reload the page after successful save
+                            window.location.reload();
+                        } else {
+                            alert('Failed to save estimated time.');
+                        }
+                    })
+                    .catch(() => alert('Error occurred while saving.'));
+                });
+            }
         });
     </script>
 }
