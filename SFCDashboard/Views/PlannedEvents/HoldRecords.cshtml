@@ -1,0 +1,106 @@
+@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "Hold Records";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-pause-circle text-warning me-3"></i>Hold Records
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (ViewData["FilteredWorkgroup"] != null)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-funnel-fill me-2"></i> 
+            Filtered by Workgroup: <strong>@ViewData["FilteredWorkgroup"]</strong>
+            <a href="@Url.Action("HoldRecords")" class="btn btn-sm btn-outline-secondary ms-3">
+                <i class="bi bi-x-circle me-1"></i> Clear Filter
+            </a>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-pause-circle me-2"></i>Hold Records</h5>
+                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>PE Number</th>
+                            <th>Customer</th>
+                            <th>Request Reference</th>
+                            <th>Region</th>
+                            <th>Required Date</th>
+                            <th>Priority</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{int rowNumber = 1;}
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@(rowNumber++)</td>
+                                <td>@item.PeNumber</td>
+                                <td>@item.Customer</td>
+                                <td>@item.RequestReferenceNo</td>
+                                <td>@item.Region</td>
+                                <td>
+                                    @if (item.ServiceRequiredDate.HasValue)
+                                    {
+                                        @item.ServiceRequiredDate.Value.ToString("yyyy-MM-dd")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Priority))
+                                    {
+                                        <span class="badge bg-warning text-dark">@item.Priority</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Standard</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i> No hold records found.
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -187,6 +187,12 @@ namespace SFCDashboard.Controllers
 
             return Json(workgroups);
         }
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var users = _context.Users.Select(u => new { id = u.Id, name = u.Name }).ToList();
+            return Json(users);
+        }
 
     }
 }

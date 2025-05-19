@@ -231,6 +231,56 @@
             }
         </div>
     </div>
+
+    <!-- Reported Issues Section -->
+    @if (ViewBag.PEReportedIssues != null && ((IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues).Any())
+    {
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-exclamation-triangle me-2"></i> Reported Issues (Subtasks)
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Reported By</th>
+                            <th>Receiver</th>
+                            <th>Issue</th>
+                            <th>Attachment</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues)
+                    {
+                        <tr>
+                            <td>@issue.SenderName</td>
+                            <td>@issue.ReceiverName</td>
+                            <td>@issue.IssueText</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                {
+                                    <a href="@issue.AttachmentPath" target="_blank">View</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mt-4">
+            <i class="bi bi-info-circle me-2"></i> No issues reported for this PE.
+        </div>
+    }
 </div>
 
 <!-- Urgent Request Modal for Planned Event -->
@@ -276,7 +326,59 @@
     </div>
 </div>
 
+<!-- Report Issue Button -->
+@if (Model.PEStatus?.ToLower() != "hold")
+{
+    <button class="btn btn-danger my-3"
+            data-bs-toggle="modal"
+            data-bs-target="#reportIssueModal">
+        <i class="bi bi-flag"></i> Report Issue
+    </button>
+}
+
+<!-- Report Issue Modal -->
+<div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="PEIssues" asp-action="Create">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportIssueModalLabel">Report Issue</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="PlannedEventId" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label for="receiverId" class="form-label">Receiver</label>
+                        <select class="form-select" id="receiverId" name="ReceiverId" required>
+                            <option value="">Select User</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="issueText" class="form-label">Issue</label>
+                        <input type="text" class="form-control" id="issueText" name="IssueText" list="issueSuggestions" autocomplete="off" required />
+                        <datalist id="issueSuggestions"></datalist>
+                    </div>
+                    <div class="mb-3">
+                        <label for="attachment" class="form-label">Attachment</label>
+                        <input type="file" class="form-control" id="attachment" name="Attachment" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+    
+
 @section Scripts {
+        @await Html.PartialAsync("_ValidationScriptsPartial")
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Handle showing the PE urgent modal (for the whole Planned Event)
@@ -339,6 +441,34 @@
                 const form = document.getElementById('urgentTaskRequestForm');
                 form.action = '@Url.Action("RequestUrgentWithReason", "PETasks")';
                 form.submit();
+            });
+        });
+                $(document).ready(function () {
+            // Populate receiver dropdown
+            $.get('/SystemUsers/GetAll', function (users) {
+                users.forEach(function (user) {
+                    $('#receiverId').append($('<option>', { value: user.id, text: user.name }));
+                });
+            });
+
+            // Populate task list dropdown
+            $.get('/PETaskLists/GetForPE', { peId: '@Model.Id' }, function (tasks) {
+                tasks.forEach(function (task) {
+                    $('#taskListId').append($('<option>', { value: task.id, text: task.name }));
+                });
+            });
+
+            // Populate issue suggestions (existing issues for this PE/tasklist)
+            $('#taskListId').on('change', function () {
+                var taskListId = $(this).val();
+                $('#issueSuggestions').empty();
+                if (taskListId) {
+                    $.get('/PEIssues/GetIssueSuggestions', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
+                        issues.forEach(function (issue) {
+                            $('#issueSuggestions').append($('<option>', { value: issue.text }));
+                        });
+                    });
+                }
             });
         });
     </script>
