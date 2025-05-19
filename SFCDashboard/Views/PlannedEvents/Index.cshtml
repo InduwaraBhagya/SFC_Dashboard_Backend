@@ -563,52 +563,35 @@
                     <!-- Issue Messages -->
                     @if (ViewData["InboxIssues"] != null)
                     {
-                        foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssue>)ViewData["InboxIssues"])
+                        foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewData["InboxIssues"])
                         {
-                            <div class="message-item unread" data-message-id="issue-@issue.Id">
-                                <div class="message-indicator"></div>
-                                <div class="message-content">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="message-sender">From: @issue.SenderId</h6>
-                                        <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
-                                    </div>
-                                    <div class="message-subject">
-                                        <span class="badge bg-info me-1">Issue</span>
-                                        @issue.IssueText
+                            <a href="@Url.Action("Details", "PlannedEvents", new { id = issue.PlannedEventId })" class="text-decoration-none">
+                                <div class="message-item unread important issue-message" data-message-id="issue-@issue.CreatedAt.Ticks">
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender">Issue from @issue.SenderName</h6>
+                                            <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            <span class="badge bg-info text-dark me-1">Issue</span>
+                                            @issue.IssueText
+                                        </div>
+                                        <div class="message-preview">
+                                            @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                            {
+                                                <a href="@issue.AttachmentPath" target="_blank">View Attachment</a>
+                                            }
+                                            else
+                                            {
+                                                <span>No attachment</span>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </a>
                         }
                     }
-                    @if (ViewData["InboxIssues"] != null)
-{
-    foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewData["InboxIssues"])
-    {
-        <div class="message-item unread important issue-message" data-message-id="issue-@issue.CreatedAt.Ticks">
-            <div class="message-indicator"></div>
-            <div class="message-content">
-                <div class="d-flex justify-content-between align-items-start">
-                    <h6 class="message-sender">Issue from @issue.SenderName</h6>
-                    <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
-                </div>
-                <div class="message-subject">
-                    <span class="badge bg-info text-dark me-1">Issue</span>
-                    @issue.IssueText
-                </div>
-                <div class="message-preview">
-                    @if (!string.IsNullOrEmpty(issue.AttachmentPath))
-                    {
-                        <a href="@issue.AttachmentPath" target="_blank">View Attachment</a>
-                    }
-                    else
-                    {
-                        <span>No attachment</span>
-                    }
-                </div>
-            </div>
-        </div>
-    }
-}
                 </div>
 
                 <div class="inbox-footer mt-3">

@@ -291,6 +291,57 @@
                                     </div>
                                 </div>
                                 <!-- End PE Tasks Table -->
+
+                                <!-- Reported Issues Section -->
+                                <div class="mt-4">
+                                    <strong>Reported Issues (Subtasks):</strong>
+                                    @{
+                                        var issues = ViewBag.PEReportedIssuesByPeId != null && ((IDictionary<int, IEnumerable<SFCDashboard.Models.PEIssueViewModel>>)ViewBag.PEReportedIssuesByPeId).ContainsKey(item.Id)
+                                            ? ((IDictionary<int, IEnumerable<SFCDashboard.Models.PEIssueViewModel>>)ViewBag.PEReportedIssuesByPeId)[item.Id]
+                                            : Enumerable.Empty<SFCDashboard.Models.PEIssueViewModel>();
+                                    }
+                                    <table class="table table-bordered table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Reported By</th>
+                                                <th>Receiver</th>
+                                                <th>Issue</th>
+                                                <th>Attachment</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @if (issues.Any())
+                                        {
+                                            foreach (var issue in issues)
+                                            {
+                                                <tr>
+                                                    <td>@issue.SenderName</td>
+                                                    <td>@issue.ReceiverName</td>
+                                                    <td>@issue.IssueText</td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                                        {
+                                                            <a href="@issue.AttachmentPath" target="_blank">View</a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                    <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">No issues reported for this PE.</td>
+                                            </tr>
+                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>

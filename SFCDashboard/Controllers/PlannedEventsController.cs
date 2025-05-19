@@ -164,7 +164,27 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
             ViewData["PendingTaskRequests"] = pendingTaskRequests;
 
-            ViewData["TotalMessages"] = pendingUrgentRequests.Count + pendingTaskRequests.Count;
+            // Get current user ID (implement this method as needed)
+            int currentUserId = GetCurrentUserId();
+
+            // Get latest issues for the inbox (e.g., top 10)
+            var inboxIssues = await _context.PEIssues
+                .Where(i => i.ReceiverId == currentUserId)
+                .OrderByDescending(i => i.CreatedAt)
+                .Take(10)
+                .Select(i => new PEIssueViewModel
+                {
+                    SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Receiver",
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId
+                })
+                .ToListAsync();
+
+            ViewData["InboxIssues"] = inboxIssues;
+            ViewData["TotalMessages"] = inboxIssues.Count;
 
             // Apply search filters based on type
             if (!string.IsNullOrEmpty(searchString))
@@ -241,18 +261,19 @@ namespace SFCDashboard.Controllers
     ViewBag.CurrentTaskListId = taskList?.Id;
 
     // Load issues/subtasks for this PE (assuming you use PEIssue or Subtask table)
-    var issues = await _context.PEIssues
-        .Where(i => i.PlannedEventId == plannedEvent.Id)
-        .OrderByDescending(i => i.CreatedAt)
-        .Select(i => new PEIssueViewModel
-        {
-            SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault(),
-            ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault(),
-            IssueText = i.IssueText,
-            AttachmentPath = i.AttachmentPath,
-            CreatedAt = i.CreatedAt
-        })
-        .ToListAsync();
+            var issues = await _context.PEIssues
+    .Where(i => i.PlannedEventId == plannedEvent.Id)
+    .OrderByDescending(i => i.CreatedAt)
+    .Select(i => new PEIssueViewModel
+    {
+        SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Sender",
+        ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Receiver",
+        IssueText = i.IssueText,
+        AttachmentPath = i.AttachmentPath,
+        CreatedAt = i.CreatedAt,
+        PlannedEventId = i.PlannedEventId
+    })
+    .ToListAsync();
 
     ViewBag.PEReportedIssues = issues;
 
@@ -809,6 +830,16 @@ public async Task<IActionResult> HoldRecords(int? workgroupId)
             return user?.WorkGroupId;
         }
 
+        private int GetCurrentUserId()
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return 0;
+
+            var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
+            return user?.Id ?? 0;
+        }
+
         public async Task<IActionResult> GlobalSearch(string searchType, string peNumber, string customer, string jobReference, string soNumber, int pageIndex = 1)
         {
             var query = _context.PlannedEvents.AsQueryable(); // No workgroup restriction
@@ -839,7 +870,7 @@ public async Task<IActionResult> HoldRecords(int? workgroupId)
             int pageSize = 20;
             var result = await PaginatedList<PlannedEvent>.CreateAsync(query.OrderByDescending(x => x.PECreatedDate), pageIndex, pageSize);
 
-            // --- Add this block to provide PETasksByPeNumber for the view ---
+            // --- Provide PETasksByPeNumber for the view ---
             var peNumbers = result.Select(pe => pe.PeNumber).ToList();
             var allTasks = await _context.PETasks
                 .Where(t => peNumbers.Contains(t.PENumber))
@@ -850,15 +881,38 @@ public async Task<IActionResult> HoldRecords(int? workgroupId)
                 .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
             ViewBag.PETasksByPeNumber = peTasksByPeNumber;
             // --- End PETasksByPeNumber block ---
+            
 
-            ViewData["SearchType"] = searchType;
-            ViewData["PENumberFilter"] = peNumber;
-            ViewData["CustomerFilter"] = customer;
-            ViewData["JobReferenceFilter"] = jobReference;
-            ViewData["SONumberFilter"] = soNumber;
+            // --- Provide PEReportedIssuesByPeId for the view ---
+            var peIds = result.Select(pe => pe.Id).ToList();
+            var allIssues = await _context.PEIssues
+        .Where(i => peIds.Contains(i.PlannedEventId))
+        .OrderByDescending(i => i.CreatedAt)
+        .Select(i => new PEIssueViewModel
+        {
+            SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Sender",
+            ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Receiver",
+            IssueText = i.IssueText,
+            AttachmentPath = i.AttachmentPath ?? string.Empty,
+            CreatedAt = i.CreatedAt,
+            PlannedEventId = i.PlannedEventId
+        })
+        .ToListAsync();
 
-            return View(result);
-        }
+    var peReportedIssuesByPeId = allIssues
+        .GroupBy(i => i.PlannedEventId)
+        .ToDictionary(g => g.Key, g => (IEnumerable<PEIssueViewModel>)g.ToList());
+    ViewBag.PEReportedIssuesByPeId = peReportedIssuesByPeId;
+    // --- End PEReportedIssuesByPeId block ---
+
+    ViewData["SearchType"] = searchType;
+    ViewData["PENumberFilter"] = peNumber;
+    ViewData["CustomerFilter"] = customer;
+    ViewData["JobReferenceFilter"] = jobReference;
+    ViewData["SONumberFilter"] = soNumber;
+
+    return View(result);
+}
     }
 }
 
