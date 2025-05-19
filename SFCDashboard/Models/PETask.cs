@@ -34,6 +34,6 @@ namespace SFCDashboard.Models
         public bool UrgentRequested { get; set; } = false;
         public string? Priority { get; set; }
         public PlannedEvent? PlannedEvent { get; set; }
-
+        public DateTime? EstimatedTime { get; set; } // Change from TimeSpan? to DateTime?
     }
 }
