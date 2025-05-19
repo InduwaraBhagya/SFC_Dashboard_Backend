@@ -279,10 +279,16 @@ namespace SFCDashboard.Controllers
             if (task == null)
                 return NotFound();
 
+            var status = task.TaskStatus?.ToUpper();
+            if (status == "COMPLETED")
+                return BadRequest("Already completed task.");
+
+            if (status != "ONGOING" && status != "WAITING")
+                return BadRequest("Estimated Time can only be set when TaskStatus is ONGOING or WAITING.");
+
             task.EstimatedTime = estimatedTime;
             await _context.SaveChangesAsync();
 
-            // For AJAX: return 200 OK with no content
             return Ok();
         }
 

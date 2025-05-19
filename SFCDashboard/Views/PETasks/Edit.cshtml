@@ -2,6 +2,9 @@
 
 @{
     ViewData["Title"] = "Edit PETask";
+    var status = Model.TaskStatus?.ToUpper();
+    bool canEditEstimatedTime = status == "ONGOING" || status == "WAITING";
+    bool isCompleted = status == "COMPLETED";
 }
 
 <h2>Edit PETask</h2>
@@ -13,7 +16,19 @@
 
     <div class="form-group mb-3">
         <label asp-for="EstimatedTime" class="control-label">Estimated Date</label>
-        <input asp-for="EstimatedTime" class="form-control" type="date" />
+        @if (canEditEstimatedTime)
+        {
+            <input asp-for="EstimatedTime" class="form-control" type="date" />
+        }
+        else if (isCompleted)
+        {
+            <input asp-for="EstimatedTime" class="form-control" type="date" disabled="disabled" />
+            <div class="text-danger mt-2">Already completed task</div>
+        }
+        else
+        {
+            <input asp-for="EstimatedTime" class="form-control" type="date" disabled="disabled" />
+        }
         <span asp-validation-for="EstimatedTime" class="text-danger"></span>
     </div>
 

@@ -82,4 +82,18 @@ footer {
 }
 
 
+.pe-card-animate {
+    animation: fadeInUp 0.7s;
+    border-radius: 1rem;
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px);}
+    to { opacity: 1; transform: translateY(0);}
+}
+.pe-task-table th, .pe-task-table td {
+    vertical-align: middle;
+}
+.pe-task-table .badge {
+    font-size: 0.95em;
+}
 
