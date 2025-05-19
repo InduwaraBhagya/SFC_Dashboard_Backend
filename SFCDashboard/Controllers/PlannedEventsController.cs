@@ -493,7 +493,7 @@ public async Task<IActionResult> HoldRecords(int? workgroupId)
         ViewData["Workgroups"] = workgroups;
         ViewData["SelectedWorkgroupId"] = workgroupId;
 
-        var query = _context.PlannedEvents.Where(p => p.PEStatus.ToLower() == "hold");
+        var query = _context.PlannedEvents.Where(p => p.PEStatus.ToLower() == "Hold");
 
         // Apply workgroup filter if selected
         if (workgroupId.HasValue)
