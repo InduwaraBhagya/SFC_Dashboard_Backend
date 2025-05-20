@@ -193,6 +193,22 @@ namespace SFCDashboard.Controllers
             var users = _context.Users.Select(u => new { id = u.Id, name = u.Name }).ToList();
             return Json(users);
         }
+        [HttpGet]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return Json(null);
+
+            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+
+            var user = await _context.Users
+                .Where(u => u.ServiceId == serviceIdShort)
+                .Select(u => new { id = u.Id, name = u.Name })
+                .FirstOrDefaultAsync();
+
+            return Json(user);
+        }
 
     }
 }

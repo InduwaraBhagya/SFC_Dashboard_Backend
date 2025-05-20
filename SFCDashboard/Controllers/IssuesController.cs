@@ -74,7 +74,11 @@ namespace SFCDashboard.Controllers
             }
 
             var currentUser = await GetCurrentUserAsync();
-            if (currentUser == null) return RedirectToAction("Index", "Home");
+            if (currentUser == null)
+            {
+                TempData["ErrorMessage"] = "Unable to identify current user.";
+                return RedirectToAction("Index", "Home");
+            }
 
             var issue = new PEIssue
             {
@@ -100,12 +104,22 @@ namespace SFCDashboard.Controllers
                 issue.AttachmentPath = $"/uploads/issues/{issue.PlannedEventId}/{uniqueFileName}";
             }
 
-            _context.PEIssues.Add(issue);
-            await _context.SaveChangesAsync();
-
-            // Optional: Notification logic here
-
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                _context.PEIssues.Add(issue);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Issue created by user {UserName} ({UserId}) for receiver {ReceiverId}", 
+                    currentUser.Name, currentUser.Id, model.ReceiverId);
+                
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating issue for user {UserId}", currentUser.Id);
+                ModelState.AddModelError("", "An error occurred while creating the issue.");
+                await PopulateUsersAsync();
+                return View(model);
+            }
         }
 
         // GET: Issues/Details/5
@@ -136,8 +150,22 @@ namespace SFCDashboard.Controllers
             if (currentUser == null) return RedirectToAction("Index", "Home");
 
             var issues = await _context.PEIssues
-                .Include(i => i.SenderId)
                 .Where(i => i.ReceiverId == currentUser.Id)
+                .Select(i => new PEIssueViewModel
+                {
+                    SenderId = i.SenderId,
+                    SenderName = _context.Users
+                        .Where(u => u.Id == i.SenderId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown",
+                    ReceiverId = i.ReceiverId,
+                    ReceiverName = currentUser.Name,
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId,
+                    IsRead = i.IsRead
+                })
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
@@ -151,8 +179,22 @@ namespace SFCDashboard.Controllers
             if (currentUser == null) return RedirectToAction("Index", "Home");
 
             var issues = await _context.PEIssues
-                .Include(i => i.ReceiverId)
                 .Where(i => i.SenderId == currentUser.Id)
+                .Select(i => new PEIssueViewModel
+                {
+                    SenderId = currentUser.Id,
+                    SenderName = currentUser.Name,
+                    ReceiverId = i.ReceiverId,
+                    ReceiverName = _context.Users
+                        .Where(u => u.Id == i.ReceiverId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown",
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId,
+                    IsRead = i.IsRead
+                })
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
@@ -216,4 +258,5 @@ namespace SFCDashboard.Controllers
         [FileExtensions(Extensions = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png")]
         public IFormFile? Attachment { get; set; }
     }
+
 }

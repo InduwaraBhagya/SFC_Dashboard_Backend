@@ -556,3 +556,25 @@
 .filter-badge .badge {
     padding: 0.3rem 0.6rem;
 }
+
+
+.ui-autocomplete {
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1050 !important;
+}
+
+.ui-autocomplete .ui-menu-item {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.ui-autocomplete .ui-menu-item:hover {
+    background-color: #f8f9fa;
+}
+
+.ui-autocomplete .ui-menu-item div {
+    padding: 5px;
+    border-radius: 3px;
+}

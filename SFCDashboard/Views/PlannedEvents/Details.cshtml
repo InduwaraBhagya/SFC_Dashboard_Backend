@@ -480,6 +480,14 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="PlannedEventId" value="@Model.Id" />
+                    
+                    <!-- Add Sender Info -->
+                    <div class="mb-3">
+                        <label class="form-label">Sender</label>
+                        <input type="text" class="form-control" id="senderName" readonly />
+                        <input type="hidden" id="senderId" name="SenderId" />
+                    </div>
+
                     <div class="mb-3">
                         <label for="receiverId" class="form-label">Receiver</label>
                         <select class="form-select" id="receiverId" name="ReceiverId" required>
@@ -642,6 +650,15 @@
             }
         });
                 $(document).ready(function () {
+
+            // Get current user info and populate sender fields
+            $.get('/SystemUsers/GetCurrentUser', function (user) {
+                if (user) {
+                    $('#senderName').val(user.name);
+                    $('#senderId').val(user.id);
+                }
+            });
+
             // Populate receiver dropdown
             $.get('/SystemUsers/GetAll', function (users) {
                 users.forEach(function (user) {

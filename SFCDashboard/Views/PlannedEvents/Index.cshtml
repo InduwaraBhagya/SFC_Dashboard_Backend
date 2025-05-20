@@ -18,39 +18,41 @@
 }
 
 <div class="container-fluid mt-4">
-    <!-- Add this workgroup filter section above your search form -->
+    <!--workgroup filter section -->
 <div class="workgroup-filter-section mb-3">
-    <form id="workgroupFilterForm" method="get" asp-action="Index">
-        <div class="row align-items-center">
-            <div class="col-auto">
-                <label for="workgroupFilter" class="form-label mb-0"><i class="bi bi-filter"></i> Filter by Workgroup:</label>
+    @if (ViewData["CanViewAll"] as bool? == true)
+    {
+        <form id="workgroupFilterForm" method="get" asp-action="Index">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <label for="workgroupFilter" class="form-label mb-0">
+                        <i class="bi bi-filter"></i> Filter by Workgroup:
+                    </label>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" id="workgroup-search" class="form-control" 
+                           placeholder="Type to search workgroups" 
+                           value="@ViewData["SelectedWorkgroupName"]" />
+                    <input type="hidden" id="selected-workgroup-id" name="workgroupId" 
+                           value="@ViewData["SelectedWorkgroupId"]" />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel-fill me-1"></i> Apply Filter
+                    </button>
+                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i> Clear Filter
+                    </a>
+                </div>
             </div>
-            <div class="col-md-3">
-                <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
-                    <option value="">All Workgroups</option>
-                    @if (ViewData["Workgroups"] != null)
-                    {
-                        foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
-                        {
-                            <option value="@workgroup.Id" @@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString() ? "selected" : "")>
-                                @workgroup.Name
-                            </option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-outline-primary">
-                    <i class="bi bi-funnel-fill me-1"></i> Apply Filter
-                </button>
-            </div>
-            <div class="col-auto">
-                <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle me-1"></i> Clear Filter
-                </a>
-            </div>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Showing records for your workgroup: @ViewData["FilteredWorkgroup"]
         </div>
-    </form>
+    }
 </div>
     <!-- Your existing search form -->
     <div class="row">
@@ -612,7 +614,43 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
     <script>
+
+        $(document).ready(function() {
+            $("#workgroup-search").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "/SystemUsers/SearchWorkgroups",
+                        data: { term: request.term },
+                        type: "GET",
+                        success: function(data) {
+                            // Remove duplicates from the response
+                            let uniqueData = [...new Map(data.map(item => 
+                                [item.label, item])).values()];
+                            response(uniqueData);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error searching workgroups:", status, error);
+                        }
+                    });
+                },
+                minLength: 2,
+                select: function(event, ui) {
+                    $("#workgroup-search").val(ui.item.label);
+                    $("#selected-workgroup-id").val(ui.item.id);
+                    $("#workgroupFilterForm").submit();
+                    return false;
+                }
+            }).autocomplete("instance")._renderItem = function(ul, item) {
+                return $("<li>")
+                    .append(`<div>${item.label}</div>`)
+                    .appendTo(ul);
+            };
+        });
+
         document.addEventListener('DOMContentLoaded', function () {
             // Initialize message inbox
             initializeMessageInbox();

@@ -15,32 +15,43 @@
         </a>
     </div>
 
-    <!-- Add the workgroup filter here, before other content -->
-    @if (ViewData["Workgroups"] != null)
-    {
-        <div class="workgroup-filter-section mb-3">
+    <!-- Workgroup filter section -->
+    <div class="workgroup-filter-section mb-3">
+        @if (ViewData["CanViewAll"] as bool? == true)
+        {
             <form id="workgroupFilterForm" method="get" asp-action="InProgressRecords">
                 <div class="row align-items-center">
                     <div class="col-auto">
-                        <label for="workgroupFilter" class="form-label mb-0"><i class="bi bi-filter"></i> Filter by
-                            Workgroup:</label>
+                        <label for="workgroup-search" class="form-label mb-0">
+                            <i class="bi bi-filter"></i> Filter by Workgroup:
+                        </label>
                     </div>
                     <div class="col-md-3">
-                        <select class="form-select" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
-                            <option value="">All Workgroups</option>
-                            @foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
-                            {
-                                <option value="@workgroup.Id"
-                                    selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
-                                    @workgroup.Name
-                                </option>
-                            }
-                        </select>
+                        <input type="text" id="workgroup-search" class="form-control" 
+                               placeholder="Type to search workgroups" 
+                               value="@ViewData["FilteredWorkgroup"]" />
+                        <input type="hidden" id="selected-workgroup-id" name="workgroupId" 
+                               value="@ViewData["SelectedWorkgroupId"]" />
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-funnel-fill me-1"></i> Apply Filter
+                        </button>
+                        <a href="@Url.Action("InProgressRecords")" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Clear Filter
+                        </a>
                     </div>
                 </div>
             </form>
-        </div>
-    }
+        }
+        else if (ViewData["FilteredWorkgroup"] != null)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Showing records for workgroup: <strong>@ViewData["FilteredWorkgroup"]</strong>
+            </div>
+        }
+    </div>
 
     @if (TempData["SuccessMessage"] != null)
     {
@@ -50,16 +61,7 @@
         </div>
     }
 
-    @if (ViewData["FilteredWorkgroup"] != null)
-    {
-        <div class="alert alert-info">
-            <i class="bi bi-funnel-fill me-2"></i>
-            Filtered by Workgroup: <strong>@ViewData["FilteredWorkgroup"]</strong>
-            <a href="@Url.Action("UrgentRecords")" class="btn btn-sm btn-outline-secondary ms-3">
-                <i class="bi bi-x-circle me-1"></i> Clear Filter
-            </a>
-        </div>
-    }
+   
 
     <div class="card">
         <div class="card-header bg-success text-white">
@@ -134,19 +136,6 @@
     </div>
 </div>
 
-<!-- Remove the duplicate workgroup filter that was causing the error -->
-<!-- Delete these lines from your view -->
-<!-- 
-<select class="form-select" id="workgroupFilter" name="workgroupId" onchange="applyWorkgroupFilter()">
-    <option value="">All Workgroups</option>
-@foreach (var workgroup in (IEnumerable<WorkGroup>)ViewData["Workgroups"])
-{
-                <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
-                    @workgroup.Name
-                </option>
-}
-</select>
--->
 
 <!-- Keep your existing modal and scripts section unchanged -->
 <div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
@@ -196,7 +185,42 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
     <script>
+        $(document).ready(function() {
+            $("#workgroup-search").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "/SystemUsers/SearchWorkgroups",
+                        data: { term: request.term },
+                        type: "GET",
+                        success: function(data) {
+                            // Remove duplicates from the response
+                            let uniqueData = [...new Map(data.map(item => 
+                                [item.label, item])).values()];
+                            response(uniqueData);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error searching workgroups:", status, error);
+                        }
+                    });
+                },
+                minLength: 2,
+                select: function(event, ui) {
+                    $("#workgroup-search").val(ui.item.label);
+                    $("#selected-workgroup-id").val(ui.item.id);
+                    $("#workgroupFilterForm").submit();
+                    return false;
+                }
+            }).autocomplete("instance")._renderItem = function(ul, item) {
+                return $("<li>")
+                    .append(`<div>${item.label}</div>`)
+                    .appendTo(ul);
+            };
+        });
+
         document.addEventListener('DOMContentLoaded', function () {
             console.log('DOM loaded, setting up modal handlers');
 
