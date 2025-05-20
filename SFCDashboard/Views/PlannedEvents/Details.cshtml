@@ -14,7 +14,12 @@
 }
 
 <!-- Estimated Time Section (Moved to Top) -->
-@if (ViewBag.PETasks != null && ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Any())
+@{
+    var drawFiberTasks = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+        .Where(t => t.Task?.Trim().ToLower() == "draw fiber")
+        .ToList();
+}
+@if (drawFiberTasks.Any())
 {
     <div class="card mb-4">
         <div class="card-header bg-secondary text-white">
@@ -22,18 +27,8 @@
         </div>
         <div class="card-body">
             <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" method="post" class="row g-3 align-items-center">
-                <div class="col-auto">
-                    <label for="taskId" class="col-form-label">Task:</label>
-                </div>
-                <div class="col-auto">
-                    <select name="taskId" id="taskId" class="form-select" required>
-                        <option value="">-- Select Task --</option>
-                        @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
-                        {
-                            <option value="@task.Id">@task.TaskSeq - @task.Task</option>
-                        }
-                    </select>
-                </div>
+                <input type="hidden" name="taskId" value="@drawFiberTasks.First().Id" />
+                
                 <div class="col-auto">
                     <label for="estimatedTime" class="col-form-label">Estimated Date:</label>
                 </div>
@@ -647,6 +642,17 @@
                     })
                     .catch(() => alert('Error occurred while saving.'));
                 });
+            }
+
+            // Set min date for estimatedTime input to today
+            var estimatedTimeInput = document.getElementById('estimatedTime');
+            if (estimatedTimeInput) {
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                var minDate = yyyy + '-' + mm + '-' + dd;
+                estimatedTimeInput.setAttribute('min', minDate);
             }
         });
                 $(document).ready(function () {
