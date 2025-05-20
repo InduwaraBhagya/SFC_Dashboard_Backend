@@ -66,9 +66,11 @@ if (!isDevelopment)
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
+
 
 app.UseUserRegistration();
 

@@ -27,6 +27,20 @@ namespace SFCDashboard.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
+        
+         private async Task<int> GetCurrentUserIdAsync()
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return 0;
+
+            // Extract the substring before the query
+            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
+            return user?.Id ?? 0;
+        }
 
         // GET: PlannedEvents/Index
         public async Task<IActionResult> Index(string searchType, string peNumber, string customer,
@@ -34,7 +48,7 @@ namespace SFCDashboard.Controllers
         {
             // Always use the logged-in user's workgroup
             if (!workgroupId.HasValue)
-                workgroupId = GetCurrentUserWorkGroupId();
+                workgroupId = await GetCurrentUserWorkGroupId();
 
             // Load all available workgroups for the dropdown
             var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
@@ -139,15 +153,17 @@ namespace SFCDashboard.Controllers
 
             ViewData["TopOLAViolations"] = topViolations;
 
-    //int currentUserId = int.Parse(User.FindFirst("UserId").Value); // Adjust as needed
+            //int currentUserId = int.Parse(User.FindFirst("UserId").Value); // Adjust as needed
 
-    //var inboxIssues = _context.PEIssues
-    //    .Where(i => i.ReceiverId == currentUserId)
-    //    .OrderByDescending(i => i.CreatedAt)
-    //    .ToList();
+            //var inboxIssues = _context.PEIssues
+            //    .Where(i => i.ReceiverId == currentUserId)
+            //    .OrderByDescending(i => i.CreatedAt)
+            //    .ToList();
 
-    //ViewData["InboxIssues"] = inboxIssues;
-    
+            //ViewData["InboxIssues"] = inboxIssues;
+
+
+
             // Pending urgent requests (same as before)
             var pendingUrgentRequests = await _context.PlannedEvents
                 .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
@@ -164,27 +180,39 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
             ViewData["PendingTaskRequests"] = pendingTaskRequests;
 
-            // Get current user ID (implement this method as needed)
-            int currentUserId = GetCurrentUserId();
+            // Get current user ID
+            var currentUserId = await GetCurrentUserIdAsync();
 
-            // Get latest issues for the inbox (e.g., top 10)
+            // Get latest issues for the inbox
             var inboxIssues = await _context.PEIssues
                 .Where(i => i.ReceiverId == currentUserId)
                 .OrderByDescending(i => i.CreatedAt)
                 .Take(10)
                 .Select(i => new PEIssueViewModel
                 {
-                    SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Sender",
-                    ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Receiver",
+                    SenderName = _context.Users
+                        .Where(u => u.Id == i.SenderId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverName = _context.Users
+                        .Where(u => u.Id == i.ReceiverId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Receiver",
                     IssueText = i.IssueText,
                     AttachmentPath = i.AttachmentPath,
                     CreatedAt = i.CreatedAt,
-                    PlannedEventId = i.PlannedEventId
+                    PlannedEventId = i.PlannedEventId,
+                    IsRead = i.IsRead
                 })
                 .ToListAsync();
 
+            // Add unread count
+            var unreadCount = inboxIssues.Count(i => !i.IsRead);
+
             ViewData["InboxIssues"] = inboxIssues;
             ViewData["TotalMessages"] = inboxIssues.Count;
+            ViewData["UnreadMessages"] = unreadCount;
+
 
             // Apply search filters based on type
             if (!string.IsNullOrEmpty(searchString))
@@ -239,6 +267,7 @@ namespace SFCDashboard.Controllers
             }
         }
 
+
         // GET: PlannedEvents/Details/5
         public async Task<IActionResult> Details(int id, string returnUrl = null)
         {
@@ -248,19 +277,19 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-    // Get related PE tasks for this event
-    var peTasks = await _context.PETasks
-        .Where(t => t.PENumber == plannedEvent.PeNumber)
-        .OrderBy(t => t.TaskSeq)
-        .ToListAsync();
-    ViewBag.PETasks = peTasks;
+            // Get related PE tasks for this event
+            var peTasks = await _context.PETasks
+                .Where(t => t.PENumber == plannedEvent.PeNumber)
+                .OrderBy(t => t.TaskSeq)
+                .ToListAsync();
+            ViewBag.PETasks = peTasks;
 
-    // Find PETaskListId for the current task name
-    var taskList = await _context.PETaskLists
-        .FirstOrDefaultAsync(tl => tl.Name == plannedEvent.TaskName);
-    ViewBag.CurrentTaskListId = taskList?.Id;
+            // Find PETaskListId for the current task name
+            var taskList = await _context.PETaskLists
+                .FirstOrDefaultAsync(tl => tl.Name == plannedEvent.TaskName);
+            ViewBag.CurrentTaskListId = taskList?.Id;
 
-    // Load issues/subtasks for this PE (assuming you use PEIssue or Subtask table)
+            // Load issues/subtasks for this PE (assuming you use PEIssue or Subtask table)
             var issues = await _context.PEIssues
     .Where(i => i.PlannedEventId == plannedEvent.Id)
     .OrderByDescending(i => i.CreatedAt)
@@ -275,7 +304,7 @@ namespace SFCDashboard.Controllers
     })
     .ToListAsync();
 
-    ViewBag.PEReportedIssues = issues;
+            ViewBag.PEReportedIssues = issues;
 
             ViewBag.ReturnUrl = returnUrl;
             return View(plannedEvent);
@@ -391,7 +420,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> InProgressRecords(int? workgroupId)
         {
             if (!workgroupId.HasValue)
-                workgroupId = GetCurrentUserWorkGroupId();
+                workgroupId = await GetCurrentUserWorkGroupId();
 
             try
             {
@@ -432,7 +461,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> OLAViolateRecords(int? workgroupId)
         {
             if (!workgroupId.HasValue)
-                workgroupId = GetCurrentUserWorkGroupId();
+                workgroupId = await GetCurrentUserWorkGroupId();
 
             try
             {
@@ -505,7 +534,7 @@ namespace SFCDashboard.Controllers
 public async Task<IActionResult> HoldRecords(int? workgroupId)
 {
     if (!workgroupId.HasValue)
-        workgroupId = GetCurrentUserWorkGroupId();
+        workgroupId = await GetCurrentUserWorkGroupId();
 
     try
     {
@@ -820,15 +849,24 @@ public async Task<IActionResult> HoldRecords(int? workgroupId)
             return null;
         }
 
-        private int? GetCurrentUserWorkGroupId()
-        {
-            var serviceId = User.Identity?.Name;
-            if (string.IsNullOrEmpty(serviceId))
-                return null;
+        private async Task<int?> GetCurrentUserWorkGroupId()
+{
+    var serviceId = User.Identity?.Name;
+    if (string.IsNullOrEmpty(serviceId))
+        return null;
 
-            var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
-            return user?.WorkGroupId;
-        }
+    // Extract the substring before the query (first 6 characters)
+    var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+
+    var user = await _context.Users
+        .Include(u => u.WorkGroup)
+        .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
+    
+    _logger.LogInformation("User {serviceId} workgroup: {workgroupId}", 
+        serviceIdShort, user?.WorkGroupId);
+        
+    return user?.WorkGroupId;
+}
 
         private int GetCurrentUserId()
         {

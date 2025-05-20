@@ -1,355 +1,219 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Hosting;
-
+using Microsoft.EntityFrameworkCore;
+using SFCDashboard.Data;
+using SFCDashboard.Models;
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.IO;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
-namespace YourNamespace.Controllers
+namespace SFCDashboard.Controllers
 {
     public class IssuesController : Controller
     {
-        private readonly DbContext _context;
-        private readonly IWebHostEnvironment _environment;
+        private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
+        private readonly ILogger<IssuesController> _logger;
 
-        public IssuesController(DbContext context, IWebHostEnvironment environment)
+        public IssuesController(ApplicationDbContext context, IWebHostEnvironment env, ILogger<IssuesController> logger)
         {
             _context = context;
-            _environment = environment;
+            _env = env;
+            _logger = logger;
         }
 
         // GET: Issues
         public async Task<IActionResult> Index()
         {
-            int currentUserId = GetCurrentUserId();
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null) return RedirectToAction("Index", "Home");
 
-            // Get unread count for the Inbox button
-            var unreadCount = await _context.Issues
-                .Where(i => i.ReceiverId == currentUserId && i.Status == "Pending")
-                .CountAsync();
-            ViewBag.UnreadCount = unreadCount;
-
-            // Get recent received issues (top 5)
-            var recentReceivedIssues = await _context.Issues
-                .Include(i => i.Sender)
-                .Where(i => i.ReceiverId == currentUserId)
-                .OrderByDescending(i => i.CreatedDate)
-                .Take(5)
+            var received = await _context.PEIssues
+                .Include(i => i.SenderId)
+                .Where(i => i.ReceiverId == currentUser.Id)
+                .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
-            ViewBag.RecentReceivedIssues = recentReceivedIssues;
 
-            // Get recent sent issues (top 5)
-            var recentSentIssues = await _context.Issues
-                .Include(i => i.Receiver)
-                .Where(i => i.SenderId == currentUserId)
-                .OrderByDescending(i => i.CreatedDate)
-                .Take(5)
+            var sent = await _context.PEIssues
+                .Include(i => i.ReceiverId)
+                .Where(i => i.SenderId == currentUser.Id)
+                .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
-            ViewBag.RecentSentIssues = recentSentIssues;
+
+            ViewBag.ReceivedIssues = received;
+            ViewBag.SentIssues = sent;
+            ViewBag.UnreadCount = received.Count(i => !i.IsRead);
 
             return View();
         }
 
         // GET: Issues/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View();
+            var users = await _context.Users
+                .Select(u => new { u.Id, Name = $"{u.Name} ({u.ServiceId})" })
+                .ToListAsync();
+            ViewBag.Users = users;
+            return View(new IssueCreateViewModel());
         }
 
         // POST: Issues/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(CreateIssueViewModel model)
+        public async Task<IActionResult> Create(IssueCreateViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                // Get the current user ID (you would get this from your auth system)
-                int currentUserId = GetCurrentUserId();
-
-                var issue = new Issue
-                {
-                    SenderId = currentUserId,
-                    ReceiverId = model.ReceiverId,
-                    IssueText = model.IssueText,
-                    Remarks = model.Remarks,
-                    CreatedDate = DateTime.Now,
-                    Status = "Pending"
-                };
-
-                _context.Issues.Add(issue);
-                await _context.SaveChangesAsync();
-
-                // Process attachments if any
-                if (model.Attachments != null && model.Attachments.Count > 0)
-                {
-                    string uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "issues", issue.IssueId.ToString());
-                    Directory.CreateDirectory(uploadsFolder);
-
-                    foreach (var file in model.Attachments)
-                    {
-                        if (file.Length > 0)
-                        {
-                            string filePath = Path.Combine(uploadsFolder, file.FileName);
-                            using (var stream = new FileStream(filePath, FileMode.Create))
-                            {
-                                await file.CopyToAsync(stream);
-                            }
-
-                            var attachment = new IssueAttachment
-                            {
-                                IssueId = issue.IssueId,
-                                FileName = file.FileName,
-                                FilePath = $"/uploads/issues/{issue.IssueId}/{file.FileName}",
-                                FileSize = (int)file.Length,
-                                UploadDate = DateTime.Now
-                            };
-
-                            _context.IssueAttachments.Add(attachment);
-                        }
-                    }
-
-                    await _context.SaveChangesAsync();
-                }
-
-                return RedirectToAction(nameof(Index));
+                await PopulateUsersAsync();
+                return View(model);
             }
 
-            return View(model);
-        }
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null) return RedirectToAction("Index", "Home");
 
-        // GET: Issues/Inbox
-        public async Task<IActionResult> Inbox()
-        {
-            int currentUserId = GetCurrentUserId();
-
-            var issues = await _context.Issues
-                .Include(i => i.Sender)
-                .Include(i => i.Attachments)
-                .Where(i => i.ReceiverId == currentUserId)
-                .OrderByDescending(i => i.CreatedDate)
-                .ToListAsync();
-
-            var unreadCount = issues.Count(i => i.Status == "Pending");
-
-            var viewModel = new IssueInboxViewModel
+            var issue = new PEIssue
             {
-                ReceivedIssues = issues,
-                UnreadCount = unreadCount
+                PlannedEventId = model.PlannedEventId,
+                PETaskId = model.PETaskId,
+                SenderId = currentUser.Id,
+                ReceiverId = model.ReceiverId,
+                IssueText = model.IssueText,
+                CreatedAt = DateTime.Now,
+                IsRead = false
             };
 
-            return View(viewModel);
-        }
+            if (model.Attachment != null && model.Attachment.Length > 0)
+            {
+                var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "issues", issue.PlannedEventId.ToString());
+                Directory.CreateDirectory(uploadsFolder);
+                var uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(model.Attachment.FileName)}";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.Attachment.CopyToAsync(stream);
+                }
+                issue.AttachmentPath = $"/uploads/issues/{issue.PlannedEventId}/{uniqueFileName}";
+            }
 
-        // GET: Issues/Sent
-        public async Task<IActionResult> Sent()
-        {
-            int currentUserId = GetCurrentUserId();
+            _context.PEIssues.Add(issue);
+            await _context.SaveChangesAsync();
 
-            var issues = await _context.Issues
-                .Include(i => i.Receiver)
-                .Include(i => i.Attachments)
-                .Where(i => i.SenderId == currentUserId)
-                .OrderByDescending(i => i.CreatedDate)
-                .ToListAsync();
+            // Optional: Notification logic here
 
-            return View(issues);
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Issues/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            var issue = await _context.PEIssues
+                .Include(i => i.SenderId)
+                .Include(i => i.ReceiverId)
+                .FirstOrDefaultAsync(i => i.Id == id);
 
-            var issue = await _context.Issues
-                .Include(i => i.Sender)
-                .Include(i => i.Receiver)
-                .Include(i => i.Attachments)
-                .FirstOrDefaultAsync(m => m.IssueId == id);
+            if (issue == null) return NotFound();
 
-            if (issue == null)
+            // Mark as read if receiver is viewing
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser != null && issue.ReceiverId == currentUser.Id && !issue.IsRead)
             {
-                return NotFound();
-            }
-
-            // If current user is the receiver, mark as read
-            int currentUserId = GetCurrentUserId();
-            if (issue.ReceiverId == currentUserId && issue.Status == "Pending")
-            {
-                issue.Status = "Read";
+                issue.IsRead = true;
                 await _context.SaveChangesAsync();
             }
 
             return View(issue);
         }
 
-        // GET: Issues/GetUsers
-        [HttpGet]
-        public async Task<IActionResult> GetUsers(string searchTerm)
+        // GET: Issues/MyInbox
+        public async Task<IActionResult> MyInbox()
         {
-            if (string.IsNullOrEmpty(searchTerm))
-            {
-                return Json(new List<object>());
-            }
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null) return RedirectToAction("Index", "Home");
 
-            var users = await _context.Users
-                .Where(u => u.Name.Contains(searchTerm))
-                .Select(u => new { id = u.Id, text = u.Name })
-                .Take(10)
+            var issues = await _context.PEIssues
+                .Include(i => i.SenderId)
+                .Where(i => i.ReceiverId == currentUser.Id)
+                .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
-            return Json(users);
+            return View(issues);
         }
 
-        // GET: Issues/Download/5
-        public async Task<IActionResult> Download(int? id)
+        // GET: Issues/MySent
+        public async Task<IActionResult> MySent()
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null) return RedirectToAction("Index", "Home");
 
-            var attachment = await _context.IssueAttachments
-                .FirstOrDefaultAsync(a => a.AttachmentId == id);
+            var issues = await _context.PEIssues
+                .Include(i => i.ReceiverId)
+                .Where(i => i.SenderId == currentUser.Id)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
 
-            if (attachment == null)
-            {
-                return NotFound();
-            }
-
-            // Get the physical file path
-            string filePath = Path.Combine(_environment.WebRootPath, "uploads", "issues",
-                attachment.IssueId.ToString(), attachment.FileName);
-
-            if (!System.IO.File.Exists(filePath))
-            {
-                return NotFound();
-            }
-
-            // Read the file
-            var memory = new MemoryStream();
-            using (var stream = new FileStream(filePath, FileMode.Open))
-            {
-                await stream.CopyToAsync(memory);
-            }
-            memory.Position = 0;
-
-            // Return the file
-            return File(memory, GetContentType(attachment.FileName), attachment.FileName);
+            return View(issues);
         }
 
-        // Helper method to get MIME type
-        private string GetContentType(string fileName)
+        // Utility: Get current user from context
+        private async Task<SystemUser?> GetCurrentUserAsync()
         {
-            var extension = Path.GetExtension(fileName).ToLowerInvariant();
-            switch (extension)
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return null;
+
+            // Extract the first 6 characters of the service ID
+            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+
+            var user = await _context.Users
+                .Include(u => u.WorkGroup) // Include WorkGroup if needed
+                .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
+
+            if (user == null)
             {
-                case ".pdf": return "application/pdf";
-                case ".jpg":
-                case ".jpeg": return "image/jpeg";
-                case ".png": return "image/png";
-                case ".gif": return "image/gif";
-                case ".doc": return "application/msword";
-                case ".docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-                case ".xls": return "application/vnd.ms-excel";
-                case ".xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-                case ".txt": return "text/plain";
-                case ".csv": return "text/csv";
-                default: return "application/octet-stream";
+                // Log the failed attempt to find user
+                _logger.LogWarning("User not found for ServiceId: {ServiceId}", serviceIdShort);
+                return null;
             }
+
+            // Log successful user lookup
+            _logger.LogInformation("Found user: {UserId} - {UserName} ({ServiceId})", 
+                user.Id, user.Name, user.ServiceId);
+
+            return user;
         }
 
-        // Helper method to get current user ID
-        private int GetCurrentUserId()
+        private async Task PopulateUsersAsync()
         {
-            // This is just a placeholder - you would implement this based on your authentication system
-            // For example, using claims:
-            // return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
-            // If you're using ASP.NET Core Identity:
-            // var userId = _userManager.GetUserId(User);
-            // return int.Parse(userId);
-
-            return 1; // Placeholder - replace with actual implementation
+            var users = await _context.Users
+                .Select(u => new { u.Id, Name = $"{u.Name} ({u.ServiceId})" })
+                .ToListAsync();
+            ViewBag.Users = users;
         }
     }
 
-    // View Models
-    public class CreateIssueViewModel
+    public class IssueCreateViewModel
     {
         [Required]
+        public int PlannedEventId { get; set; }
+
+        [Required]
+        public int PETaskId { get; set; }
+
+        [Required]
+        [Display(Name = "Send To")]
         public int ReceiverId { get; set; }
 
         [Required]
-        public string ReceiverName { get; set; }
-
-        [Required]
-        [Display(Name = "Issue")]
+        [Display(Name = "Issue Description")]
         public string IssueText { get; set; }
 
-        [Display(Name = "Remarks")]
-        public string Remarks { get; set; }
-
-        public List<IFormFile> Attachments { get; set; }
-    }
-
-    public class IssueInboxViewModel
-    {
-        public List<Issue> ReceivedIssues { get; set; }
-        public int UnreadCount { get; set; }
-    }
-    // Update the `Users` property in the `DbContext` class to be strongly typed to a collection of `User` objects.
-    // This ensures that the `.Name` property can be accessed without errors.
-
-    public class DbContext
-    {
-        public DbSet<Issue> Issues { get; set; }
-        public DbSet<IssueAttachment> IssueAttachments { get; set; }
-        public DbSet<User> Users { get; set; } // Changed from IEnumerable<object> to DbSet<User>
-        internal void OnModelCreating(ModelBuilder modelBuilder) { }
-        internal async Task SaveChangesAsync()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    // Ensure the `Issue` class is defined with the required properties.
-    public class Issue
-    {
-        public int IssueId { get; set; }
-        public int ReceiverId { get; set; }
-        public int SenderId { get; set; }
-        public string? Status { get; set; }
-        public DateTime CreatedDate { get; set; }
-        public string? IssueText { get; set; }
-        public string Remarks { get; set; }
-        public User Sender { get; set; }
-        public User Receiver { get; set; }
-        public ICollection<IssueAttachment> Attachments { get; set; }
-    }
-
-    // Ensure the `IssueAttachment` class is defined.
-    public class IssueAttachment
-    {
-        public int AttachmentId { get; set; }
-        public int IssueId { get; set; }
-        public string FileName { get; set; }
-        public string FilePath { get; set; }
-        public int FileSize { get; set; }
-        public DateTime UploadDate { get; set; }
-    }
-
-    // Ensure the `User` class is defined.
-    public class User
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
+        [Display(Name = "Attachment")]
+        [FileExtensions(Extensions = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png")]
+        public IFormFile? Attachment { get; set; }
     }
 }
