@@ -46,6 +46,12 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> Index(string searchType, string peNumber, string customer,
             string jobReference, string soNumber, int? workgroupId, int pageIndex = 1)
         {
+            // Trim all search parameters to remove leading/trailing spaces
+            peNumber = peNumber?.Trim();
+            customer = customer?.Trim();
+            jobReference = jobReference?.Trim();
+            soNumber = soNumber?.Trim();
+
             // Get current user's workgroup info
             var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
             
@@ -909,6 +915,13 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> GlobalSearch(string searchType, string peNumber, string customer, string jobReference, string soNumber, int pageIndex = 1)
         {
+
+            // Trim all search parameters to remove leading/trailing spaces
+            peNumber = peNumber?.Trim();
+            customer = customer?.Trim();
+            jobReference = jobReference?.Trim();
+            soNumber = soNumber?.Trim();
+
             var query = _context.PlannedEvents.AsQueryable(); // No workgroup restriction
 
             if (!string.IsNullOrEmpty(searchType))
@@ -917,8 +930,8 @@ namespace SFCDashboard.Controllers
                 {
             case "customer":
                 if (!string.IsNullOrEmpty(customer))
-                    query = query.Where(p => p.Customer != null && 
-                        EF.Functions.Like(p.Customer, $"%{customer}%"));
+                    query = query.Where(p => p.Customer != null &&
+                        p.Customer.ToLower().Contains(customer.ToLower()));
                 break;
             case "jobReference":
                 if (!string.IsNullOrEmpty(jobReference))
