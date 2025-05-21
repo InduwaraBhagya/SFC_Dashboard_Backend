@@ -74,30 +74,17 @@
                         </div>
 
                         <div class="col-md-6">
-                            <!-- PE Number Search -->
-                            <div class="search-field @(ViewData["SearchType"]?.ToString() == "peNumber" ? "" : "d-none")" id="peNumberField">
-                                <label for="peNumber" class="form-label">PE Number:</label>
-                                <input type="text" name="peNumber" class="form-control" id="peNumber" placeholder="Enter PE Number" value="@ViewData["PENumberFilter"]" />
-                            </div>
-
-                            <!-- Customer Search -->
-                            <div class="search-field @(ViewData["SearchType"]?.ToString() == "customer" ? "" : "d-none")" id="customerField">
-                                <label for="customer" class="form-label">Customer:</label>
-                                <input type="text" name="customer" class="form-control" id="customer" placeholder="Enter Customer Name" value="@ViewData["CustomerFilter"]" />
-                            </div>
-
-                            <!-- Job Reference Search -->
-                            <div class="search-field @(ViewData["SearchType"]?.ToString() == "jobReference" ? "" : "d-none")" id="jobReferenceField">
-                                <label for="jobReference" class="form-label">Job Reference:</label>
-                                <input type="text" name="jobReference" class="form-control" id="jobReference" placeholder="Enter Job Reference" value="@ViewData["JobReferenceFilter"]" />
-                            </div>
-
-                            <!-- SO Number Search -->
-                            <div class="search-field @(ViewData["SearchType"]?.ToString() == "soNumber" ? "" : "d-none")" id="soNumberField">
-                                <label for="soNumber" class="form-label">SO Number:</label>
-                                <input type="text" name="soNumber" class="form-control" id="soNumber" placeholder="Enter SO Number" value="@ViewData["SONumberFilter"]" />
-                            </div>
-                        </div>
+    <div class="form-group">
+        <label for="indexSearchInput" class="form-label" id="indexSearchLabel">PE Number:</label>
+        <input type="text" class="form-control" id="indexSearchInput" name="peNumber" placeholder="Enter PE Number"
+            value="@(
+                ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
+                ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
+                ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
+                ViewData["PENumberFilter"]
+            )" />
+    </div>
+</div>
 
                         <div class="col-md-3">
                             <button type="submit" class="btn btn-primary btn-ripple w-100">Search</button>
@@ -652,6 +639,34 @@
         });
 
         document.addEventListener('DOMContentLoaded', function () {
+ var select = document.getElementById('searchType');
+        var input = document.getElementById('indexSearchInput');
+        var label = document.getElementById('indexSearchLabel');
+
+        function updateInputNameAndPlaceholder() {
+            input.name = select.value;
+            switch (select.value) {
+                case "peNumber":
+                    input.placeholder = "Enter PE Number";
+                    label.textContent = "PE Number:";
+                    break;
+                case "customer":
+                    input.placeholder = "Enter Customer Name";
+                    label.textContent = "Customer:";
+                    break;
+                case "jobReference":
+                    input.placeholder = "Enter Job Reference";
+                    label.textContent = "Job Reference:";
+                    break;
+                case "soNumber":
+                    input.placeholder = "Enter SO Number";
+                    label.textContent = "SO Number:";
+                    break;
+            }
+        }
+        select.addEventListener('change', updateInputNameAndPlaceholder);
+        updateInputNameAndPlaceholder();
+
             // Initialize message inbox
             initializeMessageInbox();
             

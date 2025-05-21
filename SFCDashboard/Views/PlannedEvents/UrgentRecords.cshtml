@@ -164,18 +164,18 @@
         const noRecordsAlert = document.querySelector('.alert-info');
 
         function filterTable() {
-            const peNumber = document.getElementById('searchPeNumber').value.toLowerCase();
-            const reference = document.getElementById('searchReference').value.toLowerCase();
-            const customer = document.getElementById('searchCustomer').value.toLowerCase();
+            const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+            const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+            const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
 
             let visibleRows = 0;
             const rows = tableBody.getElementsByTagName('tr');
 
             Array.from(rows).forEach(row => {
                 const cells = row.getElementsByTagName('td');
-                const matchPeNumber = cells[1].textContent.toLowerCase().includes(peNumber);
-                const matchReference = cells[3].textContent.toLowerCase().includes(reference);
-                const matchCustomer = cells[4].textContent.toLowerCase().includes(customer);
+                const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
+                const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
 
                 if (matchPeNumber && matchReference && matchCustomer) {
                     row.style.display = '';
