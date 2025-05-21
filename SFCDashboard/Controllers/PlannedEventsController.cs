@@ -54,7 +54,7 @@ namespace SFCDashboard.Controllers
 
             // Get current user's workgroup info
             var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
-            
+
             // Base query
             var query = _context.PlannedEvents.AsQueryable();
 
@@ -118,9 +118,9 @@ namespace SFCDashboard.Controllers
                 _ => peNumber
             };
 
-            
 
-    
+
+
 
             var currentDate = DateTime.Today;
             var olaViolationQuery = _context.PETasks
@@ -244,28 +244,28 @@ namespace SFCDashboard.Controllers
             {
                 switch (searchType)
                 {
-            case "customer":
-                if (!string.IsNullOrEmpty(customer))
-                    query = query.Where(p => p.Customer != null && 
-                        EF.Functions.Like(p.Customer, $"%{customer}%"));
-                break;
-            case "jobReference":
-                if (!string.IsNullOrEmpty(jobReference))
-                    query = query.Where(p => p.JobReference != null && 
-                        EF.Functions.Like(p.JobReference, $"%{jobReference}%"));
-                break;
-            case "soNumber":
-                if (!string.IsNullOrEmpty(soNumber))
-                    query = query.Where(p => p.SoNumber != null && 
-                        EF.Functions.Like(p.SoNumber, $"%{soNumber}%"));
-                break;
-            default: // peNumber
-                if (!string.IsNullOrEmpty(peNumber))
-                    query = query.Where(p => p.PeNumber != null && 
-                        EF.Functions.Like(p.PeNumber, $"%{peNumber}%"));
-                break;
-        }
-        
+                    case "customer":
+                        if (!string.IsNullOrEmpty(customer))
+                            query = query.Where(p => p.Customer != null &&
+                                EF.Functions.Like(p.Customer, $"%{customer}%"));
+                        break;
+                    case "jobReference":
+                        if (!string.IsNullOrEmpty(jobReference))
+                            query = query.Where(p => p.JobReference != null &&
+                                EF.Functions.Like(p.JobReference, $"%{jobReference}%"));
+                        break;
+                    case "soNumber":
+                        if (!string.IsNullOrEmpty(soNumber))
+                            query = query.Where(p => p.SoNumber != null &&
+                                EF.Functions.Like(p.SoNumber, $"%{soNumber}%"));
+                        break;
+                    default: // peNumber
+                        if (!string.IsNullOrEmpty(peNumber))
+                            query = query.Where(p => p.PeNumber != null &&
+                                EF.Functions.Like(p.PeNumber, $"%{peNumber}%"));
+                        break;
+                }
+
 
                 if (workgroupId.HasValue)
                 {
@@ -316,6 +316,9 @@ namespace SFCDashboard.Controllers
                 .Where(t => t.PENumber == plannedEvent.PeNumber)
                 .OrderBy(t => t.TaskSeq)
                 .ToListAsync();
+            // Set the correct dates for display
+            SetTaskDatesFromPeNumber(plannedEvent.PeNumber, peTasks);
+
             ViewBag.PETasks = peTasks;
 
             // Find PETaskListId for the current task name
@@ -469,7 +472,7 @@ namespace SFCDashboard.Controllers
                     var workgroup = await _context.WorkGroups.FindAsync(effectiveWorkgroupId);
                     if (workgroup != null)
                     {
-                        query = query.Where(p => p.TaskWg != null && 
+                        query = query.Where(p => p.TaskWg != null &&
                             EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
                         ViewData["FilteredWorkgroup"] = workgroup.Name;
                     }
@@ -928,27 +931,27 @@ namespace SFCDashboard.Controllers
             {
                 switch (searchType)
                 {
-            case "customer":
-                if (!string.IsNullOrEmpty(customer))
-                    query = query.Where(p => p.Customer != null &&
-                        p.Customer.ToLower().Contains(customer.ToLower()));
-                break;
-            case "jobReference":
-                if (!string.IsNullOrEmpty(jobReference))
-                    query = query.Where(p => p.JobReference != null && 
-                        EF.Functions.Like(p.JobReference, $"%{jobReference}%"));
-                break;
-            case "soNumber":
-                if (!string.IsNullOrEmpty(soNumber))
-                    query = query.Where(p => p.SoNumber != null && 
-                        EF.Functions.Like(p.SoNumber, $"%{soNumber}%"));
-                break;
-            default: // peNumber
-                if (!string.IsNullOrEmpty(peNumber))
-                    query = query.Where(p => p.PeNumber != null && 
-                        EF.Functions.Like(p.PeNumber, $"%{peNumber}%"));
-                break;
-        }
+                    case "customer":
+                        if (!string.IsNullOrEmpty(customer))
+                            query = query.Where(p => p.Customer != null &&
+                                p.Customer.ToLower().Contains(customer.ToLower()));
+                        break;
+                    case "jobReference":
+                        if (!string.IsNullOrEmpty(jobReference))
+                            query = query.Where(p => p.JobReference != null &&
+                                EF.Functions.Like(p.JobReference, $"%{jobReference}%"));
+                        break;
+                    case "soNumber":
+                        if (!string.IsNullOrEmpty(soNumber))
+                            query = query.Where(p => p.SoNumber != null &&
+                                EF.Functions.Like(p.SoNumber, $"%{soNumber}%"));
+                        break;
+                    default: // peNumber
+                        if (!string.IsNullOrEmpty(peNumber))
+                            query = query.Where(p => p.PeNumber != null &&
+                                EF.Functions.Like(p.PeNumber, $"%{peNumber}%"));
+                        break;
+                }
             }
 
             int pageSize = 20;
@@ -1101,9 +1104,51 @@ namespace SFCDashboard.Controllers
             return count;
         }
 
+        // Helper to extract date from PE number
+        private DateTime? GetDateFromPeNumber(string peNumber)
+        {
+            // Expects format: PEYYYYMMDDxxxx
+            if (string.IsNullOrEmpty(peNumber) || peNumber.Length < 10)
+                return null;
+            try
+            {
+                var year = int.Parse(peNumber.Substring(2, 4));
+                var month = int.Parse(peNumber.Substring(6, 2));
+                var day = int.Parse(peNumber.Substring(8, 2));
+                return new DateTime(year, month, day);
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
+        // Call this after loading tasks for a PE (e.g., in Details or when recalculating tasks)
+        private void SetTaskDatesFromPeNumber(string peNumber, List<PETask> tasks)
+        {
+            var peCreatedDate = GetDateFromPeNumber(peNumber) ?? DateTime.Today;
+            DateTime currentCreatedDate = peCreatedDate;
+
+            for (int i = 0; i < tasks.Count; i++)
+            {
+                var task = tasks[i];
+
+                // For "Draw Fiber", use EstimatedTime if set
+                if (task.Task?.Trim().ToLower() == "draw fiber" && task.EstimatedTime.HasValue)
+                {
+                    task.TaskCreatedDate = currentCreatedDate;
+                    task.TaskCompleteDate = task.EstimatedTime.Value;
+                    currentCreatedDate = task.TaskCompleteDate;
+                }
+                else
+                {
+                    task.TaskCreatedDate = currentCreatedDate;
+                    int olaDays = 0;
+                    int.TryParse(task.OLA, out olaDays);
+                    task.TaskCompleteDate = currentCreatedDate.AddDays(olaDays);
+                    currentCreatedDate = task.TaskCompleteDate;
+                }
+            }
+        }
     }
-    
-    
 }
-

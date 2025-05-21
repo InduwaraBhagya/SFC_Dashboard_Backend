@@ -16,8 +16,8 @@
 <!-- Estimated Time Section (Moved to Top) -->
 @{
     var drawFiberTasks = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
-        .Where(t => t.Task?.Trim().ToLower() == "draw fiber")
-        .ToList();
+    .Where(t => t.Task?.Trim().ToLower() == "draw fiber")
+    .ToList();
 }
 @if (drawFiberTasks.Any())
 {
@@ -26,9 +26,10 @@
             <strong>Add or Update Estimated Time for a Task</strong>
         </div>
         <div class="card-body">
-            <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" method="post" class="row g-3 align-items-center">
+            <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" method="post"
+                class="row g-3 align-items-center">
                 <input type="hidden" name="taskId" value="@drawFiberTasks.First().Id" />
-                
+
                 <div class="col-auto">
                     <label for="estimatedTime" class="col-form-label">Estimated Date:</label>
                 </div>
@@ -61,14 +62,16 @@
     </div>
     <div class="timeline-bar position-relative" style="height: 32px;">
         <!-- Background bar -->
-        <div style="position:absolute;left:0;top:12px;width:100%;height:8px;background:#e9ecef;border-radius:4px;"></div>
+        <div style="position:absolute;left:0;top:12px;width:100%;height:8px;background:#e9ecef;border-radius:4px;">
+        </div>
         <!-- Progress bar -->
         <div style="position:absolute;left:0;top:12px;height:8px;
             background:@(isViolated ? "#dc3545" : "#198754");
             border-radius:4px;
             width:@(Math.Min(100, Math.Round((daysPassed/totalDays)*100)))%;"></div>
         <!-- Today marker -->
-        <div style="position:absolute;top:0;left:@(Math.Min(100, Math.Round((daysPassed/totalDays)*100)))%;transform:translateX(-50%);">
+        <div
+            style="position:absolute;top:0;left:@(Math.Min(100, Math.Round((daysPassed/totalDays)*100)))%;transform:translateX(-50%);">
             <span class="badge bg-primary">Today</span>
         </div>
         <!-- Target marker -->
@@ -101,7 +104,8 @@
         {
             <span class="text-danger fw-bold">
                 <i class="bi bi-exclamation-triangle"></i>
-                Unable to give service on the service required date. Exceeded by <strong>@daysExceeded.ToString("0") days</strong>.
+                Unable to give service on the service required date. Exceeded by <strong>@daysExceeded.ToString("0")
+                    days</strong>.
             </span>
         }
     </div>
@@ -111,16 +115,19 @@
         background: #f8f9fa;
         border-radius: 8px;
         padding: 1.5rem 1rem 1rem 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
+
     .timeline-labels span {
         font-size: 0.95rem;
         font-weight: 500;
     }
+
     .timeline-bar {
         min-width: 250px;
         margin-bottom: 0.5rem;
     }
+
     .timeline-info {
         font-size: 1.1rem;
     }
@@ -254,6 +261,24 @@
             }
         </div>
         <div class="card-body">
+
+            @* Show estimated time summary for "Draw Fiber" task(s) *@
+            @{
+                var drawFiberTasksWithEstimate = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+                .Where(t => t.Task?.Trim().ToLower() == "draw fiber" && t.EstimatedTime.HasValue)
+                .ToList();
+            }
+            @if (drawFiberTasksWithEstimate.Any())
+            {
+                <div class="alert alert-secondary mb-3">
+                    <strong>Estimated Time for "Draw Fiber":</strong>
+                    @foreach (var t in drawFiberTasksWithEstimate)
+                    {
+                        <span class="badge bg-primary mx-1">@t.EstimatedTime.Value.ToString("yyyy-MM-dd")</span>
+                    }
+                </div>
+            }
+
             @if (TempData["SuccessMessage"] != null)
             {
                 <div class="alert alert-success">@TempData["SuccessMessage"]</div>
@@ -274,7 +299,7 @@
                                 <th>Target Date</th>
                                 <th>Actual Date</th>
                                 <th>Priority</th>
-                                <th>Estimated Time</th>
+                                @* <th>Estimated Time</th> *@ <!-- Remove this line -->
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -282,9 +307,9 @@
                             @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
                             {
                                 <tr class="@(task.IsUrgent ? "table-warning" : 
-                                                                               task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
-                                                                               task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
-                                                                               task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                                                       task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                                                       task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                                                       task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
                             <td>@task.TaskSeq</td>
                             <td>@task.Task</td>
                             <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
@@ -304,8 +329,6 @@
                                     <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
                                     <td>@(task.ACtualTaskCompleteDate != null ?
                                                                         task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
-
-                            <!-- Priority column showing Urgent status -->
                             <td>
                                 @if (task.IsUrgent)
                                         {
@@ -320,13 +343,7 @@
                                             <small class="d-block text-muted mt-1">@task.Priority</small>
                                         }
                                     </td>
-
-                                    <!-- Estimated Time column -->
-                                    <td>
-                                        @(task.EstimatedTime.HasValue ? task.EstimatedTime.Value.ToString("yyyy-MM-dd") : "-")
-                                    </td>
-
-                                    <!-- Actions column with Request Urgent button -->
+                                    @* Remove the Estimated Time cell *@
                                     <td>
                                         @if (task.UrgentRequested && !task.IsUrgent)
                                         {
@@ -361,7 +378,8 @@
     </div>
 
     <!-- Reported Issues Section -->
-    @if (ViewBag.PEReportedIssues != null && ((IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues).Any())
+    @if (ViewBag.PEReportedIssues != null &&
+        ((IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues).Any())
     {
         <div class="card mt-4">
             <div class="card-header bg-warning text-dark">
@@ -379,25 +397,25 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues)
-                    {
-                        <tr>
-                            <td>@issue.SenderName</td>
-                            <td>@issue.ReceiverName</td>
-                            <td>@issue.IssueText</td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(issue.AttachmentPath))
-                                {
-                                    <a href="@issue.AttachmentPath" target="_blank">View</a>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">-</span>
-                                }
-                            </td>
-                            <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                        </tr>
-                    }
+                        @foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues)
+                        {
+                            <tr>
+                                <td>@issue.SenderName</td>
+                                <td>@issue.ReceiverName</td>
+                                <td>@issue.IssueText</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                    {
+                                        <a href="@issue.AttachmentPath" target="_blank">View</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             </div>
@@ -411,30 +429,30 @@
     }
 </div>
 
-    <!-- Urgent Request Modal for Planned Event -->
-    <div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="urgentPEModalLabel">Request Urgent Status for Planned Event</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Urgent Request Modal for Planned Event -->
+<div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="urgentPEModalLabel">Request Urgent Status for Planned Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>PE Number:</strong> <span id="modalPeNumberValue"></span><br>
+                    <strong>Customer:</strong> <span id="modalCustomerValue"></span>
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <strong>PE Number:</strong> <span id="modalPeNumberValue"></span><br>
-                        <strong>Customer:</strong> <span id="modalCustomerValue"></span>
-                    </div>
-                    <form id="urgentPERequestForm" method="post">
-                        <input type="hidden" name="id" id="peIdField" />
+                <form id="urgentPERequestForm" method="post">
+                    <input type="hidden" name="id" id="peIdField" />
 
-                        <div class="form-group mb-4">
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
-                                    value="OpeningCeremony" required />
-                                <label class="form-check-label" for="openingCeremony">
-                                    <strong>Opening Ceremony</strong> [Priority 1]
-                                </label>
-                            </div>
+                    <div class="form-group mb-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
+                                value="OpeningCeremony" required />
+                            <label class="form-check-label" for="openingCeremony">
+                                <strong>Opening Ceremony</strong> [Priority 1]
+                            </label>
+                        </div>
 
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer"
@@ -457,9 +475,7 @@
 <!-- Report Issue Button -->
 @if (Model.PEStatus?.ToLower() != "hold")
 {
-    <button class="btn btn-danger my-3"
-            data-bs-toggle="modal"
-            data-bs-target="#reportIssueModal">
+    <button class="btn btn-danger my-3" data-bs-toggle="modal" data-bs-target="#reportIssueModal">
         <i class="bi bi-flag"></i> Report Issue
     </button>
 }
@@ -468,14 +484,15 @@
 <div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="PEIssues" asp-action="Create">
+            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="PEIssues"
+                asp-action="Create">
                 <div class="modal-header">
                     <h5 class="modal-title" id="reportIssueModalLabel">Report Issue</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="PlannedEventId" value="@Model.Id" />
-                    
+
                     <!-- Add Sender Info -->
                     <div class="mb-3">
                         <label class="form-label">Sender</label>
@@ -492,7 +509,8 @@
 
                     <div class="mb-3">
                         <label for="issueText" class="form-label">Issue</label>
-                        <input type="text" class="form-control" id="issueText" name="IssueText" list="issueSuggestions" autocomplete="off" required />
+                        <input type="text" class="form-control" id="issueText" name="IssueText" list="issueSuggestions"
+                            autocomplete="off" required />
                         <datalist id="issueSuggestions"></datalist>
                     </div>
                     <div class="mb-3">
@@ -509,7 +527,7 @@
     </div>
 </div>
 
-    @* Urgent Request Modal for Task *@
+@* Urgent Request Modal for Task *@
 <div class="modal fade" id="urgentTaskModal" tabindex="-1" aria-labelledby="urgentTaskModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -524,36 +542,36 @@
                 </div>
                 <form id="urgentTaskRequestForm" method="post">
                     <input type="hidden" name="id" id="taskIdField" />
-                        <div class="form-group mb-4">
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="taskOpeningCeremony"
-                                    value="OpeningCeremony" required />
-                                <label class="form-check-label" for="taskOpeningCeremony">
-                                    <strong>Opening Ceremony</strong> [Priority 1]
-                                </label>
-                            </div>
-
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="radio" name="urgentReason" id="taskCriticalCustomer"
-                                    value="CriticalCustomer" />
-                                <label class="form-check-label" for="taskCriticalCustomer">
-                                    <strong>Critical Customer</strong> [Priority 2]
-                                </label>
-                            </div>
+                    <div class="form-group mb-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="taskOpeningCeremony"
+                                value="OpeningCeremony" required />
+                            <label class="form-check-label" for="taskOpeningCeremony">
+                                <strong>Opening Ceremony</strong> [Priority 1]
+                            </label>
                         </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmTaskUrgentRequest">Submit Request</button>
-                </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="taskCriticalCustomer"
+                                value="CriticalCustomer" />
+                            <label class="form-check-label" for="taskCriticalCustomer">
+                                <strong>Critical Customer</strong> [Priority 2]
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmTaskUrgentRequest">Submit Request</button>
             </div>
         </div>
     </div>
 </div>
+</div>
 
 @section Scripts {
-        @await Html.PartialAsync("_ValidationScriptsPartial")
+    @await Html.PartialAsync("_ValidationScriptsPartial")
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -632,15 +650,15 @@
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => {
-                        if (response.ok) {
-                            // Reload the page after successful save
-                            window.location.reload();
-                        } else {
-                            alert('Failed to save estimated time.');
-                        }
-                    })
-                    .catch(() => alert('Error occurred while saving.'));
+                        .then(response => {
+                            if (response.ok) {
+                                // Reload the page after successful save
+                                window.location.reload();
+                            } else {
+                                alert('Failed to save estimated time.');
+                            }
+                        })
+                        .catch(() => alert('Error occurred while saving.'));
                 });
             }
 
@@ -655,7 +673,7 @@
                 estimatedTimeInput.setAttribute('min', minDate);
             }
         });
-                $(document).ready(function () {
+        $(document).ready(function () {
 
             // Get current user info and populate sender fields
             $.get('/SystemUsers/GetCurrentUser', function (user) {

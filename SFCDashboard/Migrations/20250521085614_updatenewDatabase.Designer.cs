@@ -12,8 +12,8 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250428032201_updateAll")]
-    partial class updateAll
+    [Migration("20250521085614_updatenewDatabase")]
+    partial class updatenewDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -251,6 +251,38 @@ namespace SFCDashboard.Migrations
                     b.ToTable("PERecords", (string)null);
                 });
 
+            modelBuilder.Entity("SFCDB.Models.UrgentReason", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<int>("PERecordID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RequestedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("PERecordID");
+
+                    b.ToTable("UrgentReasons");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -295,6 +327,44 @@ namespace SFCDashboard.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.PEIssue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AttachmentPath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("IssueText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PETaskId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlannedEventId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReceiverId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PEIssues");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.PETask", b =>
                 {
                     b.Property<int>("Id")
@@ -309,6 +379,9 @@ namespace SFCDashboard.Migrations
                     b.Property<DateTime?>("ActualTaskCreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("EstimatedTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsUrgent")
                         .HasColumnType("bit");
 
@@ -316,6 +389,7 @@ namespace SFCDashboard.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PENumber")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Priority")
@@ -812,6 +886,17 @@ namespace SFCDashboard.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("SFCDB.Models.UrgentReason", b =>
+                {
+                    b.HasOne("SFCDB.Models.PERecord", "PERecord")
+                        .WithMany()
+                        .HasForeignKey("PERecordID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PERecord");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
                 {
                     b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
@@ -833,7 +918,8 @@ namespace SFCDashboard.Migrations
                         .WithMany()
                         .HasForeignKey("PENumber")
                         .HasPrincipalKey("PeNumber")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("PlannedEvent");
                 });

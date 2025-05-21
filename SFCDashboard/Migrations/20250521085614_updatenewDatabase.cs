@@ -6,11 +6,31 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SFCDashboard.Migrations
 {
     /// <inheritdoc />
-    public partial class initialMigration : Migration
+    public partial class updatenewDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "PEIssues",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PlannedEventId = table.Column<int>(type: "int", nullable: false),
+                    PETaskId = table.Column<int>(type: "int", nullable: false),
+                    ReceiverId = table.Column<int>(type: "int", nullable: false),
+                    SenderId = table.Column<int>(type: "int", nullable: false),
+                    IssueText = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AttachmentPath = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PEIssues", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "PERecords",
                 columns: table => new
@@ -118,6 +138,29 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UrgentReasons",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PERecordID = table.Column<int>(type: "int", nullable: false),
+                    Reason = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    RequestedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RequestedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UrgentReasons", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_UrgentReasons_PERecords_PERecordID",
+                        column: x => x.PERecordID,
+                        principalTable: "PERecords",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
@@ -167,7 +210,7 @@ namespace SFCDashboard.Migrations
                     TASK_WG = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     WO_ACTUAL_START_DATE = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     REQUEST_REFERENCE_NO = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SO_ID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SO_ID = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     REGION_1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PROVINCE_1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RTOM_1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -259,7 +302,7 @@ namespace SFCDashboard.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PENumber = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    PENumber = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TaskSeq = table.Column<int>(type: "int", nullable: true),
                     Task = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TaskWorkGroup = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -269,7 +312,10 @@ namespace SFCDashboard.Migrations
                     TaskCompleteDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ActualTaskCreatedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ACtualTaskCompleteDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    TaskPhase = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    IsUrgent = table.Column<bool>(type: "bit", nullable: false),
+                    UrgentRequested = table.Column<bool>(type: "bit", nullable: false),
+                    Priority = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    EstimatedTime = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -441,6 +487,11 @@ namespace SFCDashboard.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UrgentReasons_PERecordID",
+                table: "UrgentReasons",
+                column: "PERecordID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_UserRoleId",
                 table: "Users",
                 column: "UserRoleId");
@@ -458,7 +509,7 @@ namespace SFCDashboard.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "PERecords");
+                name: "PEIssues");
 
             migrationBuilder.DropTable(
                 name: "PETaskList");
@@ -476,7 +527,13 @@ namespace SFCDashboard.Migrations
                 name: "TaskHistories");
 
             migrationBuilder.DropTable(
+                name: "UrgentReasons");
+
+            migrationBuilder.DropTable(
                 name: "PlannedEvents");
+
+            migrationBuilder.DropTable(
+                name: "PERecords");
 
             migrationBuilder.DropTable(
                 name: "Users");
