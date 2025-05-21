@@ -20,7 +20,7 @@ namespace SFCDashboard.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<PERecord> PERecords { get; set; }
 
-        public DbSet<PETaskList> PETaskLists{ get; set; }
+        public DbSet<PETaskList> PETaskLists { get; set; }
         public DbSet<PETask> PETasks { get; set; }
 
         public DbSet<PEIssue> PEIssues { get; set; }
@@ -46,7 +46,8 @@ namespace SFCDashboard.Data
 
 
         }
-        public DbSet<SFCDashboard.Models.UserRole> UserRole { get; set; } = default!;
-        public DbSet<SFCDashboard.Models.PETaskList> PETaskList { get; set; } = default!;
+        public DbSet<UserRole> UserRole { get; set; } = default!;
+        public DbSet<PETaskList> PETaskList { get; set; } = default!;
+        public DbSet<UrgentReason> UrgentReasons { get; set; }
     }
 }
