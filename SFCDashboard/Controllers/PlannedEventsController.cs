@@ -998,6 +998,44 @@ namespace SFCDashboard.Controllers
             ViewData["JobReferenceFilter"] = jobReference;
             ViewData["SONumberFilter"] = soNumber;
 
+            // Additional logic for customer search - to populate the table and summary counts
+            if (searchType == "customer" && !string.IsNullOrEmpty(customer))
+            {
+                // Get all PEs for this customer
+                var customerPEs = await _context.PlannedEvents
+                    .Where(p => p.Customer != null && p.Customer.ToLower().Contains(customer.ToLower()))
+                    .ToListAsync();
+
+                // Only ongoing PEs
+                var ongoingPEs = customerPEs.Where(p => p.PEStatus != null && p.PEStatus.ToLower() == "ongoing").ToList();
+
+                int totalPEs = customerPEs.Count;
+                int ongoingCount = ongoingPEs.Count;
+                int urgent1Count = customerPEs.Count(p => p.Priority != null && p.Priority.Contains("Opening Ceremony"));
+                int urgent2Count = customerPEs.Count(p => p.Priority != null && p.Priority.Contains("Critical Customer"));
+                int regularCount = customerPEs.Count(p =>
+                    (p.Priority == null || (!p.Priority.Contains("Opening Ceremony") && !p.Priority.Contains("Critical Customer"))));
+
+                // Set ViewData for summary and table
+                ViewData["TotalPEs"] = totalPEs;
+                ViewData["OngoingCount"] = ongoingCount;
+                ViewData["Priority1Count"] = urgent1Count;
+                ViewData["Priority2Count"] = urgent2Count;
+                ViewData["RegularCount"] = regularCount;
+
+                // Table: Only ongoing PEs, show PE Number, Status, Work Group, and View Detail
+                ViewData["CustomerOngoingTable"] = ongoingPEs
+                    .OrderBy(p => p.ServiceRequiredDate)
+                    .Select((p, idx) => new
+                    {
+                        Serial = idx + 1,
+                        p.PeNumber,
+                        ServiceRequiredDate = p.ServiceRequiredDate?.ToString("yyyy-MM-dd") ?? "",
+                        p.TaskWg,
+                        p.Id
+                    }).ToList();
+            }
+
             return View(result);
         }
 
