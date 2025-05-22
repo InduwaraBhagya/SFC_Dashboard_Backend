@@ -145,6 +145,114 @@
                                 </h5>
                             </div>
 
+                            @{
+                                // Timeline logic for Global Search
+                                // Parse PE Created Date from PE Number
+                                DateTime startDate;
+                                if (!string.IsNullOrEmpty(item.PeNumber) && item.PeNumber.Length >= 10)
+                                {
+                                    try
+                                    {
+                                        var year = int.Parse(item.PeNumber.Substring(2, 4));
+                                        var month = int.Parse(item.PeNumber.Substring(6, 2));
+                                        var day = int.Parse(item.PeNumber.Substring(8, 2));
+                                        startDate = new DateTime(year, month, day);
+                                    }
+                                    catch
+                                    {
+                                        startDate = item.PECreatedDate; // fallback
+                                    }
+                                }
+                                else
+                                {
+                                    startDate = item.PECreatedDate;
+                                }
+                                var targetDate = item.ServiceRequiredDate ?? startDate.AddDays(7);
+                                var today = DateTime.Now.Date;
+                                var totalDays = (targetDate - startDate).TotalDays;
+                                var daysPassed = (today - startDate).TotalDays;
+                                var daysLeft = (targetDate - today).TotalDays;
+                                var isViolated = today > targetDate;
+                                var daysExceeded = isViolated ? (today - targetDate).TotalDays : 0;
+                                var progressPercent = totalDays > 0 ? Math.Min(100, Math.Max(0, Math.Round((daysPassed / totalDays) * 100))) : 0;
+                            }
+                            <div class="timeline-container mb-4">
+                                <div class="timeline-labels d-flex justify-content-between mb-1">
+                                    <span>
+                                        <i class="bi bi-flag-fill text-success"></i>
+                                        Start: @startDate.ToString("yyyy-MM-dd")
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-calendar-event text-primary"></i>
+                                        Today: @today.ToString("yyyy-MM-dd")
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-flag-fill text-danger"></i>
+                                        Target: @targetDate.ToString("yyyy-MM-dd")
+                                    </span>
+                                </div>
+                                <div class="timeline-bar position-relative" style="height: 32px;">
+                                    <div style="position:absolute;left:0;top:12px;width:100%;height:8px;background:#e9ecef;border-radius:4px;"></div>
+                                    <div style="position:absolute;left:0;top:12px;height:8px;
+                                        background:@(isViolated ? "#dc3545" : "#198754");
+                                        border-radius:4px;
+                                        width:@progressPercent%;"></div>
+                                    <div style="position:absolute;top:0;left:@progressPercent%;transform:translateX(-50%);">
+                                        <span class="badge bg-primary">Today</span>
+                                    </div>
+                                    <div style="position:absolute;top:24px;left:100%;transform:translateX(-50%);">
+                                        <span class="badge bg-danger">Deadline</span>
+                                    </div>
+                                    <div style="position:absolute;top:24px;left:0;">
+                                        <span class="badge bg-success">Start</span>
+                                    </div>
+                                </div>
+                                <div class="timeline-info mt-3">
+                                    @if (!isViolated)
+                                    {
+                                        <span class="text-success">
+                                            <i class="bi bi-hourglass-split"></i>
+                                            @if (daysPassed < 1)
+                                            {
+                                                <strong>Just started!</strong>
+                                            }
+                                            else
+                                            {
+                                                <strong>@daysPassed.ToString("0") days passed</strong>
+                                            }
+                                            &nbsp;|&nbsp;
+                                            <strong>@daysLeft.ToString("0") days left</strong> until deadline.
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger fw-bold">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Unable to complete task within deadline, exceeded by <strong>@daysExceeded.ToString("0") days</strong>.
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                            <style>
+                                .timeline-container {
+                                    background: #f8f9fa;
+                                    border-radius: 8px;
+                                    padding: 1.5rem 1rem 1rem 1rem;
+                                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                                }
+                                .timeline-labels span {
+                                    font-size: 0.95rem;
+                                    font-weight: 500;
+                                }
+                                .timeline-bar {
+                                    min-width: 250px;
+                                    margin-bottom: 0.5rem;
+                                }
+                                .timeline-info {
+                                    font-size: 1.1rem;
+                                }
+                            </style>
+
                             <div class="details-content">
                                 <div class="row g-4">
                                     <!-- Location Details Card -->

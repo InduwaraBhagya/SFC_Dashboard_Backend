@@ -2,15 +2,22 @@
 
 @{
     ViewData["Title"] = "PE Record Details";
-    // Calculate dates for the timeline
-    var startDate = Model.PECreatedDate;
-    var targetDate = Model.ServiceRequiredDate ?? Model.PECreatedDate.AddDays(7); // fallback if null
+    // Find the ongoing task (first one if multiple)
+    var ongoingTask = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+        .FirstOrDefault(t => t.TaskStatus?.Trim().ToLower() == "ongoing");
+
+    var startDate = ongoingTask?.TaskCreatedDate ?? Model.PECreatedDate;
+    var targetDate = ongoingTask?.TaskCompleteDate ?? (Model.ServiceRequiredDate ?? Model.PECreatedDate.AddDays(7));
     var today = DateTime.Now.Date;
+
     var totalDays = (targetDate - startDate).TotalDays;
     var daysPassed = (today - startDate).TotalDays;
     var daysLeft = (targetDate - today).TotalDays;
     var isViolated = today > targetDate;
     var daysExceeded = isViolated ? (today - targetDate).TotalDays : 0;
+
+    // Clamp progress between 0 and 100
+    var progressPercent = totalDays > 0 ? Math.Min(100, Math.Max(0, Math.Round((daysPassed / totalDays) * 100))) : 0;
 }
 
 <!-- Estimated Time Section (Moved to Top) -->
@@ -44,7 +51,7 @@
     </div>
 }
 
-<!-- Timeline/Gantt Chart Section (Moved to Top) -->
+<!-- Timeline/Gantt Chart Section (Updated) -->
 <div class="timeline-container mb-4">
     <div class="timeline-labels d-flex justify-content-between mb-1">
         <span>
@@ -68,10 +75,10 @@
         <div style="position:absolute;left:0;top:12px;height:8px;
             background:@(isViolated ? "#dc3545" : "#198754");
             border-radius:4px;
-            width:@(Math.Min(100, Math.Round((daysPassed/totalDays)*100)))%;"></div>
+            width:@progressPercent%;"></div>
         <!-- Today marker -->
         <div
-            style="position:absolute;top:0;left:@(Math.Min(100, Math.Round((daysPassed/totalDays)*100)))%;transform:translateX(-50%);">
+            style="position:absolute;top:0;left:@progressPercent%;transform:translateX(-50%);">
             <span class="badge bg-primary">Today</span>
         </div>
         <!-- Target marker -->
@@ -104,8 +111,7 @@
         {
             <span class="text-danger fw-bold">
                 <i class="bi bi-exclamation-triangle"></i>
-                Unable to give service on the service required date. Exceeded by <strong>@daysExceeded.ToString("0")
-                    days</strong>.
+                Unable to complete task within deadline, exceeded by <strong>@daysExceeded.ToString("0") days</strong>.
             </span>
         }
     </div>
@@ -194,17 +200,7 @@
                             <th class="bg-light text-primary">End Time</th>
                             <td>@Html.DisplayFor(model => model.WoActualStartDate)</td>
                         </tr>
-                        <tr>
-                            <th class="bg-light text-primary">Is Urgent</th>
-                            <td>
-                                @{
-                                    string urgentText = Model.ServiceSpeed?.ToLower()?.Contains("urgent") == true ? "Yes" :
-                                    "No";
-                                    string urgentClass = urgentText == "Yes" ? "text-danger fw-bold" : "";
-                                }
-                                <span class="@urgentClass">@urgentText</span>
-                            </td>
-                        </tr>
+                    
                         <tr>
                             <th class="bg-light text-primary">RTOM</th>
                             <td>@Html.DisplayFor(model => model.Rtom)</td>
