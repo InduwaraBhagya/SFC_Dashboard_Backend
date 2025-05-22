@@ -153,6 +153,7 @@ namespace SFCDashboard.Controllers
                 .Where(i => i.ReceiverId == currentUser.Id)
                 .Select(i => new PEIssueViewModel
                 {
+                    Id = i.Id, // Include Id here
                     SenderId = i.SenderId,
                     SenderName = _context.Users
                         .Where(u => u.Id == i.SenderId)
@@ -164,7 +165,12 @@ namespace SFCDashboard.Controllers
                     AttachmentPath = i.AttachmentPath,
                     CreatedAt = i.CreatedAt,
                     PlannedEventId = i.PlannedEventId,
-                    IsRead = i.IsRead
+                    IsRead = i.IsRead,
+                    IsReply = i.IsReply,
+                    OriginalIssueId = i.OriginalIssueId,
+                    IsResolved = i.IsResolved,
+                    IsResolutionRequest = i.IsResolutionRequest,
+                    PETaskId = i.PETaskId
                 })
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
@@ -182,6 +188,7 @@ namespace SFCDashboard.Controllers
                 .Where(i => i.SenderId == currentUser.Id)
                 .Select(i => new PEIssueViewModel
                 {
+                    Id = i.Id, // Include Id here
                     SenderId = currentUser.Id,
                     SenderName = currentUser.Name,
                     ReceiverId = i.ReceiverId,
@@ -193,7 +200,12 @@ namespace SFCDashboard.Controllers
                     AttachmentPath = i.AttachmentPath,
                     CreatedAt = i.CreatedAt,
                     PlannedEventId = i.PlannedEventId,
-                    IsRead = i.IsRead
+                    IsRead = i.IsRead,
+                    IsReply = i.IsReply,
+                    OriginalIssueId = i.OriginalIssueId,
+                    IsResolved = i.IsResolved,
+                    IsResolutionRequest = i.IsResolutionRequest,
+                    PETaskId = i.PETaskId
                 })
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();

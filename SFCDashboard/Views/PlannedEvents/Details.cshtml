@@ -168,15 +168,30 @@
                             <th class="bg-light text-primary">Status</th>
                             <td>
                                 @{
-                                    string statusClass = Model.PEStatus?.ToLower() switch
+                                    string statusClass;
+                                    string displayStatus;
+
+                                    if (Model.IsHold)
                                     {
-                                        "completed" => "badge bg-success",
-                                        "in progress" => "badge bg-warning text-dark",
-                                        "pending" => "badge bg-info",
-                                        _ => "badge bg-secondary"
-                                    };
+                                        // If IsHold is true, always show "Hold" status with warning class
+                                        statusClass = "badge bg-warning text-dark";
+                                        displayStatus = "Hold";
+                                    }
+                                    else
+                                    {
+                                        // Otherwise show the actual PEStatus from database with appropriate styling
+                                        statusClass = Model.PEStatus?.ToLower() switch
+                                        {
+                                            "completed" => "badge bg-success",
+                                            "in progress" => "badge bg-warning text-dark",
+                                            "ongoing" => "badge bg-info",
+                                            "pending" => "badge bg-secondary",
+                                            _ => "badge bg-secondary"
+                                        };
+                                        displayStatus = Model.PEStatus;
+                                    }
                                 }
-                                <span class="@statusClass">@Html.DisplayFor(model => model.PEStatus)</span>
+                                <span class="@statusClass">@displayStatus</span>
                             </td>
                         </tr>
                         <tr>
@@ -455,7 +470,7 @@
 </div>
 
 <!-- Report Issue Button -->
-@if (Model.PEStatus?.ToLower() != "hold")
+@if (!Model.IsHold)
 {
     <button class="btn btn-danger my-3"
             data-bs-toggle="modal"
@@ -463,7 +478,6 @@
         <i class="bi bi-flag"></i> Report Issue
     </button>
 }
-
 <!-- Report Issue Modal -->
 <div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true">
     <div class="modal-dialog">

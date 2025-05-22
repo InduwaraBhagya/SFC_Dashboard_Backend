@@ -24,6 +24,7 @@ namespace SFCDashboard.Data
         public DbSet<PETask> PETasks { get; set; }
 
         public DbSet<PEIssue> PEIssues { get; set; }
+        public DbSet<PEIssueResolution> PEIssueResolutions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

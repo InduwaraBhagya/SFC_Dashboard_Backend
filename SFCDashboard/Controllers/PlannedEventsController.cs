@@ -209,10 +209,13 @@ namespace SFCDashboard.Controllers
                 .Take(10)
                 .Select(i => new PEIssueViewModel
                 {
+                    Id = i.Id, // Make sure to include this
+                    SenderId = i.SenderId,
                     SenderName = _context.Users
                         .Where(u => u.Id == i.SenderId)
                         .Select(u => u.Name)
                         .FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverId = i.ReceiverId,
                     ReceiverName = _context.Users
                         .Where(u => u.Id == i.ReceiverId)
                         .Select(u => u.Name)
@@ -221,7 +224,12 @@ namespace SFCDashboard.Controllers
                     AttachmentPath = i.AttachmentPath,
                     CreatedAt = i.CreatedAt,
                     PlannedEventId = i.PlannedEventId,
-                    IsRead = i.IsRead
+                    IsRead = i.IsRead,
+                    IsReply = i.IsReply,
+                    OriginalIssueId = i.OriginalIssueId,
+                    IsResolved = i.IsResolved,
+                    IsResolutionRequest = i.IsResolutionRequest,
+                    PETaskId = i.PETaskId
                 })
                 .ToListAsync();
 
@@ -323,7 +331,10 @@ namespace SFCDashboard.Controllers
     .OrderByDescending(i => i.CreatedAt)
     .Select(i => new PEIssueViewModel
     {
+        Id = i.Id, // Make sure to include this
+        SenderId = i.SenderId,
         SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Sender",
+        ReceiverId = i.ReceiverId,
         ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Receiver",
         IssueText = i.IssueText,
         AttachmentPath = i.AttachmentPath,
@@ -454,7 +465,7 @@ namespace SFCDashboard.Controllers
             {
                 // Base query
                 var query = _context.PlannedEvents
-                    .Where(p => p.PEStatus == "ongoing")
+                    .Where(p => p.PEStatus == "ongoing"&& p.IsHold == false)
                     .AsNoTracking();
 
                 // Apply workgroup filter
@@ -571,7 +582,8 @@ namespace SFCDashboard.Controllers
                 ViewData["SelectedWorkgroupId"] = workgroupId;
                 ViewData["CanViewAll"] = canViewAll;
 
-                var query = _context.PlannedEvents.Where(p => p.PEStatus.ToLower() == "Hold");
+                // Use IsHold instead of checking PEStatus
+                var query = _context.PlannedEvents.Where(p => p.IsHold == true);
 
                 // Apply workgroup filter if selected
                 if (workgroupId.HasValue)
@@ -606,7 +618,7 @@ namespace SFCDashboard.Controllers
                 ViewData["Workgroups"] = workgroups;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
-                var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent");
+                var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent"&&p.IsHold == false);
 
                 // Apply workgroup filter if selected
                 if (workgroupId.HasValue)
@@ -961,7 +973,10 @@ namespace SFCDashboard.Controllers
         .OrderByDescending(i => i.CreatedAt)
         .Select(i => new PEIssueViewModel
         {
+            Id = i.Id, // Make sure to include this
+            SenderId = i.SenderId,
             SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Sender",
+            ReceiverId = i.ReceiverId,
             ReceiverName = _context.Users.Where(u => u.Id == i.ReceiverId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Receiver",
             IssueText = i.IssueText,
             AttachmentPath = i.AttachmentPath ?? string.Empty,
@@ -970,17 +985,20 @@ namespace SFCDashboard.Controllers
         })
         .ToListAsync();
 
-            var peReportedIssuesByPeId = allIssues
-                .GroupBy(i => i.PlannedEventId)
-                .ToDictionary(g => g.Key, g => (IEnumerable<PEIssueViewModel>)g.ToList());
-            ViewBag.PEReportedIssuesByPeId = peReportedIssuesByPeId;
-            // --- End PEReportedIssuesByPeId block ---
+    var issueIds = allIssues.Select(i => i.OriginalIssueId ?? i.Id).Distinct().ToList();
+    var resolutions = await _context.PEIssueResolutions
+        .Where(r => issueIds.Contains(r.IssueId))
+        .ToListAsync();
+
+    ViewBag.ResolutionsByIssueId = resolutions.ToDictionary(r => r.IssueId);
 
             ViewData["SearchType"] = searchType;
             ViewData["PENumberFilter"] = peNumber;
             ViewData["CustomerFilter"] = customer;
             ViewData["JobReferenceFilter"] = jobReference;
             ViewData["SONumberFilter"] = soNumber;
+
+
 
             return View(result);
         }
@@ -990,7 +1008,7 @@ namespace SFCDashboard.Controllers
             _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
                 workgroupId?.ToString() ?? "ALL");
 
-            var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent");
+            var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent"&&p.IsHold == false);
 
             if (workgroupId.HasValue)
             {
@@ -1044,7 +1062,8 @@ namespace SFCDashboard.Controllers
             _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
                 workgroupId?.ToString() ?? "ALL");
 
-            var query = _context.PlannedEvents.Where(p => p.PEStatus == "hold");
+            // Use IsHold flag instead of just checking PEStatus
+            var query = _context.PlannedEvents.Where(p => p.IsHold == true);
 
             if (workgroupId.HasValue)
             {
@@ -1069,7 +1088,7 @@ namespace SFCDashboard.Controllers
             _logger.LogInformation("Getting in-progress count for workgroup: {workgroupId}",
                 workgroupId?.ToString() ?? "ALL");
 
-            var query = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing");
+            var query = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing"&&p.IsHold == false);
 
             if (workgroupId.HasValue)
             {
@@ -1088,7 +1107,28 @@ namespace SFCDashboard.Controllers
             return count;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetBasicDetails(int id)
+        {
+            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+            if (plannedEvent == null)
+            {
+                return NotFound();
+            }
 
+            // Return basic details as JSON
+            var details = new
+            {
+                peNumber = plannedEvent.PeNumber,
+                customer = plannedEvent.Customer,
+                peStatus = plannedEvent.PEStatus,
+                serviceType = plannedEvent.ServiceType,
+                taskName = plannedEvent.TaskName,
+                taskWg = plannedEvent.TaskWg
+            };
+
+            return Json(details);
+        }
     }
     
     
