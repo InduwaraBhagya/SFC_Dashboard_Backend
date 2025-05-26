@@ -13,9 +13,6 @@ namespace SFCDashboard.Models
         public int IssueId { get; set; }
         
         [Required]
-        public int PlannedEventId { get; set; }
-        
-        [Required]
         public string ResolutionDetails { get; set; }
         
         [Required]
@@ -27,6 +24,9 @@ namespace SFCDashboard.Models
         public DateTime ConfirmationRequestedDate { get; set; }
         
         public DateTime? ConfirmedDate { get; set; }
+        
+        [Required]
+        public int PlannedEventId { get; set; }
         
         [ForeignKey("IssueId")]
         public virtual PEIssue Issue { get; set; }

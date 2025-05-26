@@ -112,10 +112,6 @@ namespace SFCDashboard.Controllers
                 _ => peNumber
             };
 
-            
-
-    
-
             var currentDate = DateTime.Today;
             var olaViolationQuery = _context.PETasks
                 .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate);
@@ -171,17 +167,6 @@ namespace SFCDashboard.Controllers
                 .ToList();
 
             ViewData["TopOLAViolations"] = topViolations;
-
-            //int currentUserId = int.Parse(User.FindFirst("UserId").Value); // Adjust as needed
-
-            //var inboxIssues = _context.PEIssues
-            //    .Where(i => i.ReceiverId == currentUserId)
-            //    .OrderByDescending(i => i.CreatedAt)
-            //    .ToList();
-
-            //ViewData["InboxIssues"] = inboxIssues;
-
-
 
             // Pending urgent requests (same as before)
             var pendingUrgentRequests = await _context.PlannedEvents
@@ -239,35 +224,78 @@ namespace SFCDashboard.Controllers
             ViewData["InboxIssues"] = inboxIssues;
             ViewData["TotalMessages"] = inboxIssues.Count;
             ViewData["UnreadMessages"] = unreadCount;
+    
+            if (inboxIssues != null)
+            {
+                foreach (var issue in inboxIssues)
+                {
+                    if (issue.IsResolutionRequest)
+                    {
+                        var resolution = await _context.PEIssueResolutions
+                            .FirstOrDefaultAsync(r => r.IssueId == (issue.OriginalIssueId ?? issue.Id) && !r.IsConfirmed);
+                        
+                        issue.ResolutionDetails = resolution?.ResolutionDetails;
+                        issue.ResolutionId = resolution?.Id;
+                    }
+                }
+            }
+    
+            ViewBag.InboxIssues = inboxIssues;
 
+            // Create a lookup dictionary for resolutions
+            if (inboxIssues != null && inboxIssues.Any())
+            {
+                Dictionary<int, PEIssueResolution> resolutionsByIssueId = new Dictionary<int, PEIssueResolution>();
+                
+                // Get all issue IDs that need resolution details
+                var issueIds = inboxIssues
+                    .Where(i => i.IsResolutionRequest)
+                    .Select(i => i.OriginalIssueId ?? i.Id)
+                    .ToList();
+                
+                if (issueIds.Any())
+                {
+                    // Fetch all resolutions in one query
+                    var resolutions = await _context.PEIssueResolutions
+                        .Where(r => issueIds.Contains(r.IssueId) && !r.IsConfirmed)
+                        .ToListAsync();
+                        
+                    foreach (var resolution in resolutions)
+                    {
+                        resolutionsByIssueId[resolution.IssueId] = resolution;
+                    }
+                }
+                
+                // Add to ViewBag for use in the view
+                ViewBag.ResolutionsByIssueId = resolutionsByIssueId;
+            }
 
             // Apply search filters based on type
             if (!string.IsNullOrEmpty(searchString))
             {
                 switch (searchType)
                 {
-            case "customer":
-                if (!string.IsNullOrEmpty(customer))
-                    query = query.Where(p => p.Customer != null && 
-                        EF.Functions.Like(p.Customer, $"%{customer}%"));
-                break;
-            case "jobReference":
-                if (!string.IsNullOrEmpty(jobReference))
-                    query = query.Where(p => p.JobReference != null && 
-                        EF.Functions.Like(p.JobReference, $"%{jobReference}%"));
-                break;
-            case "soNumber":
-                if (!string.IsNullOrEmpty(soNumber))
-                    query = query.Where(p => p.SoNumber != null && 
-                        EF.Functions.Like(p.SoNumber, $"%{soNumber}%"));
-                break;
-            default: // peNumber
-                if (!string.IsNullOrEmpty(peNumber))
-                    query = query.Where(p => p.PeNumber != null && 
-                        EF.Functions.Like(p.PeNumber, $"%{peNumber}%"));
-                break;
-        }
-        
+                    case "customer":
+                        if (!string.IsNullOrEmpty(customer))
+                            query = query.Where(p => p.Customer != null && 
+                                EF.Functions.Like(p.Customer, $"%{customer}%"));
+                        break;
+                    case "jobReference":
+                        if (!string.IsNullOrEmpty(jobReference))
+                            query = query.Where(p => p.JobReference != null && 
+                                EF.Functions.Like(p.JobReference, $"%{jobReference}%"));
+                        break;
+                    case "soNumber":
+                        if (!string.IsNullOrEmpty(soNumber))
+                            query = query.Where(p => p.SoNumber != null && 
+                                EF.Functions.Like(p.SoNumber, $"%{soNumber}%"));
+                        break;
+                    default: // peNumber
+                        if (!string.IsNullOrEmpty(peNumber))
+                            query = query.Where(p => p.PeNumber != null && 
+                                EF.Functions.Like(p.PeNumber, $"%{peNumber}%"));
+                        break;
+                }
 
                 if (workgroupId.HasValue)
                 {

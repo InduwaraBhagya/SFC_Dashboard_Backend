@@ -959,7 +959,7 @@
                 $('#resolveIssueBtn').addClass('d-none');
                 
                 // Check if there's a resolution record for this issue
-                $.get(`/PEIssues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
+                $.get(`/Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
                     if (resolution && resolution.id) {
                         // Show resolution confirmation section
                         $('#resolutionConfirmationSection').removeClass('d-none');
@@ -1120,7 +1120,7 @@
                 $('#resolveIssueBtn').addClass('d-none');
                 
                 // Check if there's a resolution record for this issue
-                $.get(`/PEIssues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
+                $.get(`/Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
                     if (resolution && resolution.id) {
                         // Show resolution confirmation section
                         $('#resolutionConfirmationSection').removeClass('d-none');
@@ -1152,61 +1152,141 @@
         }
 
         // Update the showResolutionConfirm function
-        function showResolutionConfirm(element) {
-            const resolutionId = $(element).data('resolution-id');
-            const resolutionDetails = $(element).data('resolution-details');
-            const peId = $(element).data('pe-id'); // Get the PE ID
-            
-            $('#directResolutionId').val(resolutionId);
-            
-            // Check if there are resolution details before displaying them
-            if (resolutionDetails && resolutionDetails.trim() !== "") {
-                $('#resolutionDetailsText').text(resolutionDetails);
-            } else {
-                // If no resolution details are available, fetch them from the server
-                fetch(`/PEIssues/GetResolution/${$(element).data('original-issue-id') || $(element).data('issue-id')}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data && data.details) {
-                            $('#resolutionDetailsText').text(data.details);
-                        } else {
-                            $('#resolutionDetailsText').html('<em>No details provided</em>');
-                        }
-                    })
-                    .catch(err => {
-                        $('#resolutionDetailsText').html('<em>Could not load resolution details</em>');
-                        console.error('Error loading resolution details:', err);
-                    });
-            }
-            
-            // Add a View Details button to the modal
-            $('#viewPEDetailsLink').attr('href', `/PlannedEvents/Details/${peId}`);
-            $('#viewPEDetailsLink').removeClass('d-none');
-            
-            const modal = new bootstrap.Modal(document.getElementById('resolutionConfirmModal'));
-            modal.show();
-            
-            // Mark the message as read
-            const issueId = $(element).data('issue-id');
-            if (issueId) {
-                markIssueAsRead(issueId);
-                $(element).removeClass('unread');
-                $(element).data('is-read', 'true');
-                updateUnreadCount();
-            }
+function showResolutionConfirm(element) {
+    const resolutionId = $(element).data('resolution-id');
+    const resolutionDetails = $(element).data('resolution-details');
+    const peId = $(element).data('pe-id');
+    const issueId = $(element).data('issue-id');
+    
+    console.log('Resolution data:', {
+        resolutionId,
+        resolutionDetails,
+        peId,
+        issueId
+    });
+    
+    // Always clear previous values and content
+    $('#directResolutionId').val('');
+    $('#resolutionDetailsText').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ms-2">Loading resolution details...</span>');
+    
+    // Check if we have the resolution ID from the data attribute
+    if (resolutionId && resolutionId !== '0') {
+        $('#directResolutionId').val(resolutionId);
+        
+        // If we also have the details from the attribute, use them directly
+        if (resolutionDetails && resolutionDetails.trim() !== '') {
+            $('#resolutionDetailsText').text(resolutionDetails);
+        } else {
+            // Otherwise fetch the details for this resolution
+            fetchResolutionDetails(resolutionId);
         }
+    } else {
+        // If no resolution ID from data attribute, query by issue ID
+        fetchResolutionByIssueId(issueId);
+    }
+    
+    // Set up other modal elements
+    $('#viewPEDetailsLink').attr('href', `/PlannedEvents/Details/${peId}`);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('resolutionConfirmModal'));
+    modal.show();
+    
+    // Mark as read
+    if (issueId) {
+        markIssueAsRead(issueId);
+        $(element).removeClass('unread');
+        $(element).data('is-read', 'true');
+        updateUnreadCount();
+    }
+}
+
+// Helper function to fetch resolution by ID
+function fetchResolutionDetails(resolutionId) {
+    fetch(`/Issues/GetResolutionById/${resolutionId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.details) {
+                $('#resolutionDetailsText').text(data.details);
+            } else {
+                $('#resolutionDetailsText').html('<em>No resolution details available</em>');
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching resolution details:', err);
+            $('#resolutionDetailsText').html('<em class="text-danger">Could not load resolution details. Please try again later.</em>');
+        });
+}
+
+// Helper function to fetch resolution by issue ID
+function fetchResolutionByIssueId(issueId) {
+    fetch(`/Issues/GetResolution/${issueId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.id) {
+                $('#directResolutionId').val(data.id);
+                $('#resolutionDetailsText').text(data.details || 'No details provided');
+            } else {
+                $('#resolutionDetailsText').html('<em>No resolution found for this issue</em>');
+                // Hide the buttons if no resolution is found
+                $('#confirmResolutionForm button').hide();
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching resolution:', err);
+            $('#resolutionDetailsText').html('<em class="text-danger">Could not load resolution details. Please try again later.</em>');
+        });
+}
 
         // Helper function to submit resolution confirmation
-        function submitResolutionForm(isConfirmed) {
-            // Set the hidden field value based on the button clicked
-            $('#directIsConfirmed').val(isConfirmed);
-            
-            // Log the resolution ID to check its value
-            console.log('Resolution ID:', $('#directResolutionId').val());
-            
-            // Submit the form directly without AJAX to ensure proper redirect
-            document.getElementById('directResolutionId').closest('form').submit();
-        }
+function submitResolutionForm(isConfirmed) {
+    // Set the hidden field value based on the button clicked
+    $('#directIsConfirmed').val(isConfirmed);
+    
+    // Get the resolution ID and validate it
+    const resolutionId = $('#directResolutionId').val();
+    console.log('Submitting form with Resolution ID:', resolutionId);
+    console.log('Is Confirmed:', isConfirmed);
+    
+    if (!resolutionId || resolutionId === '0') {
+        alert('Error: No resolution ID found. Please refresh the page and try again.');
+        return;
+    }
+    
+    // Disable buttons to prevent double submission
+    const buttons = $('#confirmResolutionForm button');
+    buttons.prop('disabled', true);
+    
+    // Add a spinner to the button that was clicked
+    const clickedButton = isConfirmed ? 
+        $('#confirmResolutionForm button:contains("Yes")') : 
+        $('#confirmResolutionForm button:contains("No")');
+    
+    const originalButtonHtml = clickedButton.html();
+    clickedButton.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+    
+    // Submit the form
+    try {
+        document.getElementById('confirmResolutionForm').submit();
+    } catch (err) {
+        console.error('Error submitting form:', err);
+        alert('Error submitting form. Please try again.');
+        
+        // Re-enable buttons on error
+        buttons.prop('disabled', false);
+        clickedButton.html(originalButtonHtml);
+    }
+}
 
         // Add these handlers when the document is ready
         $(document).ready(function() {
@@ -1338,7 +1418,7 @@
         // Add this function to mark issues as read
         function markIssueAsRead(issueId) {
             // Call API to mark issue as read
-            fetch(`/PEIssues/MarkAsRead/${issueId}`, {
+            fetch(`/Issues/MarkAsRead/${issueId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1421,7 +1501,7 @@
                         <i class="fas fa-question-circle me-2"></i>
                         <strong>Resolution Request:</strong> Has this issue been resolved?
                     </div>
-<form id="confirmResolutionFormModal1" method="post" asp-controller="PEIssues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
+<form id="confirmResolutionFormModal1" method="post" asp-controller="Issues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
     <!-- No hidden isConfirmed field here, it's added dynamically -->
     <div class="d-flex justify-content-end">
         <button type="button" class="btn btn-outline-danger me-2" id="rejectResolutionBtn">
@@ -1477,7 +1557,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-    <form id="confirmResolutionForm" method="post" asp-controller="PEIssues" asp-action="ConfirmResolution">
+    <form id="confirmResolutionForm" method="post" asp-controller="Issues" asp-action="ConfirmResolution">
         @Html.AntiForgeryToken()
 
         <input type="hidden" id="directResolutionId" name="resolutionId" />
@@ -1507,7 +1587,7 @@
                 <h5 class="modal-title" id="issueReplyModalLabel">Reply to Issue</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="PEIssues" asp-action="Reply">
+            <form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
                 <div class="modal-body">
                     <input type="hidden" id="replyIssueId" name="IssueId" />
                     <input type="hidden" id="replyPlannedEventId" name="PlannedEventId" />
@@ -1540,7 +1620,7 @@
                 <h5 class="modal-title" id="issueResolveModalLabel">Mark Issue as Fixed</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="issueResolveForm" method="post" asp-controller="PEIssues" asp-action="MarkAsFixed">
+            <form id="issueResolveForm" method="post" asp-controller="Issues" asp-action="MarkAsFixed">
                 <div class="modal-body">
                     <input type="hidden" id="resolveIssueId" name="IssueId" />
                     <input type="hidden" id="resolvePlannedEventId" name="PlannedEventId" />

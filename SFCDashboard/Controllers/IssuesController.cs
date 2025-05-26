@@ -7,7 +7,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Logging;
@@ -26,6 +25,8 @@ namespace SFCDashboard.Controllers
             _env = env;
             _logger = logger;
         }
+
+        #region General Issue Management
 
         // GET: Issues
         public async Task<IActionResult> Index()
@@ -52,7 +53,7 @@ namespace SFCDashboard.Controllers
             return View();
         }
 
-        // GET: Issues/Create
+        // GET: Issues/Create - General issue creation form
         public async Task<IActionResult> Create()
         {
             var users = await _context.Users
@@ -62,7 +63,7 @@ namespace SFCDashboard.Controllers
             return View(new IssueCreateViewModel());
         }
 
-        // POST: Issues/Create
+        // POST: Issues/Create - General issue creation
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(IssueCreateViewModel model)
@@ -153,7 +154,7 @@ namespace SFCDashboard.Controllers
                 .Where(i => i.ReceiverId == currentUser.Id)
                 .Select(i => new PEIssueViewModel
                 {
-                    Id = i.Id, // Include Id here
+                    Id = i.Id,
                     SenderId = i.SenderId,
                     SenderName = _context.Users
                         .Where(u => u.Id == i.SenderId)
@@ -188,7 +189,7 @@ namespace SFCDashboard.Controllers
                 .Where(i => i.SenderId == currentUser.Id)
                 .Select(i => new PEIssueViewModel
                 {
-                    Id = i.Id, // Include Id here
+                    Id = i.Id,
                     SenderId = currentUser.Id,
                     SenderName = currentUser.Name,
                     ReceiverId = i.ReceiverId,
@@ -233,8 +234,10 @@ namespace SFCDashboard.Controllers
                 SenderId = currentUserId,                   // Current user is the sender
                 ReceiverId = originalIssue.SenderId,        // Original sender becomes the receiver
                 PlannedEventId = originalIssue.PlannedEventId,
+                PETaskId = originalIssue.PETaskId,
                 IssueText = replyText,
                 CreatedAt = DateTime.Now,
+                IsRead = false,
                 IsReply = true,
                 OriginalIssueId = issueId                   // Link to the original issue
             };
@@ -245,45 +248,426 @@ namespace SFCDashboard.Controllers
             return RedirectToAction("Details", "PlannedEvents", new { id = originalIssue.PlannedEventId });
         }
 
-        // Utility: Get current user from context
+        #endregion
+
+        #region PE-Specific Issue Management
+
+        // GET: Issues/CreateForPE - New Create action for PE Issues 
+        public IActionResult CreateForPE(int plannedEventId, int? taskId = null)
+        {
+            var model = new PEIssue
+            {
+                PlannedEventId = plannedEventId,
+                PETaskId = taskId ?? 0
+            };
+            
+            return View(model);
+        }
+        
+        // POST: Issues/CreateForPE - PE-specific issue creation
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateForPE(PEIssue model, IFormFile Attachment)
+        {
+            if (ModelState.IsValid)
+            {
+                string uploads = Path.Combine(_env.WebRootPath, "uploads", "issues", model.PlannedEventId.ToString());
+                if (Attachment != null && Attachment.Length > 0)
+                {
+                    Directory.CreateDirectory(uploads);
+                    var filePath = Path.Combine(uploads, Attachment.FileName);
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await Attachment.CopyToAsync(stream);
+                    }
+                    model.AttachmentPath = $"/uploads/issues/{model.PlannedEventId}/{Attachment.FileName}";
+                }
+
+                // Set sender (current user)
+                model.CreatedAt = DateTime.Now;
+                
+                // Set current user as sender
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser != null)
+                {
+                    model.SenderId = currentUser.Id;
+                }
+                
+                _context.PEIssues.Add(model);
+                
+                // Change IsHold flag instead of directly changing status
+                var pe = await _context.PlannedEvents.FindAsync(model.PlannedEventId);
+                if (pe != null)
+                {
+                    pe.IsHold = true;
+                    _context.Update(pe);
+                }
+
+                await _context.SaveChangesAsync();
+                
+                // Redirect or return success
+                return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
+            }
+            
+            // If invalid, return to details
+            return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
+        }
+
+        // For AJAX: Get issue suggestions for a PE/tasklist
+        [HttpGet]
+        public IActionResult GetIssueSuggestions(int peId, int taskListId)
+        {
+            var issues = _context.PEIssues
+                .Where(i => i.PlannedEventId == peId && i.PETaskId == taskListId)
+                .Select(i => new { text = i.IssueText })
+                .Distinct()
+                .ToList();
+            return Json(issues);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkAsRead(int id)
+        {
+            try
+            {
+                var issue = await _context.PEIssues.FindAsync(id);
+                if (issue == null)
+                {
+                    return NotFound();
+                }
+
+                // Mark as read
+                if (!issue.IsRead)
+                {
+                    issue.IsRead = true;
+                    _context.Update(issue);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Reply(int issueId, int plannedEventId, int senderId, int receiverId, 
+            string replyText, IFormFile attachment)
+        {
+            try
+            {
+                var reply = new PEIssue
+                {
+                    PlannedEventId = plannedEventId,
+                    PETaskId = (await _context.PEIssues.FindAsync(issueId))?.PETaskId ?? 0,
+                    SenderId = senderId,
+                    ReceiverId = receiverId,
+                    IssueText = replyText,
+                    CreatedAt = DateTime.Now,
+                    IsRead = false,
+                    IsReply = true,
+                    OriginalIssueId = issueId
+                };
+
+                if (attachment != null && attachment.Length > 0)
+                {
+                    var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "issues", plannedEventId.ToString());
+                    Directory.CreateDirectory(uploadsFolder);
+                    
+                    var uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(attachment.FileName)}";
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await attachment.CopyToAsync(stream);
+                    }
+                    
+                    reply.AttachmentPath = $"/uploads/issues/{plannedEventId}/{uniqueFileName}";
+                }
+
+                _context.PEIssues.Add(reply);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Reply sent successfully.";
+                return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error sending reply: {ex.Message}";
+                return RedirectToAction("Index", "PlannedEvents");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkAsFixed(int issueId, int plannedEventId, string resolutionDetails)
+        {
+            try
+            {
+                // Log the request for debugging
+                _logger.LogInformation("MarkAsFixed called with issueId: {IssueId}, PE: {PlannedEventId}, details: {Details}", 
+                    issueId, plannedEventId, resolutionDetails);
+                    
+                var issue = await _context.PEIssues.FindAsync(issueId);
+                if (issue == null)
+                {
+                    TempData["ErrorMessage"] = "Issue not found.";
+                    return RedirectToAction("Index", "PlannedEvents");
+                }
+
+                // Create a resolution confirmation request
+                var resolutionRequest = new PEIssueResolution
+                {
+                    IssueId = issueId,
+                    ResolutionDetails = resolutionDetails,
+                    ResolutionDate = DateTime.Now,
+                    IsConfirmed = false,
+                    ConfirmationRequestedDate = DateTime.Now,
+                    PlannedEventId = plannedEventId
+                };
+
+                _context.PEIssueResolutions.Add(resolutionRequest);
+
+                // Send a notification to the original reporter
+                var notification = new PEIssue
+                {
+                    PlannedEventId = plannedEventId,
+                    PETaskId = issue.PETaskId,
+                    SenderId = issue.ReceiverId, // Current user who fixed it
+                    ReceiverId = issue.SenderId, // Original reporter
+                    IssueText = $"RESOLUTION REQUEST: {resolutionDetails}",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false,
+                    IsReply = true,
+                    OriginalIssueId = issueId,
+                    IsResolutionRequest = true
+                };
+
+                _context.PEIssues.Add(notification);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Issue marked as fixed. A confirmation request has been sent to the reporter.";
+                
+                // Return to the PE details page or index based on where the request came from
+                if (Request.Headers["Referer"].ToString().Contains("Details"))
+                {
+                    return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
+                }
+                
+                return RedirectToAction("Index", "PlannedEvents");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking issue as fixed: {Message}", ex.Message);
+                TempData["ErrorMessage"] = $"Error marking issue as fixed: {ex.Message}";
+                return RedirectToAction("Index", "PlannedEvents");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmResolution(int resolutionId, bool isConfirmed)
+        {
+            _logger.LogWarning($"ConfirmResolution called with resolutionId: {resolutionId}, isConfirmed: {isConfirmed}");
+            
+            try
+            {
+                var resolution = await _context.PEIssueResolutions.FindAsync(resolutionId);
+                if (resolution == null)
+                {
+                    _logger.LogWarning($"Resolution not found for id: {resolutionId}");
+                    TempData["ErrorMessage"] = "Resolution not found.";
+                    return RedirectToAction("Index", "PlannedEvents");
+                }
+
+                var issue = await _context.PEIssues.FindAsync(resolution.IssueId);
+                if (issue == null)
+                {
+                    _logger.LogWarning($"Issue not found for resolution id: {resolutionId}");
+                    TempData["ErrorMessage"] = "Issue not found.";
+                    return RedirectToAction("Index", "PlannedEvents");
+                }
+
+                var pe = await _context.PlannedEvents.FindAsync(resolution.PlannedEventId);
+
+                if (isConfirmed)
+                {
+                                resolution.IsConfirmed = true;
+            resolution.ConfirmedDate = DateTime.Now;
+            _context.Update(resolution);
+            
+            // Update issue
+            var issueResolution = resolution.Issue;
+            if (issueResolution != null)
+            {
+                issueResolution.IsResolved = true;
+                _context.Update(issueResolution);
+                _logger.LogInformation($"Issue {issue.Id} marked as resolved");
+            }
+            
+            // Update planned event
+             pe = resolution.PlannedEvent;
+                    if (pe != null)
+                    {
+                        // Check if all issues are now resolved before removing hold status
+                        var hasOtherActiveIssues = await _context.PEIssues
+                            .AnyAsync(i => i.PlannedEventId == pe.Id && !i.IsResolved && i.OriginalIssueId == null);
+
+                        if (!hasOtherActiveIssues)
+                        {
+                            pe.IsHold = false;
+                            _context.Update(pe);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"PE not found for resolution id: {resolutionId}");
+                    }
+                    
+                    if (issue != null)
+                    {
+                        issue.IsResolved = true;
+                        _context.Update(issue);
+                    }
+
+                    resolution.IsConfirmed = true;
+                    
+                    // Check which property exists for confirmation date in your model
+                    if (resolution.GetType().GetProperty("ConfirmedDate") != null)
+                    {
+                        resolution.ConfirmedDate = DateTime.Now;
+                    }
+                    
+                    _context.Update(resolution);
+                    await _context.SaveChangesAsync();
+                    
+                    TempData["SuccessMessage"] = "Resolution confirmed and issue marked as resolved.";
+                }
+                else
+                {
+                    // If rejected, delete the resolution request and create a notification
+                    _context.Remove(resolution);
+                    
+                    // Notify the user who attempted to fix the issue
+                    var notification = new PEIssue
+                    {
+                        PlannedEventId = resolution.PlannedEventId,
+                        PETaskId = issue.PETaskId,
+                        SenderId = issue.SenderId, // Original reporter
+                        ReceiverId = issue.ReceiverId, // User who tried to fix it
+                        IssueText = $"RESOLUTION REJECTED: The fix was not accepted. Please try again.",
+                        CreatedAt = DateTime.Now,
+                        IsRead = false,
+                        IsReply = true,
+                        OriginalIssueId = issue.Id
+                    };
+                    
+                    _context.PEIssues.Add(notification);
+                    await _context.SaveChangesAsync();
+                    
+                    TempData["SuccessMessage"] = "Resolution rejected. The responder has been notified.";
+                }
+
+                return RedirectToAction("Details", "PlannedEvents", new { id = resolution.PlannedEventId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ConfirmResolution");
+                TempData["ErrorMessage"] = $"Error processing resolution: {ex.Message}";
+                return RedirectToAction("Index", "PlannedEvents");
+            }
+        }
+
+        [HttpGet]
+public async Task<IActionResult> GetResolution(int id)
+{
+    try
+    {
+        // Try by direct ID first
+        var resolution = await _context.PEIssueResolutions
+            .FirstOrDefaultAsync(r => r.Id == id && !r.IsConfirmed);
+        
+        // If not found, try by issue ID
+        if (resolution == null)
+        {
+            resolution = await _context.PEIssueResolutions
+                .FirstOrDefaultAsync(r => r.IssueId == id && !r.IsConfirmed);
+        }
+        
+        if (resolution == null)
+        {
+            _logger.LogWarning($"Resolution not found for ID or IssueID: {id}");
+            return NotFound(new { error = "No resolution found for this issue" });
+        }
+        
+        _logger.LogInformation($"Resolution found: ID={resolution.Id}, IssueID={resolution.IssueId}, Details={resolution.ResolutionDetails}");
+        
+        return Json(new { 
+            id = resolution.Id,
+            issueId = resolution.IssueId,
+            details = resolution.ResolutionDetails,
+            date = resolution.ResolutionDate
+        });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error retrieving resolution for ID: {id}");
+        return StatusCode(500, new { error = "An error occurred while retrieving the resolution" });
+    }
+}
+
+        [HttpGet]
+public async Task<IActionResult> GetResolutionById(int id)
+{
+    try
+    {
+        var resolution = await _context.PEIssueResolutions.FindAsync(id);
+        
+        if (resolution == null)
+        {
+            _logger.LogWarning($"Resolution not found for ID: {id}");
+            return NotFound(new { error = "Resolution not found" });
+        }
+        
+        return Json(new { 
+            id = resolution.Id,
+            issueId = resolution.IssueId,
+            details = resolution.ResolutionDetails,
+            date = resolution.ResolutionDate
+        });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error retrieving resolution for ID: {id}");
+        return StatusCode(500, new { error = "An error occurred while retrieving the resolution" });
+    }
+}
+
+        #endregion
+
+        #region Helper Methods
+
         private async Task<SystemUser?> GetCurrentUserAsync()
         {
-            var serviceId = User.Identity?.Name;
-            if (string.IsNullOrEmpty(serviceId))
-                return null;
-
-            // Extract the first 6 characters of the service ID
-            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-
-            var user = await _context.Users
-                .Include(u => u.WorkGroup) // Include WorkGroup if needed
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
-
-            if (user == null)
+            if (!User.Identity?.IsAuthenticated == true)
             {
-                // Log the failed attempt to find user
-                _logger.LogWarning("User not found for ServiceId: {ServiceId}", serviceIdShort);
                 return null;
             }
 
-            // Log successful user lookup
-            _logger.LogInformation("Found user: {UserId} - {UserName} ({ServiceId})", 
-                user.Id, user.Name, user.ServiceId);
+            var email = User.Identity?.Name;
+            if (string.IsNullOrEmpty(email))
+            {
+                return null;
+            }
 
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
             return user;
         }
 
         private async Task<int> GetCurrentUserIdAsync()
         {
-            var serviceId = User.Identity?.Name;
-            if (string.IsNullOrEmpty(serviceId))
-                return 0;
-
-            // Extract the substring before the query
-            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
+            var user = await GetCurrentUserAsync();
             return user?.Id ?? 0;
         }
 
@@ -294,6 +678,17 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
             ViewBag.Users = users;
         }
+
+        private string ExtractServiceId(string email)
+        {
+            // Extract service ID from email (whatever logic you're using)
+            if (string.IsNullOrEmpty(email)) return string.Empty;
+            
+            // Assuming email format is name@domain.com or serviceId@domain.com
+            return email.Split('@').FirstOrDefault() ?? string.Empty;
+        }
+
+        #endregion
     }
 
     public class IssueCreateViewModel
@@ -316,5 +711,4 @@ namespace SFCDashboard.Controllers
         [FileExtensions(Extensions = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png")]
         public IFormFile? Attachment { get; set; }
     }
-
 }

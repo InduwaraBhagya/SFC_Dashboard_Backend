@@ -482,7 +482,7 @@
 <div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="PEIssues" asp-action="Create">
+            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="CreateForPE">
                 <div class="modal-header">
                     <h5 class="modal-title" id="reportIssueModalLabel">Report Issue</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -698,7 +698,7 @@
                 var taskListId = $(this).val();
                 $('#issueSuggestions').empty();
                 if (taskListId) {
-                    $.get('/PEIssues/GetIssueSuggestions', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
+                    $.get('/Issues/GetIssueSuggestions', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
                         issues.forEach(function (issue) {
                             $('#issueSuggestions').append($('<option>', { value: issue.text }));
                         });
