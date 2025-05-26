@@ -353,16 +353,25 @@ namespace SFCDashboard.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Reply(int issueId, int plannedEventId, int senderId, int receiverId, 
+        public async Task<IActionResult> Reply(int issueId, int plannedEventId, int receiverId, 
             string replyText, IFormFile attachment)
         {
             try
             {
+                // Get the current user ID for the sender
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    TempData["ErrorMessage"] = "Unable to determine current user.";
+                    return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
+                }
+                
+                // Create the reply with the current user as the sender
                 var reply = new PEIssue
                 {
                     PlannedEventId = plannedEventId,
                     PETaskId = (await _context.PEIssues.FindAsync(issueId))?.PETaskId ?? 0,
-                    SenderId = senderId,
+                    SenderId = currentUser.Id, // Use the current user's ID
                     ReceiverId = receiverId,
                     IssueText = replyText,
                     CreatedAt = DateTime.Now,
@@ -371,6 +380,7 @@ namespace SFCDashboard.Controllers
                     OriginalIssueId = issueId
                 };
 
+                // Handle attachment if provided
                 if (attachment != null && attachment.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "issues", plannedEventId.ToString());
@@ -395,8 +405,9 @@ namespace SFCDashboard.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error sending reply: {Message}", ex.Message);
                 TempData["ErrorMessage"] = $"Error sending reply: {ex.Message}";
-                return RedirectToAction("Index", "PlannedEvents");
+                return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
             }
         }
 

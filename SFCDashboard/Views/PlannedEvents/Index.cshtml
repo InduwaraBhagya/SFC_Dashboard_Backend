@@ -1302,7 +1302,7 @@ function submitResolutionForm(isConfirmed) {
                 // Set values for the reply form
                 $('#replyIssueId').val(originalIssueId);
                 $('#replyPlannedEventId').val(peId);
-                $('#replySenderId').val(getCurrentUserId());
+               // $('#replySenderId').val(getCurrentUserId());
                 $('#replyReceiverId').val(senderId);
                 
                 // Hide the details modal and show the reply modal
@@ -1587,27 +1587,26 @@ function submitResolutionForm(isConfirmed) {
                 <h5 class="modal-title" id="issueReplyModalLabel">Reply to Issue</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
-                <div class="modal-body">
-                    <input type="hidden" id="replyIssueId" name="IssueId" />
-                    <input type="hidden" id="replyPlannedEventId" name="PlannedEventId" />
-                    <input type="hidden" id="replySenderId" name="SenderId" />
-                    <input type="hidden" id="replyReceiverId" name="ReceiverId" />
-                    
-                    <div class="mb-3">
-                        <label for="replyText" class="form-label">Reply</label>
-                        <textarea class="form-control" id="replyText" name="ReplyText" rows="4" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
-                        <input type="file" class="form-control" id="replyAttachment" name="Attachment" />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Send Reply</button>
-                </div>
-            </form>
+<form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
+    <div class="modal-body">
+        <input type="hidden" id="replyIssueId" name="issueId" />
+        <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
+        <input type="hidden" id="replyReceiverId" name="receiverId" />
+        
+        <div class="mb-3">
+            <label for="replyText" class="form-label">Reply</label>
+            <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
+            <input type="file" class="form-control" id="replyAttachment" name="attachment" />
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Send Reply</button>
+    </div>
+</form>
         </div>
     </div>
 </div>
