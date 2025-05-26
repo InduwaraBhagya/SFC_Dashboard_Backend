@@ -213,6 +213,38 @@ namespace SFCDashboard.Controllers
             return View(issues);
         }
 
+        // POST: Issues/ReplyToIssue
+        [HttpPost]
+        public async Task<IActionResult> ReplyToIssue(int issueId, string replyText)
+        {
+            // Get the original issue
+            var originalIssue = await _context.PEIssues.FindAsync(issueId);
+            if (originalIssue == null)
+            {
+                return NotFound();
+            }
+
+            // Get current user ID for sender
+            var currentUserId = await GetCurrentUserIdAsync();
+            
+            // Create the reply
+            var reply = new PEIssue
+            {
+                SenderId = currentUserId,                   // Current user is the sender
+                ReceiverId = originalIssue.SenderId,        // Original sender becomes the receiver
+                PlannedEventId = originalIssue.PlannedEventId,
+                IssueText = replyText,
+                CreatedAt = DateTime.Now,
+                IsReply = true,
+                OriginalIssueId = issueId                   // Link to the original issue
+            };
+            
+            _context.PEIssues.Add(reply);
+            await _context.SaveChangesAsync();
+            
+            return RedirectToAction("Details", "PlannedEvents", new { id = originalIssue.PlannedEventId });
+        }
+
         // Utility: Get current user from context
         private async Task<SystemUser?> GetCurrentUserAsync()
         {
@@ -239,6 +271,20 @@ namespace SFCDashboard.Controllers
                 user.Id, user.Name, user.ServiceId);
 
             return user;
+        }
+
+        private async Task<int> GetCurrentUserIdAsync()
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return 0;
+
+            // Extract the substring before the query
+            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
+            return user?.Id ?? 0;
         }
 
         private async Task PopulateUsersAsync()

@@ -1210,7 +1210,7 @@
 
         // Add these handlers when the document is ready
         $(document).ready(function() {
-            // Existing code...
+            
             
             // Handle reply button click
             $('#replyIssueBtn').on('click', function() {
@@ -1248,8 +1248,6 @@
             $('#confirmResolutionBtn').on('click', function() {
     const form = $('#confirmResolutionForm');
     
-    // The form submission isn't working because you're just appending an input but not submitting
-    // Let's fix this:
     
     // First make sure the input isn't duplicated if clicked multiple times
     form.find('input[name="isConfirmed"]').remove();
@@ -1423,8 +1421,7 @@
                         <i class="fas fa-question-circle me-2"></i>
                         <strong>Resolution Request:</strong> Has this issue been resolved?
                     </div>
-                    <form id="confirmResolutionForm" method="post" asp-controller="PEIssues" asp-action="ConfirmResolution">
-    <input type="hidden" id="resolutionId" name="resolutionId" />
+<form id="confirmResolutionFormModal1" method="post" asp-controller="PEIssues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
     <!-- No hidden isConfirmed field here, it's added dynamically -->
     <div class="d-flex justify-content-end">
         <button type="button" class="btn btn-outline-danger me-2" id="rejectResolutionBtn">

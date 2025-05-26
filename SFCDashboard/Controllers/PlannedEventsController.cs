@@ -465,7 +465,7 @@ namespace SFCDashboard.Controllers
             {
                 // Base query
                 var query = _context.PlannedEvents
-                    .Where(p => p.PEStatus == "ongoing"&& p.IsHold == false)
+                    .Where(p => p.PEStatus == "ongoing"&& p.IsHold == false||p.PEStatus=="PENDING_URGENT_CONFIRMATION")
                     .AsNoTracking();
 
                 // Apply workgroup filter
@@ -1088,7 +1088,7 @@ namespace SFCDashboard.Controllers
             _logger.LogInformation("Getting in-progress count for workgroup: {workgroupId}",
                 workgroupId?.ToString() ?? "ALL");
 
-            var query = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing"&&p.IsHold == false);
+            var query = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing"&&p.IsHold == false||p.PEStatus=="PENDING_URGENT_CONFIRMATION");
 
             if (workgroupId.HasValue)
             {

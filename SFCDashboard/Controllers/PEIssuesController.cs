@@ -220,6 +220,8 @@ public class PEIssuesController : Controller
             resolution.IsConfirmed = isConfirmed;
             resolution.ConfirmedDate = DateTime.Now;
             _context.Update(resolution);
+            await _context.SaveChangesAsync();
+
 
             if (isConfirmed)
             {
@@ -248,6 +250,8 @@ public class PEIssuesController : Controller
                 }
 
                 TempData["SuccessMessage"] = "Resolution confirmed. PE record status updated to ongoing.";
+                await _context.SaveChangesAsync();
+
             }
             else
             {
