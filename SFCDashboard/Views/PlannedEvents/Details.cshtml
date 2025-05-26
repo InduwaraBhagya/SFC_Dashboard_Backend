@@ -4,7 +4,7 @@
     ViewData["Title"] = "PE Record Details";
     // Find the ongoing task (first one if multiple)
     var ongoingTask = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
-        .FirstOrDefault(t => t.TaskStatus?.Trim().ToLower() == "ongoing");
+    .FirstOrDefault(t => t.TaskStatus?.Trim().ToLower() == "ongoing");
 
     var startDate = ongoingTask?.TaskCreatedDate ?? Model.PECreatedDate;
     var targetDate = ongoingTask?.TaskCompleteDate ?? (Model.ServiceRequiredDate ?? Model.PECreatedDate.AddDays(7));
@@ -77,8 +77,7 @@
             border-radius:4px;
             width:@progressPercent%;"></div>
         <!-- Today marker -->
-        <div
-            style="position:absolute;top:0;left:@progressPercent%;transform:translateX(-50%);">
+        <div style="position:absolute;top:0;left:@progressPercent%;transform:translateX(-50%);">
             <span class="badge bg-primary">Today</span>
         </div>
         <!-- Target marker -->
@@ -200,7 +199,7 @@
                             <th class="bg-light text-primary">End Time</th>
                             <td>@Html.DisplayFor(model => model.WoActualStartDate)</td>
                         </tr>
-                    
+
                         <tr>
                             <th class="bg-light text-primary">RTOM</th>
                             <td>@Html.DisplayFor(model => model.Rtom)</td>
@@ -288,14 +287,14 @@
                             <tr>
                                 <th>Seq</th>
                                 <th>Task</th>
+                                <th>Priority</th> <!-- Moved Priority here -->
                                 <th>Workgroup</th>
                                 <th>OLA</th>
                                 <th>Status</th>
                                 <th>Created Date</th>
                                 <th>Target Date</th>
-                                <th>Actual Date</th>
-                                <th>Priority</th>
-                                @* <th>Estimated Time</th> *@ <!-- Remove this line -->
+                                <th>Actual Start Date</th>
+                                <th>Actual End Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -303,61 +302,87 @@
                             @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
                             {
                                 <tr class="@(task.IsUrgent ? "table-warning" : 
-                                                                       task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
-                                                                       task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
-                                                                       task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                   task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                   task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                   task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
                             <td>@task.TaskSeq</td>
                             <td>@task.Task</td>
+                            <td> <!-- Priority column moved here -->
+                                @if (task.IsUrgent)
+                                {
+                                    <span class="badge bg-danger">URGENT</span>
+                                }
+                                @if (task.UrgentRequested && !task.IsUrgent)
+                                {
+                                    <span class="badge bg-warning">URGENT REQUESTED</span>
+                                }
+                                @if (!string.IsNullOrEmpty(task.Priority))
+                                {
+                                    <small class="d-block text-muted mt-1">@task.Priority</small>
+                                }
+                            </td>
                             <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
                             <td>@task.OLA days</td>
                             <td>
                                 @{
-                                            string taskStatusClass = task.TaskStatus?.ToLower() switch
-                                            {
-                                                "completed" => "badge bg-success",
-                                                "inprogress" => "badge bg-warning text-dark",
-                                                _ => "badge bg-secondary"
-                                            };
+                                    string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                    {
+                                        "completed" => "badge bg-success",
+                                        "inprogress" => "badge bg-warning text-dark",
+                                        "ongoing" => "badge bg-primary", // Ongoing is now blue
+                                        _ => "badge bg-secondary"
+                                    };
+
+                                    // OLA color logic for completed tasks
+                                    if (task.TaskStatus?.ToLower() == "completed" && task.ActualTaskCreatedDate.HasValue && task.ACtualTaskCompleteDate.HasValue)
+                                    {
+                                        int olaDays = 0;
+                                        int.TryParse(task.OLA, out olaDays);
+                                        var actualDays = (task.ACtualTaskCompleteDate.Value.Date - task.ActualTaskCreatedDate.Value.Date).TotalDays;
+                                        if (actualDays > olaDays)
+                                        {
+                                            // Completed but OLA violated
+                                            taskStatusClass = "badge bg-danger";
                                         }
-                                        <span class="@taskStatusClass">@task.TaskStatus</span>
-                                    </td>
-                                    <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
-                                    <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
-                                    <td>@(task.ACtualTaskCompleteDate != null ?
-                                                                        task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+                                        else
+                                        {
+                                            // Completed within OLA
+                                            taskStatusClass = "badge bg-success";
+                                        }
+                                    }
+                                }
+                                <span class="@taskStatusClass">@task.TaskStatus</span>
+                            </td>
+                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
                             <td>
-                                @if (task.IsUrgent)
-                                        {
-                                            <span class="badge bg-danger">URGENT</span>
-                                        }
-                                        @if (task.UrgentRequested && !task.IsUrgent)
-                                        {
-                                            <span class="badge bg-warning">URGENT REQUESTED</span>
-                                        }
-                                        @if (!string.IsNullOrEmpty(task.Priority))
-                                        {
-                                            <small class="d-block text-muted mt-1">@task.Priority</small>
-                                        }
-                                    </td>
-                                    @* Remove the Estimated Time cell *@
-                                    <td>
-                                        @if (task.UrgentRequested && !task.IsUrgent)
-                                        {
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="bi bi-hourglass-split"></i> Awaiting Approval
-                                            </span>
-                                        }
-                                        else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
-                                        {
-                                            <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post">
-                                                <input type="hidden" name="id" value="@task.Id" />
-                                                <button type="submit" class="btn btn-warning btn-sm w-100">
-                                                    <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
-                                                </button>
-                                            </form>
-                                        }
-                                    </td>
-                                </tr>
+                                @(task.ActualTaskCreatedDate != null
+                                    ? task.ActualTaskCreatedDate.Value.ToString("yyyy-MM-dd")
+                                    : "-")
+                            </td>
+                            <td>
+                                @(task.ACtualTaskCompleteDate != null
+                                    ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd")
+                                    : "-")
+                            </td>
+                            <td>
+                                @if (task.UrgentRequested && !task.IsUrgent)
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-hourglass-split"></i> Awaiting Approval
+                                    </span>
+                                }
+                                else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
+                                {
+                                    <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post">
+                                        <input type="hidden" name="id" value="@task.Id" />
+                                        <button type="submit" class="btn btn-warning btn-sm w-100">
+                                            <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
                             }
                         </tbody>
                     </table>

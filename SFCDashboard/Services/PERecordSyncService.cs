@@ -681,98 +681,44 @@ namespace SFCDashboard.Services
 
         private async Task UpdateTaskPhases(ApplicationDbContext dbContext)
         {
-            try {
-                // Get all planned events
-                var plannedEvents = await dbContext.PlannedEvents.ToListAsync();
-                var peTasks = await dbContext.PETasks.ToListAsync();
-                DateTime currentDate = DateTime.UtcNow;
+            var plannedEvents = await dbContext.PlannedEvents.ToListAsync();
+            var peTasks = await dbContext.PETasks.ToListAsync();
+            DateTime today = DateTime.Today;
 
-                foreach (var plannedEvent in plannedEvents)
+            foreach (var plannedEvent in plannedEvents)
+            {
+                if (string.IsNullOrEmpty(plannedEvent.PeNumber))
+                    continue;
+
+                var currentTaskSeq = plannedEvent.TaskSeq;
+                var tasksForPE = peTasks
+                    .Where(t => t.PENumber == plannedEvent.PeNumber)
+                    .OrderBy(t => t.TaskSeq)
+                    .ToList();
+
+                // Find the new current task (from latest Excel upload)
+                var currentTask = tasksForPE.FirstOrDefault(t => t.TaskSeq == currentTaskSeq);
+
+                // Find the previous current task (the one with the highest TaskSeq < currentTaskSeq)
+                var prevTask = tasksForPE
+                    .Where(t => t.TaskSeq < currentTaskSeq)
+                    .OrderByDescending(t => t.TaskSeq)
+                    .FirstOrDefault();
+
+                // If the previous task exists and its actual end date is not set, set it to today
+                if (prevTask != null && !prevTask.ACtualTaskCompleteDate.HasValue)
                 {
-                    if (string.IsNullOrEmpty(plannedEvent.PeNumber))
-                        continue;
+                    prevTask.ACtualTaskCompleteDate = today;
+                }
 
-                    var tasksForPE = peTasks
-                        .Where(t => t.PENumber == plannedEvent.PeNumber)
-                        .OrderBy(t => t.TaskSeq)
-                        .ToList();
-
-                    // Skip if no tasks found for this PE
-                    if (!tasksForPE.Any())
-                    {
-                        _logger.LogWarning("No tasks found for PE {peNumber} during phase update", plannedEvent.PeNumber);
-                        continue;
-                    }
-
-                    // Find the current task based on TaskName in PlannedEvent
-                    var currentTaskName = plannedEvent.TaskName;
-
-                    if (!string.IsNullOrEmpty(currentTaskName))
-                    {
-                        bool currentTaskFound = false;
-                        bool hasChanges = false;
-
-                        foreach (var task in tasksForPE)
-                        {
-                            try {
-                                if (task.Task == currentTaskName)
-                                {
-                                    // This is the current task
-                                    task.TaskStatus = "ONGOING";
-                                    task.TaskWorkGroup = plannedEvent.TaskWg ?? task.TaskWorkGroup ?? "NULL";
-                                    currentTaskFound = true;
-                                    hasChanges = true;
-                                    
-                                    // Handle null ActualTaskCreatedDate
-                                    if (!task.ActualTaskCreatedDate.HasValue)
-                                    {
-                                        task.ActualTaskCreatedDate = currentDate;
-                                    }
-                                }
-                                else if (!currentTaskFound)
-                                {
-                                    // Tasks before the current task are finished
-                                    task.TaskStatus = "COMPLETED";
-                                    hasChanges = true;
-                                    
-                                    // Handle null ACtualTaskCompleteDate
-                                    if (!task.ACtualTaskCompleteDate.HasValue)
-                                    {
-                                        task.ACtualTaskCompleteDate = currentDate;
-                                    }
-                                }
-                                else
-                                {
-                                    // Tasks after the current task are waiting
-                                    task.TaskStatus = "WAITING";
-                                    hasChanges = true;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Error updating task {taskId} for PE {peNumber}", task.Id, plannedEvent.PeNumber);
-                            }
-                        }
-
-                        if (hasChanges)
-                        {
-                            try
-                            {
-                                // Save changes for this PE's tasks only
-                                await dbContext.SaveChangesAsync();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Error saving phase updates for PE {peNumber}", plannedEvent.PeNumber);
-                            }
-                        }
-                    }
+                // If the current task exists and its actual start date is not set, set it to today
+                if (currentTask != null && !currentTask.ActualTaskCreatedDate.HasValue)
+                {
+                    currentTask.ActualTaskCreatedDate = today;
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in UpdateTaskPhases");
-            }
+
+            await dbContext.SaveChangesAsync();
         }
 
         private void LogDbContextError(Exception ex, string contextMessage)
