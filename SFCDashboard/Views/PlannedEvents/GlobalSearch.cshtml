@@ -385,40 +385,25 @@
                                                         <tr>
                                                             <th>Seq</th>
                                                             <th>Task</th>
+                                                            <th>Priority</th>
                                                             <th>Workgroup</th>
                                                             <th>OLA</th>
                                                             <th>Status</th>
                                                             <th>Created Date</th>
                                                             <th>Target Date</th>
-                                                            <th>Actual Date</th>
-                                                            <th>Priority</th>
+                                                            <th>Actual Start Date</th>
+                                                            <th>Actual End Date</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         @foreach (var task in peTasks)
                                                         {
                                                             <tr class="@(task.IsUrgent ? "table-warning" : 
-                                                                       task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
-                                                                       task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
-                                                                       task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                                                task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                                                task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                                                task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
                                                                 <td>@task.TaskSeq</td>
                                                                 <td>@task.Task</td>
-                                                                <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
-                                                                <td>@task.OLA days</td>
-                                                                <td>
-                                                                    @{
-                                                                        string taskStatusClass = task.TaskStatus?.ToLower() switch
-                                                                        {
-                                                                            "completed" => "badge bg-success",
-                                                                            "inprogress" => "badge bg-warning text-dark",
-                                                                            _ => "badge bg-secondary"
-                                                                        };
-                                                                    }
-                                                                    <span class="@taskStatusClass">@task.TaskStatus</span>
-                                                                </td>
-                                                                <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
-                                                                <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
-                                                                <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
                                                                 <td>
                                                                     @if (task.IsUrgent)
                                                                     {
@@ -433,6 +418,23 @@
                                                                         <small class="d-block text-muted mt-1">@task.Priority</small>
                                                                     }
                                                                 </td>
+                                                                <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                                                <td>@task.OLA days</td>
+                                                                <td>
+                                                                    @{
+                                                                        string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                                                        {
+                                                                            "completed" => "badge bg-success",
+                                                                            "ongoing" => "badge bg-warning text-dark",
+                                                                            _ => "badge bg-secondary"
+                                                                        };
+                                                                    }
+                                                                    <span class="@taskStatusClass">@task.TaskStatus</span>
+                                                                </td>
+                                                                <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                                                                <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                                                <td>@(task.ActualTaskCreatedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                                                <td>@(task.ACtualTaskCompleteDate?.ToString("yyyy-MM-dd") ?? "-")</td>
                                                             </tr>
                                                         }
                                                     </tbody>

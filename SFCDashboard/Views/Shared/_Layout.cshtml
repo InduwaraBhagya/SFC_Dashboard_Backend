@@ -15,6 +15,421 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+    <style>
+        /* Dark mode styles */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --input-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --card-bg: #2d2d2d;
+            --border-color: #404040;
+            --input-bg: #333333;
+            --table-bg: #2d2d2d;
+            --hover-bg: #3d3d3d;
+            --message-bg: #2d2d2d;
+        }
+
+        body {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            flex: 1;
+        }
+
+        /* Form controls in dark mode */
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: var(--input-bg) !important;
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: var(--input-bg) !important;
+            color: var(--text-color) !important;
+            border-color: #0d6efd !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+        }
+
+        /* Cards and content areas */
+        [data-theme="dark"] .card {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .table {
+            background-color: var(--table-bg) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .table thead th {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .table tbody tr {
+            background-color: var(--table-bg) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .table tbody tr:hover {
+            background-color: var(--hover-bg) !important;
+        }
+
+        [data-theme="dark"] .list-group-item {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .message-inbox-container {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        /* Message item styles for dark mode */
+        [data-theme="dark"] .message-item {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .message-item:hover {
+            background-color: var(--hover-bg) !important;
+        }
+
+        [data-theme="dark"] .message-sender,
+        [data-theme="dark"] .message-subject,
+        [data-theme="dark"] .message-preview,
+        [data-theme="dark"] .message-time {
+            color: var(--text-color) !important;
+        }
+
+        /* Urgent and task messages in dark mode */
+        [data-theme="dark"] .message-item.urgent-request {
+            background-color: rgba(220, 53, 69, 0.15) !important;
+            border-left: 3px solid #dc3545 !important;
+        }
+
+        [data-theme="dark"] .message-item.task-urgent-request {
+            background-color: rgba(255, 193, 7, 0.15) !important;
+            border-left: 3px solid #ffc107 !important;
+        }
+
+        [data-theme="dark"] .message-item.urgent-request:hover,
+        [data-theme="dark"] .message-item.task-urgent-request:hover {
+            background-color: rgba(220, 53, 69, 0.25) !important;
+        }
+
+        [data-theme="dark"] .inbox-header {
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .inbox-header h3 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .view-all-link {
+            color: #63a8ff !important;
+        }
+
+        [data-theme="dark"] .inbox-filters .btn-outline-primary {
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .inbox-filters .btn-outline-primary:hover,
+        [data-theme="dark"] .inbox-filters .btn-outline-primary.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+
+        /* Dark mode toggle button */
+        .dark-mode-toggle {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dark-mode-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Footer dark mode */
+        footer.bg-dark {
+            background-color: #010127 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        footer.text-white {
+            color: white !important;
+        }
+
+        footer .container {
+            background-color: #010127 !important;
+            color: white !important;
+        }
+
+        /* Navbar adjustments for dark mode */
+        [data-theme="dark"] .navbar-dark {
+            background-color: #0d1117 !important;
+        }
+
+        /* Timeline container dark mode */
+        [data-theme="dark"] .timeline-container {
+            background-color: var(--card-bg) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        /* PE Record Details and all record list tables dark mode */
+        [data-theme="dark"] .table-light,
+        [data-theme="dark"] .table-striped>tbody>tr:nth-of-type(odd),
+        [data-theme="dark"] .table-hover>tbody>tr:hover,
+        [data-theme="dark"] thead.thead-dark,
+        [data-theme="dark"] .table> :not(caption)>*>* {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        /* Search bar and workgroup container dark mode */
+        [data-theme="dark"] .search-section,
+        [data-theme="dark"] .workgroup-filter-section {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        /* Background colors for different status tables */
+        [data-theme="dark"] .table-warning,
+        [data-theme="dark"] .table-success,
+        [data-theme="dark"] .table-primary,
+        [data-theme="dark"] .table-secondary {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Card headers dark mode */
+        [data-theme="dark"] .card-header {
+            background-color: var(--hover-bg) !important;
+            border-bottom-color: var(--border-color) !important;
+        }
+
+        /* Alert dark mode */
+        [data-theme="dark"] .alert {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Timeline specific elements dark mode */
+        [data-theme="dark"] .timeline-labels span {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .timeline-bar>div:first-child {
+            background-color: var(--border-color) !important;
+        }
+
+        /* Background for table rows in dark mode */
+        [data-theme="dark"] .bg-light {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Table header specific dark mode */
+        [data-theme="dark"] th.bg-light {
+            background-color: var(--hover-bg) !important;
+        }
+
+        /* Dark mode calendar icon and input fields */
+        [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        /* Search labels and headings */
+        [data-theme="dark"] .form-label,
+        [data-theme="dark"] .search-section .form-label,
+        [data-theme="dark"] .details-title,
+        [data-theme="dark"] .modal-title,
+        [data-theme="dark"] .inbox-search::placeholder,
+        [data-theme="dark"] .search-section label {
+            color: var(--text-color) !important;
+        }
+
+        /* Message inbox and modal content */
+        [data-theme="dark"] .modal-content {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .modal-header,
+        [data-theme="dark"] .modal-footer {
+            border-color: var(--border-color) !important;
+        }
+
+        /* Form check labels in modals */
+        [data-theme="dark"] .form-check-label {
+            color: var(--text-color) !important;
+        }
+
+        /* Search messages placeholder */
+        [data-theme="dark"] .inbox-search::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        /* Message details and content */
+        [data-theme="dark"] .message-detail-header h5,
+        [data-theme="dark"] .message-info,
+        [data-theme="dark"] .message-detail-body {
+            color: var(--text-color) !important;
+        }
+
+        /* Search container labels and text */
+        [data-theme="dark"] .search-container label,
+        [data-theme="dark"] .search-container .text-muted {
+            color: var(--text-color) !important;
+        }
+
+        /* Form text and small text elements */
+        [data-theme="dark"] .form-text,
+        [data-theme="dark"] small.text-muted {
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+
+        /* Search input placeholder text in dark mode */
+        [data-theme="dark"] input::placeholder,
+        [data-theme="dark"] .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        [data-theme="dark"] .search-section input::placeholder,
+        [data-theme="dark"] .search-section .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        [data-theme="dark"] .global-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        /* Details card headers in dark mode */
+        [data-theme="dark"] .details-card-header.bg-info {
+            background-color: rgba(13, 202, 240, 0.2) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .details-card-header.bg-success {
+            background-color: rgba(25, 135, 84, 0.2) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .details-card-header.bg-warning {
+            background-color: rgba(255, 193, 7, 0.2) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .details-card-header.bg-primary {
+            background-color: rgba(13, 110, 253, 0.2) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .details-card-header.bg-secondary {
+            background-color: rgba(108, 117, 125, 0.2) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* PE Tasks card header in dark mode */
+        [data-theme="dark"] .card-header.bg-info {
+            background-color: rgba(13, 202, 240, 0.2) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Details cards background in dark mode */
+        [data-theme="dark"] .details-card.bg-light {
+            background-color: var(--card-bg) !important;
+        }
+
+        /* Details card body in dark mode */
+        [data-theme="dark"] .details-card-body {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Detail labels in dark mode */
+        [data-theme="dark"] .detail-label {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        /* Detail values in dark mode */
+        [data-theme="dark"] .detail-value {
+            color: var(--text-color) !important;
+        }
+
+        /* PE Details title and heading in dark mode */
+        [data-theme="dark"] .details-title .text-dark,
+        [data-theme="dark"] h5.mb-0,
+        [data-theme="dark"] .card-header h5 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .details-header .text-primary {
+            color: #63a8ff !important;
+        }
+
+        [data-theme="dark"] .details-header .text-dark {
+            color: var(--text-color) !important;
+        }
+
+        /* Update logo styles */
+        .navbar-brand {
+            padding: 0;
+        }
+
+        .logo-img {
+            height: 100px;
+            width: auto;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        /* Remove the dashboard name styles since we're not using it anymore */
+        .dashboard-name {
+            display: none;
+        }
+
+        /* Adjust navbar height to accommodate larger logo */
+        .navbar {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            min-height: 110px;
+        }
+    </style>
 </head>
 
 <body>
@@ -23,8 +438,7 @@
             <div class="container-fluid">
                 <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="PlannedEvents"
                     asp-action="Index">
-                    <img src="~/images/logo.png" alt="Logo" class="logo-img me-2" />
-                    <span class="dashboard-name">SFCDashboard</span>
+                    <img src="~/images/logo.png" alt="SFCDashboard" class="logo-img" />
                 </a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -77,6 +491,13 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Dark Mode Toggle Button -->
+                    <button class="dark-mode-toggle me-3" id="darkModeToggle" type="button">
+                        <i class="bi bi-moon-fill" id="darkModeIcon"></i>
+                        <span id="darkModeText">Dark</span>
+                    </button>
+
                     <partial name="_LoginPartial" />
                 </div>
             </div>
@@ -106,6 +527,7 @@
     @await RenderSectionAsync("Scripts", required: false)
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Search functionality
             var select = document.getElementById('navbarSearchType');
             var input = document.getElementById('navbarSearchInput');
             function updateInputNameAndPlaceholder() {
@@ -127,6 +549,40 @@
             }
             select.addEventListener('change', updateInputNameAndPlaceholder);
             updateInputNameAndPlaceholder();
+
+            // Dark mode functionality
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const darkModeIcon = document.getElementById('darkModeIcon');
+            const darkModeText = document.getElementById('darkModeText');
+            const body = document.body;
+
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            body.setAttribute('data-theme', currentTheme);
+
+            // Update button appearance based on current theme
+            function updateDarkModeButton(theme) {
+                if (theme === 'dark') {
+                    darkModeIcon.className = 'bi bi-sun-fill';
+                    darkModeText.textContent = 'Light';
+                } else {
+                    darkModeIcon.className = 'bi bi-moon-fill';
+                    darkModeText.textContent = 'Dark';
+                }
+            }
+
+            // Initialize button appearance
+            updateDarkModeButton(currentTheme);
+
+            // Toggle dark mode
+            darkModeToggle.addEventListener('click', function () {
+                const currentTheme = body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+                body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateDarkModeButton(newTheme);
+            });
         });
     </script>
 </body>
