@@ -54,7 +54,7 @@ namespace SFCDashboard.Controllers
 
             // Get current user's workgroup info
             var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
-            
+
             // Base query
             var query = _context.PlannedEvents.AsQueryable();
 
@@ -117,6 +117,10 @@ namespace SFCDashboard.Controllers
                 "soNumber" => soNumber,
                 _ => peNumber
             };
+
+
+
+
 
             var currentDate = DateTime.Today;
             var olaViolationQuery = _context.PETasks
@@ -354,6 +358,9 @@ var inboxIssues = await _context.PEIssues
                 .Where(t => t.PENumber == plannedEvent.PeNumber)
                 .OrderBy(t => t.TaskSeq)
                 .ToListAsync();
+            // Set the correct dates for display
+            SetTaskDatesFromPeNumber(plannedEvent.PeNumber, peTasks);
+
             ViewBag.PETasks = peTasks;
 
             // Find PETaskListId for the current task name
@@ -512,7 +519,7 @@ var inboxIssues = await _context.PEIssues
                     var workgroup = await _context.WorkGroups.FindAsync(effectiveWorkgroupId);
                     if (workgroup != null)
                     {
-                        query = query.Where(p => p.TaskWg != null && 
+                        query = query.Where(p => p.TaskWg != null &&
                             EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
                         ViewData["FilteredWorkgroup"] = workgroup.Name;
                     }
@@ -1057,7 +1064,43 @@ var inboxIssues = await _context.PEIssues
             ViewData["JobReferenceFilter"] = jobReference;
             ViewData["SONumberFilter"] = soNumber;
 
+            // Additional logic for customer search - to populate the table and summary counts
+            if (searchType == "customer" && !string.IsNullOrEmpty(customer))
+            {
+                // Get all PEs for this customer
+                var customerPEs = await _context.PlannedEvents
+                    .Where(p => p.Customer != null && p.Customer.ToLower().Contains(customer.ToLower()))
+                    .ToListAsync();
 
+                // Only ongoing PEs
+                var ongoingPEs = customerPEs.Where(p => p.PEStatus != null && p.PEStatus.ToLower() == "ongoing").ToList();
+
+                int totalPEs = customerPEs.Count;
+                int ongoingCount = ongoingPEs.Count;
+                int urgent1Count = customerPEs.Count(p => p.Priority != null && p.Priority.Contains("Opening Ceremony"));
+                int urgent2Count = customerPEs.Count(p => p.Priority != null && p.Priority.Contains("Critical Customer"));
+                int regularCount = customerPEs.Count(p =>
+                    (p.Priority == null || (!p.Priority.Contains("Opening Ceremony") && !p.Priority.Contains("Critical Customer"))));
+
+                // Set ViewData for summary and table
+                ViewData["TotalPEs"] = totalPEs;
+                ViewData["OngoingCount"] = ongoingCount;
+                ViewData["Priority1Count"] = urgent1Count;
+                ViewData["Priority2Count"] = urgent2Count;
+                ViewData["RegularCount"] = regularCount;
+
+                // Table: Only ongoing PEs, show PE Number, Status, Work Group, and View Detail
+                ViewData["CustomerOngoingTable"] = ongoingPEs
+                    .OrderBy(p => p.ServiceRequiredDate)
+                    .Select((p, idx) => new
+                    {
+                        Serial = idx + 1,
+                        p.PeNumber,
+                        ServiceRequiredDate = p.ServiceRequiredDate?.ToString("yyyy-MM-dd") ?? "",
+                        p.TaskWg,
+                        p.Id
+                    }).ToList();
+            }
 
             return View(result);
         }
@@ -1166,6 +1209,24 @@ var inboxIssues = await _context.PEIssues
             return count;
         }
 
+        // Helper to extract date from PE number
+        private DateTime? GetDateFromPeNumber(string peNumber)
+        {
+            // Expects format: PEYYYYMMDDxxxx
+            if (string.IsNullOrEmpty(peNumber) || peNumber.Length < 10)
+                return null;
+            try
+            {
+                var year = int.Parse(peNumber.Substring(2, 4));
+                var month = int.Parse(peNumber.Substring(6, 2));
+                var day = int.Parse(peNumber.Substring(8, 2));
+                return new DateTime(year, month, day);
+            }
+            catch
+            {
+                return null;
+            }
+        }
         [HttpGet]
         public async Task<IActionResult> GetBasicDetails(int id)
         {
@@ -1193,3 +1254,32 @@ var inboxIssues = await _context.PEIssues
     
 }
 
+        // Call this after loading tasks for a PE (e.g., in Details or when recalculating tasks)
+        private void SetTaskDatesFromPeNumber(string peNumber, List<PETask> tasks)
+        {
+            var peCreatedDate = GetDateFromPeNumber(peNumber) ?? DateTime.Today;
+            DateTime currentCreatedDate = peCreatedDate;
+
+            for (int i = 0; i < tasks.Count; i++)
+            {
+                var task = tasks[i];
+
+                // For "Draw Fiber", use EstimatedTime if set
+                if (task.Task?.Trim().ToLower() == "draw fiber" && task.EstimatedTime.HasValue)
+                {
+                    task.TaskCreatedDate = currentCreatedDate;
+                    task.TaskCompleteDate = task.EstimatedTime.Value;
+                    currentCreatedDate = task.TaskCompleteDate;
+                }
+                else
+                {
+                    task.TaskCreatedDate = currentCreatedDate;
+                    int olaDays = 0;
+                    int.TryParse(task.OLA, out olaDays);
+                    task.TaskCompleteDate = currentCreatedDate.AddDays(olaDays);
+                    currentCreatedDate = task.TaskCompleteDate;
+                }
+            }
+        }
+    }
+}
