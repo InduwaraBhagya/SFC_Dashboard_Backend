@@ -151,8 +151,7 @@ namespace SFCDashboard.Controllers
             if (currentUser == null) return RedirectToAction("Index", "Home");
 
             var issues = await _context.PEIssues
-                .Where(i => i.ReceiverId == currentUser.Id)
-                .Select(i => new PEIssueViewModel
+.Where(i => i.ReceiverId == currentUser.Id && !i.IsHiddenFromInbox && !i.IsResolved)                .Select(i => new PEIssueViewModel
                 {
                     Id = i.Id,
                     SenderId = i.SenderId,
@@ -546,37 +545,54 @@ namespace SFCDashboard.Controllers
                         issue.IsResolved = true;
                         _context.Update(issue);
                         _logger.LogInformation($"Issue {issue.Id} marked as resolved");
-                    }
+                        
+                        // Find and mark the original issue as resolved if this is a reply
+                        if (issue.OriginalIssueId.HasValue)
+                        {
+                            var originalIssue = await _context.PEIssues.FindAsync(issue.OriginalIssueId);
+                            if (originalIssue != null && !originalIssue.IsResolved)
+                            {
+                                originalIssue.IsResolved = true;
+                                _context.Update(originalIssue);
+                                _logger.LogInformation($"Original issue {originalIssue.Id} also marked as resolved");
+                            }
+                        }
+                        
+                        // Find the resolution request message and hide it from inbox
                         var resolutionRequestMessage = await _context.PEIssues
-        .FirstOrDefaultAsync(i => i.IsResolutionRequest && 
-                               i.OriginalIssueId == issue.Id);
-                               
-    if (resolutionRequestMessage != null)
-    {
-        // Instead of removing, mark it as hidden from inbox
-        resolutionRequestMessage.IsHiddenFromInbox = true;
-        _context.Update(resolutionRequestMessage);
-        _logger.LogInformation($"Resolution request message {resolutionRequestMessage.Id} hidden from inbox");
-    }
+                            .FirstOrDefaultAsync(i => i.IsResolutionRequest && 
+                                            i.OriginalIssueId == issue.Id);
+                        
+                        if (resolutionRequestMessage != null)
+                        {
+                            resolutionRequestMessage.IsHiddenFromInbox = true;
+                            _context.Update(resolutionRequestMessage);
+                            _logger.LogInformation($"Resolution request message {resolutionRequestMessage.Id} hidden from inbox");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Issue not found for resolution id: {resolutionId}");
+                    }
+                    
                     // Update planned event - ONLY if no other active issues remain
                     if (pe != null)
                     {
-                        // Check if all issues are now resolved before removing hold status
+                        // Check if any unresolved root issues remain (improved query)
                         var hasOtherActiveIssues = await _context.PEIssues
                             .AnyAsync(i => i.PlannedEventId == pe.Id && 
                                       !i.IsResolved && 
-                                      i.OriginalIssueId == null && 
-                                      i.Id != issue.Id);  // Exclude the current issue
-
+                                      i.OriginalIssueId == null);  // Only consider root issues
+pe.IsHold = false;
                         if (!hasOtherActiveIssues)
                         {
-                            pe.IsHold = false;  // Just set IsHold to false, don't change status
+                            pe.IsHold = false;  // Set IsHold to false
                             _context.Update(pe);
                             _logger.LogInformation($"PE {pe.Id} removed from hold status as all issues are resolved");
                         }
                         else
                         {
-                            _logger.LogInformation($"PE {pe.Id} remains on hold due to other unresolved issues");
+                            _logger.LogInformation($"PE {pe.Id} remains on hold due to other unresolved issues: {hasOtherActiveIssues}");
                         }
                     }
                     else

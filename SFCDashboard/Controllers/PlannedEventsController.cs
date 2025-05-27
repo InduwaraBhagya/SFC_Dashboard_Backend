@@ -1249,10 +1249,7 @@ var inboxIssues = await _context.PEIssues
 
             return Json(details);
         }
-    }
-    
-    
-}
+
 
         // Call this after loading tasks for a PE (e.g., in Details or when recalculating tasks)
         private void SetTaskDatesFromPeNumber(string peNumber, List<PETask> tasks)
