@@ -259,6 +259,22 @@
                     $('.select2-search__field').attr('placeholder', 'Type to search...');
                 }, 0);
             });
+
+            // Intercept form submission
+            $('form').on('submit', function(e) {
+                e.preventDefault();
+                
+                const selectedWorkGroup = $('.select2 option:selected').text();
+                
+                if (!selectedWorkGroup || selectedWorkGroup === '-- Select Work Group --') {
+                    alert('Please select a work group');
+                    return false;
+                }
+
+                if (confirm(`You have selected "${selectedWorkGroup}" as your work group. Continue?`)) {
+                    this.submit();
+                }
+            });
         });
     </script>
 </body>
