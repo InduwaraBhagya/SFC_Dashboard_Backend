@@ -12,6 +12,30 @@ namespace SFCDashboard.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "PEIssues",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PlannedEventId = table.Column<int>(type: "int", nullable: false),
+                    PETaskId = table.Column<int>(type: "int", nullable: false),
+                    ReceiverId = table.Column<int>(type: "int", nullable: false),
+                    SenderId = table.Column<int>(type: "int", nullable: false),
+                    IssueText = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AttachmentPath = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    IsReply = table.Column<bool>(type: "bit", nullable: false),
+                    OriginalIssueId = table.Column<int>(type: "int", nullable: true),
+                    IsResolved = table.Column<bool>(type: "bit", nullable: false),
+                    IsResolutionRequest = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PEIssues", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PERecords",
                 columns: table => new
                 {
@@ -167,7 +191,7 @@ namespace SFCDashboard.Migrations
                     TASK_WG = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     WO_ACTUAL_START_DATE = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     REQUEST_REFERENCE_NO = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SO_ID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SO_ID = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     REGION_1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PROVINCE_1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RTOM_1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -205,6 +229,7 @@ namespace SFCDashboard.Migrations
                     PE_STATUS = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PRIORITY = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PE_CREATED_DATE = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsHold = table.Column<bool>(type: "bit", nullable: false),
                     SystemUserId = table.Column<int>(type: "int", nullable: true),
                     WorkGroupId = table.Column<int>(type: "int", nullable: true)
                 },
@@ -254,12 +279,43 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PEIssueResolutions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IssueId = table.Column<int>(type: "int", nullable: false),
+                    ResolutionDetails = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ResolutionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    ConfirmationRequestedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ConfirmedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PlannedEventId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PEIssueResolutions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PEIssueResolutions_PEIssues_IssueId",
+                        column: x => x.IssueId,
+                        principalTable: "PEIssues",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PEIssueResolutions_PlannedEvents_PlannedEventId",
+                        column: x => x.PlannedEventId,
+                        principalTable: "PlannedEvents",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PETasks",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PENumber = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    PENumber = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TaskSeq = table.Column<int>(type: "int", nullable: true),
                     Task = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TaskWorkGroup = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -269,7 +325,10 @@ namespace SFCDashboard.Migrations
                     TaskCompleteDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ActualTaskCreatedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ACtualTaskCompleteDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    TaskPhase = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    IsUrgent = table.Column<bool>(type: "bit", nullable: false),
+                    UrgentRequested = table.Column<bool>(type: "bit", nullable: false),
+                    Priority = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    EstimatedTime = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -391,6 +450,16 @@ namespace SFCDashboard.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PEIssueResolutions_IssueId",
+                table: "PEIssueResolutions",
+                column: "IssueId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PEIssueResolutions_PlannedEventId",
+                table: "PEIssueResolutions",
+                column: "PlannedEventId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PETasks_PENumber",
                 table: "PETasks",
                 column: "PENumber");
@@ -458,6 +527,9 @@ namespace SFCDashboard.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
+                name: "PEIssueResolutions");
+
+            migrationBuilder.DropTable(
                 name: "PERecords");
 
             migrationBuilder.DropTable(
@@ -474,6 +546,9 @@ namespace SFCDashboard.Migrations
 
             migrationBuilder.DropTable(
                 name: "TaskHistories");
+
+            migrationBuilder.DropTable(
+                name: "PEIssues");
 
             migrationBuilder.DropTable(
                 name: "PlannedEvents");

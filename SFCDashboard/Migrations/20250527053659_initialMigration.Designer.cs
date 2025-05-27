@@ -12,8 +12,8 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250428032201_updateAll")]
-    partial class updateAll
+    [Migration("20250527053659_initialMigration")]
+    partial class initialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -295,6 +295,95 @@ namespace SFCDashboard.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.PEIssue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AttachmentPath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsReply")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsResolutionRequest")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("IssueText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("OriginalIssueId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PETaskId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlannedEventId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReceiverId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PEIssues");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.PEIssueResolution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ConfirmationRequestedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ConfirmedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("IssueId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlannedEventId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ResolutionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ResolutionDetails")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IssueId");
+
+                    b.HasIndex("PlannedEventId");
+
+                    b.ToTable("PEIssueResolutions");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.PETask", b =>
                 {
                     b.Property<int>("Id")
@@ -309,6 +398,9 @@ namespace SFCDashboard.Migrations
                     b.Property<DateTime?>("ActualTaskCreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("EstimatedTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsUrgent")
                         .HasColumnType("bit");
 
@@ -316,6 +408,7 @@ namespace SFCDashboard.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PENumber")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Priority")
@@ -432,6 +525,9 @@ namespace SFCDashboard.Migrations
                     b.Property<string>("FiberSoId")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("FIBER_SO_ID");
+
+                    b.Property<bool>("IsHold")
+                        .HasColumnType("bit");
 
                     b.Property<string>("JobReference")
                         .HasColumnType("nvarchar(max)")
@@ -827,13 +923,33 @@ namespace SFCDashboard.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.PEIssueResolution", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.PEIssue", "Issue")
+                        .WithMany()
+                        .HasForeignKey("IssueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
+                        .WithMany()
+                        .HasForeignKey("PlannedEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Issue");
+
+                    b.Navigation("PlannedEvent");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.PETask", b =>
                 {
                     b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
                         .WithMany()
                         .HasForeignKey("PENumber")
                         .HasPrincipalKey("PeNumber")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("PlannedEvent");
                 });

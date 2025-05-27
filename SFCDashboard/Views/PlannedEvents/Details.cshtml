@@ -168,15 +168,30 @@
                             <th class="bg-light text-primary">Status</th>
                             <td>
                                 @{
-                                    string statusClass = Model.PEStatus?.ToLower() switch
+                                    string statusClass;
+                                    string displayStatus;
+
+                                    if (Model.IsHold)
                                     {
-                                        "completed" => "badge bg-success",
-                                        "in progress" => "badge bg-warning text-dark",
-                                        "pending" => "badge bg-info",
-                                        _ => "badge bg-secondary"
-                                    };
+                                        // If IsHold is true, always show "Hold" status with warning class
+                                        statusClass = "badge bg-warning text-dark";
+                                        displayStatus = "Hold";
+                                    }
+                                    else
+                                    {
+                                        // Otherwise show the actual PEStatus from database with appropriate styling
+                                        statusClass = Model.PEStatus?.ToLower() switch
+                                        {
+                                            "completed" => "badge bg-success",
+                                            "in progress" => "badge bg-warning text-dark",
+                                            "ongoing" => "badge bg-info",
+                                            "pending" => "badge bg-secondary",
+                                            _ => "badge bg-secondary"
+                                        };
+                                        displayStatus = Model.PEStatus;
+                                    }
                                 }
-                                <span class="@statusClass">@Html.DisplayFor(model => model.PEStatus)</span>
+                                <span class="@statusClass">@displayStatus</span>
                             </td>
                         </tr>
                         <tr>
@@ -376,6 +391,7 @@
                             <th>Issue</th>
                             <th>Attachment</th>
                             <th>Date</th>
+                            <th>Status</th>  <!-- Add this new column -->
                         </tr>
                     </thead>
                     <tbody>
@@ -396,6 +412,16 @@
                                 }
                             </td>
                             <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                @if (issue.IsResolved || issue.IsHiddenFromInbox)
+                                {
+                                    <span class="badge bg-success">Fixed</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Open</span>
+                                }
+                            </td>
                         </tr>
                     }
                     </tbody>
@@ -455,7 +481,7 @@
 </div>
 
 <!-- Report Issue Button -->
-@if (Model.PEStatus?.ToLower() != "hold")
+@if (!Model.IsHold)
 {
     <button class="btn btn-danger my-3"
             data-bs-toggle="modal"
@@ -463,12 +489,11 @@
         <i class="bi bi-flag"></i> Report Issue
     </button>
 }
-
 <!-- Report Issue Modal -->
 <div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="PEIssues" asp-action="Create">
+            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="CreateForPE">
                 <div class="modal-header">
                     <h5 class="modal-title" id="reportIssueModalLabel">Report Issue</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -495,10 +520,11 @@
                         <input type="text" class="form-control" id="issueText" name="IssueText" list="issueSuggestions" autocomplete="off" required />
                         <datalist id="issueSuggestions"></datalist>
                     </div>
-                    <div class="mb-3">
-                        <label for="attachment" class="form-label">Attachment</label>
-                        <input type="file" class="form-control" id="attachment" name="Attachment" />
-                    </div>
+<div class="mb-3">
+    <label for="attachment" class="form-label">Attachment (Optional)</label>
+    <input type="file" class="form-control" id="attachment" name="Attachment" />
+    <small class="text-muted">Supported formats: PDF, Word, Excel, Images</small>
+</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -684,7 +710,7 @@
                 var taskListId = $(this).val();
                 $('#issueSuggestions').empty();
                 if (taskListId) {
-                    $.get('/PEIssues/GetIssueSuggestions', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
+                    $.get('/Issues/GetIssueSuggestions', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
                         issues.forEach(function (issue) {
                             $('#issueSuggestions').append($('<option>', { value: issue.text }));
                         });

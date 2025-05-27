@@ -176,5 +176,7 @@ namespace SFCDashboard.Models
         [Column("PE_CREATED_DATE")]
         public DateTime PECreatedDate { get; set; }
 
+        // Add this new property for tracking hold status
+        public bool IsHold { get; set; } = false; // Default value is false
     }
 }

@@ -29,5 +29,12 @@ namespace SFCDashboard.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public bool IsRead { get; set; } = false;
+
+        // Add these properties to your PEIssue model
+        public bool IsReply { get; set; }
+        public int? OriginalIssueId { get; set; }
+        public bool IsResolved { get; set; }
+        public bool IsResolutionRequest { get; set; }
+        public bool IsHiddenFromInbox { get; set; } = false;
     }
 }

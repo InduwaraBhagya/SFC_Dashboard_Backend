@@ -97,50 +97,53 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
         {
-            var task = await _context.PETasks.FindAsync(id);
-            if (task == null || !task.UrgentRequested)
+            // Fix: Load the PETask first, not the PlannedEvent
+            var task = await _context.PETasks
+                .Include(t => t.PlannedEvent)
+                .FirstOrDefaultAsync(t => t.Id == id);
+                
+            if (task == null || task.TaskStatus == "COMPLETED")
             {
                 return NotFound();
             }
 
-            // Extract the originally requested reason from Priority field if it exists
-            string originalReason = "";
-            if (task.Priority?.Contains("URGENT REQUEST PENDING: ") == true)
-            {
-                var startIndex = task.Priority.IndexOf("URGENT REQUEST PENDING: ") + "URGENT REQUEST PENDING: ".Length;
-                var endIndex = task.Priority.IndexOf("]", startIndex);
-                if (endIndex > startIndex)
-                {
-                    originalReason = task.Priority.Substring(startIndex, endIndex - startIndex);
-                }
-            }
+            bool markAsUrgent = false;
+            string priorityMessage = "";
+            int priorityLevel = 0; // Numeric priority level
 
-            // Clear the urgent requested flag
-            task.UrgentRequested = false;
-
-            // Remove the pending marker from the priority
-            task.Priority = task.Priority?.Replace("[URGENT REQUEST PENDING]", "").Trim();
-
+            // Extract numeric priority for debugging and display
             switch (urgentReason)
             {
                 case "OpeningCeremony":
-                    task.IsUrgent = true;  // Only mark THIS task as urgent
-                    task.Priority = (task.Priority ?? "") + " [URGENT: Opening Ceremony - Priority 1]";
+                    markAsUrgent = true;
+                    task.IsUrgent = true;
+                    priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
+                    priorityLevel = 1;
+                    // Clear any previous priority and set the new one
+                    task.Priority = priorityMessage;
                     break;
 
                 case "CriticalCustomer":
-                    task.IsUrgent = true;  // Only mark THIS task as urgent
-                    task.Priority = (task.Priority ?? "") + " [URGENT: Critical Customer - Priority 2]";
+                    markAsUrgent = true;
+                    task.IsUrgent = true;
+                    priorityMessage = "[URGENT: Critical Customer - Priority 2]";
+                    priorityLevel = 2;
+                    // Clear any previous priority and set the new one
+                    task.Priority = priorityMessage;
                     break;
 
                 case "NetworkOutage":
-                    task.IsUrgent = true;  // Only mark THIS task as urgent
-                    task.Priority = (task.Priority ?? "") + " [URGENT: Network Outage - Priority 0]";
+                    markAsUrgent = true;
+                    task.IsUrgent = true;
+                    priorityMessage = "[URGENT: Network Outage - Priority 0]";
+                    priorityLevel = 0;
+                    // Clear any previous priority and set the new one
+                    task.Priority = priorityMessage;
                     break;
 
                 case "Reject":
-                    // Just clearing the UrgentRequested flag and adding rejection note
-                    task.Priority = (task.Priority ?? "") + " [Urgent Request Rejected]";
+                    task.UrgentRequested = false;
+                    task.Priority = "Urgent Request Rejected";
                     break;
 
                 default:
@@ -149,11 +152,28 @@ namespace SFCDashboard.Controllers
             }
 
             _context.Update(task);
+            
+            // Update the PlannedEvent if needed
+            if (markAsUrgent && task.PlannedEvent != null)
+            {
+                task.PlannedEvent.PEStatus = "URGENT";
+                task.PlannedEvent.Priority = priorityMessage;
+                _context.Update(task.PlannedEvent);
+                
+                _logger.LogInformation("PE {id} marked as urgent with priority level {level}", 
+                    task.PlannedEvent.Id, priorityLevel);
+            }
+
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Task ID {taskId} urgent request processed with reason: {reason}", id, urgentReason);
-            TempData["SuccessMessage"] = "Task urgent request processed.";
-            return RedirectToAction(nameof(UrgentRequestsList));
+            _logger.LogInformation("Task {id} priority set to: '{priority}' with level: {level}", 
+                id, task.Priority, priorityLevel);
+
+            TempData["SuccessMessage"] = markAsUrgent
+                ? $"Task marked as urgent with priority {priorityLevel}."
+                : "Urgent request processed.";
+
+            return RedirectToAction("Details", "PlannedEvents", new { id = task.PlannedEvent?.Id });
         }
 
         // GET: PETasks/OLAViolationsList
