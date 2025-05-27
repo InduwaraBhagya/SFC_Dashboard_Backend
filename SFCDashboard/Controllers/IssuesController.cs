@@ -522,7 +522,7 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmResolution(int resolutionId, bool isConfirmed)
         {
-            _logger.LogWarning($"ConfirmResolution called with resolutionId: {resolutionId}, isConfirmed: {isConfirmed}");
+            _logger.LogInformation($"ConfirmResolution called with resolutionId: {resolutionId}, isConfirmed: {isConfirmed}");
             
             try
             {
@@ -546,31 +546,38 @@ namespace SFCDashboard.Controllers
 
                 if (isConfirmed)
                 {
-                                resolution.IsConfirmed = true;
-            resolution.ConfirmedDate = DateTime.Now;
-            _context.Update(resolution);
-            
-            // Update issue
-            var issueResolution = resolution.Issue;
-            if (issueResolution != null)
-            {
-                issueResolution.IsResolved = true;
-                _context.Update(issueResolution);
-                _logger.LogInformation($"Issue {issue.Id} marked as resolved");
-            }
-            
-            // Update planned event
-             pe = resolution.PlannedEvent;
+                    // Update resolution status
+                    resolution.IsConfirmed = true;
+                    resolution.ConfirmedDate = DateTime.Now;
+                    _context.Update(resolution);
+                    
+                    // Mark issue as resolved
+                    if (issue != null)
+                    {
+                        issue.IsResolved = true;
+                        _context.Update(issue);
+                        _logger.LogInformation($"Issue {issue.Id} marked as resolved");
+                    }
+                    
+                    // Update planned event - ONLY if no other active issues remain
                     if (pe != null)
                     {
                         // Check if all issues are now resolved before removing hold status
                         var hasOtherActiveIssues = await _context.PEIssues
-                            .AnyAsync(i => i.PlannedEventId == pe.Id && !i.IsResolved && i.OriginalIssueId == null);
+                            .AnyAsync(i => i.PlannedEventId == pe.Id && 
+                                      !i.IsResolved && 
+                                      i.OriginalIssueId == null && 
+                                      i.Id != issue.Id);  // Exclude the current issue
 
                         if (!hasOtherActiveIssues)
                         {
-                            pe.IsHold = false;
+                            pe.IsHold = false;  // Just set IsHold to false, don't change status
                             _context.Update(pe);
+                            _logger.LogInformation($"PE {pe.Id} removed from hold status as all issues are resolved");
+                        }
+                        else
+                        {
+                            _logger.LogInformation($"PE {pe.Id} remains on hold due to other unresolved issues");
                         }
                     }
                     else
@@ -578,23 +585,7 @@ namespace SFCDashboard.Controllers
                         _logger.LogWarning($"PE not found for resolution id: {resolutionId}");
                     }
                     
-                    if (issue != null)
-                    {
-                        issue.IsResolved = true;
-                        _context.Update(issue);
-                    }
-
-                    resolution.IsConfirmed = true;
-                    
-                    // Check which property exists for confirmation date in your model
-                    if (resolution.GetType().GetProperty("ConfirmedDate") != null)
-                    {
-                        resolution.ConfirmedDate = DateTime.Now;
-                    }
-                    
-                    _context.Update(resolution);
                     await _context.SaveChangesAsync();
-                    
                     TempData["SuccessMessage"] = "Resolution confirmed and issue marked as resolved.";
                 }
                 else

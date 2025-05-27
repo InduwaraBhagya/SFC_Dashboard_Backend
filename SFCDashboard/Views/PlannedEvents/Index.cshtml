@@ -1688,13 +1688,47 @@ function submitResolutionForm(isConfirmed) {
 @functions {
     private string GetResolutionDetails(int issueId)
     {
-        var resolution = ViewBag.ResolutionsByIssueId?[issueId];
-        return resolution?.ResolutionDetails ?? "";
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return "";
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return "";
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.ResolutionDetails ?? "";
+                
+            return "";
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return "";
+        }
     }
 
     private int GetResolutionId(int issueId)
     {
-        var resolution = ViewBag.ResolutionsByIssueId?[issueId];
-        return resolution?.Id ?? 0;
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return 0;
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return 0;
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.Id ?? 0;
+                
+            return 0;
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return 0;
+        }
     }
 }
