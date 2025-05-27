@@ -10,7 +10,7 @@ namespace SFCDashboard.Models
         public int ReceiverId { get; set; }
         public string ReceiverName { get; set; }
         public string IssueText { get; set; }
-        public string AttachmentPath { get; set; }
+        public string? AttachmentPath { get; set; }
         public DateTime CreatedAt { get; set; }
         public int PlannedEventId { get; set; }
         public bool IsRead { get; set; }
@@ -23,5 +23,8 @@ namespace SFCDashboard.Models
         // New properties for resolution information
         public string ResolutionDetails { get; set; }
         public int? ResolutionId { get; set; }
+
+        // Property to indicate if the issue is hidden from the inbox
+        public bool IsHiddenFromInbox { get; set; }
     }
 }

@@ -188,9 +188,10 @@ namespace SFCDashboard.Controllers
             var currentUserId = await GetCurrentUserIdAsync();
 
             // Get latest issues for the inbox
-            var inboxIssues = await _context.PEIssues
-                .Where(i => i.ReceiverId == currentUserId)
-                .OrderByDescending(i => i.CreatedAt)
+// In your inbox action methods
+var inboxIssues = await _context.PEIssues
+    .Where(i => i.ReceiverId == currentUserId && !i.IsHiddenFromInbox)
+    .OrderByDescending(i => i.CreatedAt)
                 .Take(10)
                 .Select(i => new PEIssueViewModel
                 {
@@ -215,6 +216,7 @@ namespace SFCDashboard.Controllers
                     IsResolved = i.IsResolved,
                     IsResolutionRequest = i.IsResolutionRequest,
                     PETaskId = i.PETaskId
+                    
                 })
                 .ToListAsync();
 
@@ -359,7 +361,7 @@ namespace SFCDashboard.Controllers
     .OrderByDescending(i => i.CreatedAt)
     .Select(i => new PEIssueViewModel
     {
-        Id = i.Id, // Make sure to include this
+        Id = i.Id,
         SenderId = i.SenderId,
         SenderName = _context.Users.Where(u => u.Id == i.SenderId).Select(u => u.Name).FirstOrDefault() ?? "Unknown Sender",
         ReceiverId = i.ReceiverId,
@@ -367,7 +369,9 @@ namespace SFCDashboard.Controllers
         IssueText = i.IssueText,
         AttachmentPath = i.AttachmentPath,
         CreatedAt = i.CreatedAt,
-        PlannedEventId = i.PlannedEventId
+        PlannedEventId = i.PlannedEventId,
+        IsResolved = i.IsResolved,
+        IsHiddenFromInbox = i.IsHiddenFromInbox  // Add this property
     })
     .ToListAsync();
 
@@ -1021,7 +1025,9 @@ namespace SFCDashboard.Controllers
             IssueText = i.IssueText,
             AttachmentPath = i.AttachmentPath ?? string.Empty,
             CreatedAt = i.CreatedAt,
-            PlannedEventId = i.PlannedEventId
+            PlannedEventId = i.PlannedEventId,
+                    IsResolved = i.IsResolved,  // Add this
+        IsHiddenFromInbox = i.IsHiddenFromInbox  // Add this
         })
         .ToListAsync();
 

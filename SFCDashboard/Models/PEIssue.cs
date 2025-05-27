@@ -35,5 +35,6 @@ namespace SFCDashboard.Models
         public int? OriginalIssueId { get; set; }
         public bool IsResolved { get; set; }
         public bool IsResolutionRequest { get; set; }
+        public bool IsHiddenFromInbox { get; set; } = false;
     }
 }

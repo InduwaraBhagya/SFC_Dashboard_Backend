@@ -271,38 +271,36 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                _logger.LogInformation("CreateForPE called for PE: {PeId}", model.PlannedEventId);
+                _logger.LogInformation("CreateForPE called with model: {PE}, {Text}, {Receiver}, {Attachment}",
+                    model.PlannedEventId, model.IssueText, model.ReceiverId,
+                    Attachment != null ? Attachment.FileName : "No attachment");
                 
-                if (!ModelState.IsValid)
+                if (model.IssueText == null || string.IsNullOrWhiteSpace(model.IssueText))
                 {
-                    _logger.LogWarning("Invalid model state in CreateForPE: {Errors}", 
-                        string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
-                    
-                    // Return to details with error message
-                    TempData["ErrorMessage"] = "There were errors in your form submission. Please check your input.";
+                    _logger.LogWarning("Issue text is empty or null");
+                    TempData["ErrorMessage"] = "Issue text cannot be empty";
                     return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
                 }
-                
-                // Only process attachment if one was provided
+
+                // Process attachment only if one was provided
                 if (Attachment != null && Attachment.Length > 0)
                 {
-                    _logger.LogInformation("Processing attachment: {FileName}, size: {Size}", 
-                        Attachment.FileName, Attachment.Length);
-                        
+                    _logger.LogInformation("Processing attachment: {FileName}, Size: {Size}KB", 
+                        Attachment.FileName, Attachment.Length / 1024);
+                
                     try
                     {
-                        string uploads = Path.Combine(_env.WebRootPath, "uploads", "issues", model.PlannedEventId.ToString());
-                        Directory.CreateDirectory(uploads);
-                        
-                        // Create a unique filename to prevent collisions
+                        string uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "issues", model.PlannedEventId.ToString());
+                        Directory.CreateDirectory(uploadsDir);
+                
                         var uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(Attachment.FileName)}";
-                        var filePath = Path.Combine(uploads, uniqueFileName);
-                        
+                        var filePath = Path.Combine(uploadsDir, uniqueFileName);
+                
                         using (var stream = new FileStream(filePath, FileMode.Create))
                         {
                             await Attachment.CopyToAsync(stream);
                         }
-                        
+                
                         model.AttachmentPath = $"/uploads/issues/{model.PlannedEventId}/{uniqueFileName}";
                         _logger.LogInformation("Attachment saved to: {Path}", model.AttachmentPath);
                     }
@@ -310,47 +308,38 @@ namespace SFCDashboard.Controllers
                     {
                         _logger.LogError(ex, "Error processing attachment");
                         // Continue without attachment rather than failing the whole request
-                        model.AttachmentPath = null;
                     }
                 }
-                else
-                {
-                    _logger.LogInformation("No attachment provided");
-                    // Ensure attachment path is null if no attachment
-                    model.AttachmentPath = null;
-                }
-                
-                // Set sender and creation time
+        
+                // Set creation time and user info
                 model.CreatedAt = DateTime.Now;
-                
-                // Get current user and set as sender
+        
                 var currentUser = await GetCurrentUserAsync();
-                if (currentUser == null)
+                if (currentUser != null)
                 {
-                    TempData["ErrorMessage"] = "Unable to identify current user. Please try again.";
-                    return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
+                    model.SenderId = currentUser.Id;
                 }
-                
-                model.SenderId = currentUser.Id;
+        
+                // Add the issue
                 _context.PEIssues.Add(model);
-                
-                // Set the PlannedEvent to "Hold" status
+        
+                // Set the PE on hold
                 var pe = await _context.PlannedEvents.FindAsync(model.PlannedEventId);
                 if (pe != null)
                 {
                     pe.IsHold = true;
                     _context.Update(pe);
                 }
-                
+
                 await _context.SaveChangesAsync();
-                
+        
                 TempData["SuccessMessage"] = "Issue reported successfully!";
                 return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in CreateForPE");
-                TempData["ErrorMessage"] = $"An error occurred while reporting the issue: {ex.Message}";
+                TempData["ErrorMessage"] = $"Error: {ex.Message}";
                 return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
             }
         }
@@ -558,7 +547,17 @@ namespace SFCDashboard.Controllers
                         _context.Update(issue);
                         _logger.LogInformation($"Issue {issue.Id} marked as resolved");
                     }
-                    
+                        var resolutionRequestMessage = await _context.PEIssues
+        .FirstOrDefaultAsync(i => i.IsResolutionRequest && 
+                               i.OriginalIssueId == issue.Id);
+                               
+    if (resolutionRequestMessage != null)
+    {
+        // Instead of removing, mark it as hidden from inbox
+        resolutionRequestMessage.IsHiddenFromInbox = true;
+        _context.Update(resolutionRequestMessage);
+        _logger.LogInformation($"Resolution request message {resolutionRequestMessage.Id} hidden from inbox");
+    }
                     // Update planned event - ONLY if no other active issues remain
                     if (pe != null)
                     {

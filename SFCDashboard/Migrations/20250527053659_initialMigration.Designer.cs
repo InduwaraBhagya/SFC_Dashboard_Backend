@@ -12,7 +12,7 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250526035547_initialMigration")]
+    [Migration("20250527053659_initialMigration")]
     partial class initialMigration
     {
         /// <inheritdoc />

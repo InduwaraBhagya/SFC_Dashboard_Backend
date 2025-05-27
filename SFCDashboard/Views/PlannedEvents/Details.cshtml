@@ -391,6 +391,7 @@
                             <th>Issue</th>
                             <th>Attachment</th>
                             <th>Date</th>
+                            <th>Status</th>  <!-- Add this new column -->
                         </tr>
                     </thead>
                     <tbody>
@@ -411,6 +412,16 @@
                                 }
                             </td>
                             <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                @if (issue.IsResolved || issue.IsHiddenFromInbox)
+                                {
+                                    <span class="badge bg-success">Fixed</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Open</span>
+                                }
+                            </td>
                         </tr>
                     }
                     </tbody>
