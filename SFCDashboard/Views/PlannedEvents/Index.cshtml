@@ -700,32 +700,48 @@
             });
             
             // Accept button handler
-            document.getElementById('acceptUrgentRequestBtn').addEventListener('click', function() {
-                const requestType = document.getElementById('urgentRequestType').value;
-                const requestId = document.getElementById('urgentRequestId').value;
-                
-                // Submit the form to the appropriate endpoint
-                const form = document.getElementById('urgentRequestForm');
-                
-                // Create hidden field for urgentReason
-                const reasonField = document.createElement('input');
-                reasonField.type = 'hidden';
-                reasonField.name = 'urgentReason';
-                
-                // Default to OpeningCeremony 
-                // (backend will use the original reason from the request)
-                reasonField.value = 'OpeningCeremony';
-                
-                form.appendChild(reasonField);
-                
-                if (requestType === 'pe') {
-                    form.action = '/PlannedEvents/ProcessUrgentRequest';
-                } else {
-                    form.action = '/PETasks/ProcessUrgentRequest';
-                }
-                
-                form.submit();
-            });
+ // Update the urgent request accept button handler
+document.getElementById('acceptUrgentRequestBtn').addEventListener('click', function() {
+    const requestType = document.getElementById('urgentRequestType').value;
+    const requestId = document.getElementById('urgentRequestId').value;
+    
+    // Get the current priority reason from the displayed data
+    let priorityText = document.querySelector('#urgentRequestDetails .row:nth-child(3) .col-sm-8').innerText || '';
+    let urgentReason = 'OpeningCeremony'; // Default fallback
+    
+    // Determine the correct reason based on the priority text displayed in the modal
+    if (priorityText.includes('Priority 2') || priorityText.toLowerCase().includes('critical customer')) {
+        urgentReason = 'CriticalCustomer';
+        console.log('Setting urgentReason to CriticalCustomer based on priority text');
+    } else if (priorityText.includes('Priority 0') || priorityText.toLowerCase().includes('network outage')) {
+        urgentReason = 'NetworkOutage';
+        console.log('Setting urgentReason to NetworkOutage based on priority text');
+    } else if (priorityText.includes('Priority 1') || priorityText.toLowerCase().includes('opening ceremony')) {
+        urgentReason = 'OpeningCeremony';
+        console.log('Setting urgentReason to OpeningCeremony based on priority text');
+    }
+    
+    // Submit the form to the appropriate endpoint
+    const form = document.getElementById('urgentRequestForm');
+    
+    // Create hidden field for urgentReason
+    const reasonField = document.createElement('input');
+    reasonField.type = 'hidden';
+    reasonField.name = 'urgentReason';
+    reasonField.value = urgentReason;
+    
+    console.log('Submitting urgent request with reason:', urgentReason);
+    
+    form.appendChild(reasonField);
+    
+    if (requestType === 'pe') {
+        form.action = '/PlannedEvents/ProcessUrgentRequest';
+    } else {
+        form.action = '/PETasks/ProcessUrgentRequest';
+    }
+    
+    form.submit();
+});
             
             // Reject button handler
             document.getElementById('rejectUrgentRequestBtn').addEventListener('click', function() {

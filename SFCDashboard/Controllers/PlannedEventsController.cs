@@ -715,26 +715,31 @@ namespace SFCDashboard.Controllers
 
             bool markAsUrgent = false;
             string priorityMessage = "";
+            int priorityLevel = 0;
 
             switch (urgentReason)
             {
                 case "OpeningCeremony":
                     markAsUrgent = true;
                     plannedEvent.PEStatus = "URGENT";
-                    priorityMessage = " [URGENT: Opening Ceremony - Priority 1]";
-                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + priorityMessage;
+                    priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
+                    priorityLevel = 1;
+                    // Replace entire priority string
+                    plannedEvent.Priority = priorityMessage;
                     break;
 
                 case "CriticalCustomer":
                     markAsUrgent = true;
                     plannedEvent.PEStatus = "URGENT";
-                    priorityMessage = " [URGENT: Critical Customer - Priority 2]";
-                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + priorityMessage;
+                    priorityMessage = "[URGENT: Critical Customer - Priority 2]";
+                    priorityLevel = 2;
+                    // Replace entire priority string
+                    plannedEvent.Priority = priorityMessage;
                     break;
 
                 case "Reject":
                     plannedEvent.PEStatus = "ongoing";
-                    plannedEvent.Priority = (plannedEvent.Priority ?? "") + " [Urgent Request Rejected]";
+                    plannedEvent.Priority = "Urgent Request Rejected";
                     break;
 
                 default:
@@ -745,35 +750,42 @@ namespace SFCDashboard.Controllers
             _context.Update(plannedEvent);
             await _context.SaveChangesAsync();
 
-            // If PE was marked as urgent, update all its tasks to be urgent as well
-            if (markAsUrgent)
-            {
-                var relatedTasks = await _context.PETasks
-                    .Where(t => t.PENumber == plannedEvent.PeNumber)
-                    .ToListAsync();
+            // Add logging
+            _logger.LogInformation("PE {id} priority set to: '{priority}' with level {level}", 
+        id, plannedEvent.Priority, priorityLevel);
 
-                foreach (var task in relatedTasks)
-                {
-                    task.IsUrgent = true;
-                    task.UrgentRequested = false; // Clear any pending urgent requests
-                    task.Priority = (task.Priority ?? "") + priorityMessage + " (Inherited from PE)";
-                }
+    // If PE was marked as urgent, update all its tasks to be urgent as well
+    if (markAsUrgent)
+    {
+        var relatedTasks = await _context.PETasks
+            .Where(t => t.PENumber == plannedEvent.PeNumber)
+            .ToListAsync();
 
-                if (relatedTasks.Any())
-                {
-                    _context.UpdateRange(relatedTasks);
-                    await _context.SaveChangesAsync();
-                    _logger.LogInformation("Marked {count} tasks as urgent for PE {peNumber}",
-                        relatedTasks.Count, plannedEvent.PeNumber);
-                }
-            }
-
-            TempData["SuccessMessage"] = markAsUrgent
-                ? "Planned Event marked as urgent. All related tasks have also been marked as urgent."
-                : "Urgent request processed.";
-
-            return RedirectToAction("Details", new { id = plannedEvent.Id });
+        foreach (var task in relatedTasks)
+        {
+            task.IsUrgent = true;
+            task.UrgentRequested = false; // Clear any pending urgent requests
+            
+            // Use the EXACT same priority message
+            task.Priority = priorityMessage + " (Inherited from PE)";
+            
+            _logger.LogInformation("Task {id} priority set to: '{priority}'", 
+                task.Id, task.Priority);
         }
+
+        if (relatedTasks.Any())
+        {
+            _context.UpdateRange(relatedTasks);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    TempData["SuccessMessage"] = markAsUrgent
+        ? $"Planned Event marked as urgent with priority {priorityLevel}. All related tasks have also been marked as urgent."
+        : "Urgent request processed.";
+
+    return RedirectToAction("Details", new { id = plannedEvent.Id });
+}
 
         [HttpGet]
         public async Task<IActionResult> RequestUrgent(int id)

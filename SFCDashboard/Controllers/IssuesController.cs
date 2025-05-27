@@ -269,48 +269,90 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateForPE(PEIssue model, IFormFile Attachment)
         {
-            if (ModelState.IsValid)
+            try
             {
-                string uploads = Path.Combine(_env.WebRootPath, "uploads", "issues", model.PlannedEventId.ToString());
+                _logger.LogInformation("CreateForPE called for PE: {PeId}", model.PlannedEventId);
+                
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid model state in CreateForPE: {Errors}", 
+                        string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+                    
+                    // Return to details with error message
+                    TempData["ErrorMessage"] = "There were errors in your form submission. Please check your input.";
+                    return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
+                }
+                
+                // Only process attachment if one was provided
                 if (Attachment != null && Attachment.Length > 0)
                 {
-                    Directory.CreateDirectory(uploads);
-                    var filePath = Path.Combine(uploads, Attachment.FileName);
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    _logger.LogInformation("Processing attachment: {FileName}, size: {Size}", 
+                        Attachment.FileName, Attachment.Length);
+                        
+                    try
                     {
-                        await Attachment.CopyToAsync(stream);
+                        string uploads = Path.Combine(_env.WebRootPath, "uploads", "issues", model.PlannedEventId.ToString());
+                        Directory.CreateDirectory(uploads);
+                        
+                        // Create a unique filename to prevent collisions
+                        var uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(Attachment.FileName)}";
+                        var filePath = Path.Combine(uploads, uniqueFileName);
+                        
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await Attachment.CopyToAsync(stream);
+                        }
+                        
+                        model.AttachmentPath = $"/uploads/issues/{model.PlannedEventId}/{uniqueFileName}";
+                        _logger.LogInformation("Attachment saved to: {Path}", model.AttachmentPath);
                     }
-                    model.AttachmentPath = $"/uploads/issues/{model.PlannedEventId}/{Attachment.FileName}";
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing attachment");
+                        // Continue without attachment rather than failing the whole request
+                        model.AttachmentPath = null;
+                    }
                 }
-
-                // Set sender (current user)
+                else
+                {
+                    _logger.LogInformation("No attachment provided");
+                    // Ensure attachment path is null if no attachment
+                    model.AttachmentPath = null;
+                }
+                
+                // Set sender and creation time
                 model.CreatedAt = DateTime.Now;
                 
-                // Set current user as sender
+                // Get current user and set as sender
                 var currentUser = await GetCurrentUserAsync();
-                if (currentUser != null)
+                if (currentUser == null)
                 {
-                    model.SenderId = currentUser.Id;
+                    TempData["ErrorMessage"] = "Unable to identify current user. Please try again.";
+                    return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
                 }
                 
+                model.SenderId = currentUser.Id;
                 _context.PEIssues.Add(model);
                 
-                // Change IsHold flag instead of directly changing status
+                // Set the PlannedEvent to "Hold" status
                 var pe = await _context.PlannedEvents.FindAsync(model.PlannedEventId);
                 if (pe != null)
                 {
                     pe.IsHold = true;
                     _context.Update(pe);
                 }
-
+                
                 await _context.SaveChangesAsync();
                 
-                // Redirect or return success
+                TempData["SuccessMessage"] = "Issue reported successfully!";
                 return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
             }
-            
-            // If invalid, return to details
-            return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in CreateForPE");
+                TempData["ErrorMessage"] = $"An error occurred while reporting the issue: {ex.Message}";
+                return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
+            }
         }
 
         // For AJAX: Get issue suggestions for a PE/tasklist
