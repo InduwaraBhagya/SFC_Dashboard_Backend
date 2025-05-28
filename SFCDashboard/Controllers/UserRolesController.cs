@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
 
@@ -8,16 +9,18 @@ namespace SFCDashboard.Controllers
     public class UserRolesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<UserRolesController> _logger;
 
-        public UserRolesController(ApplicationDbContext context)
+        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: UserRoles
         public async Task<IActionResult> Index()
         {
-            return View(await _context.UserRole.ToListAsync());
+            return View(await _context.UserRoles.ToListAsync());
         }
 
         // GET: UserRoles/Details/5
@@ -28,7 +31,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var userRole = await _context.UserRole
+            var userRole = await _context.UserRoles
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (userRole == null)
             {
@@ -39,8 +42,9 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: UserRoles/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
             return View();
         }
 
@@ -49,14 +53,42 @@ namespace SFCDashboard.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name")] UserRole userRole)
+        public async Task<IActionResult> Create([Bind("Name")] UserRole userRole, int[] selectedPermissions)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(userRole);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.UserRoles.Add(userRole);  // Changed from UserRole to UserRoles
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation($"Role created with ID: {userRole.Id}");
+
+                    if (selectedPermissions != null && selectedPermissions.Any())
+                    {
+                        foreach (var permissionId in selectedPermissions)
+                        {
+                            var rolePermission = new RolePermission
+                            {
+                                RoleId = userRole.Id,
+                                PermissionId = permissionId
+                            };
+                            _context.RolePermissions.Add(rolePermission);
+                        }
+                        await _context.SaveChangesAsync();
+                    }
+
+                    TempData["SuccessMessage"] = "Role created successfully!";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error creating role: {ex.Message}");
+                    ModelState.AddModelError("", "Error creating role: " + ex.Message);
+                }
             }
+
+            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
             return View(userRole);
         }
 
@@ -68,11 +100,18 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var userRole = await _context.UserRole.FindAsync(id);
+            var userRole = await _context.UserRoles
+                .Include(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
             if (userRole == null)
             {
                 return NotFound();
             }
+
+            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
+            ViewData["SelectedPermissions"] = userRole.RolePermissions.Select(rp => rp.PermissionId).ToList();
             return View(userRole);
         }
 
@@ -81,7 +120,7 @@ namespace SFCDashboard.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name")] UserRole userRole)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Name")] UserRole userRole, int[] selectedPermissions)
         {
             if (id != userRole.Id)
             {
@@ -92,8 +131,37 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    _context.Update(userRole);
+                    // Get existing role with permissions
+                    var existingRole = await _context.UserRoles
+                        .Include(r => r.RolePermissions)
+                        .FirstOrDefaultAsync(r => r.Id == id);
+
+                    if (existingRole == null)
+                    {
+                        return NotFound();
+                    }
+
+                    // Update basic properties
+                    existingRole.Name = userRole.Name;
+
+                    // Remove existing permissions
+                    _context.RolePermissions.RemoveRange(existingRole.RolePermissions);
+
+                    // Add new permissions
+                    if (selectedPermissions != null)
+                    {
+                        foreach (var permissionId in selectedPermissions)
+                        {
+                            existingRole.RolePermissions.Add(new RolePermission
+                            {
+                                RoleId = id,
+                                PermissionId = permissionId
+                            });
+                        }
+                    }
+
                     await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -106,8 +174,9 @@ namespace SFCDashboard.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(Index));
             }
+
+            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
             return View(userRole);
         }
 
@@ -119,7 +188,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var userRole = await _context.UserRole
+            var userRole = await _context.UserRoles
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (userRole == null)
             {
@@ -134,10 +203,10 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var userRole = await _context.UserRole.FindAsync(id);
+            var userRole = await _context.UserRoles.FindAsync(id);
             if (userRole != null)
             {
-                _context.UserRole.Remove(userRole);
+                _context.UserRoles.Remove(userRole);
             }
 
             await _context.SaveChangesAsync();
@@ -146,7 +215,7 @@ namespace SFCDashboard.Controllers
 
         private bool UserRoleExists(int id)
         {
-            return _context.UserRole.Any(e => e.Id == id);
+            return _context.UserRoles.Any(e => e.Id == id);
         }
 
     }

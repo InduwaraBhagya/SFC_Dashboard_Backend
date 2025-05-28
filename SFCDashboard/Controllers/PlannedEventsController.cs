@@ -37,10 +37,13 @@ namespace SFCDashboard.Controllers
             string jobReference, string soNumber, int? workgroupId, int pageIndex = 1)
         {
              var currentUser = await _context.Users
-            .Include(u => u.UserRole)
-            .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
-        
-            ViewData["IsGeneralManager"] = currentUser?.UserRole?.Name == "General Manager";
+                .Include(u => u.UserRole)
+                    .ThenInclude(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+                .Include(u => u.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+
+                ViewData["CanAcceptUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanAcceptUrgentRequests") == true;
 
             // Trim all search parameters to remove leading/trailing spaces
             peNumber = peNumber?.Trim();
@@ -341,17 +344,19 @@ var inboxIssues = await _context.PEIssues
 
 
         // GET: PlannedEvents/Details/5
-        public async Task<IActionResult> Details(int id, string returnUrl = null)
+        public async Task<IActionResult> Details(int? id, string returnUrl = null)
         {
-             // Get current user's role and workgroup
             var currentUser = await _context.Users
-            .Include(u => u.UserRole)
-            .Include(u => u.WorkGroup)
-            .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
-        
-            ViewData["CanManageEstimatedTime"] = currentUser?.UserRole?.Name == "Engineer" && 
-                                                currentUser?.WorkGroup?.Name == "NET-PROJ-ACC-CABLE";
+                .Include(u => u.UserRole)
+                    .ThenInclude(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+                .Include(u => u.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
+            ViewData["CanMakeTasksUrgent"] = currentUser?.UserRole?.HasPermission("CanMakeTasksUrgent") == true;
+            
+            ViewData["CanManageEstimatedTime"] = currentUser?.UserRole?.HasPermission("CanManageEstimatedTime") == true && 
+                                        currentUser?.WorkGroup?.Name == "NET-PROJ-ACC-CABLE";
 
             var plannedEvent = await _context.PlannedEvents.FindAsync(id);
             if (plannedEvent == null)
@@ -535,12 +540,14 @@ var inboxIssues = await _context.PEIssues
                 ViewData["CanViewAll"] = canViewAll;
                 ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
 
-                // Get current user's role
                 var currentUser = await _context.Users
-                    .Include(u => u.UserRole)
-                    .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
-                    
-                ViewData["IsAccountManager"] = currentUser?.UserRole?.Name == "Account Manager";
+                .Include(u => u.UserRole)
+                    .ThenInclude(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+                .Include(u => u.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+
+                ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendUrgentRequests") == true;
     
                 var records = await query.ToListAsync();
                 return View(records);

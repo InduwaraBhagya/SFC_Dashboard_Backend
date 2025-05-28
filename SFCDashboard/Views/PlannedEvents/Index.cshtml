@@ -505,7 +505,7 @@
                 </div>
 
                 <div class="messages-container mt-3">
-                    @if (ViewData["IsGeneralManager"] as bool? == true)
+                    @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
                     {<!-- Urgent Request Confirmation Messages -->
                     @if (ViewData["PendingUrgentRequests"] != null)
                     {

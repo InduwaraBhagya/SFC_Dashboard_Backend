@@ -44,7 +44,7 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers/Create
         public IActionResult Create()
         {
-            ViewData["UserRoleId"] = new SelectList(_context.UserRole, "Id", "Name");
+            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name");
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name");
             return View();
         }
@@ -62,7 +62,7 @@ namespace SFCDashboard.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserRoleId"] = new SelectList(_context.UserRole, "Id", "Name", systemUser.UserRoleId);
+            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", systemUser.UserRoleId);
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name", systemUser.WorkGroupId);
             return View(systemUser);
         }
@@ -87,7 +87,7 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-            ViewData["UserRoleId"] = new SelectList(_context.UserRole, "Id", "Name", systemUser.UserRoleId);
+            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", systemUser.UserRoleId);
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name", systemUser.WorkGroupId);
             return View(systemUser);
         }
@@ -135,7 +135,7 @@ namespace SFCDashboard.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserRoleId"] = new SelectList(_context.UserRole, "Id", "Name", systemUser.UserRoleId);
+            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", systemUser.UserRoleId);
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name", systemUser.WorkGroupId);
             return View(systemUser);
         }

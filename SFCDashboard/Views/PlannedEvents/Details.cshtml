@@ -26,6 +26,8 @@
     .Where(t => t.Task?.Trim().ToLower() == "draw fiber")
     .ToList();
 }
+
+
 @if (drawFiberTasks.Any() && ViewData["CanManageEstimatedTime"] as bool? == true)
 {
     <div class="card mb-4">
@@ -302,7 +304,7 @@
                             <tr>
                                 <th>Seq</th>
                                 <th>Task</th>
-                                <th>Priority</th> <!-- Moved Priority here -->
+                                <th>Priority</th>
                                 <th>Workgroup</th>
                                 <th>OLA</th>
                                 <th>Status</th>
@@ -310,7 +312,10 @@
                                 <th>Target Date</th>
                                 <th>Actual Start Date</th>
                                 <th>Actual End Date</th>
-                                <th>Actions</th>
+                                @if (ViewData["CanMakeTasksUrgent"] as bool? == true)
+                                {
+                                    <th>Actions</th>
+                                }
                             </tr>
                         </thead>
                         <tbody>
@@ -389,12 +394,14 @@
                                 }
                                 else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
                                 {
+                                    @if (ViewData["CanMakeTasksUrgent"] as bool? == true){
                                     <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post">
                                         <input type="hidden" name="id" value="@task.Id" />
                                         <button type="submit" class="btn btn-warning btn-sm w-100">
                                             <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
                                         </button>
                                     </form>
+                                    }
                                 }
                             </td>
                         </tr>
