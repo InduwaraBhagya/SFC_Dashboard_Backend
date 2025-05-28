@@ -1064,12 +1064,9 @@ var inboxIssues = await _context.PEIssues
         })
         .ToListAsync();
 
-    var issueIds = allIssues.Select(i => i.OriginalIssueId ?? i.Id).Distinct().ToList();
-    var resolutions = await _context.PEIssueResolutions
-        .Where(r => issueIds.Contains(r.IssueId))
-        .ToListAsync();
-
-    ViewBag.ResolutionsByIssueId = resolutions.ToDictionary(r => r.IssueId);
+var issuesByPlannedEventId = allIssues.GroupBy(i => i.PlannedEventId)
+    .ToDictionary(g => g.Key, g => g.ToList());  // Make sure we're using ToList() here
+ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
 
             ViewData["SearchType"] = searchType;
             ViewData["PENumberFilter"] = peNumber;

@@ -456,9 +456,9 @@
                                 <div class="mt-4">
                                     <strong>Reported Issues (Subtasks):</strong>
                                     @{
-                                        var issues = ViewBag.PEReportedIssuesByPeId != null && ((IDictionary<int, IEnumerable<SFCDashboard.Models.PEIssueViewModel>>)ViewBag.PEReportedIssuesByPeId).ContainsKey(item.Id)
-                                            ? ((IDictionary<int, IEnumerable<SFCDashboard.Models.PEIssueViewModel>>)ViewBag.PEReportedIssuesByPeId)[item.Id]
-                                            : Enumerable.Empty<SFCDashboard.Models.PEIssueViewModel>();
+                                        var issues = ViewBag.IssuesByPlannedEventId != null && ViewBag.IssuesByPlannedEventId.ContainsKey(item.Id)
+                                            ? ViewBag.IssuesByPlannedEventId[item.Id] 
+                                            : new List<SFCDashboard.Models.PEIssueViewModel>();
                                     }
                                     <table class="table table-bordered table-striped">
                                         <thead>
@@ -468,11 +468,11 @@
                                                 <th>Issue</th>
                                                 <th>Attachment</th>
                                                 <th>Date</th>
-                                                <th>Status</th>  <!-- Add this new column -->
+                                                <th>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                        @if (issues.Any())
+                                        @if (issues != null && issues.Count > 0)
                                         {
                                             foreach (var issue in issues)
                                             {
