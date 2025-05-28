@@ -505,7 +505,8 @@
                 </div>
 
                 <div class="messages-container mt-3">
-                    <!-- Urgent Request Confirmation Messages -->
+                    @if (ViewData["IsGeneralManager"] as bool? == true)
+                    {<!-- Urgent Request Confirmation Messages -->
                     @if (ViewData["PendingUrgentRequests"] != null)
                     {
                         foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
@@ -552,7 +553,8 @@
                             </div>
                         }
                     }
-
+                }
+                    
                     <!-- Issue Messages -->
                     @if (ViewData["InboxIssues"] != null)
                     {

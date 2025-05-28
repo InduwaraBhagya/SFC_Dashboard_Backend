@@ -1,17 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Hosting;
-using ClosedXML.Excel;
-using System.Collections.Generic;
-using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace SFCDashboard.Controllers
 {
@@ -46,6 +36,12 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> Index(string searchType, string peNumber, string customer,
             string jobReference, string soNumber, int? workgroupId, int pageIndex = 1)
         {
+             var currentUser = await _context.Users
+            .Include(u => u.UserRole)
+            .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+        
+            ViewData["IsGeneralManager"] = currentUser?.UserRole?.Name == "General Manager";
+
             // Trim all search parameters to remove leading/trailing spaces
             peNumber = peNumber?.Trim();
             customer = customer?.Trim();
@@ -347,6 +343,16 @@ var inboxIssues = await _context.PEIssues
         // GET: PlannedEvents/Details/5
         public async Task<IActionResult> Details(int id, string returnUrl = null)
         {
+             // Get current user's role and workgroup
+            var currentUser = await _context.Users
+            .Include(u => u.UserRole)
+            .Include(u => u.WorkGroup)
+            .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+        
+            ViewData["CanManageEstimatedTime"] = currentUser?.UserRole?.Name == "Engineer" && 
+                                                currentUser?.WorkGroup?.Name == "NET-PROJ-ACC-CABLE";
+
+
             var plannedEvent = await _context.PlannedEvents.FindAsync(id);
             if (plannedEvent == null)
             {
@@ -529,6 +535,13 @@ var inboxIssues = await _context.PEIssues
                 ViewData["CanViewAll"] = canViewAll;
                 ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
 
+                // Get current user's role
+                var currentUser = await _context.Users
+                    .Include(u => u.UserRole)
+                    .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                    
+                ViewData["IsAccountManager"] = currentUser?.UserRole?.Name == "Account Manager";
+    
                 var records = await query.ToListAsync();
                 return View(records);
             }

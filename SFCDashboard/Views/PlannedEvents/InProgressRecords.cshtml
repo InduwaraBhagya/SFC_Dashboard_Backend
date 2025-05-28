@@ -144,11 +144,14 @@
                                             class="btn btn-primary btn-sm">
                                             <i class="bi bi-eye"></i> View Details
                                         </a>
+                                        @if (ViewData["IsAccountManager"] as bool? == true)
+                                        {
                                         <button type="button" class="btn btn-danger btn-sm urgent-request-btn"
                                             data-pe-id="@item.Id" data-pe-number="@item.PeNumber"
                                             data-customer="@item.Customer">
                                             <i class="bi bi-exclamation-triangle"></i> Urgent
                                         </button>
+                                        }
                                     </div>
                                 </td>
                             </tr>

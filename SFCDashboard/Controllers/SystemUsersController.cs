@@ -70,6 +70,13 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+             var user = await _context.Users
+            .Include(u => u.WorkGroup)
+            .FirstOrDefaultAsync(u => u.Id == id);
+        
+            ViewData["CurrentWorkgroup"] = user.WorkGroup?.Name;
+            ViewData["CurrentWorkgroupId"] = user.WorkGroup?.Id;
+
             if (id == null)
             {
                 return NotFound();

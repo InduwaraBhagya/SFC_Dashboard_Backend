@@ -26,7 +26,7 @@
     .Where(t => t.Task?.Trim().ToLower() == "draw fiber")
     .ToList();
 }
-@if (drawFiberTasks.Any())
+@if (drawFiberTasks.Any() && ViewData["CanManageEstimatedTime"] as bool? == true)
 {
     <div class="card mb-4">
         <div class="card-header bg-secondary text-white">
