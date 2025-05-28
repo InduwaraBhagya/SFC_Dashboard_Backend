@@ -57,5 +57,6 @@ namespace SFCDashboard.Data
         }
         public DbSet<PETaskList> PETaskList { get; set; } = default!;
         public DbSet<UrgentReason> UrgentReasons { get; set; }
+        public DbSet<SubTaskList> SubTaskLists { get; set; }
     }
 }

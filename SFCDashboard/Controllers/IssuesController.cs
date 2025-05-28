@@ -330,6 +330,45 @@ namespace SFCDashboard.Controllers
                     _context.Update(pe);
                 }
 
+                // Find the matching PETaskList ID based on the task name from the PE record
+                var taskListId = await _context.PETaskLists
+                    .Where(tl => tl.Name == pe.TaskName)  // Changed from plannedEvent.TaskName to pe.TaskName
+                    .Select(tl => tl.Id)
+                    .FirstOrDefaultAsync();
+
+                // Override the PETaskId with the correct value
+                model.PETaskId = taskListId;
+                
+                // NEW: Check if this issue text already exists in SubTaskList
+                var existingSubTask = await _context.SubTaskLists
+                    .Where(s => s.PETaskListId == taskListId && s.SubTaskName == model.IssueText)
+                    .FirstOrDefaultAsync();
+                    
+                if (existingSubTask != null)
+                {
+                    // Update frequency and last reported date
+                    existingSubTask.Frequency += 1;
+                    existingSubTask.LastReported = DateTime.Now;
+                    _context.Update(existingSubTask);
+                    _logger.LogInformation($"Updated existing subtask frequency: {existingSubTask.SubTaskName}, new count: {existingSubTask.Frequency}");
+                }
+                else
+                {
+                    // Add new subtask to the SubTaskList
+                    var newSubTask = new SubTaskList
+                    {
+                        PETaskListId = taskListId,
+                        SubTaskName = model.IssueText,
+                        Frequency = 1,
+                        CreatedAt = DateTime.Now,
+                        LastReported = DateTime.Now
+                    };
+                    
+                    _context.SubTaskLists.Add(newSubTask);
+                    await _context.SaveChangesAsync();  // Try saving immediately to isolate any issues
+                    _logger.LogInformation($"Successfully added new subtask: {newSubTask.SubTaskName} for task ID: {taskListId}");
+                }
+
                 await _context.SaveChangesAsync();
         
                 TempData["SuccessMessage"] = "Issue reported successfully!";
@@ -345,15 +384,59 @@ namespace SFCDashboard.Controllers
 
         // For AJAX: Get issue suggestions for a PE/tasklist
         [HttpGet]
-        public IActionResult GetIssueSuggestions(int peId, int taskListId)
+public async Task<IActionResult> GetIssueSuggestions(int taskId)
+{
+    try
+    {
+        // First, get suggestions from SubTaskList table (more reliable)
+        var subTaskSuggestions = await _context.SubTaskLists
+            .Where(s => s.PETaskListId == taskId)
+            .OrderByDescending(s => s.Frequency) // Most common issues first
+            .ThenByDescending(s => s.LastReported) // Then most recent
+            .Take(10) // Increased to show more options
+            .Select(s => new 
+            {
+                IssueText = s.SubTaskName,
+                Frequency = s.Frequency,
+                LastReported = s.LastReported,
+                Source = "common" // Indicate this comes from common issues
+            })
+            .ToListAsync();
+        
+        // Then, get previous issues for this task (as before)
+        var recentIssueSuggestions = await _context.PEIssues
+            .Where(i => i.PETaskId == taskId && !i.IsReply && !i.IsResolutionRequest)
+            .OrderByDescending(i => i.CreatedAt)
+            .Take(5)
+            .Select(i => new 
+            {
+                IssueText = i.IssueText,
+                ReportedBy = _context.Users
+                    .Where(u => u.Id == i.SenderId)
+                    .Select(u => u.Name)
+                    .FirstOrDefault() ?? "Unknown",
+                CreatedAt = i.CreatedAt,
+                IsResolved = i.IsResolved,
+                Source = "recent" // Indicate this is from recent issues
+            })
+            .ToListAsync();
+        
+        // Combine and return both types of suggestions
+        var combinedSuggestions = new
         {
-            var issues = _context.PEIssues
-                .Where(i => i.PlannedEventId == peId && i.PETaskId == taskListId)
-                .Select(i => new { text = i.IssueText })
-                .Distinct()
-                .ToList();
-            return Json(issues);
-        }
+            CommonIssues = subTaskSuggestions,
+            RecentIssues = recentIssueSuggestions
+        };
+        
+        _logger.LogInformation($"Found {subTaskSuggestions.Count} common subtasks and {recentIssueSuggestions.Count} recent issues for task ID {taskId}");
+        return Json(combinedSuggestions);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error fetching issue suggestions for task ID {taskId}");
+        return Json(new { CommonIssues = new List<object>(), RecentIssues = new List<object>() });
+    }
+}
 
         [HttpPost]
         public async Task<IActionResult> MarkAsRead(int id)

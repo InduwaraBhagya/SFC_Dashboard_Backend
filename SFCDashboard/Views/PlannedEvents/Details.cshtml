@@ -561,12 +561,11 @@
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="issueText" class="form-label">Issue</label>
-                        <input type="text" class="form-control" id="issueText" name="IssueText" list="issueSuggestions"
-                            autocomplete="off" required />
-                        <datalist id="issueSuggestions"></datalist>
-                    </div>
+<div class="mb-3">
+    <label for="issueText" class="form-label">Issue</label>
+
+    <input type="text" class="form-control" id="issueText" name="IssueText" placeholder="Describe the issue" required />
+</div>
 <div class="mb-3">
     <label for="attachment" class="form-label">Attachment (Optional)</label>
     <input type="file" class="form-control" id="attachment" name="Attachment" />
@@ -764,6 +763,75 @@
                     });
                 }
             });
+
+            // When the modal is shown, fetch suggestions
+    $('#reportIssueModal').on('shown.bs.modal', function() {
+        // Clear previous suggestions
+        $('#issueSelect').empty();
+        $('#issueSelect').append($('<option>', { 
+            value: "", 
+            text: "-- Select from previous issues or type a new one --" 
+        }));
+        
+        // Get the taskId from PE's TaskName
+        var peTaskName = '@Model.TaskName';
+        
+        // First get the matching PETaskList ID
+        $.get('/Issues/GetTaskListIdByName', { taskName: peTaskName }, function(taskListId) {
+            if (taskListId > 0) {
+                // Then get suggestions for that task
+                $.get('/Issues/GetIssueSuggestions', { taskId: taskListId }, function(data) {
+                    // Check if we have suggestions
+                    if (data && (data.commonIssues.length > 0 || data.recentIssues.length > 0)) {
+                        
+                        // Show suggestion container
+                        $('.suggestion-container').show();
+                        
+                        // Add common issues
+                        if (data.commonIssues && data.commonIssues.length > 0) {
+                            var commonGroup = $('<optgroup label="Common Issues"></optgroup>');
+                            data.commonIssues.forEach(function(issue) {
+                                var frequencyText = issue.frequency > 1 ? 
+                                    ` (Reported ${issue.frequency} times)` : '';
+                                commonGroup.append($('<option>', {
+                                    value: issue.issueText,
+                                    text: issue.issueText + frequencyText
+                                }));
+                            });
+                            $('#issueSelect').append(commonGroup);
+                        }
+                        
+                        // Add recent issues
+                        if (data.recentIssues && data.recentIssues.length > 0) {
+                            var recentGroup = $('<optgroup label="Recent Issues"></optgroup>');
+                            data.recentIssues.forEach(function(issue) {
+                                var status = issue.isResolved ? '[FIXED] ' : '';
+                                recentGroup.append($('<option>', {
+                                    value: issue.issueText,
+                                    text: status + issue.issueText + ' (by ' + issue.reportedBy + ')'
+                                }));
+                            });
+                            $('#issueSelect').append(recentGroup);
+                        }
+                    } else {
+                        // No suggestions available
+                        $('.suggestion-container').hide();
+                    }
+                });
+            } else {
+                // No matching task list
+                $('.suggestion-container').hide();
+            }
+        });
+    });
+    
+    // When a suggestion is selected, populate the input field
+    $('#issueSelect').change(function() {
+        var selectedText = $(this).val();
+        if (selectedText) {
+            $('#issueText').val(selectedText);
+        }
+    });
         });
     </script>
 }
