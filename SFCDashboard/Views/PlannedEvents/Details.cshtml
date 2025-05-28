@@ -561,11 +561,13 @@
                         </select>
                     </div>
 
-<div class="mb-3">
-    <label for="issueText" class="form-label">Issue</label>
+                    <div class="mb-3">
+                            <label for="issueText" class="form-label">Issue</label>
 
-    <input type="text" class="form-control" id="issueText" name="IssueText" placeholder="Describe the issue" required />
-</div>
+                            input type="text" class="form-control" id="issueText" name="IssueText" list="issueSuggestions"
+                            autocomplete="off" required />
+                        <datalist id="issueSuggestions"></datalist>
+                    </div>
 <div class="mb-3">
     <label for="attachment" class="form-label">Attachment (Optional)</label>
     <input type="file" class="form-control" id="attachment" name="Attachment" />
