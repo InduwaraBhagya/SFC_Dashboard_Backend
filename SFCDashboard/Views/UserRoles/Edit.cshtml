@@ -1,32 +1,54 @@
 ﻿@model SFCDashboard.Models.UserRole
-
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit Role";
+    var permissions = (IEnumerable<Permission>)ViewData["Permissions"];
+    var selectedPermissions = (List<int>)ViewData["SelectedPermissions"] ?? new List<int>();
 }
 
-<h1>Edit</h1>
-
-<h4>UserRole</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
+<div class="card">
+    <div class="card-header">
+        <h4>Edit Role</h4>
+    </div>
+    <div class="card-body">
         <form asp-action="Edit">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
+            
+            <div class="form-group mb-3">
+                <label asp-for="Name" class="form-label">Role Name</label>
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Permissions</label>
+                <div class="border rounded p-3">
+                    @foreach (var permission in permissions)
+                    {
+                        <div class="form-check">
+                            <input type="checkbox" 
+                                   name="selectedPermissions" 
+                                   value="@permission.Id" 
+                                   class="form-check-input"
+                                   @(selectedPermissions.Contains(permission.Id) ? "checked" : "") />
+                            <label class="form-check-label">
+                                @permission.Name
+                                @if (!string.IsNullOrEmpty(permission.Description))
+                                {
+                                    <small class="text-muted d-block">@permission.Description</small>
+                                }
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+
             <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
             </div>
         </form>
     </div>
-</div>
-
-<div>
-    <a asp-action="Index">Back to List</a>
 </div>
 
 @section Scripts {

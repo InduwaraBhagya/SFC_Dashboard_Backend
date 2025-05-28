@@ -25,6 +25,10 @@ namespace SFCDashboard.Data
 
         public DbSet<PEIssue> PEIssues { get; set; }
         public DbSet<PEIssueResolution> PEIssueResolutions { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -45,9 +49,12 @@ namespace SFCDashboard.Data
                 .HasPrincipalKey(e => e.PeNumber)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Permission>().HasData(
+            new Permission { Id = 1, Name = "CanManageEstimatedTime", Description = "Can manage estimated time for tasks" }
+            // Add other permissions here
+            );
 
         }
-        public DbSet<UserRole> UserRole { get; set; } = default!;
         public DbSet<PETaskList> PETaskList { get; set; } = default!;
         public DbSet<UrgentReason> UrgentReasons { get; set; }
     }
