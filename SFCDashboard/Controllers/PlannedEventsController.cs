@@ -547,7 +547,7 @@ var inboxIssues = await _context.PEIssues
                 .Include(u => u.WorkGroup)
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
-                ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendUrgentRequests") == true;
+                ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
     
                 var records = await query.ToListAsync();
                 return View(records);
