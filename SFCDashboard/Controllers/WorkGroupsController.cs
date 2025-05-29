@@ -6,18 +6,26 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class WorkGroupsController : Controller
+    public class WorkGroupsController : AdminControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public WorkGroupsController(ApplicationDbContext context)
+        public WorkGroupsController(ApplicationDbContext context) : base(context)
         {
             _context = context;
+        }
+
+        private async Task<bool> IsAuthorized()
+        {
+            return await HttpContext.HasAdminPermissionAsync(_context);
         }
 
         // GET: WorkGroups
         public async Task<IActionResult> Index()
         {
+            if (!await IsAuthorized())
+                return RedirectToAction("Index", "PlannedEvents");
+
             return View(await _context.WorkGroups.ToListAsync());
         }
 

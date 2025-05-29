@@ -633,46 +633,67 @@ var inboxIssues = await _context.PEIssues
                 return View(new List<PlannedEvent>());
             }
         }
+public async Task<IActionResult> HoldRecords(string peNumber, string reference, string customer, int? workgroupId)
+{
+    // Get current user's workgroup info
+    var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
 
-        public async Task<IActionResult> HoldRecords(int? workgroupId)
+    // Start with base query that explicitly filters for IsHold = true
+    var query = _context.PlannedEvents.Where(p => p.IsHold == true);
+    
+    // Apply workgroup filtering
+    if (canViewAll)
+    {
+        if (workgroupId.HasValue)
         {
-            var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
-            workgroupId = workgroupId ?? userWorkgroupId;
-
-            try
+            var selectedWorkgroup = await _context.WorkGroups.FindAsync(workgroupId);
+            if (selectedWorkgroup != null)
             {
-                // Load workgroups for the dropdown
-                var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-                ViewData["Workgroups"] = workgroups;
+                query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(selectedWorkgroup.Name));
+                ViewData["FilteredWorkgroup"] = selectedWorkgroup.Name;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
-                ViewData["CanViewAll"] = canViewAll;
-
-                // Use IsHold instead of checking PEStatus
-                var query = _context.PlannedEvents.Where(p => p.IsHold == true);
-
-                // Apply workgroup filter if selected
-                if (workgroupId.HasValue)
-                {
-                    var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
-                    if (workgroup != null)
-                    {
-                        ViewData["FilteredWorkgroup"] = workgroup.Name;
-                        query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
-                    }
-                }
-
-                var holdRecords = await query.ToListAsync();
-                ViewData["HoldCount"] = holdRecords.Count;
-
-                return View(holdRecords);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading hold records with workgroup filter {workgroupId}", workgroupId);
-                TempData["ErrorMessage"] = "An error occurred while loading records.";
-                return View(new List<PlannedEvent>());
             }
         }
+    }
+    else
+    {
+        // Regular users can only see their own workgroup's records
+        var workgroup = await _context.WorkGroups.FindAsync(userWorkgroupId);
+        if (workgroup != null)
+        {
+            query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
+            ViewData["FilteredWorkgroup"] = workgroup.Name;
+        }
+    }
+    
+    // Apply search filters
+    if (!string.IsNullOrEmpty(peNumber))
+    {
+        query = query.Where(p => p.PeNumber.Contains(peNumber));
+        ViewData["SearchPeNumber"] = peNumber;
+    }
+
+    if (!string.IsNullOrEmpty(reference))
+    {
+        query = query.Where(p => p.RequestReferenceNo != null && 
+                               p.RequestReferenceNo.Contains(reference));
+        ViewData["SearchReference"] = reference;
+    }
+
+    if (!string.IsNullOrEmpty(customer))
+    {
+        query = query.Where(p => p.Customer != null && 
+                               p.Customer.Contains(customer));
+        ViewData["SearchCustomer"] = customer;
+    }
+    
+    // Add logging to diagnose issues
+    var holdRecords = await query.ToListAsync();
+    _logger.LogInformation($"Found {holdRecords.Count} hold records");
+    
+    return View(holdRecords);
+}
+
 
         public async Task<IActionResult> UrgentRecords(int? workgroupId)
         {
@@ -683,7 +704,7 @@ var inboxIssues = await _context.PEIssues
                 ViewData["Workgroups"] = workgroups;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
-                var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent"&&p.IsHold == false);
+                var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent" && p.IsHold == false);
 
                 // Apply workgroup filter if selected
                 if (workgroupId.HasValue)

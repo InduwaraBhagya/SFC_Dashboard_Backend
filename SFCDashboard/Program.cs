@@ -55,6 +55,7 @@ builder.Services.AddControllersWithViews(options =>
 // Add Razor Pages
 builder.Services.AddRazorPages()
     .AddMicrosoftIdentityUI();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 

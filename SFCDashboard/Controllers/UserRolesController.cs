@@ -6,12 +6,12 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class UserRolesController : Controller
+    public class UserRolesController : AdminControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserRolesController> _logger;
 
-        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger)
+        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger) : base(context)
         {
             _context = context;
             _logger = logger;
