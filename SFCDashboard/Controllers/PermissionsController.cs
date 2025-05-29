@@ -5,12 +5,12 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class PermissionsController : Controller
+    public class PermissionsController : AdminControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PermissionsController> _logger;
 
-        public PermissionsController(ApplicationDbContext context, ILogger<PermissionsController> logger)
+        public PermissionsController(ApplicationDbContext context, ILogger<PermissionsController> logger) : base(context)
         {
             _context = context;
             _logger = logger;

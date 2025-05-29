@@ -5,11 +5,10 @@ using SFCDashboard.Data;
 
 namespace SFCDashboard.Controllers
 {
-    public class SystemUsersController : Controller
+    public class SystemUsersController : AdminControllerBase
     {
         private readonly ApplicationDbContext _context;
-
-        public SystemUsersController(ApplicationDbContext context)
+        public SystemUsersController(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
