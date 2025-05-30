@@ -24,6 +24,15 @@
 
 
 <head>
+    <!-- Add this script before any other content in head -->
+    <script>
+        // Immediately check and apply the theme
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            document.body.setAttribute('data-theme', theme);
+        })();
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SFCDashboard</title>
@@ -605,10 +614,11 @@
 
             // Toggle dark mode
             darkModeToggle.addEventListener('click', function () {
-                const currentTheme = body.getAttribute('data-theme');
+                const currentTheme = document.documentElement.getAttribute('data-theme');
                 const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
-                body.setAttribute('data-theme', newTheme);
+                document.documentElement.setAttribute('data-theme', newTheme);
+                document.body.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
                 updateDarkModeButton(newTheme);
             });
