@@ -10,11 +10,11 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class PETaskListsController : Controller
+    public class PETaskListsController : AdminControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public PETaskListsController(ApplicationDbContext context)
+        public PETaskListsController(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
