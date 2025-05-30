@@ -6,25 +6,22 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class WorkGroupsController : AdminControllerBase
+    public class WorkGroupsController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public WorkGroupsController(ApplicationDbContext context) : base(context)
+        public WorkGroupsController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        private async Task<bool> IsAuthorized()
-        {
-            return await HttpContext.HasAdminPermissionAsync(_context);
-        }
+        
 
         // GET: WorkGroups
         public async Task<IActionResult> Index()
         {
-            if (!await IsAuthorized())
-                return RedirectToAction("Index", "PlannedEvents");
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
 
             return View(await _context.WorkGroups.ToListAsync());
         }
@@ -48,8 +45,11 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: WorkGroups/Create
-        public IActionResult Create()
+        public async Task<IActionResult> CreateAsync()
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             return View();
         }
 
@@ -60,6 +60,9 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name")] WorkGroup workGroup)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             if (ModelState.IsValid)
             {
                 _context.Add(workGroup);
@@ -68,10 +71,12 @@ namespace SFCDashboard.Controllers
             }
             return View(workGroup);
         }
-        public IActionResult ImportFromBackend()
+        public async Task<IActionResult> ImportFromBackendAsync()
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
 
-            string filePath = @"D:\slt intern\project file\given documents\WORK_GROUPS.xlsx"; // Change this to your file path
+            string filePath = @"wwwroot\assets\WORK_GROUPS.xlsx"; // Change this to your file path
 
 
             if (!System.IO.File.Exists(filePath))
@@ -115,6 +120,9 @@ namespace SFCDashboard.Controllers
         // GET: WorkGroups/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             if (id == null)
             {
                 return NotFound();
@@ -135,6 +143,9 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name")] WorkGroup workGroup)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             if (id != workGroup.Id)
             {
                 return NotFound();
@@ -166,6 +177,9 @@ namespace SFCDashboard.Controllers
         // GET: WorkGroups/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             if (id == null)
             {
                 return NotFound();
@@ -186,6 +200,9 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             var workGroup = await _context.WorkGroups.FindAsync(id);
             if (workGroup != null)
             {

@@ -5,10 +5,10 @@ using SFCDashboard.Data;
 
 namespace SFCDashboard.Controllers
 {
-    public class SystemUsersController : AdminControllerBase
+    public class SystemUsersController : Controller
     {
         private readonly ApplicationDbContext _context;
-        public SystemUsersController(ApplicationDbContext context) : base(context)
+        public SystemUsersController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -16,6 +16,9 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers
         public async Task<IActionResult> Index()
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+            
             var applicationDbContext = _context.Users.Include(s => s.UserRole).Include(s => s.WorkGroup);
             return View(await applicationDbContext.ToListAsync());
         }
@@ -41,8 +44,11 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: SystemUsers/Create
-        public IActionResult Create()
+        public async Task<IActionResult> CreateAsync()
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+            
             ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name");
             ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name");
             return View();
@@ -55,6 +61,9 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name,ServiceId,UserRoleId,WorkGroupId")] SystemUser systemUser)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             if (ModelState.IsValid)
             {
                 _context.Add(systemUser);
@@ -69,6 +78,9 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
              var user = await _context.Users
             .Include(u => u.WorkGroup)
             .FirstOrDefaultAsync(u => u.Id == id);
@@ -98,6 +110,9 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name,ServiceId,UserRoleId,WorkGroupId")] SystemUser systemUser)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             if (id != systemUser.Id)
             {
                 return NotFound();
@@ -142,6 +157,9 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             if (id == null)
             {
                 return NotFound();
@@ -164,6 +182,9 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            return RedirectToAction("Index", "PlannedEvents");
+
             var systemUser = await _context.Users.FindAsync(id);
             if (systemUser != null)
             {
