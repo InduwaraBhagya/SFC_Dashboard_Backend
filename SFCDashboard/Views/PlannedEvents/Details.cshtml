@@ -283,11 +283,23 @@
             @if (drawFiberTasksWithEstimate.Any())
             {
                 <div class="alert alert-secondary mb-3">
-                    <strong>Estimated Time for "Draw Fiber":</strong>
-                    @foreach (var t in drawFiberTasksWithEstimate)
-                    {
-                        <span class="badge bg-primary mx-1">@t.EstimatedTime.Value.ToString("yyyy-MM-dd")</span>
-                    }
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Estimated Time for "Draw Fiber":</strong>
+                            @foreach (var t in drawFiberTasksWithEstimate)
+                            {
+                                <span class="badge bg-primary mx-1">@t.EstimatedTime.Value.ToString("yyyy-MM-dd")</span>
+                                <button type="button" 
+                                        class="btn btn-sm btn-primary ms-2"
+                                        onclick="showEstimationHistory(@t.Id)"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="View previous estimation dates">
+                                    <i class="bi bi-clock-history"></i> 
+                                </button>
+                            }
+                        </div>
+                    </div>
                 </div>
             }
 
@@ -322,89 +334,92 @@
                             @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
                             {
                                 <tr class="@(task.IsUrgent ? "table-warning" : 
-                                   task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
-                                   task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
-                                   task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                                                       task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                                                       task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                                                       task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
                             <td>@task.TaskSeq</td>
                             <td>@task.Task</td>
                             <td> <!-- Priority column moved here -->
                                 @if (task.IsUrgent)
-                                {
-                                    <span class="badge bg-danger">URGENT</span>
-                                }
-                                @if (task.UrgentRequested && !task.IsUrgent)
-                                {
-                                    <span class="badge bg-warning">URGENT REQUESTED</span>
-                                }
-                                @if (!string.IsNullOrEmpty(task.Priority))
-                                {
-                                    <small class="d-block text-muted mt-1">@task.Priority</small>
-                                }
-                            </td>
-                            <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
-                            <td>@task.OLA days</td>
-                            <td>
-                                @{
-                                    string taskStatusClass = task.TaskStatus?.ToLower() switch
-                                    {
-                                        "completed" => "badge bg-success",
-                                        "inprogress" => "badge bg-warning text-dark",
-                                        "ongoing" => "badge bg-primary", // Ongoing is now blue
-                                        _ => "badge bg-secondary"
-                                    };
+                                        {
+                                            <span class="badge bg-danger">URGENT</span>
+                                        }
+                                        @if (task.UrgentRequested && !task.IsUrgent)
+                                        {
+                                            <span class="badge bg-warning">URGENT REQUESTED</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(task.Priority))
+                                        {
+                                            <small class="d-block text-muted mt-1">@task.Priority</small>
+                                        }
+                                    </td>
+                                    <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                    <td>@task.OLA days</td>
+                                    <td>
+                                        @{
+                                            string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                            {
+                                                "completed" => "badge bg-success",
+                                                "inprogress" => "badge bg-warning text-dark",
+                                                "ongoing" => "badge bg-primary", // Ongoing is now blue
+                                                _ => "badge bg-secondary"
+                                            };
 
-                                    // OLA color logic for completed tasks
-                                    if (task.TaskStatus?.ToLower() == "completed" && task.ActualTaskCreatedDate.HasValue && task.ACtualTaskCompleteDate.HasValue)
-                                    {
-                                        int olaDays = 0;
-                                        int.TryParse(task.OLA, out olaDays);
-                                        var actualDays = (task.ACtualTaskCompleteDate.Value.Date - task.ActualTaskCreatedDate.Value.Date).TotalDays;
-                                        if (actualDays > olaDays)
-                                        {
-                                            // Completed but OLA violated
-                                            taskStatusClass = "badge bg-danger";
+                                            // OLA color logic for completed tasks
+                                            if (task.TaskStatus?.ToLower() == "completed" && task.ActualTaskCreatedDate.HasValue &&
+                                            task.ACtualTaskCompleteDate.HasValue)
+                                            {
+                                                int olaDays = 0;
+                                                int.TryParse(task.OLA, out olaDays);
+                                                var actualDays = (task.ACtualTaskCompleteDate.Value.Date -
+                                                task.ActualTaskCreatedDate.Value.Date).TotalDays;
+                                                if (actualDays > olaDays)
+                                                {
+                                                    // Completed but OLA violated
+                                                    taskStatusClass = "badge bg-danger";
+                                                }
+                                                else
+                                                {
+                                                    // Completed within OLA
+                                                    taskStatusClass = "badge bg-success";
+                                                }
+                                            }
                                         }
-                                        else
-                                        {
-                                            // Completed within OLA
-                                            taskStatusClass = "badge bg-success";
-                                        }
-                                    }
-                                }
-                                <span class="@taskStatusClass">@task.TaskStatus</span>
-                            </td>
-                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
-                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
-                            <td>
-                                @(task.ActualTaskCreatedDate != null
-                                    ? task.ActualTaskCreatedDate.Value.ToString("yyyy-MM-dd")
-                                    : "-")
-                            </td>
-                            <td>
-                                @(task.ACtualTaskCompleteDate != null
-                                    ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd")
-                                    : "-")
+                                    <span class="@taskStatusClass">@task.TaskStatus</span>
+                                </td>
+                                <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                                <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    @(task.ActualTaskCreatedDate != null
+                                                                    ? task.ActualTaskCreatedDate.Value.ToString("yyyy-MM-dd")
+                                                                    : "-")
+                                                                      </td>
+                                                                      <td>
+                                    @(task.ACtualTaskCompleteDate != null
+                                                                    ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd")
+                                                                    : "-")
                             </td>
                             <td>
                                 @if (task.UrgentRequested && !task.IsUrgent)
-                                {
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-hourglass-split"></i> Awaiting Approval
-                                    </span>
-                                }
-                                else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
-                                {
-                                    @if (ViewData["CanMakeTasksUrgent"] as bool? == true){
-                                    <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post">
-                                        <input type="hidden" name="id" value="@task.Id" />
-                                        <button type="submit" class="btn btn-warning btn-sm w-100">
-                                            <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
-                                        </button>
-                                    </form>
-                                    }
-                                }
-                            </td>
-                        </tr>
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-hourglass-split"></i> Awaiting Approval
+                                            </span>
+                                        }
+                                        else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
+                                        {
+                                            @if (ViewData["CanMakeTasksUrgent"] as bool? == true)
+                                            {
+                                                <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post">
+                                                    <input type="hidden" name="id" value="@task.Id" />
+                                                    <button type="submit" class="btn btn-warning btn-sm w-100">
+                                                        <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
+                                                    </button>
+                                                </form>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
                             }
                         </tbody>
                     </table>
@@ -437,39 +452,39 @@
                             <th>Issue</th>
                             <th>Attachment</th>
                             <th>Date</th>
-                            <th>Status</th>  <!-- Add this new column -->
+                            <th>Status</th> <!-- Add this new column -->
                         </tr>
                     </thead>
                     <tbody>
-                    @foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues)
-                    {
-                        <tr>
-                            <td>@issue.SenderName</td>
-                            <td>@issue.ReceiverName</td>
-                            <td>@issue.IssueText</td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(issue.AttachmentPath))
-                                {
-                                    <a href="@issue.AttachmentPath" target="_blank">View</a>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">-</span>
-                                }
-                            </td>
-                            <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td>
-                                @if (issue.IsResolved || issue.IsHiddenFromInbox)
-                                {
-                                    <span class="badge bg-success">Fixed</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-warning text-dark">Open</span>
-                                }
-                            </td>
-                        </tr>
-                    }
+                        @foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues)
+                        {
+                            <tr>
+                                <td>@issue.SenderName</td>
+                                <td>@issue.ReceiverName</td>
+                                <td>@issue.IssueText</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                    {
+                                        <a href="@issue.AttachmentPath" target="_blank">View</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    @if (issue.IsResolved || issue.IsHiddenFromInbox)
+                                    {
+                                        <span class="badge bg-success">Fixed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Open</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             </div>
@@ -529,9 +544,7 @@
 <!-- Report Issue Button -->
 @if (!Model.IsHold)
 {
-    <button class="btn btn-danger my-3"
-            data-bs-toggle="modal"
-            data-bs-target="#reportIssueModal">
+    <button class="btn btn-danger my-3" data-bs-toggle="modal" data-bs-target="#reportIssueModal">
         <i class="bi bi-flag"></i> Report Issue
     </button>
 }
@@ -539,7 +552,8 @@
 <div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="CreateForPE">
+            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="Issues"
+                asp-action="CreateForPE">
                 <div class="modal-header">
                     <h5 class="modal-title" id="reportIssueModalLabel">Report Issue</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -561,16 +575,17 @@
                         </select>
                     </div>
 
-<div class="mb-3">
-    <label for="issueText" class="form-label">Issue</label>
+                    <div class="mb-3">
+                        <label for="issueText" class="form-label">Issue</label>
 
-    <input type="text" class="form-control" id="issueText" name="IssueText" placeholder="Describe the issue" required />
-</div>
-<div class="mb-3">
-    <label for="attachment" class="form-label">Attachment (Optional)</label>
-    <input type="file" class="form-control" id="attachment" name="Attachment" />
-    <small class="text-muted">Supported formats: PDF, Word, Excel, Images</small>
-</div>
+                        <input type="text" class="form-control" id="issueText" name="IssueText"
+                            placeholder="Describe the issue" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="attachment" class="form-label">Attachment (Optional)</label>
+                        <input type="file" class="form-control" id="attachment" name="Attachment" />
+                        <small class="text-muted">Supported formats: PDF, Word, Excel, Images</small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -618,6 +633,35 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="confirmTaskUrgentRequest">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estimation History Modal -->
+<div class="modal fade" id="estimationHistoryModal" tabindex="-1" aria-labelledby="estimationHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="estimationHistoryModalLabel">Estimation Date History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Estimated Date</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="estimationHistoryTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -765,73 +809,108 @@
             });
 
             // When the modal is shown, fetch suggestions
-    $('#reportIssueModal').on('shown.bs.modal', function() {
-        // Clear previous suggestions
-        $('#issueSelect').empty();
-        $('#issueSelect').append($('<option>', { 
-            value: "", 
-            text: "-- Select from previous issues or type a new one --" 
-        }));
-        
-        // Get the taskId from PE's TaskName
-        var peTaskName = '@Model.TaskName';
-        
-        // First get the matching PETaskList ID
-        $.get('/Issues/GetTaskListIdByName', { taskName: peTaskName }, function(taskListId) {
-            if (taskListId > 0) {
-                // Then get suggestions for that task
-                $.get('/Issues/GetIssueSuggestions', { taskId: taskListId }, function(data) {
-                    // Check if we have suggestions
-                    if (data && (data.commonIssues.length > 0 || data.recentIssues.length > 0)) {
-                        
-                        // Show suggestion container
-                        $('.suggestion-container').show();
-                        
-                        // Add common issues
-                        if (data.commonIssues && data.commonIssues.length > 0) {
-                            var commonGroup = $('<optgroup label="Common Issues"></optgroup>');
-                            data.commonIssues.forEach(function(issue) {
-                                var frequencyText = issue.frequency > 1 ? 
-                                    ` (Reported ${issue.frequency} times)` : '';
-                                commonGroup.append($('<option>', {
-                                    value: issue.issueText,
-                                    text: issue.issueText + frequencyText
-                                }));
-                            });
-                            $('#issueSelect').append(commonGroup);
-                        }
-                        
-                        // Add recent issues
-                        if (data.recentIssues && data.recentIssues.length > 0) {
-                            var recentGroup = $('<optgroup label="Recent Issues"></optgroup>');
-                            data.recentIssues.forEach(function(issue) {
-                                var status = issue.isResolved ? '[FIXED] ' : '';
-                                recentGroup.append($('<option>', {
-                                    value: issue.issueText,
-                                    text: status + issue.issueText + ' (by ' + issue.reportedBy + ')'
-                                }));
-                            });
-                            $('#issueSelect').append(recentGroup);
-                        }
+            $('#reportIssueModal').on('shown.bs.modal', function () {
+                // Clear previous suggestions
+                $('#issueSelect').empty();
+                $('#issueSelect').append($('<option>', {
+                    value: "",
+                    text: "-- Select from previous issues or type a new one --"
+                }));
+
+                // Get the taskId from PE's TaskName
+                var peTaskName = '@Model.TaskName';
+
+                // First get the matching PETaskList ID
+                $.get('/Issues/GetTaskListIdByName', { taskName: peTaskName }, function (taskListId) {
+                    if (taskListId > 0) {
+                        // Then get suggestions for that task
+                        $.get('/Issues/GetIssueSuggestions', { taskId: taskListId }, function (data) {
+                            // Check if we have suggestions
+                            if (data && (data.commonIssues.length > 0 || data.recentIssues.length > 0)) {
+
+                                // Show suggestion container
+                                $('.suggestion-container').show();
+
+                                // Add common issues
+                                if (data.commonIssues && data.commonIssues.length > 0) {
+                                    var commonGroup = $('<optgroup label="Common Issues"></optgroup>');
+                                    data.commonIssues.forEach(function (issue) {
+                                        var frequencyText = issue.frequency > 1 ?
+                                            ` (Reported ${issue.frequency} times)` : '';
+                                        commonGroup.append($('<option>', {
+                                            value: issue.issueText,
+                                            text: issue.issueText + frequencyText
+                                        }));
+                                    });
+                                    $('#issueSelect').append(commonGroup);
+                                }
+
+                                // Add recent issues
+                                if (data.recentIssues && data.recentIssues.length > 0) {
+                                    var recentGroup = $('<optgroup label="Recent Issues"></optgroup>');
+                                    data.recentIssues.forEach(function (issue) {
+                                        var status = issue.isResolved ? '[FIXED] ' : '';
+                                        recentGroup.append($('<option>', {
+                                            value: issue.issueText,
+                                            text: status + issue.issueText + ' (by ' + issue.reportedBy + ')'
+                                        }));
+                                    });
+                                    $('#issueSelect').append(recentGroup);
+                                }
+                            } else {
+                                // No suggestions available
+                                $('.suggestion-container').hide();
+                            }
+                        });
                     } else {
-                        // No suggestions available
+                        // No matching task list
                         $('.suggestion-container').hide();
                     }
                 });
-            } else {
-                // No matching task list
-                $('.suggestion-container').hide();
-            }
+            });
+
+            // When a suggestion is selected, populate the input field
+            $('#issueSelect').change(function () {
+                var selectedText = $(this).val();
+                if (selectedText) {
+                    $('#issueText').val(selectedText);
+                }
+            });
         });
-    });
-    
-    // When a suggestion is selected, populate the input field
-    $('#issueSelect').change(function() {
-        var selectedText = $(this).val();
-        if (selectedText) {
-            $('#issueText').val(selectedText);
+
+        // Add this inside your existing document.ready function
+        function showEstimationHistory(taskId) {
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('estimationHistoryModal'));
+            
+            // Fetch history data
+            fetch(`/PETasks/GetEstimationHistory/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('estimationHistoryTableBody');
+                    tbody.innerHTML = ''; // Clear existing content
+                    
+                    data.forEach(history => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${new Date(history.estimatedDate).toLocaleDateString()}</td>
+                            <td>${new Date(history.createdAt).toLocaleString()}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error fetching estimation history:', error);
+                    alert('Failed to load estimation history.');
+                });
         }
-    });
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
         });
     </script>
 }

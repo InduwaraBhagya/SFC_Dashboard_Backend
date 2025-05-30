@@ -28,6 +28,7 @@ namespace SFCDashboard.Data
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<TaskEstimationHistory> TaskEstimationHistory { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -101,7 +101,7 @@ namespace SFCDashboard.Controllers
             var task = await _context.PETasks
                 .Include(t => t.PlannedEvent)
                 .FirstOrDefaultAsync(t => t.Id == id);
-                
+
             if (task == null || task.TaskStatus == "COMPLETED")
             {
                 return NotFound();
@@ -152,21 +152,21 @@ namespace SFCDashboard.Controllers
             }
 
             _context.Update(task);
-            
+
             // Update the PlannedEvent if needed
             if (markAsUrgent && task.PlannedEvent != null)
             {
                 task.PlannedEvent.PEStatus = "URGENT";
                 task.PlannedEvent.Priority = priorityMessage;
                 _context.Update(task.PlannedEvent);
-                
-                _logger.LogInformation("PE {id} marked as urgent with priority level {level}", 
+
+                _logger.LogInformation("PE {id} marked as urgent with priority level {level}",
                     task.PlannedEvent.Id, priorityLevel);
             }
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Task {id} priority set to: '{priority}' with level: {level}", 
+            _logger.LogInformation("Task {id} priority set to: '{priority}' with level: {level}",
                 id, task.Priority, priorityLevel);
 
             TempData["SuccessMessage"] = markAsUrgent
@@ -316,7 +316,18 @@ namespace SFCDashboard.Controllers
             if (estimatedTime.Date < DateTime.Today)
                 return BadRequest("Estimated Time cannot be in the past.");
 
-            // 1. Update this task's estimated time and target date
+            // Create history record
+            var historyRecord = new TaskEstimationHistory
+            {
+                TaskId = taskId,
+                EstimatedDate = estimatedTime,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Add history record
+            _context.TaskEstimationHistory.Add(historyRecord);
+
+            // Update task's estimated time
             task.EstimatedTime = estimatedTime;
             task.TaskCompleteDate = estimatedTime;
 
@@ -395,6 +406,22 @@ namespace SFCDashboard.Controllers
                 .Select(t => new { id = t.Id, name = t.Task })
                 .ToList();
             return Json(tasks);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetEstimationHistory(int id)
+        {
+            var history = await _context.TaskEstimationHistory
+                .Where(h => h.TaskId == id)
+                .OrderByDescending(h => h.CreatedAt)
+                .Select(h => new
+                {
+                    h.EstimatedDate,
+                    h.CreatedAt
+                })
+                .ToListAsync();
+
+            return Json(history);
         }
     }
 }

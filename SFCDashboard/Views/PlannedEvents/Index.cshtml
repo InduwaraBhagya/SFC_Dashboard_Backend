@@ -478,29 +478,34 @@
                 <div class="inbox-header">
                     <h3>
                         <i class="fas fa-inbox me-2"></i>Message Inbox
-                        <span class="badge bg-primary rounded-pill ms-2">@ViewData["TotalMessages"]</span>
-                        @if (ViewData["UnreadMessages"] != null && (int)ViewData["UnreadMessages"] > 0)
-                        {
-                            <span class="badge bg-danger rounded-pill ms-2">@ViewData["UnreadMessages"] New</span>
+                        @{
+                            var totalUnreadCount = ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])?.Count() ?? 0;
+                            totalUnreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"])?.Count() ?? 0;
+                            totalUnreadCount += ((IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewData["InboxIssues"])?.Count(i => !i.IsRead) ?? 0;
+
+                            if (totalUnreadCount > 0)
+                            {
+                                <span class="badge bg-danger rounded-pill ms-2">@totalUnreadCount Messages</span>
+                            }
                         }
                     </h3>
+                </div>
 
-                    <!-- Message search bar -->
-                    <div class="inbox-search-container mt-3">
-                        <div class="input-group">
-                            <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
-                            <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
+                <!-- Message search bar -->
+                <div class="inbox-search-container mt-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
+                        <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
 
                 <div class="inbox-filters mt-3">
                     <div class="btn-group w-100" role="group" aria-label="Message filters">
                         <button type="button" class="btn btn-outline-primary active" data-filter="all">All</button>
-                        <button type="button" class="btn btn-outline-primary" data-filter="urgent">Urgent Requests</button>
-                        <button type="button" class="btn btn-outline-primary" data-filter="system">System</button>
+                        <button type="button" class="btn btn-outline-primary" data-filter="unread">Unread</button>
+                        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
                     </div>
                 </div>
 
@@ -805,14 +810,13 @@ document.getElementById('acceptUrgentRequestBtn').addEventListener('click', func
                     this.classList.add('active');
 
                     const filter = this.getAttribute('data-filter');
-
-                    // Show/hide messages based on filter
+                    
                     messageItems.forEach(item => {
                         if (filter === 'all') {
                             item.style.display = 'flex';
-                        } else if (filter === 'urgent' && (item.classList.contains('urgent-request') || item.classList.contains('task-urgent-request'))) {
+                        } else if (filter === 'unread' && item.classList.contains('unread')) {
                             item.style.display = 'flex';
-                        } else if (filter === 'system' && item.classList.contains('system')) {
+                        } else if (filter === 'read' && !item.classList.contains('unread')) {
                             item.style.display = 'flex';
                         } else {
                             item.style.display = 'none';
@@ -862,167 +866,6 @@ document.getElementById('acceptUrgentRequestBtn').addEventListener('click', func
             });
         }
         
-        // Add function to show urgent request details modal
-        function showUrgentRequestModal(type, id) {
-            // Set the form values
-            document.getElementById('urgentRequestType').value = type;
-            document.getElementById('urgentRequestId').value = id;
-            
-            // Fetch record details based on type (PE or Task)
-            let url = '';
-            if (type === 'pe') {
-                url = '/PlannedEvents/GetUrgentRequestDetails/' + id;
-            } else {
-                url = '/PETasks/GetUrgentRequestDetails/' + id;
-            }
-            
-            // Show loading indicator
-            document.getElementById('urgentRequestDetails').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading details...</p></div>';
-            
-            // Show the modal while fetching details
-            const modal = new bootstrap.Modal(document.getElementById('urgentRequestModal'));
-            modal.show();
-            
-            // Fetch details from server
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Update the modal with details
-                    let detailsHtml = `
-                        <div class="alert alert-info mb-3">
-                            <div class="row">
-                                <div class="col-sm-4 fw-bold">PE Number:</div>
-                                <div class="col-sm-8">${data.peNumber}</div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-sm-4 fw-bold">Customer:</div>
-                                <div class="col-sm-8">${data.customer || 'Not specified'}</div>
-                            </div>`;
-                            
-                    if (type === 'task') {
-                        detailsHtml += `
-                            <div class="row mt-2">
-                                <div class="col-sm-4 fw-bold">Task:</div>
-                                <div class="col-sm-8">${data.taskName}</div>
-                            </div>`;
-                    }
-                    
-                    detailsHtml += `
-                        <div class="row mt-2">
-                            <div class="col-sm-4 fw-bold">Priority:</div>
-                            <div class="col-sm-8">${data.priority || 'Not specified'}</div>
-                        </div>
-                    </div>`;
-                    
-                    // Show request reason if available
-                    if (data.urgentRequestReason) {
-                        detailsHtml += `
-                        <div class="alert alert-warning">
-                            <h6 class="fw-bold">Request Reason:</h6>
-                            <p>${data.urgentRequestReason}</p>
-                        </div>`;
-                    }
-                    
-                    document.getElementById('urgentRequestDetails').innerHTML = detailsHtml;
-                })
-                .catch(error => {
-                    console.error('Error fetching urgent request details:', error);
-                    document.getElementById('urgentRequestDetails').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Failed to load request details. Please try again.
-                        </div>`;
-                });
-        }
-
-        function showIssueDetails(element) {
-            // Extract issue data from the element's data attributes
-            const issueId = $(element).data('issue-id');
-            const peId = $(element).data('pe-id');
-            const sender = $(element).data('sender');
-            const senderId = $(element).data('sender-id');
-            const issueText = $(element).data('issue-text');
-            const attachment = $(element).data('attachment');
-            const date = $(element).data('date');
-            const isRead = $(element).data('is-read') === 'true';
-            const isResolutionRequest = $(element).data('is-resolution-request') === 'true';
-            const originalIssueId = $(element).data('original-issue-id');
-            
-            // Build the issue details content
-            let detailsHtml = `
-                <div class="message-detail-header">
-                    <h5>${isResolutionRequest ? '<span class="badge bg-success">Resolution Request</span> ' : ''}${issueText}</h5>
-                    <div class="message-info">
-                        <span class="fw-bold">From:</span> ${sender} · 
-                        <span class="fw-bold">Date:</span> ${date}
-                    </div>
-                </div>
-                <div class="message-detail-body my-3">
-                    <p>${issueText}</p>
-                    ${attachment ? `<div class="attachment-section mt-3">
-                        <h6 class="fw-bold">Attachment:</h6>
-                        <a href="${attachment}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-paperclip me-2"></i>View Attachment
-                        </a>
-                    </div>` : ''}
-                </div>`;
-            
-            // Update the modal content
-            $('#issueDetailsContent').html(detailsHtml);
-            $('#viewPEDetailsBtn').attr('href', `/PlannedEvents/Details/${peId}`);
-            
-            // Set up the reply button data
-            $('#replyIssueBtn').data('issue-id', issueId);
-            $('#replyIssueBtn').data('pe-id', peId);
-            $('#replyIssueBtn').data('sender-id', senderId);
-            $('#replyIssueBtn').data('original-issue-id', originalIssueId);
-            
-            // Set up the resolve button data
-            $('#resolveIssueBtn').data('issue-id', issueId);
-            $('#resolveIssueBtn').data('pe-id', peId);
-            
-            // Handle resolution request specific UI
-            if (isResolutionRequest) {
-                $('#replyIssueBtn').addClass('d-none');
-                $('#resolveIssueBtn').addClass('d-none');
-                
-                // Check if there's a resolution record for this issue
-                $.get(`/Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
-                    if (resolution && resolution.id) {
-                        // Show resolution confirmation section
-                        $('#resolutionConfirmationSection').removeClass('d-none');
-                        $('#resolutionId').val(resolution.id);
-                    }
-                });
-            } else {
-                $('#replyIssueBtn').removeClass('d-none');
-                $('#resolveIssueBtn').removeClass('d-none');
-                $('#resolutionConfirmationSection').addClass('d-none');
-            }
-            
-            // Fetch PE record details
-            fetchPEDetails(peId);
-            
-            // Mark as read if not already read
-            if (!isRead) {
-                markIssueAsRead(issueId);
-                $(element).removeClass('unread');
-                $(element).data('is-read', 'true');
-                
-                // Update unread count in the header
-                updateUnreadCount();
-            }
-            
-            // Show the modal
-            const modal = new bootstrap.Modal(document.getElementById('issueDetailsModal'));
-            modal.show();
-        }
-
         // Add function to show urgent request details modal
         function showUrgentRequestModal(type, id) {
             // Set the form values
@@ -1436,17 +1279,18 @@ function submitResolutionForm(isConfirmed) {
 
         // Add this function to update unread count
         function updateUnreadCount() {
-            // Update the unread count badge in the header
-            const unreadBadge = document.querySelector('.badge.bg-danger');
-            if (unreadBadge) {
-                let count = parseInt(unreadBadge.textContent);
-                if (count > 1) {
-                    unreadBadge.textContent = `${count - 1} New`;
-                } else {
-                    unreadBadge.remove();
-                }
-            }
+    const unreadMessages = document.querySelectorAll('.message-item.unread');
+    const unreadBadge = document.querySelector('.badge.bg-danger');
+    const count = unreadMessages.length;
+    
+    if (unreadBadge) {
+        if (count > 0) {
+            unreadBadge.textContent = `${count} Messages`;
+        } else {
+            unreadBadge.remove();
         }
+    }
+}
 
         // Add this function to mark issues as read
         function markIssueAsRead(issueId) {
@@ -1476,7 +1320,7 @@ function submitResolutionForm(isConfirmed) {
                 <h5 class="modal-title" id="urgentRequestModalLabel">
                     <i class="fas fa-exclamation-triangle me-2"></i>Urgent Request Confirmation
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div id="urgentRequestDetails">
@@ -1680,6 +1524,7 @@ function submitResolutionForm(isConfirmed) {
     </div>
 </div>
 
+<!-- Message Inbox Styles -->
 <style>
     .message-item.resolution-request {
         background-color: rgba(25, 135, 84, 0.08);
@@ -1700,6 +1545,45 @@ function submitResolutionForm(isConfirmed) {
     min-height: 60px;
     white-space: pre-line;  /* Preserves line breaks in the text */
 }
+
+.message-item {
+    /* ...existing styles... */
+    border-left: 3px solid transparent;
+    opacity: 0.8;
+}
+
+.message-item.unread {
+    background-color: #fff;
+    border-left: 3px solid #0d6efd;
+    opacity: 1;
+    font-weight: 500;
+}
+
+.message-item.read {
+    background-color: #f8f9fa;
+    border-left: 3px solid #6c757d;
+}
+
+.message-item.unread .message-subject {
+    font-weight: 600;
+    color: #000;
+}
+
+.message-item.unread .message-sender {
+    font-weight: 600;
+}
+
+.message-item.unread::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 8px;
+    height: 8px;
+    background-color: #0d6efd;
+    border-radius: 50%;
+}
+
 </style>
 
 @functions {

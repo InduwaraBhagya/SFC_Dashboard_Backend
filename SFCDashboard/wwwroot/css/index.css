@@ -1,5 +1,4 @@
-
-    /* Existing styles */
+/* Existing styles */
     /* body, html {
         height: 100%;
         width: 100%;
@@ -341,8 +340,32 @@
         }
 
         .message-item.unread {
-            background-color: rgba(74, 137, 220, 0.05);
-            border-left: 3px solid #4a89dc;
+            background-color: #fff;
+            border-left: 3px solid #dc3545;
+            opacity: 1;
+            font-weight: 500;
+        }
+
+        .message-item.read {
+            background-color: #f8f9fa;
+            border-left: 3px solid #6c757d;
+            opacity: 0.8;
+        }
+
+        .message-item.unread .message-subject {
+            font-weight: 600;
+            color: #000;
+        }
+
+        .message-item.unread::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 8px;
+            height: 8px;
+            background-color: #dc3545;
+            border-radius: 50%;
         }
 
         .message-item.important {
@@ -351,10 +374,6 @@
 
         .message-item.unread .message-sender {
             font-weight: 700;
-        }
-
-        .message-item.unread .message-subject {
-            font-weight: 600;
         }
 
     .message-indicator {
