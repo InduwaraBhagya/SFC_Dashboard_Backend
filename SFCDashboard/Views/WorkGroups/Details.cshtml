@@ -1,24 +1,45 @@
 ﻿@model SFCDashboard.Models.WorkGroup
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Work Group Details";
 }
 
-<h1>Details</h1>
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-gradient text-white" style="background-color: #4361ee;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-info-circle fs-4 me-2"></i>
+                <h5 class="mb-0">Work Group Details</h5>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3">Group Information</h6>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-3">
+                                    <i class="bi bi-people me-2"></i>
+                                    @Html.DisplayNameFor(model => model.Name)
+                                </dt>
+                                <dd class="col-sm-9 fw-medium">
+                                    @Html.DisplayFor(model => model.Name)
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<div>
-    <h4>WorkGroup</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+            <div class="d-flex gap-2 mt-4">
+                <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </a>
+                <a asp-action="Index" class="btn btn-light btn-lg px-4">
+                    <i class="bi bi-arrow-left me-2"></i>Back to List
+                </a>
+            </div>
+        </div>
+    </div>
 </div>

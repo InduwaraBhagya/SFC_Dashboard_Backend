@@ -9,6 +9,7 @@ namespace SFCDashboard.Controllers
     public class WorkGroupsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly int _pageSize = 10;  // Add this line
 
         public WorkGroupsController(ApplicationDbContext context)
         {
@@ -18,12 +19,34 @@ namespace SFCDashboard.Controllers
         
 
         // GET: WorkGroups
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? page, string searchTerm)
         {
             if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
+                return RedirectToAction("Index", "PlannedEvents");
 
-            return View(await _context.WorkGroups.ToListAsync());
+            var query = _context.WorkGroups.AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(w => w.Name.Contains(searchTerm));
+            }
+
+            var pageNumber = page ?? 1;
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)_pageSize);
+
+            var workGroups = await query
+                .OrderBy(w => w.Name)
+                .Skip((pageNumber - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToListAsync();
+
+            ViewData["CurrentPage"] = pageNumber;
+            ViewData["TotalPages"] = totalPages;
+            ViewData["TotalItems"] = totalItems;
+            ViewData["SearchTerm"] = searchTerm;
+
+            return View(workGroups);
         }
 
         // GET: WorkGroups/Details/5

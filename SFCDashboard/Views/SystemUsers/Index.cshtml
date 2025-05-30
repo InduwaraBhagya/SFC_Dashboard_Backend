@@ -7,61 +7,94 @@
     <div class="row mb-4">
         <div class="col">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="display-4">System Users</h1>
-                <a asp-action="Create" class="btn btn-primary">
+                <div>
+                    <h1 class="display-5 fw-bold mb-1">System Users</h1>
+                    <p class="text-muted mb-0">Manage system users and their permissions</p>
+                </div>
+                <a asp-action="Create" class="btn btn-primary btn-lg">
                     <i class="bi bi-plus-circle me-2"></i>Create New User
                 </a>
             </div>
-            <hr class="bg-secondary" />
+            <hr class="my-4" />
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-light py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="userSearch" class="form-control border-start-0" placeholder="Search users...">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-striped">
-                    <thead class="thead-dark bg-dark text-light">
+                <table class="table table-hover mb-0" id="usersTable">
+                    <thead class="table-light">
                         <tr>
-                            <th scope="col" class="p-3">
+                            <th scope="col" class="px-4 py-3">
+                                <i class="bi bi-person me-2"></i>
                                 @Html.DisplayNameFor(model => model.Name)
                             </th>
-                            <th scope="col" class="p-3">
+                            <th scope="col" class="px-4 py-3">
+                                <i class="bi bi-key me-2"></i>
                                 @Html.DisplayNameFor(model => model.ServiceId)
                             </th>
-                            <th scope="col" class="p-3">
+                            <th scope="col" class="px-4 py-3">
+                                <i class="bi bi-shield me-2"></i>
                                 @Html.DisplayNameFor(model => model.UserRole)
                             </th>
-                            <th scope="col" class="p-3">
+                            <th scope="col" class="px-4 py-3">
+                                <i class="bi bi-people me-2"></i>
                                 @Html.DisplayNameFor(model => model.WorkGroup)
                             </th>
-                            <th scope="col" class="p-3 text-center">Actions</th>
+                            <th scope="col" class="px-4 py-3 text-center" style="width: 200px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model) {
-                            <tr>
-                                <td class="p-3 align-middle">
-                                    <span class="fw-bold">@Html.DisplayFor(modelItem => item.Name)</span>
+                            <tr class="align-middle">
+                                <td class="px-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <span class="fw-medium">@Html.DisplayFor(modelItem => item.Name)</span>
+                                    </div>
                                 </td>
-                                <td class="p-3 align-middle">
-                                    @Html.DisplayFor(modelItem => item.ServiceId)
+                                <td class="px-4 py-3">
+                                    <span class="text-muted">@Html.DisplayFor(modelItem => item.ServiceId)</span>
                                 </td>
-                                <td class="p-3 align-middle">
-                                    <span class="badge bg-info text-dark">@Html.DisplayFor(modelItem => item.UserRole.Name)</span>
+                                <td class="px-4 py-3">
+                                    <span class="badge bg-info text-dark">
+                                        <i class="bi bi-shield-fill me-1"></i>
+                                        @Html.DisplayFor(modelItem => item.UserRole.Name)
+                                    </span>
                                 </td>
-                                <td class="p-3 align-middle">
-                                    <span class="badge bg-secondary">@Html.DisplayFor(modelItem => item.WorkGroup.Name)</span>
+                                <td class="px-4 py-3">
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-people-fill me-1"></i>
+                                        @Html.DisplayFor(modelItem => item.WorkGroup.Name)
+                                    </span>
                                 </td>
-                                <td class="p-3 text-center">
+                                <td class="px-4 py-3 text-center">
                                     <div class="btn-group" role="group">
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">
-                                            <i class="bi bi-pencil me-1"></i>Edit
+                                        <a asp-action="Edit" asp-route-id="@item.Id" 
+                                           class="btn btn-outline-primary btn-sm"
+                                           data-bs-toggle="tooltip" title="Edit User">
+                                            <i class="bi bi-pencil"></i>
                                         </a>
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info btn-sm mx-2">
-                                            <i class="bi bi-info-circle me-1"></i>Details
+                                        <a asp-action="Details" asp-route-id="@item.Id" 
+                                           class="btn btn-outline-info btn-sm"
+                                           data-bs-toggle="tooltip" title="View Details">
+                                            <i class="bi bi-info-circle"></i>
                                         </a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">
-                                            <i class="bi bi-trash me-1"></i>Delete
+                                        <a asp-action="Delete" asp-route-id="@item.Id" 
+                                           class="btn btn-outline-danger btn-sm"
+                                           data-bs-toggle="tooltip" title="Delete User">
+                                            <i class="bi bi-trash"></i>
                                         </a>
                                     </div>
                                 </td>
@@ -76,8 +109,22 @@
 
 @section Scripts {
     <script>
-        // Add animation to rows
         $(document).ready(function () {
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Search functionality
+            $("#userSearch").on("keyup", function() {
+                var value = $(this).val().toLowerCase();
+                $("#usersTable tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+
+            // Animate table rows
             $('tbody tr').each(function(i) {
                 $(this).css('animation-delay', (i * 0.1) + 's');
                 $(this).addClass('animate__animated animate__fadeIn');

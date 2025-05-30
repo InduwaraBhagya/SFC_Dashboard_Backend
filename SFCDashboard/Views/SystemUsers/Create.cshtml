@@ -1,55 +1,86 @@
 ﻿@model SystemUser
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create User";
 }
 
-<h1>Create</h1>
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-gradient text-white" style="background-color: #4361ee;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-person-plus fs-4 me-2"></i>
+                <h5 class="mb-0">Create New User</h5>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="Create" class="needs-validation" novalidate>
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Name" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input asp-for="Name" class="form-control form-control-lg" required />
+                            </div>
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="ServiceId" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-key"></i></span>
+                                <input asp-for="ServiceId" class="form-control form-control-lg" required />
+                            </div>
+                            <span asp-validation-for="ServiceId" class="text-danger"></span>
+                        </div>
+                    </div>
 
-<h4>SystemUser</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="ServiceId" class="control-label"></label>
-                <input asp-for="ServiceId" class="form-control" />
-                <span asp-validation-for="ServiceId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UserRoleId" class="control-label"></label>
-                <select asp-for="UserRoleId" class="form-control" asp-items="ViewBag.UserRoleId"></select>
-            </div>
-            <div class="form-group">
-                <label for="workgroup-search" class="control-label">WorkGroup</label>
-                <input id="workgroup-search" class="form-control" placeholder="Type to search workgroups" />
-                <input id="selected-workgroup-id" name="WorkGroupId" type="hidden" />
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="UserRoleId" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-shield"></i></span>
+                                <select asp-for="UserRoleId" class="form-select form-select-lg" asp-items="ViewBag.UserRoleId" required>
+                                    <option value="">Select a role...</option>
+                                </select>
+                            </div>
+                            <span asp-validation-for="UserRoleId" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="workgroup-search" class="form-label fw-semibold">WorkGroup</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-people"></i></span>
+                                <input id="workgroup-search" class="form-control form-control-lg" 
+                                       placeholder="Type to search workgroups" required />
+                            </div>
+                            <input id="selected-workgroup-id" name="WorkGroupId" type="hidden" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-4">
+                        <i class="bi bi-check-circle me-2"></i>Create
+                    </button>
+                    <a asp-action="Index" class="btn btn-light btn-lg px-4">
+                        <i class="bi bi-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
-    <!-- jQuery UI CSS for autocomplete styling -->
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-    <!-- jQuery and jQuery UI scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 
     <script>
@@ -61,7 +92,6 @@
                         data: { term: request.term },
                         type: "GET",
                         success: function(data) {
-                            // Remove duplicates from the response
                             let uniqueData = [...new Map(data.map(item => [item.label, item])).values()];
                             response(uniqueData);
                         },
@@ -77,11 +107,18 @@
                     return false;
                 }
             });
+
+            // Modern form validation
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
         });
     </script>
-
-
 }
-
-
-

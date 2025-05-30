@@ -5,49 +5,70 @@
     var selectedPermissions = (List<int>)ViewData["SelectedPermissions"] ?? new List<int>();
 }
 
-<div class="card">
-    <div class="card-header">
-        <h4>Edit Role</h4>
-    </div>
-    <div class="card-body">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            
-            <div class="form-group mb-3">
-                <label asp-for="Name" class="form-label">Role Name</label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-gradient text-white" style="background-color: #4361ee;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-pencil-square fs-4 me-2"></i>
+                <h5 class="mb-0">Edit Role</h5>
             </div>
-
-            <div class="form-group mb-3">
-                <label class="form-label">Permissions</label>
-                <div class="border rounded p-3">
-                    @foreach (var permission in permissions)
-                    {
-                        <div class="form-check">
-                            <input type="checkbox" 
-                                   name="selectedPermissions" 
-                                   value="@permission.Id" 
-                                   class="form-check-input"
-                                   @(selectedPermissions.Contains(permission.Id) ? "checked" : "") />
-                            <label class="form-check-label">
-                                @permission.Name
-                                @if (!string.IsNullOrEmpty(permission.Description))
-                                {
-                                    <small class="text-muted d-block">@permission.Description</small>
-                                }
-                            </label>
-                        </div>
-                    }
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="Edit" class="needs-validation" novalidate>
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="Id" />
+                
+                <div class="mb-4">
+                    <label asp-for="Name" class="form-label fw-semibold">Role Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                        <input asp-for="Name" class="form-control form-control-lg" required />
+                    </div>
+                    <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
-            </div>
-        </form>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Permissions</label>
+                    <div class="border rounded-3 p-4 bg-light">
+                        <div class="row g-3">
+                            @foreach (var permission in permissions)
+                            {
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       name="selectedPermissions" 
+                                                       value="@permission.Id" 
+                                                       class="form-check-input" 
+                                                       id="perm_@permission.Id"
+                                                       @(selectedPermissions.Contains(permission.Id) ? "checked" : "") />
+                                                <label class="form-check-label fw-medium" for="perm_@permission.Id">
+                                                    @permission.Name
+                                                </label>
+                                                @if (!string.IsNullOrEmpty(permission.Description))
+                                                {
+                                                    <small class="text-muted d-block mt-1">@permission.Description</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-4">
+                        <i class="bi bi-save me-2"></i>Save Changes
+                    </button>
+                    <a asp-action="Index" class="btn btn-light btn-lg px-4">
+                        <i class="bi bi-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 

@@ -1,32 +1,41 @@
 ﻿@model SFCDashboard.Models.WorkGroup
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Work Group";
 }
 
-<h1>Create</h1>
-
-<h4>WorkGroup</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-gradient text-white" style="background-color: #4361ee;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-people-fill fs-4 me-2"></i>
+                <h5 class="mb-0">Create New Work Group</h5>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="Create" class="needs-validation" novalidate>
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-4">
+                    <label asp-for="Name" class="form-label fw-semibold">Group Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-people"></i></span>
+                        <input asp-for="Name" class="form-control form-control-lg" required placeholder="Enter work group name" />
+                    </div>
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-4">
+                        <i class="bi bi-plus-circle me-2"></i>Create
+                    </button>
+                    <a asp-action="Index" class="btn btn-light btn-lg px-4">
+                        <i class="bi bi-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
-
-<div>
-    <a asp-action="Index">Back to List</a>
 </div>
 
 @section Scripts {
