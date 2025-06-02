@@ -271,7 +271,12 @@ namespace SFCDashboard.Services
                                        WHERE ct.PENumber = pt.PENumber) 
                         THEN (SELECT TOP 1 TaskWg 
                               FROM CurrentTasks ct 
-                              WHERE ct.PENumber = pt.PENumber)
+                              WHERE ct.PENumber = pt.PENumber AND ct.TaskWg IS NOT NULL AND LEN(ct.TaskWg) > 0)
+                        WHEN pt.TaskWorkGroup IS NULL OR pt.TaskWorkGroup = 'NULL' THEN
+                            COALESCE((SELECT TOP 1 pe.TaskWg 
+                              FROM PlannedEvents pe 
+                              WHERE pe.PeNumber = pt.PENumber AND pe.TaskWg IS NOT NULL AND LEN(pe.TaskWg) > 0),
+                        'NULL')
                         ELSE pt.TaskWorkGroup
                     END,
                     ActualTaskCreatedDate = CASE
@@ -282,11 +287,11 @@ namespace SFCDashboard.Services
                         THEN GETUTCDATE()
                         ELSE pt.ActualTaskCreatedDate
                     END,
-                    ActualTaskCompleteDate = CASE
+                    ACtualTaskCompleteDate = CASE
                         WHEN TaskStatus = 'COMPLETED' 
-                        AND pt.ActualTaskCompleteDate IS NULL 
+                        AND pt.ACtualTaskCompleteDate IS NULL 
                         THEN GETUTCDATE()
-                        ELSE pt.ActualTaskCompleteDate
+                        ELSE pt.ACtualTaskCompleteDate
                     END
                     -- UrgentRequested and IsUrgent are preserved and not modified by this update
                 FROM PETasks pt
@@ -485,6 +490,16 @@ namespace SFCDashboard.Services
                             initialStatus = "COMPLETED"; // This task comes before the current task
                         }
 
+                        // Get workgroup from template or record
+                        string workgroup = "NULL";  // Default value
+                        
+                        // If this is the current task, use the workgroup from the record/PlannedEvent
+                        if (taskTemplate.Name == record.TASK_NAME && !string.IsNullOrEmpty(record.TASK_WG))
+                        {
+                            workgroup = record.TASK_WG;
+                        }
+
+
                         // Create task for this PE, safely handling nullable fields
                         var peTask = new PETask
                         {
@@ -495,7 +510,7 @@ namespace SFCDashboard.Services
                             TaskStatus = initialStatus,
                             TaskCreatedDate = taskCreatedDate,
                             TaskCompleteDate = taskCompleteDate,
-                            TaskWorkGroup = "NULL", // Default value
+                            TaskWorkGroup = workgroup,  // Set from determined workgroup
                             // Initialize optional fields to avoid database null constraint violations
                             ActualTaskCreatedDate = null,
                             ACtualTaskCompleteDate = null,
@@ -507,7 +522,6 @@ namespace SFCDashboard.Services
                         // If this is the current task in the PE record, set actual dates and work group
                         if (taskTemplate.Name == record.TASK_NAME)
                         {
-                            peTask.TaskWorkGroup = record.TASK_WG ?? "NULL";
                             peTask.ActualTaskCreatedDate = currentDate;
                         }
                         // If this task is completed, set the actual complete date
@@ -644,11 +658,32 @@ namespace SFCDashboard.Services
                     {
                         // Update fields from template/task record
                         existingTask.OLA = templateTask.OLA;
-                        existingTask.TaskWorkGroup = templateTask.TaskWorkGroup;
+                        
+                        // WORKGROUP HANDLING: Prioritize task-specific workgroups
+                        // If this is the current task in the PE record, use record's workgroup
+                        if (existingTask.Task == record.TASK_NAME && !string.IsNullOrEmpty(record.TASK_WG))
+                        {
+                            existingTask.TaskWorkGroup = record.TASK_WG;
+                            _logger.LogDebug("Setting workgroup for current task {task} to {workgroup}", 
+                                existingTask.Task, record.TASK_WG);
+                        }
+                        // Otherwise, don't override an existing valid workgroup with a null or empty one
+                        else if (string.IsNullOrEmpty(existingTask.TaskWorkGroup) || existingTask.TaskWorkGroup == "NULL")
+                        {
+                            // Only update if template has a non-null workgroup
+                            if (!string.IsNullOrEmpty(templateTask.TaskWorkGroup) && templateTask.TaskWorkGroup != "NULL")
+                            {
+                                existingTask.TaskWorkGroup = templateTask.TaskWorkGroup;
+                                _logger.LogDebug("Setting workgroup for task {task} from template to {workgroup}", 
+                                    existingTask.Task, templateTask.TaskWorkGroup);
+                            }
+                        }
+                        
                         existingTask.TaskStatus = templateTask.TaskStatus;
                         existingTask.TaskCreatedDate = templateTask.TaskCreatedDate;
                         existingTask.TaskCompleteDate = templateTask.TaskCompleteDate;
                         existingTask.Priority = templateTask.Priority;
+                        
                         // Only set actual dates if not already set
                         if (!existingTask.ActualTaskCreatedDate.HasValue && templateTask.ActualTaskCreatedDate.HasValue)
                             existingTask.ActualTaskCreatedDate = templateTask.ActualTaskCreatedDate;

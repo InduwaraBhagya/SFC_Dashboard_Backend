@@ -295,73 +295,89 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateEstimatedTime(int taskId, DateTime estimatedTime)
         {
-            var task = await _context.PETasks
-                .Include(t => t.PlannedEvent)
-                .FirstOrDefaultAsync(t => t.Id == taskId);
-
-            if (task == null)
-                return NotFound();
-
-            // Only allow for "Draw Fiber" tasks
-            if (!string.Equals(task.Task?.Trim(), "Draw Fiber", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("Estimated Time can only be set for 'Draw Fiber' tasks.");
-
-            var status = task.TaskStatus?.ToUpper();
-            if (status == "COMPLETED")
-                return BadRequest("Already completed task.");
-
-            if (status != "ONGOING" && status != "WAITING")
-                return BadRequest("Estimated Time can only be set when TaskStatus is ONGOING or WAITING.");
-
-            if (estimatedTime.Date < DateTime.Today)
-                return BadRequest("Estimated Time cannot be in the past.");
-
-            // Create history record
-            var historyRecord = new TaskEstimationHistory
+            try
             {
-                TaskId = taskId,
-                EstimatedDate = estimatedTime,
-                CreatedAt = DateTime.UtcNow
-            };
+                var task = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(t => t.Id == taskId);
 
-            // Add history record
-            _context.TaskEstimationHistory.Add(historyRecord);
+                if (task == null)
+                    return NotFound("Task not found");
 
-            // Update task's estimated time
-            task.EstimatedTime = estimatedTime;
-            task.TaskCompleteDate = estimatedTime;
+                // Only allow for "Draw Fiber" tasks
+                if (!string.Equals(task.Task?.Trim(), "Draw Fiber", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("Estimated Time can only be set for 'Draw Fiber' tasks.");
 
-            // 2. Get all tasks for this PE, ordered by TaskSeq
-            var allTasks = await _context.PETasks
-                .Where(t => t.PENumber == task.PENumber)
-                .OrderBy(t => t.TaskSeq)
-                .ToListAsync();
+                var status = task.TaskStatus?.ToUpper();
+                if (status == "COMPLETED")
+                    return BadRequest("Already completed task.");
 
-            // 3. Find index of the updated task
-            int idx = allTasks.FindIndex(t => t.Id == taskId);
+                // FIXED CHECK: For OLA violated tasks, skip the status check entirely
+                if (!task.IsOLAViolate && status != "ONGOING" && status != "WAITING")
+                    return BadRequest("Estimated Time can only be set when TaskStatus is ONGOING or WAITING or task is OLA Violated.");
 
-            // 4. Update only the create/target dates for subsequent tasks
-            DateTime prevCompleteDate = estimatedTime;
-            for (int i = idx + 1; i < allTasks.Count; i++)
-            {
-                var currentTask = allTasks[i];
+                if (estimatedTime.Date < DateTime.Today)
+                    return BadRequest("Estimated Time cannot be in the past.");
 
-                // Set created date as previous task's complete date
-                currentTask.TaskCreatedDate = prevCompleteDate;
+                // Create history record
+                var historyRecord = new TaskEstimationHistory
+                {
+                    TaskId = taskId,
+                    EstimatedDate = estimatedTime,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-                // Parse OLA (assume it's in days, as int)
-                int olaDays = 0;
-                int.TryParse(currentTask.OLA, out olaDays);
+                // Add history record
+                _context.TaskEstimationHistory.Add(historyRecord);
 
-                // Set complete date as created date + OLA days
-                currentTask.TaskCompleteDate = currentTask.TaskCreatedDate.AddDays(olaDays);
+                // Update task's estimated time
+                task.EstimatedTime = estimatedTime;
+                task.TaskCompleteDate = estimatedTime;
+                
+                // If this is an OLA violated task and we're setting a future date, clear the violation flag
+                if (task.IsOLAViolate && estimatedTime.Date >= DateTime.Today)
+                {
+                    task.IsOLAViolate = false;
+                    _logger.LogInformation("Cleared OLA violation for task {id} after setting new estimated time", taskId);
+                }
 
-                prevCompleteDate = currentTask.TaskCompleteDate;
+                // 2. Get all tasks for this PE, ordered by TaskSeq
+                var allTasks = await _context.PETasks
+                    .Where(t => t.PENumber == task.PENumber)
+                    .OrderBy(t => t.TaskSeq)
+                    .ToListAsync();
+
+                // 3. Find index of the updated task
+                int idx = allTasks.FindIndex(t => t.Id == taskId);
+
+                // 4. Update only the create/target dates for subsequent tasks
+                DateTime prevCompleteDate = estimatedTime;
+                for (int i = idx + 1; i < allTasks.Count; i++)
+                {
+                    var currentTask = allTasks[i];
+
+                    // Set created date as previous task's complete date
+                    currentTask.TaskCreatedDate = prevCompleteDate;
+
+                    // Parse OLA (assume it's in days, as int)
+                    int olaDays = 0;
+                    int.TryParse(currentTask.OLA, out olaDays);
+
+                    // Set complete date as created date + OLA days
+                    currentTask.TaskCompleteDate = currentTask.TaskCreatedDate.AddDays(olaDays);
+
+                    prevCompleteDate = currentTask.TaskCompleteDate;
+                }
+
+                await _context.SaveChangesAsync();
+                
+                return Ok(new { success = true, message = "Estimated time updated successfully" });
             }
-
-            await _context.SaveChangesAsync();
-
-            return Ok();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating estimated time for task {taskId}", taskId);
+                return StatusCode(500, "Error updating estimated time: " + ex.Message);
+            }
         }
 
         [HttpPost]

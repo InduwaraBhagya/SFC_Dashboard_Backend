@@ -736,30 +736,35 @@
             });
 
             // AJAX for Estimated Time Save
-            const estimatedTimeForm = document.getElementById('estimatedTimeForm');
-            if (estimatedTimeForm) {
-                estimatedTimeForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    const formData = new FormData(estimatedTimeForm);
-                    fetch(estimatedTimeForm.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                        .then(response => {
-                            if (response.ok) {
-                                // Reload the page after successful save
-                                window.location.reload();
-                            } else {
-                                alert('Failed to save estimated time.');
-                            }
-                        })
-                        .catch(() => alert('Error occurred while saving.'));
-                });
+// In Details.cshtml where you handle the form submission:
+const estimatedTimeForm = document.getElementById('estimatedTimeForm');
+if (estimatedTimeForm) {
+    estimatedTimeForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(estimatedTimeForm);
+        fetch(estimatedTimeForm.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
-
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+                return;
+            }
+            // Parse the error message from the response
+            return response.text().then(text => {
+                throw new Error(text || 'Failed to save estimated time.');
+            });
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert(error.message || 'Failed to save estimated time.');
+        });
+    });
+}
             // Set min date for estimatedTime input to today
             var estimatedTimeInput = document.getElementById('estimatedTime');
             if (estimatedTimeInput) {
