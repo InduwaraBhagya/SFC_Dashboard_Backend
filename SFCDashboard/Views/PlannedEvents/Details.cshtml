@@ -138,6 +138,54 @@
     .timeline-info {
         font-size: 1.1rem;
     }
+
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 1rem);
+    }
+
+    .modal-content {
+        border-radius: 1rem;
+        border: none;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+        padding: 1rem 1.5rem;
+    }
+
+    .btn-lg {
+        border-radius: 0.5rem;
+        font-weight: 500;
+        min-width: 120px;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+
+    .table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
 </style>
 
 <div class="container mt-4">
@@ -410,7 +458,8 @@
                                         {
                                             @if (ViewData["CanMakeTasksUrgent"] as bool? == true)
                                             {
-                                                <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post">
+                                                <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post" 
+                                                      onsubmit="return confirmUrgent(event, '@task.Task')">
                                                     <input type="hidden" name="id" value="@task.Id" />
                                                     <button type="submit" class="btn btn-warning btn-sm w-100">
                                                         <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
@@ -638,30 +687,73 @@
     </div>
 </div>
 
-<!-- Estimation History Modal -->
+<!-- Improved Estimation History Modal -->
 <div class="modal fade" id="estimationHistoryModal" tabindex="-1" aria-labelledby="estimationHistoryModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="estimationHistoryModalLabel">Estimation Date History</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="estimationHistoryModalLabel">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Estimation Date History
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div id="loadingSpinner" class="text-center my-4 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="noHistoryAlert" class="alert alert-info d-none">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No estimation history available.
+                </div>
                 <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
+                    <table class="table table-hover table-striped">
+                        <thead class="table-light">
                             <tr>
-                                <th>Estimated Date</th>
-                                <th>Created At</th>
+                                <th scope="col">
+                                    <i class="bi bi-calendar-date me-2"></i>
+                                    Estimated Date
+                                </th>
+                                <th scope="col">
+                                    <i class="bi bi-clock me-2"></i>
+                                    Created At
+                                </th>
                             </tr>
                         </thead>
-                        <tbody id="estimationHistoryTableBody">
-                        </tbody>
+                        <tbody id="estimationHistoryTableBody"></tbody>
                     </table>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+           
+        </div>
+    </div>
+</div>
+
+<!-- Task Urgent Confirmation Modal -->
+<div class="modal fade" id="taskUrgentConfirmModal" tabindex="-1" aria-labelledby="taskUrgentConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark py-2">
+                <h5 class="modal-title fs-6" id="taskUrgentConfirmModalLabel">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Confirm Action
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <h6 class="mb-0">Do you want to mark this task as urgent?</h6>
+                <form id="markUrgentForm" method="post">
+                    <input type="hidden" name="id" id="confirmTaskId" />
+                </form>
+            </div>
+            <div class="modal-footer justify-content-center py-2 border-0">
+                <button type="button" class="btn btn-sm btn-success" onclick="submitUrgentForm()">
+                    <i class="bi bi-check-circle me-1"></i>Yes
+                </button>
+                <button type="button" class="btn btn-sm btn-danger" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>No
+                </button>
             </div>
         </div>
     </div>
@@ -880,30 +972,75 @@
 
         // Add this inside your existing document.ready function
         function showEstimationHistory(taskId) {
-            // Show modal
             const modal = new bootstrap.Modal(document.getElementById('estimationHistoryModal'));
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const noHistoryMessage = document.getElementById('noHistoryAlert');
+            const tbody = document.getElementById('estimationHistoryTableBody');
+            
+            // Show loading spinner
+            loadingSpinner.classList.remove('d-none');
+            noHistoryMessage.classList.add('d-none');
+            tbody.innerHTML = '';
+            modal.show();
             
             // Fetch history data
             fetch(`/PETasks/GetEstimationHistory/${taskId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    const tbody = document.getElementById('estimationHistoryTableBody');
-                    tbody.innerHTML = ''; // Clear existing content
+                    loadingSpinner.classList.add('d-none');
+                    
+                    if (!data || data.length === 0) {
+                        noHistoryMessage.classList.remove('d-none');
+                        return;
+                    }
                     
                     data.forEach(history => {
                         const row = document.createElement('tr');
+                        const estimatedDate = new Date(history.estimatedDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                        const createdAt = new Date(history.createdAt).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
                         row.innerHTML = `
-                            <td>${new Date(history.estimatedDate).toLocaleDateString()}</td>
-                            <td>${new Date(history.createdAt).toLocaleString()}</td>
+                            <td class="align-middle">
+                                <span class="badge bg-primary">
+                                    <i class="bi bi-calendar2-check me-1"></i>
+                                    ${estimatedDate}
+                                </span>
+                            </td>
+                            <td class="align-middle text-muted">
+                                <small>
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    ${createdAt}
+                                </small>
+                            </td>
                         `;
                         tbody.appendChild(row);
                     });
-                    
-                    modal.show();
                 })
                 .catch(error => {
+                    loadingSpinner.classList.add('d-none');
                     console.error('Error fetching estimation history:', error);
-                    alert('Failed to load estimation history.');
+                    const errorAlert = document.createElement('div');
+                    errorAlert.className = 'alert alert-danger m-3';
+                    errorAlert.innerHTML = `
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Failed to load estimation history. Please try again.
+                    `;
+                    tbody.parentElement.insertBefore(errorAlert, tbody);
                 });
         }
 
@@ -912,5 +1049,42 @@
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
+
+        function confirmUrgent(event, taskName) {
+            event.preventDefault();
+            
+            // Get the form and task ID
+            const form = event.target;
+            const taskId = form.querySelector('input[name="id"]').value;
+            
+            // Set the task ID in the confirmation modal's form
+            document.getElementById('confirmTaskId').value = taskId;
+            
+            // Get the modal element and show it
+            const modal = new bootstrap.Modal(document.getElementById('taskUrgentConfirmModal'));
+            modal.show();
+            
+            return false;
+        }
+
+        function submitUrgentForm() {
+            const form = document.getElementById('markUrgentForm');
+            form.action = '@Url.Action("MarkAsUrgent", "PETasks")';
+            form.submit();
+        }
+
+        function confirmEstimation(isConfirmed) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('estimationHistoryModal'));
+            modal.hide();
+
+            if (isConfirmed) {
+                // User confirmed the estimation
+                // You can add any additional logic here if needed
+                alert('Estimation confirmed!');
+            } else {
+                // User declined the estimation
+                alert('Estimation not confirmed.');
+            }
+        }
     </script>
 }
