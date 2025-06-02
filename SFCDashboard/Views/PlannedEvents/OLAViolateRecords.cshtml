@@ -5,17 +5,15 @@
     ViewData["Title"] = "OLA Violation Records";
 }
 
-
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-<h1 class="display-5">
-    <i class="bi bi-clock-history text-primary me-3"></i>OLA Violation Records
-</h1>
+        <h1 class="display-5">
+            <i class="bi bi-clock-history text-primary me-3"></i>OLA Violation Records
+        </h1>
         <a asp-action="Index" class="btn btn-outline-primary">
             <i class="bi bi-arrow-left"></i> Back to Dashboard
         </a>
     </div>
-
 
     @if (TempData["SuccessMessage"] != null)
     {
@@ -25,11 +23,10 @@
         </div>
     }
 
-    
     <div class="card mb-4">
         <div class="card-header bg-primary text-dark">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Overdue Tasks</h5>
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>OLA Violation Records</h5>
                 <span class="badge bg-dark">@Model.Count() Records</span>
             </div>
         </div>
@@ -44,27 +41,21 @@
                                 <th>Customer</th>
                                 <th>Current Task</th>
                                 <th>Service Type</th>
-                                <th>Overdue Tasks</th>
-                                <th>Max Days Overdue</th>
+                                <th>Status</th>
+                                <th>Workgroup</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Model)
                             {
-                                var violations = ViewBag.ViolationDetails[item.PeNumber];
-                                
                                 <tr>
                                     <td>@item.PeNumber</td>
                                     <td>@item.Customer</td>
                                     <td>@item.TaskName</td>
                                     <td>@item.ServiceType</td>
-                                    <td>
-                                        <span class="badge bg-danger">@violations.TasksCount tasks</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-danger">@violations.MaxDaysOverdue days</span>
-                                    </td>
+                                    <td>@item.PEStatus</td>
+                                    <td>@item.TaskWg</td>
                                     <td>
                                         <a asp-action="Details" asp-route-id="@item.Id" asp-route-returnUrl="@Url.Action("OLAViolateRecords")" class="btn btn-primary btn-sm">
                                             <i class="bi bi-eye"></i> View Details

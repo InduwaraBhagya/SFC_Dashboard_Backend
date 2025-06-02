@@ -371,7 +371,9 @@
                                         }
                                     }
                                 }
-                                <span class="@taskStatusClass">@task.TaskStatus</span>
+                                <span class="@(task.IsOLAViolate ? "badge bg-danger" : taskStatusClass)">
+    @(task.IsOLAViolate ? "ONGOING" : task.TaskStatus)
+</span>
                             </td>
                             <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
                             <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
