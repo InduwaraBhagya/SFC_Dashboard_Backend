@@ -53,35 +53,34 @@ namespace SFCDashboard.Services
         private async Task CheckAndUpdateOLAViolations(ApplicationDbContext dbContext)
         {
             var currentDate = DateTime.Today;
-            
-            // Find tasks with OLA violations
-            var violatingTasks = await dbContext.PETasks
+
+            // Load tasks with their related PlannedEvent (for IsHold)
+            var candidateTasks = await dbContext.PETasks
                 .Include(t => t.PlannedEvent)
-                .Where(t => t.TaskStatus != "COMPLETED" && 
-                           t.TaskCompleteDate.Date < currentDate)
+                .Where(t => t.TaskStatus != "COMPLETED" &&
+                    (t.EstimatedTime.HasValue || t.ActualTaskCreatedDate.HasValue))
                 .ToListAsync();
-            
-            int updatedCount = 0;
-            
-            // Update PE status for each violating task
-            foreach (var task in violatingTasks)
+
+            foreach (var task in candidateTasks)
             {
-                if (task.PlannedEvent != null && task.PlannedEvent.PEStatus != "ola-violated")
+                bool isHold = task.PlannedEvent != null && task.PlannedEvent.IsHold;
+                bool isOlaViolate =
+                    !isHold && (
+                        (task.EstimatedTime.HasValue && task.EstimatedTime.Value < currentDate) ||
+                        (!task.EstimatedTime.HasValue && task.ActualTaskCreatedDate.HasValue &&
+                            task.OLA != null &&
+                            int.TryParse(task.OLA, out var olaDays) &&
+                            task.ActualTaskCreatedDate.Value.AddDays(olaDays) < currentDate)
+                    );
+
+                if (task.IsOLAViolate != isOlaViolate)
                 {
-                    task.PlannedEvent.PEStatus = "ola-violated";
-                    dbContext.Update(task.PlannedEvent);
-                    updatedCount++;
+                    task.IsOLAViolate = isOlaViolate;
+                    dbContext.Update(task);
                 }
             }
-            
-            // Save changes if any PEs were updated
-            if (updatedCount > 0)
-            {
-                await dbContext.SaveChangesAsync();
-                _logger.LogInformation("Updated {count} PE records to OLA-violated status", updatedCount);
-            }
-            
-            _logger.LogInformation("Found {count} tasks with OLA violations", violatingTasks.Count);
+
+            await dbContext.SaveChangesAsync();
         }
     }
 }

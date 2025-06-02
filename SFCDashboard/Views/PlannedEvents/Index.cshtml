@@ -475,21 +475,36 @@
         <!-- Right Column - Message Inbox -->
         <div class="col-lg-4">
             <div class="message-inbox-container">
-                <div class="inbox-header">
-                    <h3>
-                        <i class="fas fa-inbox me-2"></i>Message Inbox
-                        @{
-                            var totalUnreadCount = ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])?.Count() ?? 0;
-                            totalUnreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"])?.Count() ?? 0;
-                            totalUnreadCount += ((IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewData["InboxIssues"])?.Count(i => !i.IsRead) ?? 0;
-
-                            if (totalUnreadCount > 0)
-                            {
-                                <span class="badge bg-danger rounded-pill ms-2">@totalUnreadCount Messages</span>
-                            }
-                        }
-                    </h3>
-                </div>
+<div class="inbox-header">
+    <h3>
+        <i class="fas fa-inbox me-2"></i>Message Inbox
+        @{
+            var unreadCount = 0;
+            
+            // Count unread issues
+            if (ViewData["InboxIssues"] != null)
+            {
+                unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
+            }
+            
+            // Count pending urgent PE requests
+            if (ViewData["PendingUrgentRequests"] != null)
+            {
+                unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
+            }
+            
+            // Count pending urgent task requests
+            if (ViewData["PendingTaskRequests"] != null)
+            {
+                unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
+            }
+            
+            if (unreadCount > 0)
+            {
+                <span class="badge bg-danger rounded-pill ms-2">@unreadCount Unread</span>
+            }
+        }
+    </h3>
 
                 <!-- Message search bar -->
                 <div class="inbox-search-container mt-3">
@@ -501,13 +516,14 @@
                     </div>
                 </div>
 
-                <div class="inbox-filters mt-3">
-                    <div class="btn-group w-100" role="group" aria-label="Message filters">
-                        <button type="button" class="btn btn-outline-primary active" data-filter="all">All</button>
-                        <button type="button" class="btn btn-outline-primary" data-filter="unread">Unread</button>
-                        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
-                    </div>
-                </div>
+<!-- Add this section after the inbox-search-container -->
+<div class="inbox-filters mt-3">
+    <div class="btn-group w-100" role="group" aria-label="Message filters">
+        <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
+        <button type="button" class="btn btn-outline-primary" data-filter="all">All Messages</button>
+        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
+    </div>
+</div>
 
                 <div class="messages-container mt-3">
                     @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
@@ -797,33 +813,39 @@ document.getElementById('acceptUrgentRequestBtn').addEventListener('click', func
             const inboxSearch = document.querySelector('.inbox-search');
             
             // Ensure all messages are visible on first load
-            messageItems.forEach(item => {
-                item.style.display = 'flex';
-            });
+    messageItems.forEach(item => {
+        if (item.classList.contains('unread')) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
 
             // Message filtering
-            filterButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Remove active class from all buttons
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    // Add active class to clicked button
-                    this.classList.add('active');
+// Replace the existing filter button handling code with this
+filterButtons.forEach(button => {
+    button.addEventListener('click', function() {
+        // Remove active class from all buttons
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        // Add active class to clicked button
+        this.classList.add('active');
 
-                    const filter = this.getAttribute('data-filter');
-                    
-                    messageItems.forEach(item => {
-                        if (filter === 'all') {
-                            item.style.display = 'flex';
-                        } else if (filter === 'unread' && item.classList.contains('unread')) {
-                            item.style.display = 'flex';
-                        } else if (filter === 'read' && !item.classList.contains('unread')) {
-                            item.style.display = 'flex';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-                });
-            });
+        const filter = this.getAttribute('data-filter');
+
+        // Show/hide messages based on filter
+        messageItems.forEach(item => {
+            if (filter === 'all') {
+                item.style.display = 'flex';
+            } else if (filter === 'unread' && item.classList.contains('unread')) {
+                item.style.display = 'flex';
+            } else if (filter === 'read' && !item.classList.contains('unread')) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+});
             
             // Handle search functionality
             if (inboxSearch) {
@@ -1278,17 +1300,15 @@ function submitResolutionForm(isConfirmed) {
         }
 
         // Add this function to update unread count
-        function updateUnreadCount() {
-    const unreadMessages = document.querySelectorAll('.message-item.unread');
-    const unreadBadge = document.querySelector('.badge.bg-danger');
-    const count = unreadMessages.length;
+function updateUnreadCount() {
+    const unreadBadge = document.querySelector('.inbox-header .badge');
+    const currentCount = parseInt(unreadBadge?.textContent) || 0;
     
-    if (unreadBadge) {
-        if (count > 0) {
-            unreadBadge.textContent = `${count} Messages`;
-        } else {
-            unreadBadge.remove();
-        }
+    if (currentCount > 1) {
+        const newCount = currentCount - 1;
+        unreadBadge.textContent = `${newCount} Unread`;
+    } else if (currentCount === 1) {
+        unreadBadge.remove();
     }
 }
 
@@ -1307,6 +1327,8 @@ function submitResolutionForm(isConfirmed) {
                     console.error('Error marking issue as read');
                 }
             });
+                updateUnreadCount();
+
         }
     </script>
 }
@@ -1584,6 +1606,22 @@ function submitResolutionForm(isConfirmed) {
     border-radius: 50%;
 }
 
+.badge.rounded-pill {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+.bg-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+.inbox-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 </style>
 
 @functions {

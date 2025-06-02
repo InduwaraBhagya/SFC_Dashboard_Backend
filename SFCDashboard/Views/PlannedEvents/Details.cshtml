@@ -365,39 +365,39 @@
                                                 _ => "badge bg-secondary"
                                             };
 
-                                            // OLA color logic for completed tasks
-                                            if (task.TaskStatus?.ToLower() == "completed" && task.ActualTaskCreatedDate.HasValue &&
-                                            task.ACtualTaskCompleteDate.HasValue)
-                                            {
-                                                int olaDays = 0;
-                                                int.TryParse(task.OLA, out olaDays);
-                                                var actualDays = (task.ACtualTaskCompleteDate.Value.Date -
-                                                task.ActualTaskCreatedDate.Value.Date).TotalDays;
-                                                if (actualDays > olaDays)
-                                                {
-                                                    // Completed but OLA violated
-                                                    taskStatusClass = "badge bg-danger";
-                                                }
-                                                else
-                                                {
-                                                    // Completed within OLA
-                                                    taskStatusClass = "badge bg-success";
-                                                }
-                                            }
+                                    // OLA color logic for completed tasks
+                                    if (task.TaskStatus?.ToLower() == "completed" && task.ActualTaskCreatedDate.HasValue && task.ACtualTaskCompleteDate.HasValue)
+                                    {
+                                        int olaDays = 0;
+                                        int.TryParse(task.OLA, out olaDays);
+                                        var actualDays = (task.ACtualTaskCompleteDate.Value.Date - task.ActualTaskCreatedDate.Value.Date).TotalDays;
+                                        if (actualDays > olaDays)
+                                        {
+                                            // Completed but OLA violated
+                                            taskStatusClass = "badge bg-danger";
                                         }
-                                    <span class="@taskStatusClass">@task.TaskStatus</span>
-                                </td>
-                                <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
-                                <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
-                                <td>
-                                    @(task.ActualTaskCreatedDate != null
-                                                                    ? task.ActualTaskCreatedDate.Value.ToString("yyyy-MM-dd")
-                                                                    : "-")
-                                                                      </td>
-                                                                      <td>
-                                    @(task.ACtualTaskCompleteDate != null
-                                                                    ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd")
-                                                                    : "-")
+                                        else
+                                        {
+                                            // Completed within OLA
+                                            taskStatusClass = "badge bg-success";
+                                        }
+                                    }
+                                }
+                                <span class="@(task.IsOLAViolate ? "badge bg-danger" : taskStatusClass)">
+    @(task.IsOLAViolate ? "ONGOING" : task.TaskStatus)
+</span>
+                            </td>
+                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                @(task.ActualTaskCreatedDate != null
+                                    ? task.ActualTaskCreatedDate.Value.ToString("yyyy-MM-dd")
+                                    : "-")
+                            </td>
+                            <td>
+                                @(task.ACtualTaskCompleteDate != null
+                                    ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd")
+                                    : "-")
                             </td>
                             <td>
                                 @if (task.UrgentRequested && !task.IsUrgent)

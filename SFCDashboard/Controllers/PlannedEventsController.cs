@@ -118,65 +118,6 @@ namespace SFCDashboard.Controllers
             };
 
 
-
-
-
-            var currentDate = DateTime.Today;
-            var olaViolationQuery = _context.PETasks
-                .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate);
-
-            if (workgroupId.HasValue)
-            {
-                olaViolationQuery = olaViolationQuery.Where(t => t.TaskWorkGroup != null &&
-                    _context.WorkGroups.Any(w => w.Id == workgroupId && t.TaskWorkGroup.Contains(w.Name)));
-            }
-
-            // Count unique PE Numbers (i.e., unique PEs with at least one violating task)
-            ViewData["OLAViolateCount"] = await olaViolationQuery
-                .Select(t => t.PENumber)
-                .Distinct()
-                .CountAsync();
-
-
-            // Get top OLA violations with workgroup filter
-            IOrderedQueryable<PETask> violationsQuery;
-
-            if (workgroupId.HasValue)
-            {
-                // Apply both filter and ordering in one step
-                violationsQuery = _context.PETasks
-                    .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate)
-                    .Where(t => t.TaskWorkGroup != null &&
-                        _context.WorkGroups.Any(w => w.Id == workgroupId && t.TaskWorkGroup.Contains(w.Name)))
-                    .OrderBy(t => t.TaskCompleteDate);
-            }
-            else
-            {
-                // No workgroup filter, just apply the basic filter and ordering
-                violationsQuery = _context.PETasks
-                    .Where(t => t.TaskStatus != "COMPLETED" && t.TaskCompleteDate.Date < currentDate)
-                    .OrderBy(t => t.TaskCompleteDate);
-            }
-
-            var violationsData = await violationsQuery
-                .Take(5)
-                .Include(t => t.PlannedEvent)
-                .ToListAsync();
-
-            // Then transform it in memory
-            var topViolations = violationsData
-                .Select(t => new
-                {
-                    PENumber = t.PENumber,
-                    TaskName = t.Task,
-                    DueDate = t.TaskCompleteDate,
-                    DaysOverdue = (currentDate - t.TaskCompleteDate.Date).Days,
-                    PlannedEventId = t.PlannedEvent?.Id
-                })
-                .ToList();
-
-            ViewData["TopOLAViolations"] = topViolations;
-
             // Pending urgent requests (same as before)
             var pendingUrgentRequests = await _context.PlannedEvents
                 .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
@@ -231,6 +172,19 @@ var inboxIssues = await _context.PEIssues
 
             // Add unread count
             var unreadCount = inboxIssues.Count(i => !i.IsRead);
+            // Add pending urgent PE requests to unread count
+if (ViewData["PendingUrgentRequests"] != null)
+{
+    unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
+        .Count(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION");
+}
+
+// Add pending urgent task requests to unread count
+if (ViewData["PendingTaskRequests"] != null)
+{
+    unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"])
+        .Count(t => t.UrgentRequested && !t.IsUrgent);
+}
 
             ViewData["InboxIssues"] = inboxIssues;
             ViewData["TotalMessages"] = inboxIssues.Count;
@@ -512,127 +466,138 @@ var inboxIssues = await _context.PEIssues
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> InProgressRecords(int? workgroupId)
+public async Task<IActionResult> InProgressRecords(int? workgroupId)
+{
+    var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
+    var effectiveWorkgroupId = canViewAll ? workgroupId : userWorkgroupId;
+
+    try
+    {
+        // Get PE numbers with OLA violation
+        var violatingPENumbers = await _context.PETasks
+            .Where(t => t.IsOLAViolate)
+            .Select(t => t.PENumber)
+            .Distinct()
+            .ToListAsync();
+
+        // Base query, EXCLUDING OLA Violate records
+        var query = _context.PlannedEvents
+            .Where(p => 
+                (p.PEStatus == "ongoing" && p.IsHold == false || p.PEStatus == "PENDING_URGENT_CONFIRMATION")
+                && !violatingPENumbers.Contains(p.PeNumber))
+            .AsNoTracking();
+
+        // Apply workgroup filter
+        if (effectiveWorkgroupId.HasValue)
         {
-            var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
-            var effectiveWorkgroupId = canViewAll ? workgroupId : userWorkgroupId;
-
-            try
+            var workgroup = await _context.WorkGroups.FindAsync(effectiveWorkgroupId);
+            if (workgroup != null)
             {
-                // Base query
-                var query = _context.PlannedEvents
-                    .Where(p => p.PEStatus == "ongoing"&& p.IsHold == false||p.PEStatus=="PENDING_URGENT_CONFIRMATION")
-                    .AsNoTracking();
-
-                // Apply workgroup filter
-                if (effectiveWorkgroupId.HasValue)
-                {
-                    var workgroup = await _context.WorkGroups.FindAsync(effectiveWorkgroupId);
-                    if (workgroup != null)
-                    {
-                        query = query.Where(p => p.TaskWg != null &&
-                            EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
-                        ViewData["FilteredWorkgroup"] = workgroup.Name;
-                    }
-                }
-
-                // Set ViewData
-                ViewData["CanViewAll"] = canViewAll;
-                ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
-
-                var currentUser = await _context.Users
-                .Include(u => u.UserRole)
-                    .ThenInclude(r => r.RolePermissions)
-                    .ThenInclude(rp => rp.Permission)
-                .Include(u => u.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
-
-                ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
-    
-                var records = await query.ToListAsync();
-                return View(records);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading in-progress records");
-                return View(new List<PlannedEvent>());
+                query = query.Where(p => p.TaskWg != null &&
+                    EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
+                ViewData["FilteredWorkgroup"] = workgroup.Name;
             }
         }
+
+        // Set ViewData
+        ViewData["CanViewAll"] = canViewAll;
+        ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
+
+        var currentUser = await _context.Users
+            .Include(u => u.UserRole)
+                .ThenInclude(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+            .Include(u => u.WorkGroup)
+            .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+
+        ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
+
+        var records = await query.ToListAsync();
+        return View(records);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error loading in-progress records");
+        return View(new List<PlannedEvent>());
+    }
+}
 
         // GET: PlannedEvents/OLAViolateRecords
-        public async Task<IActionResult> OLAViolateRecords(int? workgroupId)
+// GET: PlannedEvents/OLAViolateRecords
+public async Task<IActionResult> OLAViolateRecords(int? workgroupId)
+{
+    var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
+    workgroupId = workgroupId ?? userWorkgroupId;
+
+    try
+    {
+        var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+        ViewData["Workgroups"] = workgroups;
+        ViewData["SelectedWorkgroupId"] = workgroupId;
+        ViewData["CanViewAll"] = canViewAll;
+
+        // Get PE numbers with OLA violation
+        var violatingPENumbers = await _context.PETasks
+            .Where(t => t.IsOLAViolate)
+            .Select(t => t.PENumber)
+            .Distinct()
+            .ToListAsync();
+
+        // Get the PE records with at least one OLA-violated task
+        var query = _context.PlannedEvents
+            .Where(p => violatingPENumbers.Contains(p.PeNumber));
+
+        // Apply workgroup filter if needed
+        if (workgroupId.HasValue)
         {
-            var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
-            workgroupId = workgroupId ?? userWorkgroupId;
-
-            try
+            var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+            if (workgroup != null)
             {
-                // Load workgroups for the dropdown
-                var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-                ViewData["Workgroups"] = workgroups;
-                ViewData["SelectedWorkgroupId"] = workgroupId;
-                ViewData["CanViewAll"] = canViewAll;
-
-                var currentDate = DateTime.Today;
-
-                // Get all PE records with OLA violations (tasks past their due date)
-                var olaViolatingTasks = await _context.PETasks
-                    .Where(t => t.TaskStatus != "COMPLETED" &&
-                               t.TaskCompleteDate.Date < currentDate)
-                    .Select(t => t.PENumber)
-                    .Distinct()
-                    .ToListAsync();
-
-                // Get the actual PE records
-                var olaViolateRecords = await _context.PlannedEvents
-                    .Where(p => olaViolatingTasks.Contains(p.PeNumber))
-                    .OrderBy(p => p.PeNumber)
-                    .ToListAsync();
-
-                // Create a dictionary to store violation details - do this calculation in memory
-                var violatingTasksList = await _context.PETasks
-                    .Where(t => t.TaskStatus != "COMPLETED" &&
-                               t.TaskCompleteDate.Date < currentDate)
-                    .ToListAsync();
-
-                // Group and calculate in memory instead of in the query
-                var violationDetails = violatingTasksList
-                    .GroupBy(t => t.PENumber)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => new
-                        {
-                            TasksCount = g.Count(),
-                            MaxDaysOverdue = g.Max(t => (currentDate - t.TaskCompleteDate.Date).Days),
-                            OldestViolation = g.OrderBy(t => t.TaskCompleteDate).FirstOrDefault()?.TaskCompleteDate
-                        }
-                    );
-
-                ViewBag.ViolationDetails = violationDetails;
-
-                // When getting violatingTasksList, filter by workgroup:
-                if (workgroupId.HasValue)
-                {
-                    var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
-                    if (workgroup != null)
-                    {
-                        violatingTasksList = violatingTasksList
-                            .Where(t => t.TaskWorkGroup != null && t.TaskWorkGroup.Contains(workgroup.Name))
-                            .ToList();
-                    }
-                }
-
-                _logger.LogInformation("Retrieved {count} OLA violated records", olaViolateRecords.Count);
-
-                return View(olaViolateRecords);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in OLAViolateRecords");
-                TempData["ErrorMessage"] = "An error occurred while loading records.";
-                return View(new List<PlannedEvent>());
+                query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
             }
         }
+
+        var olaViolateRecords = await query.OrderBy(p => p.PeNumber).ToListAsync();
+
+        // For details, get all violating tasks for these PEs
+        var violatingTasks = await _context.PETasks
+            .Where(t => t.IsOLAViolate && violatingPENumbers.Contains(t.PENumber))
+            .ToListAsync();
+
+        var currentDate = DateTime.Today;
+        var violationDetails = violatingTasks
+            .GroupBy(t => t.PENumber)
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    TasksCount = g.Count(),
+                    MaxDaysOverdue = g.Max(t =>
+                        t.EstimatedTime.HasValue
+                            ? (currentDate - t.EstimatedTime.Value).Days
+                            : (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays2))
+                                ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays2)).Days
+                                : 0
+                    ),
+                    OldestViolation = g.Min(t =>
+                        t.EstimatedTime ?? (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays3)
+                            ? t.ActualTaskCreatedDate.Value.AddDays(olaDays3)
+                            : (DateTime?)null))
+                }
+            );
+
+        ViewBag.ViolationDetails = violationDetails;
+
+        _logger.LogInformation("Retrieved {count} OLA violated records", olaViolateRecords.Count);
+        return View(olaViolateRecords);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error in OLAViolateRecords");
+        TempData["ErrorMessage"] = "An error occurred while loading records.";
+        return View(new List<PlannedEvent>());
+    }
+}
 public async Task<IActionResult> HoldRecords(string peNumber, string reference, string customer, int? workgroupId)
 {
     // Get current user's workgroup info
@@ -695,42 +660,50 @@ public async Task<IActionResult> HoldRecords(string peNumber, string reference, 
 }
 
 
-        public async Task<IActionResult> UrgentRecords(int? workgroupId)
+public async Task<IActionResult> UrgentRecords(int? workgroupId)
+{
+    try
+    {
+        // Get PE numbers with OLA violation
+        var violatingPENumbers = await _context.PETasks
+            .Where(t => t.IsOLAViolate)
+            .Select(t => t.PENumber)
+            .Distinct()
+            .ToListAsync();
+
+        // Load workgroups for the dropdown
+        var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+        ViewData["Workgroups"] = workgroups;
+        ViewData["SelectedWorkgroupId"] = workgroupId;
+
+        var query = _context.PlannedEvents
+            .Where(p => p.PEStatus == "urgent" && p.IsHold == false && !violatingPENumbers.Contains(p.PeNumber));
+
+        // Apply workgroup filter if selected
+        if (workgroupId.HasValue)
         {
-            try
+            var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+            if (workgroup != null)
             {
-                // Load workgroups for the dropdown
-                var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-                ViewData["Workgroups"] = workgroups;
-                ViewData["SelectedWorkgroupId"] = workgroupId;
-
-                var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent" && p.IsHold == false);
-
-                // Apply workgroup filter if selected
-                if (workgroupId.HasValue)
-                {
-                    var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
-                    if (workgroup != null)
-                    {
-                        ViewData["FilteredWorkgroup"] = workgroup.Name;
-                        query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
-                    }
-                }
-
-                var urgentRecords = await query.ToListAsync();
-
-                _logger.LogInformation("Total URGENT records found: {Count} (Workgroup filter: {workgroup})",
-                    urgentRecords.Count, workgroupId.HasValue ? workgroupId.Value.ToString() : "None");
-
-                return View(urgentRecords);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading urgent records with workgroup filter {workgroupId}", workgroupId);
-                TempData["ErrorMessage"] = "An error occurred while loading records.";
-                return View(new List<PlannedEvent>());
+                ViewData["FilteredWorkgroup"] = workgroup.Name;
+                query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
             }
         }
+
+        var urgentRecords = await query.ToListAsync();
+
+        _logger.LogInformation("Total URGENT records found: {Count} (Workgroup filter: {workgroup})",
+            urgentRecords.Count, workgroupId.HasValue ? workgroupId.Value.ToString() : "None");
+
+        return View(urgentRecords);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error loading urgent records with workgroup filter {workgroupId}", workgroupId);
+        TempData["ErrorMessage"] = "An error occurred while loading records.";
+        return View(new List<PlannedEvent>());
+    }
+}
         // GET: PlannedEvents/UrgentRequestConfirmation/5
         public async Task<IActionResult> UrgentRequestConfirmation(int? id)
         {
@@ -1145,56 +1118,63 @@ ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
 
         private async Task<int> GetUrgentCount(int? workgroupId)
         {
-            _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
-                workgroupId?.ToString() ?? "ALL");
+    _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
+        workgroupId?.ToString() ?? "ALL");
 
-            var query = _context.PlannedEvents.Where(p => p.PEStatus == "urgent"&&p.IsHold == false);
+    // Get PE numbers with OLA violation
+    var violatingPENumbers = await _context.PETasks
+        .Where(t => t.IsOLAViolate)
+        .Select(t => t.PENumber)
+        .Distinct()
+        .ToListAsync();
 
-            if (workgroupId.HasValue)
-            {
-                var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
-                if (workgroup != null)
-                {
-                    query = query.Where(p => p.TaskWg != null &&
-                        EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
-                }
-            }
+    var query = _context.PlannedEvents
+        .Where(p => p.PEStatus == "urgent" && p.IsHold == false && !violatingPENumbers.Contains(p.PeNumber));
 
-            var count = await query.CountAsync();
-            _logger.LogInformation("Urgent count: {count} for workgroup: {workgroupId}",
-                count, workgroupId?.ToString() ?? "ALL");
-
-            return count;
-        }
-
-
-        private async Task<int> GetOLAViolateCount(int? workgroupId)
+    if (workgroupId.HasValue)
+    {
+        var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+        if (workgroup != null)
         {
-            _logger.LogInformation("Getting OLA violation count for workgroup: {workgroupId}",
-                workgroupId?.ToString() ?? "ALL");
+            query = query.Where(p => p.TaskWg != null &&
+                EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
+        }
+    }
 
-            var currentDate = DateTime.Today;
-            var query = _context.PlannedEvents.Where(p =>
-                p.ServiceRequiredDate.HasValue &&
-                p.ServiceRequiredDate.Value < currentDate &&
-                p.PEStatus != "completed");
-
-            if (workgroupId.HasValue)
-            {
-                var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
-                if (workgroup != null)
-                {
-                    query = query.Where(p => p.TaskWg != null &&
-                        EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
-                }
-            }
-
-            var count = await query.CountAsync();
-            _logger.LogInformation("OLA violation count: {count} for workgroup: {workgroupId}",
-                count, workgroupId?.ToString() ?? "ALL");
+    var count = await query.CountAsync();
+    _logger.LogInformation("Urgent count: {count} for workgroup: {workgroupId}",
+        count, workgroupId?.ToString() ?? "ALL");
 
             return count;
         }
+
+
+private async Task<int> GetOLAViolateCount(int? workgroupId)
+{
+    _logger.LogInformation("Getting OLA violate count for workgroup: {workgroupId}",
+        workgroupId?.ToString() ?? "ALL");
+
+    var query = _context.PETasks.Where(p => p.IsOLAViolate);
+
+    if (workgroupId.HasValue)
+    {
+        var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+        if (workgroup != null)
+        {
+            query = query.Where(p => p.TaskWorkGroup != null &&
+                p.TaskWorkGroup.Contains(workgroup.Name));
+        }
+    }
+
+    // Count unique PE Numbers that have at least one violating task
+    var count = await query.Select(p => p.PENumber).Distinct().CountAsync();
+
+    _logger.LogInformation("OLA violate count: {count} for workgroup: {workgroupId}",
+        count, workgroupId?.ToString() ?? "ALL");
+
+    return count;
+}
+
 
 
         private async Task<int> GetHoldCount(int? workgroupId)
@@ -1223,26 +1203,37 @@ ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
         }
 
 
-        private async Task<int> GetInProgressCount(int? workgroupId)
+private async Task<int> GetInProgressCount(int? workgroupId)
+{
+    _logger.LogInformation("Getting in-progress count for workgroup: {workgroupId}",
+        workgroupId?.ToString() ?? "ALL");
+
+    // Get PE numbers with OLA violation
+    var violatingPENumbers = await _context.PETasks
+        .Where(t => t.IsOLAViolate)
+        .Select(t => t.PENumber)
+        .Distinct()
+        .ToListAsync();
+
+    var query = _context.PlannedEvents
+        .Where(p => 
+            (p.PEStatus == "ongoing" && p.IsHold == false || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+            !violatingPENumbers.Contains(p.PeNumber)
+        );
+
+    if (workgroupId.HasValue)
+    {
+        var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+        if (workgroup != null)
         {
-            _logger.LogInformation("Getting in-progress count for workgroup: {workgroupId}",
-                workgroupId?.ToString() ?? "ALL");
+            query = query.Where(p => p.TaskWg != null &&
+                EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
+        }
+    }
 
-            var query = _context.PlannedEvents.Where(p => p.PEStatus == "ongoing"&&p.IsHold == false||p.PEStatus=="PENDING_URGENT_CONFIRMATION");
-
-            if (workgroupId.HasValue)
-            {
-                var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
-                if (workgroup != null)
-                {
-                    query = query.Where(p => p.TaskWg != null &&
-                        EF.Functions.Like(p.TaskWg, $"%{workgroup.Name}%"));
-                }
-            }
-
-            var count = await query.CountAsync();
-            _logger.LogInformation("In-progress count: {count} for workgroup: {workgroupId}",
-                count, workgroupId?.ToString() ?? "ALL");
+    var count = await query.CountAsync();
+    _logger.LogInformation("In-progress count: {count} for workgroup: {workgroupId}",
+        count, workgroupId?.ToString() ?? "ALL");
 
             return count;
         }
