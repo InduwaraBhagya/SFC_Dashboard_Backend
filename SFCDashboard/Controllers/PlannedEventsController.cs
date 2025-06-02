@@ -300,19 +300,33 @@ if (ViewData["PendingTaskRequests"] != null)
         // GET: PlannedEvents/Details/5
         public async Task<IActionResult> Details(int? id, string returnUrl = null)
         {
-            var currentUser = await _context.Users
-                .Include(u => u.UserRole)
-                    .ThenInclude(r => r.RolePermissions)
-                    .ThenInclude(rp => rp.Permission)
-                .Include(u => u.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+var currentUser = await _context.Users
+    .Include(u => u.UserRole)
+        .ThenInclude(r => r.RolePermissions)
+        .ThenInclude(rp => rp.Permission)
+    .Include(u => u.WorkGroup)
+    .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
-            ViewData["CanMakeTasksUrgent"] = currentUser?.UserRole?.HasPermission("CanMakeTasksUrgent") == true;
-            
-            ViewData["CanManageEstimatedTime"] = currentUser?.UserRole?.HasPermission("CanManageEstimatedTime") == true && 
-                                        currentUser?.WorkGroup?.Name == "NET-PROJ-ACC-CABLE";
+ViewData["CanMakeTasksUrgent"] = currentUser?.UserRole?.HasPermission("CanMakeTasksUrgent") == true;
 
-            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+// Get the planned event first
+var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+if (plannedEvent == null)
+{
+    return NotFound();
+}
+
+// Check if current task is "Draw Fiber"
+bool isCurrentTaskDrawFiber = plannedEvent.TaskName?.Trim().ToLower() == "draw fiber";
+
+// Only allow estimated time management if user has permission, is in the right workgroup,
+// AND the current task is "Draw Fiber"
+ViewData["CanManageEstimatedTime"] = 
+    currentUser?.UserRole?.HasPermission("CanManageEstimatedTime") == true && 
+    currentUser?.WorkGroup?.Name == "NET-PROJ-ACC-CABLE" &&
+    isCurrentTaskDrawFiber;
+
+
             if (plannedEvent == null)
             {
                 return NotFound();
