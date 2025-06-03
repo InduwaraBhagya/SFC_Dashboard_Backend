@@ -5,17 +5,17 @@
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     var userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name;
-    var serviceId = !string.IsNullOrEmpty(userName) && userName.Length >= 6 
-        ? userName.Substring(0, 6) 
-        : null;
+    var serviceId = !string.IsNullOrEmpty(userName) && userName.Length >= 6
+    ? userName.Substring(0, 6)
+    : null;
 
     var currentUser = !string.IsNullOrEmpty(serviceId)
-        ? await Context.Users
-            .Include(u => u.UserRole)
-                .ThenInclude(r => r.RolePermissions)
-                .ThenInclude(rp => rp.Permission)
-            .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
-        : null;
+    ? await Context.Users
+    .Include(u => u.UserRole)
+    .ThenInclude(r => r.RolePermissions)
+    .ThenInclude(rp => rp.Permission)
+    .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
+    : null;
 
     var isAdmin = currentUser?.UserRole?.HasPermission("Admin") == true;
 }
@@ -27,7 +27,7 @@
     <!-- Add this script before any other content in head -->
     <script>
         // Immediately check and apply the theme
-        (function() {
+        (function () {
             const theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', theme);
             document.body.setAttribute('data-theme', theme);
@@ -478,38 +478,45 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        @if (isAdmin){
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="WorkGroups" asp-action="Index">
-                                <i class="bi bi-people-fill me-1"></i> Add WorkGroup
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="SystemUsers" asp-action="Index">
-                                <i class="bi bi-person-plus-fill me-1"></i> Add User
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="UserRoles" asp-action="Index">
-                                <i class="bi bi-person-badge-fill me-1"></i> Add Role
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="PETaskLists" asp-action="Index">
-                                <i class="bi bi-list-task me-1"></i> Add Task
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="ImportExcel">
-                                <i class="bi bi-file-earmark-arrow-up-fill me-1"></i> Import Excel
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Permissions" asp-action="Index">
-                                <i class="bi bi-shield-check me-1"></i> Manage Permissions
-                            </a>
-                        </li>
+                        @if (isAdmin)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="WorkGroups" asp-action="Index">
+                                    <i class="bi bi-people-fill me-1"></i> Add WorkGroup
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="SystemUsers" asp-action="Index">
+                                    <i class="bi bi-person-plus-fill me-1"></i> Add User
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="UserRoles" asp-action="Index">
+                                    <i class="bi bi-person-badge-fill me-1"></i> Add Role
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="PETaskLists" asp-action="Index">
+                                    <i class="bi bi-list-task me-1"></i> Add Task
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="ImportExcel">
+                                    <i class="bi bi-file-earmark-arrow-up-fill me-1"></i> Import Excel
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Permissions" asp-action="Index">
+                                    <i class="bi bi-shield-check me-1"></i> Manage Permissions
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Project" asp-action="Index">
+                                    <i class="bi bi-folder-fill me-1"></i> Projects
+                                </a>
+                            </li>
                         }
+
                     </ul>
                     <div class="vr d-none d-lg-block" style="height: 40px;"></div>
                     <form class="d-flex align-items-center me-3" method="get" asp-controller="PlannedEvents"
