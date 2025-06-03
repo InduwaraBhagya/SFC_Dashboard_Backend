@@ -114,4 +114,26 @@ public class ProjectController : Controller
 
         return Json(new { success = true });
     }
+
+    [HttpPost]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var project = await _context.Projects
+            .Include(p => p.ProjectPEs)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (project == null)
+        {
+            return NotFound("Project not found");
+        }
+
+        // Remove associated PEs first
+        _context.ProjectPEMappings.RemoveRange(project.ProjectPEs);
+
+        // Remove the project
+        _context.Projects.Remove(project);
+        await _context.SaveChangesAsync();
+
+        return Json(new { success = true });
+    }
 }
