@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Models;
 using SFCDB.Models;
+using static Project;
 
 namespace SFCDashboard.Data
 {
@@ -30,6 +32,8 @@ namespace SFCDashboard.Data
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<TaskEstimationHistory> TaskEstimationHistory { get; set; }
 
+        public DbSet<Project> Projects { get; set; }
+        public DbSet<ProjectPEMapping> ProjectPEMappings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -59,9 +63,22 @@ namespace SFCDashboard.Data
             // Add other permissions here
             );
 
+            modelBuilder.Entity<ProjectPEMapping>()
+                .HasOne(pp => pp.Project)
+                .WithMany(p => p.ProjectPEs)
+                .HasForeignKey(pp => pp.ProjectId);
+
+            modelBuilder.Entity<ProjectPEMapping>()
+                .HasOne(pp => pp.PlannedEvent)
+                .WithMany()
+                .HasForeignKey(pp => pp.PlannedEventId);
         }
         public DbSet<PETaskList> PETaskList { get; set; } = default!;
         public DbSet<UrgentReason> UrgentReasons { get; set; }
         public DbSet<SubTaskList> SubTaskLists { get; set; }
+    }
+
+    public class PE
+    {
     }
 }
