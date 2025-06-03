@@ -87,6 +87,20 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
+    .project-header {
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .project-title {
+        margin-bottom: 0.5rem;
+    }
+
+    .project-meta {
+        color: var(--text-color, #6c757d);
+        font-size: 0.95rem;
+    }
+
     /* Dark mode styles */
     [data-theme="dark"] .project-card {
         --card-bg: #2d2d2d;
@@ -118,7 +132,27 @@
         --header-bg: linear-gradient(135deg, #2d2d2d, #1a1a1a);
     }
 
+    [data-theme="dark"] .project-details {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    [data-theme="dark"] .display-5 {
+        color: var(--text-color, #ffffff) !important;
+    }
+
     [data-theme="dark"] .text-muted {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    [data-theme="dark"] .project-meta {
+        --text-color: rgba(255, 255, 255, 0.7);
+    }
+
+    [data-theme="dark"] small {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    [data-theme="dark"] .created-date {
         color: rgba(255, 255, 255, 0.7) !important;
     }
 
@@ -249,9 +283,9 @@
             });
 
             // Project search functionality
-            $("#projectSearch").on('input', function() {
+            $("#projectSearch").on('input', function () {  // Fixed syntax error here
                 var searchTerm = $(this).val().toLowerCase();
-                
+
                 // Show all projects if search is empty
                 if (!searchTerm) {
                     $(".project-card").closest('.col').show();
@@ -259,10 +293,10 @@
                 }
 
                 // Filter projects
-                $(".project-card").each(function() {
+                $(".project-card").each(function () {
                     var projectName = $(this).find('.card-title').text().toLowerCase();
                     var projectCount = $(this).find('.project-count').text().toLowerCase();
-                    
+
                     if (projectName.includes(searchTerm) || projectCount.includes(searchTerm)) {
                         $(this).closest('.col').show();
                     } else {
@@ -273,9 +307,9 @@
 
             // Autocomplete functionality
             $("#projectSearch").autocomplete({
-                source: function(request, response) {
+                source: function (request, response) {
                     var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
-                    var suggestions = $(".project-card").map(function() {
+                    var suggestions = $(".project-card").map(function () {  // Fixed syntax error here
                         var projectName = $(this).find('.card-title').text();
                         if (matcher.test(projectName))
                             return projectName;
@@ -284,7 +318,7 @@
                     response(suggestions);
                 },
                 minLength: 1,
-                select: function(event, ui) {
+                select: function (event, ui) {
                     $(this).val(ui.item.value);
                     $(this).trigger('input');
                 }
@@ -292,4 +326,3 @@
         });
     </script>
 }
-

@@ -7,8 +7,8 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="display-5 fw-bold mb-1">@Model.ProjectName</h1>
-            <p class="text-muted mb-0">Created on @Model.CreatedDate.ToString("MMM dd, yyyy")</p>
+            <h1 class="display-5 fw-bold mb-1 project-title">@Model.ProjectName</h1>
+            <p class="text-muted mb-0 project-meta">Created on @Model.CreatedDate.ToString("MMM dd, yyyy")</p>
         </div>
         <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-2"></i>Back to Projects
@@ -50,6 +50,8 @@
                             <tr>
                                 <th>PE Number</th>
                                 <th>Customer</th>
+                                <th>Job Reference</th>
+                                <th>Required Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -59,10 +61,20 @@
                                 <tr>
                                     <td>@pe.PlannedEvent.PeNumber</td>
                                     <td>@pe.PlannedEvent.Customer</td>
+                                    <td>@pe.PlannedEvent.JobReference</td>
                                     <td>
-                                        <button class="btn btn-sm btn-danger remove-pe" 
-                                                data-pe-id="@pe.PlannedEventId"
-                                                data-pe-number="@pe.PlannedEvent.PeNumber">
+                                        @if (pe.PlannedEvent.ServiceRequiredDate.HasValue)
+                                        {
+                                            @pe.PlannedEvent.ServiceRequiredDate.Value.ToString("yyyy-MM-dd")
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
+                                            data-pe-number="@pe.PlannedEvent.PeNumber">
                                             <i class="bi bi-trash"></i> Remove
                                         </button>
                                     </td>
@@ -83,77 +95,270 @@
 </div>
 
 @section Scripts {
-<script>
-$(document).ready(function () {
-    // Search functionality
-    $('#searchInput').on('keyup', function () {
-        var searchTerm = $(this).val();
-        if (searchTerm.length > 2) {
-            $.get('/Project/Search', { searchTerm: searchTerm })
-                .done(function (data) {
-                    var html = '<div class="table-responsive"><table class="table table-hover">';
-                    html += '<thead><tr><th>PE Number</th><th>Customer</th><th>Action</th></tr></thead><tbody>';
-                    
-                    data.forEach(function (pe) {
-                        html += `
-                            <tr>
-                                <td>${pe.peNumber}</td>
-                                <td>${pe.customer}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary assign-pe" 
-                                            data-pe-id="${pe.id}">
-                                        <i class="bi bi-plus-circle me-1"></i>Assign
-                                    </button>
-                                </td>
-                            </tr>`;
-                    });
-                    
-                    html += '</tbody></table></div>';
-                    $('#searchResults').html(data.length ? html : '<p class="text-muted">No results found</p>');
-                });
-        } else {
-            $('#searchResults').html('');
-        }
-    });
+    <script>
+        $(document).ready(function () {
+            // Search functionality
+            $('#searchInput').on('keyup', function () {
+                var searchTerm = $(this).val();
+                if (searchTerm.length > 2) {
+                    $.get('/Project/Search', { searchTerm: searchTerm })
+                        .done(function (data) {
+                            var html = '<div class="table-responsive"><table class="table table-hover">';
+                            html += '<thead><tr><th>PE Number</th><th>Customer</th><th>Action</th></tr></thead><tbody>';
 
-    // Assign PE
-    $(document).on('click', '.assign-pe', function () {
-        var peId = $(this).data('pe-id');
-        
-        $.post('/Project/AssignPEToProject', {
-            plannedEventId: peId,
-            projectId: @Model.Id
-        })
-            .done(function (response) {
-                if (response.success) {
-                    location.reload();
+                            data.forEach(function (pe) {
+                                html += `
+                                                <tr>
+                                                    <td>${pe.peNumber}</td>
+                                                    <td>${pe.customer}</td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-primary assign-pe" 
+                                                                data-pe-id="${pe.id}">
+                                                            <i class="bi bi-plus-circle me-1"></i>Assign
+                                                        </button>
+                                                    </td>
+                                                </tr>`;
+                            });
+
+                            html += '</tbody></table></div>';
+                            $('#searchResults').html(data.length ? html : '<p class="text-muted">No results found</p>');
+                        });
+                } else {
+                    $('#searchResults').html('');
                 }
-            })
-            .fail(function (error) {
-                alert('Error assigning PE to project');
             });
-    });
 
-    // Remove PE with confirmation
-    $(document).on('click', '.remove-pe', function () {
-        var peId = $(this).data('pe-id');
-        var peNumber = $(this).data('pe-number');
-        
-        if (confirm(`Are you sure you want to remove PE ${peNumber} from this project?`)) {
-            $.post('/Project/RemovePEFromProject', {
-                plannedEventId: peId,
-                projectId: @Model.Id
-            })
-                .done(function (response) {
-                    if (response.success) {
-                        location.reload();
-                    }
-                })
-                .fail(function (error) {
-                    alert('Error removing PE from project');
-                });
-        }
-    });
-});
-</script>
+            // Assign PE
+            $(document).on('click', '.assign-pe', function () {
+                var peId = $(this).data('pe-id');
+
+                $.post('/Project/AssignPEToProject', {
+                    plannedEventId: peId,
+                    projectId: @Model.Id
+                            })
+                    .done(function (response) {
+                        if (response.success) {
+                            location.reload();
+                        }
+                    })
+                    .fail(function (error) {
+                        alert('Error assigning PE to project');
+                    });
+            });
+
+            // Remove PE with confirmation
+            $(document).on('click', '.remove-pe', function () {
+                var peId = $(this).data('pe-id');
+                var peNumber = $(this).data('pe-number');
+
+                if (confirm(`Are you sure you want to remove PE ${peNumber} from this project?`)) {
+                    $.post('/Project/RemovePEFromProject', {
+                        plannedEventId: peId,
+                        projectId: @Model.Id
+                                })
+                        .done(function (response) {
+                            if (response.success) {
+                                location.reload();
+                            }
+                        })
+                        .fail(function (error) {
+                            alert('Error removing PE from project');
+                        });
+                }
+            });
+        });
+    </script>
 }
+
+<style>
+    /* Card styling */
+    .card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1.25rem;
+        border-radius: 1rem 1rem 0 0 !important;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Project header styling */
+    .project-title {
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .project-meta {
+        color: #6c757d;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .project-meta i {
+        color: #0d6efd;
+    }
+
+    /* Search section styling */
+    .input-group {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .input-group-text {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        color: #6c757d;
+    }
+
+    .form-control {
+        border: 1px solid #dee2e6;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control:focus {
+        box-shadow: none;
+        border-color: #80bdff;
+    }
+
+    /* Table styling */
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        padding: 1rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    /* Button styling */
+    .btn-outline-secondary {
+        border: 2px solid #6c757d;
+        padding: 0.5rem 1.25rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #6c757d;
+        transform: translateY(-2px);
+    }
+
+    .btn-danger {
+        background: #fff;
+        color: #dc3545;
+        border: 2px solid #dc3545;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        background: #dc3545;
+        color: #fff;
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd, #0099ff);
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0957d0, #0077cc);
+        transform: translateY(-2px);
+    }
+
+    /* Alert styling */
+    .alert-info {
+        background-color: #e8f4ff;
+        border: none;
+        border-left: 4px solid #0d6efd;
+        border-radius: 0.5rem;
+        padding: 1rem 1.25rem;
+    }
+
+    /* Dark mode styles */
+    [data-theme="dark"] {
+        --text-color: rgba(255, 255, 255, 0.7);
+        --card-bg: #2d2d2d;
+        --card-header-bg: #363636;
+    }
+
+    [data-theme="dark"] .project-title {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] .display-5 {
+        color: #ffffff !important;
+    }
+
+    [data-theme="dark"] .text-muted {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    [data-theme="dark"] .project-meta {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    [data-theme="dark"] .card {
+        background-color: var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    [data-theme="dark"] .card-header {
+        background: var(--card-header-bg);
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="dark"] .card-header h5 {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    [data-theme="dark"] .table th {
+        background-color: var(--card-header-bg);
+        color: rgba(255, 255, 255, 0.9);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="dark"] .table td {
+        color: var(--text-color);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="dark"] .input-group-text {
+        background-color: var(--card-header-bg);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+    }
+
+    [data-theme="dark"] .form-control {
+        background-color: var(--card-bg);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+    }
+
+    [data-theme="dark"] .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+</style>
