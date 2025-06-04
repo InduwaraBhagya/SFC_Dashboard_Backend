@@ -74,7 +74,8 @@ namespace SFCDashboard.Data
             new Permission { Id = 2, Name = "CanSendPEUrgentRequests", Description = "Can send \"Planned Event\" urgent requests" },
             new Permission { Id = 3, Name = "CanAcceptUrgentRequests", Description = "Can view and accept Planned Event urgent requests" },
             new Permission { Id = 4, Name = "CanMakeTasksUrgent", Description = "Can mark a \"Task\" of a specific PE as Urgent" },
-            new Permission { Id = 5, Name = "Admin", Description = "Admin permissions" }
+            new Permission { Id = 5, Name = "Admin", Description = "Admin permissions" },
+            new Permission { Id = 6, Name = "ViewAll", Description = "Can view all records" }
             // Add other permissions here
             );
 
