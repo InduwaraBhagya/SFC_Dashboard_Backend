@@ -56,26 +56,33 @@ namespace SFCDashboard.Controllers
 
             ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name");
             ViewData["WorkGroups"] = new MultiSelectList(_context.WorkGroups, "Id", "Name");
-            return View();
+            return View(new SystemUserViewModel());
         }
 
         // POST: SystemUsers/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,ServiceId,UserRoleId")] SystemUser systemUser, int[] WorkGroupIds)
+        public async Task<IActionResult> Create(SystemUserViewModel vm)
         {
             if (!await HttpContext.HasAdminPermissionAsync(_context))
                 return RedirectToAction("Index", "PlannedEvents");
 
             if (ModelState.IsValid)
             {
+                var systemUser = new SystemUser
+                {
+                    Name = vm.Name,
+                    ServiceId = vm.ServiceId,
+                    UserRoleId = vm.UserRoleId
+                };
+
                 _context.Add(systemUser);
                 await _context.SaveChangesAsync();
 
                 // Add user-workgroup relations
-                if (WorkGroupIds != null && WorkGroupIds.Length > 0)
+                if (vm.WorkGroupIds != null && vm.WorkGroupIds.Count > 0)
                 {
-                    foreach (var wgId in WorkGroupIds)
+                    foreach (var wgId in vm.WorkGroupIds)
                     {
                         _context.UserWorkGroups.Add(new UserWorkGroup
                         {
@@ -88,9 +95,9 @@ namespace SFCDashboard.Controllers
 
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", systemUser.UserRoleId);
-            ViewData["WorkGroups"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", WorkGroupIds);
-            return View(systemUser);
+            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", vm.UserRoleId);
+            ViewData["WorkGroups"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", vm.WorkGroupIds);
+            return View(vm);
         }
 
         // GET: SystemUsers/Edit/5
@@ -114,23 +121,33 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var selectedWorkGroupIds = user.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToArray() ?? Array.Empty<int>();
+            var vm = new SystemUserViewModel
+            {
+                Name = user.Name,
+                ServiceId = user.ServiceId,
+                UserRoleId = user.UserRoleId,
+                WorkGroupIds = user.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>()
+            };
 
             ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", user.UserRoleId);
-            ViewData["WorkGroups"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", selectedWorkGroupIds);
+            ViewData["WorkGroups"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", vm.WorkGroupIds);
 
-            return View(user);
+            return View(vm);
         }
 
         // POST: SystemUsers/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,ServiceId,UserRoleId")] SystemUser systemUser, int[] WorkGroupIds)
+        public async Task<IActionResult> Edit(int id, SystemUserViewModel vm)
         {
             if (!await HttpContext.HasAdminPermissionAsync(_context))
                 return RedirectToAction("Index", "PlannedEvents");
 
-            if (id != systemUser.Id)
+            var existingUser = await _context.Users
+                .Include(u => u.UserWorkGroups)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (existingUser == null)
             {
                 return NotFound();
             }
@@ -139,29 +156,20 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    var existingUser = await _context.Users
-                        .Include(u => u.UserWorkGroups)
-                        .FirstOrDefaultAsync(u => u.Id == id);
-
-                    if (existingUser == null)
-                    {
-                        return NotFound();
-                    }
-
                     // Update properties
-                    existingUser.Name = systemUser.Name;
-                    existingUser.ServiceId = systemUser.ServiceId;
-                    existingUser.UserRoleId = systemUser.UserRoleId;
+                    existingUser.Name = vm.Name;
+                    existingUser.ServiceId = vm.ServiceId;
+                    existingUser.UserRoleId = vm.UserRoleId;
 
                     // Update user-workgroup relations
                     var existingWgIds = existingUser.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
 
                     // Remove old relations
-                    var toRemove = existingUser.UserWorkGroups?.Where(uwg => !WorkGroupIds.Contains(uwg.WorkGroupId)).ToList() ?? new List<UserWorkGroup>();
+                    var toRemove = existingUser.UserWorkGroups?.Where(uwg => !vm.WorkGroupIds.Contains(uwg.WorkGroupId)).ToList() ?? new List<UserWorkGroup>();
                     _context.UserWorkGroups.RemoveRange(toRemove);
 
                     // Add new relations
-                    var toAdd = WorkGroupIds.Where(wgId => !existingWgIds.Contains(wgId)).ToList();
+                    var toAdd = vm.WorkGroupIds.Where(wgId => !existingWgIds.Contains(wgId)).ToList();
                     foreach (var wgId in toAdd)
                     {
                         _context.UserWorkGroups.Add(new UserWorkGroup
@@ -175,7 +183,7 @@ namespace SFCDashboard.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!SystemUserExists(systemUser.Id))
+                    if (!SystemUserExists(id))
                     {
                         return NotFound();
                     }
@@ -186,9 +194,9 @@ namespace SFCDashboard.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", systemUser.UserRoleId);
-            ViewData["WorkGroups"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", WorkGroupIds);
-            return View(systemUser);
+            ViewData["UserRoleId"] = new SelectList(_context.UserRoles, "Id", "Name", vm.UserRoleId);
+            ViewData["WorkGroups"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", vm.WorkGroupIds);
+            return View(vm);
         }
 
         // GET: SystemUsers/Delete/5
@@ -261,7 +269,6 @@ namespace SFCDashboard.Controllers
 
             return Json(workgroups);
         }
-
 
         [HttpGet]
         public JsonResult GetWorkgroupsByIds(List<int> ids)
