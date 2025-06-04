@@ -30,11 +30,13 @@
                     </label>
                 </div>
                 <div class="col-md-3">
-                    <input type="text" id="workgroup-search" class="form-control" 
-                           placeholder="Type to search workgroups" 
-                           value="@ViewData["SelectedWorkgroupName"]" />
-                    <input type="hidden" id="selected-workgroup-id" name="workgroupId" 
-                           value="@ViewData["SelectedWorkgroupId"]" />
+                    <select id="workgroup-ids" name="workgroupIds" class="form-select select2" multiple="multiple" style="width:100%;">
+                        @foreach (var wg in ViewData["Workgroups"] as IEnumerable<WorkGroup>)
+                        {
+                            var isSelected = ViewData["SelectedWorkgroupIds"] != null && ((List<int>)ViewData["SelectedWorkgroupIds"]).Contains(wg.Id) ? "selected" : "";
+                            <option value="@wg.Id" @@isSelected>@wg.Name</option>
+                        }
+                    </select>
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-outline-primary">
@@ -668,36 +670,51 @@
 
     <script>
 
-        $(document).ready(function() {
-            $("#workgroup-search").autocomplete({
-                source: function(request, response) {
-                    $.ajax({
-                        url: "/SystemUsers/SearchWorkgroups",
-                        data: { term: request.term },
-                        type: "GET",
-                        success: function(data) {
-                            // Remove duplicates from the response
-                            let uniqueData = [...new Map(data.map(item => 
-                                [item.label, item])).values()];
-                            response(uniqueData);
-                        },
-                        error: function(xhr, status, error) {
-                            console.error("Error searching workgroups:", status, error);
-                        }
-                    });
-                },
-                minLength: 2,
-                select: function(event, ui) {
-                    $("#workgroup-search").val(ui.item.label);
-                    $("#selected-workgroup-id").val(ui.item.id);
-                    $("#workgroupFilterForm").submit();
-                    return false;
+        $(document).ready(function () {
+            $('#workgroup-ids').select2({
+                placeholder: "Search workgroups...",
+                allowClear: true,
+                minimumInputLength: 2,
+                ajax: {
+                    url: '/SystemUsers/SearchWorkgroups',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            term: params.term // search term
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    id: item.id,
+                                    text: item.label
+                                };
+                            })
+                        };
+                    },
+                    cache: true
                 }
-            }).autocomplete("instance")._renderItem = function(ul, item) {
-                return $("<li>")
-                    .append(`<div>${item.label}</div>`)
-                    .appendTo(ul);
-            };
+            });
+
+            // Preselect workgroups if any are already selected (for edit/filter persistence)
+            var preselected = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["SelectedWorkgroupIds"] ?? new List<int>()));
+            if (preselected.length > 0) {
+                $.ajax({
+                    type: 'GET',
+                    url: '/SystemUsers/GetWorkgroupsByIds',
+                    data: { ids: preselected },
+                    traditional: true,
+                    success: function (data) {
+                        var select = $('#workgroup-ids');
+                        $.each(data, function (i, wg) {
+                            var option = new Option(wg.label, wg.id, true, true);
+                            select.append(option).trigger('change');
+                        });
+                    }
+                });
+            }
         });
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -1545,84 +1562,6 @@ function updateUnreadCount() {
         </div>
     </div>
 </div>
-
-<!-- Message Inbox Styles -->
-<style>
-    .message-item.resolution-request {
-        background-color: rgba(25, 135, 84, 0.08);
-        border-left: 3px solid #198754;
-    }
-
-    .message-item.resolution-request:hover {
-        background-color: rgba(25, 135, 84, 0.15);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(25, 135, 84, 0.15);
-    }
-
-    .message-item.resolution-request.unread::before {
-        background-color: #198754;
-    }
-
-    .resolution-details-container {
-    min-height: 60px;
-    white-space: pre-line;  /* Preserves line breaks in the text */
-}
-
-.message-item {
-    /* ...existing styles... */
-    border-left: 3px solid transparent;
-    opacity: 0.8;
-}
-
-.message-item.unread {
-    background-color: #fff;
-    border-left: 3px solid #0d6efd;
-    opacity: 1;
-    font-weight: 500;
-}
-
-.message-item.read {
-    background-color: #f8f9fa;
-    border-left: 3px solid #6c757d;
-}
-
-.message-item.unread .message-subject {
-    font-weight: 600;
-    color: #000;
-}
-
-.message-item.unread .message-sender {
-    font-weight: 600;
-}
-
-.message-item.unread::before {
-    content: '';
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 8px;
-    height: 8px;
-    background-color: #0d6efd;
-    border-radius: 50%;
-}
-
-.badge.rounded-pill {
-    display: inline-block;
-    font-size: 0.75rem;
-    padding: 0.35em 0.65em;
-}
-
-.bg-danger {
-    background-color: #dc3545 !important;
-    color: #fff !important;
-}
-
-.inbox-header h3 {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-</style>
 
 @functions {
     private string GetResolutionDetails(int issueId)

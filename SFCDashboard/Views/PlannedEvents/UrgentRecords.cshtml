@@ -105,11 +105,11 @@
                                 <td>
                                     @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
                                     {
-                                        <span class="badge bg-danger">Priority 1</span>
+                                        <span class="badge bg-danger">Opening Ceremony (Priority 01)</span>
                                     }
                                     else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 2"))
                                     {
-                                        <span class="badge bg-warning text-dark">Priority 2</span>
+                                        <span class="badge bg-warning text-dark">Critical Customer (Priority 02)</span>
                                     }
                                     else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("URGENT"))
                                     {

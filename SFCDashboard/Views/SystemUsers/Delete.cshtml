@@ -52,12 +52,23 @@
 
                         <dt class="col-sm-3">
                             <i class="bi bi-people me-2"></i>
-                            @Html.DisplayNameFor(model => model.WorkGroup)
+                            Work Groups
                         </dt>
                         <dd class="col-sm-9">
-                            <span class="badge bg-secondary">
-                                @Html.DisplayFor(model => model.WorkGroup.Name)
-                            </span>
+                            @if (Model.UserWorkGroups != null && Model.UserWorkGroups.Count > 0)
+                            {
+                                foreach (var uwg in Model.UserWorkGroups)
+                                {
+                                    if (uwg.WorkGroup != null)
+                                    {
+                                        <span class="badge bg-secondary me-1">@uwg.WorkGroup.Name</span>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">No workgroups assigned</span>
+                            }
                         </dd>
                     </dl>
                 </div>

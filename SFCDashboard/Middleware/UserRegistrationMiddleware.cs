@@ -21,7 +21,9 @@ namespace SFCDashboard.Middleware
                 var azureAdName = context.User.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
 
                 // First check if user exists in database
-                var user = await dbContext.Users.FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+                var user = await dbContext.Users
+                    .Include(u => u.UserWorkGroups)
+                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
 
                 if (user == null)
                 {
@@ -41,8 +43,9 @@ namespace SFCDashboard.Middleware
                         await dbContext.SaveChangesAsync();
                     }
 
-                    // Check if registration is complete
-                    if (!context.Request.Path.StartsWithSegments("/Register") && user.WorkGroupId == null)
+                    // Check if registration is complete (must have at least one workgroup)
+                    if (!context.Request.Path.StartsWithSegments("/Register") &&
+                        (user.UserWorkGroups == null || !user.UserWorkGroups.Any()))
                     {
                         context.Response.Redirect("/Register");
                         return;

@@ -12,7 +12,7 @@ namespace SFCDashboard.Models
         public required string Name { get; set; }
 
         // Navigation properties
-        public virtual ICollection<SystemUser>? Users { get; set; }
         public virtual ICollection<PlannedEvent>? AssignedEvents { get; set; }
+        public virtual ICollection<UserWorkGroup>? UserWorkGroups { get; set; }
     }
 }

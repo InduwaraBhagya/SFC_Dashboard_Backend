@@ -619,3 +619,77 @@
     border-radius: 3px;
 }
 
+.message-item.resolution-request {
+    background-color: rgba(25, 135, 84, 0.08);
+    border-left: 3px solid #198754;
+}
+
+.message-item.resolution-request:hover {
+    background-color: rgba(25, 135, 84, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(25, 135, 84, 0.15);
+}
+
+.message-item.resolution-request.unread::before {
+    background-color: #198754;
+}
+
+.resolution-details-container {
+min-height: 60px;
+white-space: pre-line;  /* Preserves line breaks in the text */
+}
+
+.message-item {
+/* ...existing styles... */
+border-left: 3px solid transparent;
+opacity: 0.8;
+}
+
+.message-item.unread {
+background-color: #fff;
+border-left: 3px solid #0d6efd;
+opacity: 1;
+font-weight: 500;
+}
+
+.message-item.read {
+background-color: #f8f9fa;
+border-left: 3px solid #6c757d;
+}
+
+.message-item.unread .message-subject {
+font-weight: 600;
+color: #000;
+}
+
+.message-item.unread .message-sender {
+font-weight: 600;
+}
+
+.message-item.unread::before {
+content: '';
+position: absolute;
+top: 15px;
+right: 15px;
+width: 8px;
+height: 8px;
+background-color: #0d6efd;
+border-radius: 50%;
+}
+
+.badge.rounded-pill {
+display: inline-block;
+font-size: 0.75rem;
+padding: 0.35em 0.65em;
+}
+
+.bg-danger {
+background-color: #dc3545 !important;
+color: #fff !important;
+}
+
+.inbox-header h3 {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
