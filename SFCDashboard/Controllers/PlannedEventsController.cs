@@ -1560,54 +1560,54 @@ namespace SFCDashboard.Controllers
             }
         }
         
-//         [HttpGet]
-// public async Task<IActionResult> GetWorkgroups(string search, int page = 1)
-// {
-//     const int pageSize = 10;
-//     var query = _context.WorkGroups.AsQueryable();
+        [HttpGet]
+public async Task<IActionResult> GetWorkgroups(string search, int page = 1)
+{
+    const int pageSize = 10;
+    var query = _context.WorkGroups.AsQueryable();
 
-//     // Get current user's workgroup permissions
-//     var (userWorkgroupIds, _, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+    // Get current user's workgroup permissions
+    var (userWorkgroupIds, _, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
-//     // Filter based on permissions
-//     if (!canViewAll)
-//     {
-//         query = query.Where(w => userWorkgroupIds.Contains(w.Id));
-//     }
+    // Filter based on permissions
+    if (!canViewAll)
+    {
+        query = query.Where(w => userWorkgroupIds.Contains(w.Id));
+    }
 
-//     // Apply search filter
-//     if (!string.IsNullOrWhiteSpace(search))
-//     {
-//         search = search.ToLower();
-//         query = query.Where(w => w.Name.ToLower().Contains(search));
-//     }
+    // Apply search filter
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+        search = search.ToLower();
+        query = query.Where(w => w.Name.ToLower().Contains(search));
+    }
 
-//     // Get total count for pagination
-//     var total = await query.CountAsync();
+    // Get total count for pagination
+    var total = await query.CountAsync();
 
-//     // Get paginated results
-//     var items = await query
-//         .OrderBy(w => w.Name)
-//         .Skip((page - 1) * pageSize)
-//         .Take(pageSize)
-//         .Select(w => new { id = w.Id, name = w.Name })
-//         .ToListAsync();
+    // Get paginated results
+    var items = await query
+        .OrderBy(w => w.Name)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(w => new { id = w.Id, name = w.Name })
+        .ToListAsync();
 
-//     return Json(new { 
-//         items = items,
-//         hasMore = (page * pageSize) < total
-//     });
-// }
+    return Json(new { 
+        items = items,
+        hasMore = (page * pageSize) < total
+    });
+}
 
-// [HttpGet]
-// public async Task<IActionResult> GetSelectedWorkgroups([FromQuery] List<int> ids)
-// {
-//     var workgroups = await _context.WorkGroups
-//         .Where(w => ids.Contains(w.Id))
-//         .Select(w => new { id = w.Id, name = w.Name })
-//         .ToListAsync();
+[HttpGet]
+public async Task<IActionResult> GetSelectedWorkgroups([FromQuery] List<int> ids)
+{
+    var workgroups = await _context.WorkGroups
+        .Where(w => ids.Contains(w.Id))
+        .Select(w => new { id = w.Id, name = w.Name })
+        .ToListAsync();
 
-//     return Json(workgroups);
-// }
+    return Json(workgroups);
+}
     }
 }
