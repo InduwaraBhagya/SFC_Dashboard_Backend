@@ -17,6 +17,8 @@
     </div>
 }
 
+@{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
+
 <div class="container-fluid mt-4">
     <!--workgroup filter section -->
 <div class="workgroup-filter-section mb-3">
@@ -33,23 +35,17 @@
                     <select id="workgroup-ids" name="workgroupIds" class="form-select select2" multiple="multiple"></select>
                 </div>
                 <div class="col-auto">
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-funnel-fill me-1"></i> Apply Filter
-                    </button>
-                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle me-1"></i> Clear Filter
-                    </a>
+                    <button type="submit" class="btn btn-primary">Apply Filter</button>
+                    <a href="@Url.Action("Index")" class="btn btn-secondary">Clear Filter</a>
                 </div>
             </div>
         </form>
     }
     else if ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count == 1)
     {
-    var userWorkGroups = ViewData["UserWorkGroups"] as List<WorkGroup>;
-    var workgroupName = userWorkGroups != null && userWorkGroups.Count == 1 ? userWorkGroups[0].Name : "";
+        var workgroup = (ViewData["UserWorkGroups"] as List<WorkGroup>)?.FirstOrDefault();
         <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i>
-        Showing records for your workgroup: @workgroupName
+            <i class="bi bi-info-circle"></i> Showing records for your workgroup: @workgroup?.Name
         </div>
     }
 </div>
@@ -702,59 +698,59 @@
     <script>
         $(document).ready(function() {
             $('#workgroup-ids').select2({
-        theme: 'default',
-        width: '100%',
-        placeholder: 'Select workgroups...',
-                allowClear: true,
-                ajax: {
-            url: '/PlannedEvents/GetWorkgroups',
-                    dataType: 'json',
-                    delay: 250,
-            data: function(params) {
-                        return {
-                    search: params.term || '',
-                    page: params.page || 1
-                        };
-                    },
-            processResults: function(data, params) {
-                params.page = params.page || 1;
-                        return {
-                    results: data.items.map(function(item) {
-                                return {
-                                    id: item.id,
-                            text: item.name
-                                };
-                    }),
-                    pagination: {
-                        more: data.hasMore
-                    }
-                        };
-                    },
-                    cache: true
+    theme: 'default',
+    width: '100%',
+    placeholder: 'Select workgroup...',
+    allowClear: true,
+    ajax: {
+        url: '/PlannedEvents/GetWorkgroups',
+        dataType: 'json',
+        delay: 250,
+        data: function(params) {
+            return {
+                search: params.term || '',
+                page: params.page || 1
+            };
+        },
+        processResults: function(data, params) {
+            params.page = params.page || 1;
+            return {
+                results: data.items.map(function(item) {
+                    return {
+                        id: item.id,
+                        text: item.name
+                    };
+                }),
+                pagination: {
+                    more: data.hasMore
                 }
-            });
+            };
+        },
+        cache: true
+    }
+});
 
             // Load pre-selected workgroups
     var preselectedIds = @Html.Raw(Json.Serialize(ViewData["SelectedWorkgroupIds"] ?? new List<int>()));
     if (preselectedIds && preselectedIds.length > 0) {
-                $.ajax({
-            url: '/PlannedEvents/GetSelectedWorkgroups',
-                    type: 'GET',
-            data: { ids: preselectedIds },
-            success: function(data) {
-                data.forEach(function(item) {
-                    var option = new Option(item.name, item.id, true, true);
-                    $('#workgroup-ids').append(option);
-                });
-                $('#workgroup-ids').trigger('change');
-                    }
-                });
-            }
+    $.ajax({
+        url: '/PlannedEvents/GetSelectedWorkgroups',
+        type: 'GET',
+        data: { ids: [preselectedId] },
+        success: function(data) {
+            data.forEach(function(item) {
+                var option = new Option(item.name, item.id, true, true);
+                $('#workgroup-ids').append(option);
+            });
+            $('#workgroup-ids').trigger('change');
+        }
+    });
+}
         });
 
 
         document.addEventListener('DOMContentLoaded', function () {
- var select = document.getElementById('searchType');
+        var select = document.getElementById('searchType');
         var input = document.getElementById('indexSearchInput');
         var label = document.getElementById('indexSearchLabel');
 

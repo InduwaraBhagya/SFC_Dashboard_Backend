@@ -10,7 +10,7 @@
         <h1 class="display-5">
             <i class="bi bi-list-task text-success me-3"></i>Regular Records
         </h1>
-        <a asp-action="Index" class="btn btn-outline-success">
+        <a href="@Url.Action("Index", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="btn btn-outline-success">
             <i class="bi bi-arrow-left"></i> Back to Dashboard
         </a>
     </div>
