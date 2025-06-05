@@ -1,4 +1,5 @@
-﻿@using SFCDashboard.Models
+﻿@using System.Linq
+@using SFCDashboard.Models
 @model PaginatedList<SFCDashboard.Models.PlannedEvent>
 
 @{
@@ -54,7 +55,83 @@
         </div>
     }
 </div>
-    <!-- Your existing search form -->
+@inject SFCDashboard.Services.TaskQueueingService TaskQueueService
+@{
+    var nextTask = await TaskQueueService.GetPrioritizedTasksAsync(workgroupId: ViewBag.UserWorkgroupId, take: 1).ConfigureAwait(false);
+    var hasNextTask = nextTask != null && System.Linq.Enumerable.Any(nextTask);
+}
+
+
+
+<!-- Next Task Card -->
+<div class="card border-primary mb-4 shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-arrow-right-circle-fill me-2"></i> Next Task
+        </h5>
+        <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-sm btn-light">
+            <i class="bi bi-list-task me-1"></i> View All Tasks
+        </a>
+    </div>
+    
+    <div class="card-body">
+        @if (hasNextTask)
+        {
+                var task = nextTask[0];
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    @{
+                        string badgeClass = task.PriorityLevel switch
+                        {
+                            "URGENT P0" => "bg-danger fw-bold",
+                            "URGENT P1" => "bg-danger",
+                            "URGENT P2" => "bg-danger",
+                            "URGENT" => "bg-danger",
+                            "OLA VIOLATION" => "bg-warning text-dark",
+                            "APPROACHING DEADLINE" => "bg-info text-dark",
+                            _ => "bg-secondary"
+                        };
+                    }
+                    <span class="badge @badgeClass p-3">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                    </span>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="card-title mb-1">@task.Task.Task</h5>
+                    <p class="card-text mb-1 text-muted">
+                        <small>
+                            <i class="bi bi-file-earmark-text me-1"></i> PE: @task.Task.PENumber 
+                            <i class="bi bi-person ms-2 me-1"></i> @task.Task.PlannedEvent?.Customer
+                        </small>
+                    </p>
+                    <p class="mb-0">
+                        @{
+                            string daysClass = task.IsOverdue ? "text-danger fw-bold" : 
+                                (task.DaysUntilDue <= 2) ? "text-warning fw-bold" : "text-success";
+                        }
+                        <span class="@daysClass">
+                            <i class="bi bi-calendar-check me-1"></i>
+                            @task.DueStatus
+                        </span>
+                    </p>
+                </div>
+                <div class="flex-shrink-0 ms-3">
+                    <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" 
+                       class="btn btn-primary">
+                        <i class="bi bi-arrow-right"></i> Start Working
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                <p class="mt-3 mb-0">No pending tasks in your queue!</p>
+            </div>
+        }
+    </div>
+</div>
     <div class="row">
         <!-- Left Column - Existing Content -->
         <div class="col-lg-8">
@@ -699,7 +776,21 @@
                     .appendTo(ul);
             };
         });
-
+        document.addEventListener('DOMContentLoaded', function() {
+            // Make the next task card clickable on mobile
+            const nextTaskCard = document.getElementById('next-task-card');
+            if (nextTaskCard) {
+                nextTaskCard.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on the "View All" or "Start Working" buttons
+                    if (!e.target.closest('a')) {
+                        const startButton = this.querySelector('.btn-primary');
+                        if (startButton && startButton.href) {
+                            window.location.href = startButton.href;
+                        }
+                    }
+                });
+            }
+        });
         document.addEventListener('DOMContentLoaded', function () {
  var select = document.getElementById('searchType');
         var input = document.getElementById('indexSearchInput');
@@ -1622,6 +1713,7 @@ function updateUnreadCount() {
     align-items: center;
     gap: 0.5rem;
 }
+
 </style>
 
 @functions {

@@ -682,7 +682,6 @@ namespace SFCDashboard.Services
                         existingTask.TaskStatus = templateTask.TaskStatus;
                         existingTask.TaskCreatedDate = templateTask.TaskCreatedDate;
                         existingTask.TaskCompleteDate = templateTask.TaskCompleteDate;
-                        existingTask.Priority = templateTask.Priority;
                         
                         // Only set actual dates if not already set
                         if (!existingTask.ActualTaskCreatedDate.HasValue && templateTask.ActualTaskCreatedDate.HasValue)

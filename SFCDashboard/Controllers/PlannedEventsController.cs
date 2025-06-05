@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.Services;
 
 namespace SFCDashboard.Controllers
 {
@@ -10,12 +11,14 @@ namespace SFCDashboard.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PlannedEventsController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly TaskQueueingService _taskQueueService;
 
-        public PlannedEventsController(ApplicationDbContext context, ILogger<PlannedEventsController> logger, IWebHostEnvironment webHostEnvironment)
+        public PlannedEventsController(ApplicationDbContext context, ILogger<PlannedEventsController> logger, IWebHostEnvironment webHostEnvironment, TaskQueueingService taskQueueService)
         {
             _context = context;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _taskQueueService = taskQueueService;
         }
 
         private async Task<int> GetCurrentUserIdAsync()
@@ -749,79 +752,111 @@ public async Task<IActionResult> UrgentRecords(int? workgroupId)
         }
         // POST: PlannedEvents/ProcessUrgentRequest
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
-        {
-            var plannedEvent = await _context.PlannedEvents.FindAsync(id);
-            if (plannedEvent == null || plannedEvent.PEStatus == "COMPLETED")
-            {
-                return NotFound();
-            }
+// POST: PlannedEvents/ProcessUrgentRequest
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
+{
+    var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+    if (plannedEvent == null || plannedEvent.PEStatus == "COMPLETED")
+    {
+        return NotFound();
+    }
 
-            bool markAsUrgent = false;
-            string priorityMessage = "";
-            int priorityLevel = 0;
+    bool markAsUrgent = false;
+    string priorityMessage = "";
+    int priorityLevel = 0;
 
-            switch (urgentReason)
-            {
-                case "OpeningCeremony":
-                    markAsUrgent = true;
-                    plannedEvent.PEStatus = "URGENT";
-                    priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
-                    priorityLevel = 1;
-                    // Replace entire priority string
-                    plannedEvent.Priority = priorityMessage;
-                    break;
+    switch (urgentReason)
+    {
+        case "OpeningCeremony":
+            markAsUrgent = true;
+            plannedEvent.PEStatus = "URGENT";
+            priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
+            priorityLevel = 1;
+            // Replace entire priority string
+            plannedEvent.Priority = priorityMessage;
+            break;
 
-                case "CriticalCustomer":
-                    markAsUrgent = true;
-                    plannedEvent.PEStatus = "URGENT";
-                    priorityMessage = "[URGENT: Critical Customer - Priority 2]";
-                    priorityLevel = 2;
-                    // Replace entire priority string
-                    plannedEvent.Priority = priorityMessage;
-                    break;
+        case "CriticalCustomer":
+            markAsUrgent = true;
+            plannedEvent.PEStatus = "URGENT";
+            priorityMessage = "[URGENT: Critical Customer - Priority 2]";
+            priorityLevel = 2;
+            // Replace entire priority string
+            plannedEvent.Priority = priorityMessage;
+            break;
 
-                case "Reject":
-                    plannedEvent.PEStatus = "ongoing";
-                    plannedEvent.Priority = "Urgent Request Rejected";
-                    break;
+        case "Reject":
+            plannedEvent.PEStatus = "ongoing";
+            plannedEvent.Priority = "Urgent Request Rejected";
+            break;
 
-                default:
-                    TempData["ErrorMessage"] = "Invalid option selected.";
-                    return RedirectToAction(nameof(UrgentRequestsList));
-            }
+        default:
+            TempData["ErrorMessage"] = "Invalid option selected.";
+            return RedirectToAction(nameof(UrgentRequestsList));
+    }
 
-            _context.Update(plannedEvent);
-            await _context.SaveChangesAsync();
-
-            // Add logging
-            _logger.LogInformation("PE {id} priority set to: '{priority}' with level {level}", 
+    // Update and save the PE first
+    _context.Update(plannedEvent);
+    await _context.SaveChangesAsync();
+    
+    // Log the PE update
+    _logger.LogInformation("PE {id} priority set to: '{priority}' with level {level}", 
         id, plannedEvent.Priority, priorityLevel);
 
     // If PE was marked as urgent, update all its tasks to be urgent as well
     if (markAsUrgent)
     {
-        var relatedTasks = await _context.PETasks
-            .Where(t => t.PENumber == plannedEvent.PeNumber)
-            .ToListAsync();
-
-        foreach (var task in relatedTasks)
+        try
         {
-            task.IsUrgent = true;
-            task.UrgentRequested = false; // Clear any pending urgent requests
+            // Get all tasks for this PE
+            var peNumber = plannedEvent.PeNumber;
+            _logger.LogInformation("Updating tasks for PE: {peNumber}", peNumber);
             
-            // Use the EXACT same priority message
-            task.Priority = priorityMessage + " (Inherited from PE)";
+            // Use a separate query with AsNoTracking to avoid tracking conflicts
+            var taskIds = await _context.PETasks
+                .AsNoTracking()
+                .Where(t => t.PENumber == peNumber)
+                .Select(t => t.Id)
+                .ToListAsync();
             
-            _logger.LogInformation("Task {id} priority set to: '{priority}'", 
-                task.Id, task.Priority);
+            _logger.LogInformation("Found {count} tasks to update", taskIds.Count);
+            
+            // Process each task individually to ensure proper updates
+            foreach (var taskId in taskIds)
+            {
+                // Get a fresh instance of the task
+                var task = await _context.PETasks.FindAsync(taskId);
+                if (task != null)
+                {
+                    task.IsUrgent = true;
+                    task.UrgentRequested = false;
+                    task.Priority = priorityMessage + " (Inherited from PE)";
+                    
+                    // Explicitly mark as modified and save immediately
+                    _context.Entry(task).State = EntityState.Modified;
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Updated task {id} with priority: {priority}", 
+                        task.Id, task.Priority);
+                }
+            }
+            
+            // Verify the update by checking one task
+            var verifyTask = await _context.PETasks
+                .FirstOrDefaultAsync(t => t.PENumber == peNumber);
+            
+            if (verifyTask != null)
+            {
+                _logger.LogInformation("Verification - Task {id} has priority: {priority}", 
+                    verifyTask.Id, verifyTask.Priority);
+            }
         }
-
-        if (relatedTasks.Any())
+        catch (Exception ex)
         {
-            _context.UpdateRange(relatedTasks);
-            await _context.SaveChangesAsync();
+            _logger.LogError(ex, "Error updating tasks for PE {id}", id);
+            TempData["ErrorMessage"] = "There was a problem updating the tasks. Please check the details.";
         }
     }
 
@@ -1321,5 +1356,48 @@ private async Task<int> GetInProgressCount(int? workgroupId)
                 }
             }
         }
+
+        // Add this action method
+    [HttpGet]
+    public async Task<IActionResult> TaskQueue(int? workgroupId, int take = 20)
+    {
+        var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
+        var effectiveWorkgroupId = canViewAll ? workgroupId : userWorkgroupId;
+
+        try
+        {
+            // Load workgroups for the dropdown
+            var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+            ViewData["Workgroups"] = workgroups;
+            ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
+            ViewData["CanSwitchWorkgroup"] = canViewAll;
+
+            // Get prioritized tasks from the queue service
+            var prioritizedTasks = await _taskQueueService.GetPrioritizedTasksAsync(effectiveWorkgroupId, take);
+            
+            // Get statistics for the summary boxes
+          // Get statistics for the summary boxes
+ViewData["UrgentCount"] = prioritizedTasks.Count(t => t.Task.IsUrgent);
+ViewData["OLAViolateCount"] = prioritizedTasks.Count(t => t.Task.IsOLAViolate && !t.Task.IsUrgent);
+ViewData["ApproachingDeadlineCount"] = prioritizedTasks.Count(t => 
+    !t.Task.IsUrgent && 
+    !t.Task.IsOLAViolate && 
+    t.DaysUntilDue >= 0 && 
+    t.DaysUntilDue <= Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3)));
+
+// Fix the regular tasks count calculation:
+ViewData["RegularTaskCount"] = prioritizedTasks.Count(t => 
+    !t.Task.IsUrgent && 
+    !t.Task.IsOLAViolate && 
+    (t.DaysUntilDue < 0 || t.DaysUntilDue > Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3))));
+            return View(prioritizedTasks);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading task queue with workgroup filter {workgroupId}", workgroupId);
+            TempData["ErrorMessage"] = "An error occurred while loading the task queue.";
+            return View(new List<TaskQueueItem>());
+        }
+    }
     }
 }
