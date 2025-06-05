@@ -20,18 +20,18 @@
             <form id="searchForm" class="row g-3" method="get">
                 <div class="col-md-3">
                     <label for="searchPeNumber" class="form-label">PE Number</label>
-                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber" 
-                           value="@ViewData["SearchPeNumber"]">
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber"
+                        value="@ViewData["SearchPeNumber"]">
                 </div>
                 <div class="col-md-3">
                     <label for="searchReference" class="form-label">Request Reference</label>
-                    <input type="text" class="form-control" id="searchReference" name="reference" 
-                           value="@ViewData["SearchReference"]">
+                    <input type="text" class="form-control" id="searchReference" name="reference"
+                        value="@ViewData["SearchReference"]">
                 </div>
                 <div class="col-md-3">
                     <label for="searchCustomer" class="form-label">Customer</label>
-                    <input type="text" class="form-control" id="searchCustomer" name="customer" 
-                           value="@ViewData["SearchCustomer"]">
+                    <input type="text" class="form-control" id="searchCustomer" name="customer"
+                        value="@ViewData["SearchCustomer"]">
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <div class="btn-group w-100">
@@ -92,7 +92,7 @@
         </div>
     }
 
-   
+
 
     <div class="card">
         <div class="card-header bg-success text-white">
@@ -146,11 +146,20 @@
                                         </a>
                                         @if (ViewData["CanSendUrgentRequests"] as bool? == true)
                                         {
-                                        <button type="button" class="btn btn-danger btn-sm urgent-request-btn"
-                                            data-pe-id="@item.Id" data-pe-number="@item.PeNumber"
-                                            data-customer="@item.Customer">
-                                            <i class="bi bi-exclamation-triangle"></i> Urgent
-                                        </button>
+                                            @if (item.HasPendingUrgentRequest)
+                                            {
+                                                <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                                    <i class="bi bi-clock"></i> Urgent Request Pending
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-danger btn-sm urgent-request-btn"
+                                                    data-pe-id="@item.Id" data-pe-number="@item.PeNumber"
+                                                    data-customer="@item.Customer">
+                                                    <i class="bi bi-exclamation-triangle"></i> Urgent
+                                                </button>
+                                            }
                                         }
                                     </div>
                                 </td>
@@ -280,122 +289,122 @@
             };
         }); *@
 
-        document.addEventListener('DOMContentLoaded', function () {
-            console.log('DOM loaded, setting up modal handlers');
+            document.addEventListener('DOMContentLoaded', function () {
+                console.log('DOM loaded, setting up modal handlers');
 
-            // Ensure Bootstrap is loaded
-            if (typeof bootstrap !== 'undefined') {
-                console.log('Bootstrap is loaded properly');
-            } else {
-                console.error('Bootstrap is not loaded!');
-            }
-
-            // Handle showing the PE urgent modal - use a more specific class
-            const buttons = document.querySelectorAll('.urgent-request-btn');
-            console.log('Found ' + buttons.length + ' urgent request buttons');
-
-            buttons.forEach(function (button) {
-                button.addEventListener('click', function (event) {
-                    console.log('Button clicked!');
-                    event.preventDefault();
-
-                    const peId = this.getAttribute('data-pe-id');
-                    const peNumber = this.getAttribute('data-pe-number');
-                    const customer = this.getAttribute('data-customer');
-
-                    console.log('PE ID: ' + peId + ', Number: ' + peNumber + ', Customer: ' + customer);
-
-                    document.getElementById('peIdField').value = peId;
-                    document.getElementById('modalPeNumberValue').textContent = peNumber;
-                    document.getElementById('modalCustomerValue').textContent = customer || 'Not specified';
-
-                    // Try direct DOM method first
-                    try {
-                        const modalElement = document.getElementById('urgentPEModal');
-                        const modal = new bootstrap.Modal(modalElement);
-                        modal.show();
-                        console.log('Modal shown with bootstrap.Modal');
-                    } catch (e) {
-                        console.error('Error showing modal: ', e);
-                        // Fallback to jQuery if available
-                        if (typeof $ !== 'undefined') {
-                            $('#urgentPEModal').modal('show');
-                            console.log('Modal shown with jQuery fallback');
-                        }
-                    }
-                });
-            });
-
-            // Handle form submission from the modal
-            document.getElementById('confirmPEUrgentRequest').addEventListener('click', function () {
-                // Check if a radio button is selected
-                const selectedReason = document.querySelector('input[name="urgentReason"]:checked');
-                if (!selectedReason) {
-                    alert('Please select a reason for the urgent request.');
-                    return;
-                }
-
-                // Hide the modal immediately
-                const modalElement = document.getElementById('urgentPEModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                modalInstance.hide();
-
-                // Submit the form with a slight delay to allow modal to close
-                setTimeout(function () {
-                    const form = document.getElementById('urgentPERequestForm');
-                    form.action = '@Url.Action("RequestUrgentWithReason", "PlannedEvents")';
-                    form.submit();
-                }, 300);
-            });
-
-            // Add search functionality
-        const searchForm = document.getElementById('searchForm');
-        const searchInputs = searchForm.querySelectorAll('input');
-        const tableBody = document.querySelector('table tbody');
-        const noRecordsAlert = document.querySelector('.alert-info');
-
-        function filterTable() {
-            const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
-            const reference = document.getElementById('searchReference').value.trim().toLowerCase();
-            const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
-
-            let visibleRows = 0;
-            const rows = tableBody.getElementsByTagName('tr');
-
-            Array.from(rows).forEach(row => {
-                const cells = row.getElementsByTagName('td');
-                const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
-                const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
-                const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
-
-                if (matchPeNumber && matchReference && matchCustomer) {
-                    row.style.display = '';
-                    visibleRows++;
+                // Ensure Bootstrap is loaded
+                if (typeof bootstrap !== 'undefined') {
+                    console.log('Bootstrap is loaded properly');
                 } else {
-                    row.style.display = 'none';
+                    console.error('Bootstrap is not loaded!');
                 }
+
+                // Handle showing the PE urgent modal - use a more specific class
+                const buttons = document.querySelectorAll('.urgent-request-btn');
+                console.log('Found ' + buttons.length + ' urgent request buttons');
+
+                buttons.forEach(function (button) {
+                    button.addEventListener('click', function (event) {
+                        console.log('Button clicked!');
+                        event.preventDefault();
+
+                        const peId = this.getAttribute('data-pe-id');
+                        const peNumber = this.getAttribute('data-pe-number');
+                        const customer = this.getAttribute('data-customer');
+
+                        console.log('PE ID: ' + peId + ', Number: ' + peNumber + ', Customer: ' + customer);
+
+                        document.getElementById('peIdField').value = peId;
+                        document.getElementById('modalPeNumberValue').textContent = peNumber;
+                        document.getElementById('modalCustomerValue').textContent = customer || 'Not specified';
+
+                        // Try direct DOM method first
+                        try {
+                            const modalElement = document.getElementById('urgentPEModal');
+                            const modal = new bootstrap.Modal(modalElement);
+                            modal.show();
+                            console.log('Modal shown with bootstrap.Modal');
+                        } catch (e) {
+                            console.error('Error showing modal: ', e);
+                            // Fallback to jQuery if available
+                            if (typeof $ !== 'undefined') {
+                                $('#urgentPEModal').modal('show');
+                                console.log('Modal shown with jQuery fallback');
+                            }
+                        }
+                    });
+                });
+
+                // Handle form submission from the modal
+                document.getElementById('confirmPEUrgentRequest').addEventListener('click', function () {
+                    // Check if a radio button is selected
+                    const selectedReason = document.querySelector('input[name="urgentReason"]:checked');
+                    if (!selectedReason) {
+                        alert('Please select a reason for the urgent request.');
+                        return;
+                    }
+
+                    // Hide the modal immediately
+                    const modalElement = document.getElementById('urgentPEModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    modalInstance.hide();
+
+                    // Submit the form with a slight delay to allow modal to close
+                    setTimeout(function () {
+                        const form = document.getElementById('urgentPERequestForm');
+                        form.action = '@Url.Action("RequestUrgentWithReason", "PlannedEvents")';
+                        form.submit();
+                    }, 300);
+                });
+
+                // Add search functionality
+                const searchForm = document.getElementById('searchForm');
+                const searchInputs = searchForm.querySelectorAll('input');
+                const tableBody = document.querySelector('table tbody');
+                const noRecordsAlert = document.querySelector('.alert-info');
+
+                function filterTable() {
+                    const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+                    const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+                    const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+
+                    let visibleRows = 0;
+                    const rows = tableBody.getElementsByTagName('tr');
+
+                    Array.from(rows).forEach(row => {
+                        const cells = row.getElementsByTagName('td');
+                        const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                        const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
+                        const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
+
+                        if (matchPeNumber && matchReference && matchCustomer) {
+                            row.style.display = '';
+                            visibleRows++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+
+                    // Update record count
+                    document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+                    // Show/hide no records message
+                    if (noRecordsAlert) {
+                        noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
+                    }
+                }
+
+                // Add real-time search
+                searchInputs.forEach(input => {
+                    input.addEventListener('input', filterTable);
+                });
+
+                // Prevent form submission (using real-time filter instead)
+                searchForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    filterTable();
+                });
+
             });
-
-            // Update record count
-            document.querySelector('.badge').textContent = visibleRows + ' Records';
-
-            // Show/hide no records message
-            if (noRecordsAlert) {
-                noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
-            }
-        }
-
-        // Add real-time search
-        searchInputs.forEach(input => {
-            input.addEventListener('input', filterTable);
-        });
-
-        // Prevent form submission (using real-time filter instead)
-        searchForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            filterTable();
-        });
-        
-        });
     </script>
 }

@@ -104,8 +104,8 @@
                                     </td>
                                     <td>
                                         <div class="btn-group">
-                                            <a href="@Url.Action("Details", "PlannedEvents", new { id = pe.PlannedEventId, returnUrl = Url.Action("Details", "Project", new { id = Model.Id }) })"
-                                                class="btn btn-sm btn-info me-2">
+                                            <a href="@Url.Action("Details", "PlannedEvents", new { id = pe.PlannedEventId })"
+                                                class="btn btn-sm btn-info me-2" target="_blank">
                                                 <i class="bi bi-eye"></i> View Details
                                             </a>
                                             <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
@@ -135,32 +135,48 @@
         $(document).ready(function () {
             // Search functionality
             $('#searchInput').on('keyup', function () {
-                var searchTerm = $(this).val();
+                var searchTerm = $(this).val().trim();
+                var searchResults = $('#searchResults');
+
                 if (searchTerm.length > 2) {
-                    $.get('/Project/Search', { searchTerm: searchTerm })
+                    $.get('/Project/Search', {
+                        searchTerm: searchTerm,
+                        projectId: @Model.Id
+                                })
                         .done(function (data) {
-                            var html = '<div class="table-responsive"><table class="table table-hover">';
-                            html += '<thead><tr><th>PE Number</th><th>Customer</th><th>Action</th></tr></thead><tbody>';
+                            if (data && data.length > 0) {
+                                var html = '<div class="table-responsive">';
+                                html += '<table class="table table-hover">';
+                                html += '<thead><tr><th>PE Number</th><th>Customer</th><th>Action</th></tr></thead>';
+                                html += '<tbody>';
 
-                            data.forEach(function (pe) {
-                                html += `
-                                                                    <tr>
-                                                                        <td>${pe.peNumber}</td>
-                                                                        <td>${pe.customer}</td>
-                                                                        <td>
-                                                                            <button class="btn btn-sm btn-primary assign-pe" 
-                                                                                    data-pe-id="${pe.id}">
-                                                                                <i class="bi bi-plus-circle me-1"></i>Assign
-                                                                            </button>
-                                                                        </td>
-                                                                    </tr>`;
-                            });
+                                data.forEach(function (pe) {
+                                    html += `<tr>
+                                    <td>${pe.peNumber}</td>
+                                    <td>${pe.customer}</td>
+                                    <td>
+                                        ${pe.isAssigned ?
+                                            '<span class="badge bg-secondary"><i class="bi bi-check-circle me-1"></i>Already Assigned</span>' :
+                                            `<button class="btn btn-sm btn-primary assign-pe" data-pe-id="${pe.id}">
+                                                <i class="bi bi-plus-circle me-1"></i>Assign
+                                            </button>`
+                                        }
+                                    </td>
+                                </tr>`;
+                                });
 
-                            html += '</tbody></table></div>';
-                            $('#searchResults').html(data.le    ngth ? html : '<p class="text-muted">No results found</p>');
+                                html += '</tbody></table></div>';
+                                searchResults.html(html);
+                            } else {
+                                searchResults.html('<div class="alert alert-info">No results found</div>');
+                            }
+                        })
+                        .fail(function (error) {
+                            searchResults.html('<div class="alert alert-danger">Error performing search</div>');
+                            console.error('Search error:', error);
                         });
                 } else {
-                    $('#searchResults').html('');
+                    searchResults.empty();
                 }
             });
 
@@ -171,7 +187,7 @@
                 $.post('/Project/AssignPEToProject', {
                     plannedEventId: peId,
                     projectId: @Model.Id
-                                                })
+                                                                })
                     .done(function (response) {
                         if (response.success) {
                             location.reload();
@@ -191,7 +207,7 @@
                     $.post('/Project/RemovePEFromProject', {
                         plannedEventId: peId,
                         projectId: @Model.Id
-                                                    })
+                                                                    })
                         .done(function (response) {
                             if (response.success) {
                                 location.reload();
@@ -366,5 +382,63 @@
     .progress+span {
         min-width: 3.5rem;
         text-align: right;
+    }
+
+    /* Badge styling */
+    .badge {
+        padding: 0.5rem 0.75rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .badge i {
+        opacity: 0.8;
+    }
+
+    /* Dark mode styles for search section */
+    [data-theme="dark"] .input-group-text {
+        background-color: var(--input-bg) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] .input-group .form-control {
+        background-color: var(--input-bg) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] .card-header {
+        background: var(--card-bg) !important;
+        border-bottom-color: var(--border-color) !important;
+    }
+
+    [data-theme="dark"] .card-header h5 {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    [data-theme="dark"] .card {
+        background-color: var(--card-bg) !important;
+        border-color: var(--border-color) !important;
+    }
+
+    [data-theme="dark"] .bi-search {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] .project-title {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] .project-meta {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    [data-theme="dark"] .text-muted {
+        color: rgba(255, 255, 255, 0.7) !important;
     }
 </style>

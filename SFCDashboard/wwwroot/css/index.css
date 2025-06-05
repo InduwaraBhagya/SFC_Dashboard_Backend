@@ -636,3 +636,57 @@
     background-color: #0d6efd !important;
 }
 
+/* Urgent button styles */
+.btn-secondary:disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    opacity: 0.8;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.btn-secondary:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-secondary:disabled .bi-clock {
+    animation: pulse 2s infinite;
+}
+
+/* Pending state animation */
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Tooltip for disabled button */
+.btn-secondary:disabled:after {
+    content: "Urgent request is pending approval";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:disabled:hover:after {
+    visibility: visible;
+    opacity: 1;
+}
+

@@ -178,5 +178,7 @@ namespace SFCDashboard.Models
 
         // Add this new property for tracking hold status
         public bool IsHold { get; set; } = false; // Default value is false
+
+        public bool HasPendingUrgentRequest => PEStatus == "PENDING_URGENT_CONFIRMATION";
     }
 }
