@@ -1,3 +1,5 @@
+@using SFCDashboard.Data
+@inject ApplicationDbContext _context
 @model Project
 
 @{
@@ -52,12 +54,29 @@
                                 <th>Customer</th>
                                 <th>Job Reference</th>
                                 <th>Required Date</th>
+                                <th>Progress</th> <!-- New column -->
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var pe in Model.ProjectPEs)
                             {
+                                var tasks = _context.PETasks
+                                .Where(t => t.PENumber == pe.PlannedEvent.PeNumber)
+                                .ToList();
+
+                                var totalTasks = tasks.Count;
+                                var completedTasks = tasks.Count(t => t.TaskStatus?.ToLower() == "completed");
+                                var progressPercent = totalTasks > 0 ? (completedTasks * 100) / totalTasks : 0;
+
+                                var progressClass = progressPercent switch
+                                {
+                                    100 => "bg-success",
+                                    > 60 => "bg-info",
+                                    > 30 => "bg-warning",
+                                    _ => "bg-danger"
+                                };
+
                                 <tr>
                                     <td>@pe.PlannedEvent.PeNumber</td>
                                     <td>@pe.PlannedEvent.Customer</td>
@@ -73,10 +92,27 @@
                                         }
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
-                                            data-pe-number="@pe.PlannedEvent.PeNumber">
-                                            <i class="bi bi-trash"></i> Remove
-                                        </button>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1" style="height: 8px;">
+                                                <div class="progress-bar @progressClass" role="progressbar"
+                                                    style="width: @progressPercent%;" aria-valuenow="@progressPercent"
+                                                    aria-valuemin="0" aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <span class="ms-2 small">@progressPercent%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="@Url.Action("Details", "PlannedEvents", new { id = pe.PlannedEventId, returnUrl = Url.Action("Details", "Project", new { id = Model.Id }) })"
+                                                class="btn btn-sm btn-info me-2">
+                                                <i class="bi bi-eye"></i> View Details
+                                            </a>
+                                            <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
+                                                data-pe-number="@pe.PlannedEvent.PeNumber">
+                                                <i class="bi bi-trash"></i> Remove
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -108,20 +144,20 @@
 
                             data.forEach(function (pe) {
                                 html += `
-                                                <tr>
-                                                    <td>${pe.peNumber}</td>
-                                                    <td>${pe.customer}</td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-primary assign-pe" 
-                                                                data-pe-id="${pe.id}">
-                                                            <i class="bi bi-plus-circle me-1"></i>Assign
-                                                        </button>
-                                                    </td>
-                                                </tr>`;
+                                                                    <tr>
+                                                                        <td>${pe.peNumber}</td>
+                                                                        <td>${pe.customer}</td>
+                                                                        <td>
+                                                                            <button class="btn btn-sm btn-primary assign-pe" 
+                                                                                    data-pe-id="${pe.id}">
+                                                                                <i class="bi bi-plus-circle me-1"></i>Assign
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>`;
                             });
 
                             html += '</tbody></table></div>';
-                            $('#searchResults').html(data.length ? html : '<p class="text-muted">No results found</p>');
+                            $('#searchResults').html(data.le    ngth ? html : '<p class="text-muted">No results found</p>');
                         });
                 } else {
                     $('#searchResults').html('');
@@ -135,7 +171,7 @@
                 $.post('/Project/AssignPEToProject', {
                     plannedEventId: peId,
                     projectId: @Model.Id
-                            })
+                                                })
                     .done(function (response) {
                         if (response.success) {
                             location.reload();
@@ -155,7 +191,7 @@
                     $.post('/Project/RemovePEFromProject', {
                         plannedEventId: peId,
                         projectId: @Model.Id
-                                })
+                                                    })
                         .done(function (response) {
                             if (response.success) {
                                 location.reload();
@@ -289,6 +325,24 @@
         transform: translateY(-2px);
     }
 
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-info {
+        background: #0dcaf0;
+        border: none;
+        color: #fff;
+        transition: all 0.3s ease;
+    }
+
+    .btn-info:hover {
+        background: #0bacdb;
+        color: #fff;
+        transform: translateY(-2px);
+    }
+
     /* Alert styling */
     .alert-info {
         background-color: #e8f4ff;
@@ -298,67 +352,19 @@
         padding: 1rem 1.25rem;
     }
 
-    /* Dark mode styles */
-    [data-theme="dark"] {
-        --text-color: rgba(255, 255, 255, 0.7);
-        --card-bg: #2d2d2d;
-        --card-header-bg: #363636;
+    /* Progress bar styling */
+    .progress {
+        background-color: #f0f0f0;
+        border-radius: 0.5rem;
+        overflow: hidden;
     }
 
-    [data-theme="dark"] .project-title {
-        color: var(--text-color) !important;
+    .progress-bar {
+        transition: width 0.6s ease;
     }
 
-    [data-theme="dark"] .display-5 {
-        color: #ffffff !important;
-    }
-
-    [data-theme="dark"] .text-muted {
-        color: rgba(255, 255, 255, 0.7) !important;
-    }
-
-    [data-theme="dark"] .project-meta {
-        color: rgba(255, 255, 255, 0.7) !important;
-    }
-
-    [data-theme="dark"] .card {
-        background-color: var(--card-bg);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    [data-theme="dark"] .card-header {
-        background: var(--card-header-bg);
-        border-bottom-color: rgba(255, 255, 255, 0.1);
-    }
-
-    [data-theme="dark"] .card-header h5 {
-        color: rgba(255, 255, 255, 0.9);
-    }
-
-    [data-theme="dark"] .table th {
-        background-color: var(--card-header-bg);
-        color: rgba(255, 255, 255, 0.9);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    [data-theme="dark"] .table td {
-        color: var(--text-color);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    [data-theme="dark"] .input-group-text {
-        background-color: var(--card-header-bg);
-        border-color: rgba(255, 255, 255, 0.1);
-        color: var(--text-color);
-    }
-
-    [data-theme="dark"] .form-control {
-        background-color: var(--card-bg);
-        border-color: rgba(255, 255, 255, 0.1);
-        color: var(--text-color);
-    }
-
-    [data-theme="dark"] .form-control::placeholder {
-        color: rgba(255, 255, 255, 0.5);
+    .progress+span {
+        min-width: 3.5rem;
+        text-align: right;
     }
 </style>

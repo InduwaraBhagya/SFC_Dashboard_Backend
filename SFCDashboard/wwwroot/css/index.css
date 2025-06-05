@@ -249,6 +249,7 @@
         display: flex;
         flex-direction: column;
         border: 1px solid rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
     }
 
     .inbox-header {
@@ -617,5 +618,21 @@
     background-color: #fff3cd;
     padding: 2px;
     border-radius: 3px;
+}
+
+/* Add these styles to index.css */
+.message-item.reminder {
+    background-color: rgba(13, 110, 253, 0.08);
+    border-left: 3px solid #0d6efd;
+}
+
+.message-item.reminder:hover {
+    background-color: rgba(13, 110, 253, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15);
+}
+
+.message-item.reminder .badge {
+    background-color: #0d6efd !important;
 }
 

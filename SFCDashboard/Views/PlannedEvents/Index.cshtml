@@ -577,10 +577,16 @@
                 }
                     
                     <!-- Issue Messages -->
-                    @if (ViewData["InboxIssues"] != null)
-                    {
-                        foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewData["InboxIssues"])
-                        {
+     @if (ViewData["InboxIssues"] != null)
+        {
+              foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
+        {
+            if (issue.SenderId == 1) // System messages
+            {
+                    @await Html.PartialAsync("_ReminderMessage", issue as PEIssueViewModel)
+            }
+            else
+            {
                             <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
                                  data-message-id="issue-@issue.CreatedAt.Ticks"
                                  data-issue-id="@issue.Id"
@@ -647,7 +653,7 @@
                             </div>
                         }
                     }
-                </div>
+                
 
                 <div class="inbox-footer mt-3">
                     <div class="d-flex justify-content-between align-items-center">
@@ -657,6 +663,7 @@
                         <a href="#" class="view-all-link">View All Messages <i class="fas fa-arrow-right ms-1"></i></a>
                     </div>
                 </div>
+                }
             </div>
         </div>
     </div>
