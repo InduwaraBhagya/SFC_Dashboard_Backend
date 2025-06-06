@@ -157,25 +157,47 @@ namespace SFCDashboard.Services
                     {
                         Task = task,
                         PriorityScore = priorityScore,
-                        DaysUntilDue = daysUntilDue,
-                        EffectiveDeadline = effectiveDeadline,
-                        OLAInDays = olaInDays,
-                        OLAPercentRemaining = olaPercentRemaining
+                        DaysUntilDue = daysUntilDue
                     });
                 }
 
-                // Sort by priority score (descending), then by days until due (ascending)
-                return result
-                    .OrderByDescending(t => t.PriorityScore)
-                    .ThenBy(t => t.DaysUntilDue)
-                    .Take(take)
-                    .ToList();
+                // Sort the final list by priority score (descending)
+                return result.OrderByDescending(t => t.PriorityScore).Take(take).ToList();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error calculating task priorities");
                 return new List<TaskQueueItem>();
             }
+        }
+
+        public async Task<TaskQueueItem> GetNextTaskAsync(int? workgroupId = null)
+        {
+            var prioritizedTasks = await GetPrioritizedTasksAsync(workgroupId, take: 1);
+            return prioritizedTasks.Count > 0 ? prioritizedTasks[0] : null;
+        }
+
+        private string GetPriorityLevelName(double priorityScore)
+        {
+            // Simplified priority level determination based on score ranges
+            if (priorityScore >= 10)
+                return "High";
+            else if (priorityScore >= 5)
+                return "Medium";
+            else
+                return "Low";
+        }
+
+        private string GetDueStatusText(int daysUntilDue)
+        {
+            if (daysUntilDue < 0)
+                return $"Overdue by {Math.Abs(daysUntilDue)} days";
+            else if (daysUntilDue == 0)
+                return "Due today";
+            else if (daysUntilDue == 1)
+                return "Due tomorrow";
+            else
+                return $"Due in {daysUntilDue} days";
         }
     }
 

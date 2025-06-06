@@ -120,7 +120,14 @@ namespace SFCDashboard.Controllers
                 _ => peNumber
             };
 
+// In the Index action
+ViewBag.UserWorkgroupId = userWorkgroupId;
 
+var nextTaskList = await _taskQueueService.GetPrioritizedTasksAsync(
+    workgroupId: userWorkgroupId, 
+    take: 1);
+    
+ViewBag.NextTask = nextTaskList.Count > 0 ? nextTaskList[0] : null;
             // Pending urgent requests (same as before)
             var pendingUrgentRequests = await _context.PlannedEvents
                 .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
