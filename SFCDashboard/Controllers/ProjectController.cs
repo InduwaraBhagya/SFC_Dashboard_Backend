@@ -21,22 +21,32 @@ public class ProjectController : Controller
         return View(projects);
     }
 
-    public async Task<IActionResult> Search(string searchTerm)
+    public async Task<IActionResult> Search(string searchTerm, int projectId) // Added projectId parameter
     {
-        if (string.IsNullOrEmpty(searchTerm))
+        if (string.IsNullOrWhiteSpace(searchTerm))
         {
             return Json(Array.Empty<object>());
         }
 
+        searchTerm = searchTerm.Trim().ToLower();
+
+        // Get currently assigned PE IDs for this project
+        var currentProjectPEs = await _context.ProjectPEMappings
+            .Where(p => p.ProjectId == projectId)
+            .Select(p => p.PlannedEventId)
+            .ToListAsync();
+
         var results = await _context.PlannedEvents
-            .Where(p => p.PeNumber.Contains(searchTerm) ||
-                       p.Customer.Contains(searchTerm))
+            .Where(p => (p.PeNumber != null && p.PeNumber.ToLower().Contains(searchTerm)) ||
+                       (p.Customer != null && p.Customer.ToLower().Contains(searchTerm)))
             .Select(p => new
             {
+                id = p.Id,
                 peNumber = p.PeNumber,
-                customer = p.Customer,
-                id = p.Id
+                customer = p.Customer ?? "No Customer",
+                isAssigned = currentProjectPEs.Contains(p.Id)
             })
+            .Take(10)
             .ToListAsync();
 
         return Json(results);
