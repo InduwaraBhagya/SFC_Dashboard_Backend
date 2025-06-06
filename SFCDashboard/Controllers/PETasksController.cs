@@ -57,7 +57,21 @@ namespace SFCDashboard.Controllers
             // Mark this task as urgent immediately (no approval needed)
             task.IsUrgent = true;
             task.UrgentRequested = false;
-            task.Priority = (task.Priority ?? "") + " [URGENT]";
+            
+            // Check if the PE has a priority set, and use it for the task
+            if (task.PlannedEvent != null && !string.IsNullOrWhiteSpace(task.PlannedEvent.Priority))
+            {
+                // Use the PE's priority for the task
+                task.Priority = task.PlannedEvent.Priority;
+                _logger.LogInformation("Task {taskId} inherited priority from PE: {priority}", 
+                    id, task.Priority);
+            }
+            else 
+            {
+                // If no PE priority exists, use the default urgent marking
+                task.Priority = (task.Priority ?? "") + " [URGENT]";
+                _logger.LogInformation("Task {taskId} marked as generic urgent", id);
+            }
 
             _context.Update(task);
 
@@ -132,14 +146,7 @@ namespace SFCDashboard.Controllers
                     task.Priority = priorityMessage;
                     break;
 
-                case "NetworkOutage":
-                    markAsUrgent = true;
-                    task.IsUrgent = true;
-                    priorityMessage = "[URGENT: Network Outage - Priority 0]";
-                    priorityLevel = 0;
-                    // Clear any previous priority and set the new one
-                    task.Priority = priorityMessage;
-                    break;
+
 
                 case "Reject":
                     task.UrgentRequested = false;
@@ -438,6 +445,39 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
 
             return Json(history);
+        }
+
+        // Add this method to PETasksController
+        private async Task UpdateTasksPriorityFromPE(string peNumber, string pePriority)
+        {
+            if (string.IsNullOrEmpty(peNumber) || string.IsNullOrEmpty(pePriority))
+                return;
+                
+            _logger.LogInformation("Updating all tasks for PE {peNumber} with priority: {priority}", 
+                peNumber, pePriority);
+                
+            // Get all tasks for this PE
+            var tasks = await _context.PETasks
+                .Where(t => t.PENumber == peNumber && t.TaskStatus != "COMPLETED")
+                .ToListAsync();
+                
+            if (tasks.Any())
+            {
+                foreach (var task in tasks)
+                {
+                    // Set the priority and update urgent flag
+                    task.Priority = pePriority ;
+                    task.IsUrgent = true;
+                    task.UrgentRequested = false; // Clear any pending urgent requests
+                    
+                    _context.Update(task);
+                    _logger.LogInformation("Updated task ID {taskId} with inherited priority", task.Id);
+                }
+                
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Updated {count} tasks with priority from PE {peNumber}", 
+                    tasks.Count, peNumber);
+            }
         }
     }
 }

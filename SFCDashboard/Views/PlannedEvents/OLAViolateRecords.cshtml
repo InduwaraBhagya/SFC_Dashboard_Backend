@@ -60,11 +60,6 @@
                                         <a asp-action="Details" asp-route-id="@item.Id" asp-route-returnUrl="@Url.Action("OLAViolateRecords")" class="btn btn-primary btn-sm">
                                             <i class="bi bi-eye"></i> View Details
                                         </a>
-                                        <button type="button" class="btn btn-danger btn-sm ms-1"
-                                                data-bs-toggle="modal" data-bs-target="#markUrgentModal"
-                                                data-pe-id="@item.Id" data-pe-number="@item.PeNumber">
-                                            <i class="bi bi-exclamation-circle"></i> Mark Urgent
-                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -82,52 +77,10 @@
     </div>
 </div>
 
-<!-- Mark as Urgent Modal -->
-<div class="modal fade" id="markUrgentModal" tabindex="-1" aria-labelledby="markUrgentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title" id="markUrgentModalLabel">
-                    <i class="bi bi-exclamation-triangle me-2"></i>Mark as Urgent
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to mark PE <strong id="modalPeNumber"></strong> as urgent due to OLA violation?</p>
-                <p class="text-muted">This will move the record to the urgent list for immediate attention.</p>
-                
-                <form id="markUrgentForm" asp-action="MarkOLARecordUrgent" method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="peIdField" name="id" />
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmUrgentBtn">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Mark Urgent
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Set up modal data
-            $('#markUrgentModal').on('show.bs.modal', function (event) {
-                var button = $(event.relatedTarget);
-                var peId = button.data('pe-id');
-                var peNumber = button.data('pe-number');
-                
-                document.getElementById('modalPeNumber').textContent = peNumber;
-                document.getElementById('peIdField').value = peId;
-            });
-            
-            // Handle confirm button click
-            document.getElementById('confirmUrgentBtn').addEventListener('click', function() {
-                document.getElementById('markUrgentForm').submit();
-            });
+            // Any necessary JavaScript can be added here
         });
     </script>
 }

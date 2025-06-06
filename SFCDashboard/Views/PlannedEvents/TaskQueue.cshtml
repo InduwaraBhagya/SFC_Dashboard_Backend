@@ -1,0 +1,248 @@
+@model IEnumerable<SFCDashboard.Services.TaskQueueItem>
+@using System.Linq
+
+@{
+    ViewData["Title"] = "Task Queue";
+}
+
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-list-task text-primary me-3"></i>Prioritized Task Queue
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Summary Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-danger h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Urgent Tasks
+                    </h5>
+                    <h2 class="card-text display-4 fw-bold">@ViewData["UrgentCount"]</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-warning h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-warning">
+                        <i class="bi bi-clock-history me-2"></i>OLA Violations
+                    </h5>
+                    <h2 class="card-text display-4 fw-bold">@ViewData["OLAViolateCount"]</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-info h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-info">
+                        <i class="bi bi-hourglass-split me-2"></i>Approaching Deadline
+                    </h5>
+                    <h2 class="card-text display-4 fw-bold">@ViewData["ApproachingDeadlineCount"]</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-success h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-success">
+                        <i class="bi bi-calendar-check me-2"></i>Regular Tasks
+                    </h5>
+                    <h2 class="card-text display-4 fw-bold">@ViewData["RegularTaskCount"]</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workgroup Filter -->
+    @if (ViewData["CanSwitchWorkgroup"] as bool? == true)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <form asp-action="TaskQueue" method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="workgroupId" class="form-label">Filter by Workgroup</label>
+                        <select id="workgroupId" name="workgroupId" class="form-select">
+                            <option value="">All Workgroups</option>
+                            @foreach (var workgroup in (IEnumerable<SFCDashboard.Models.WorkGroup>)ViewData["Workgroups"])
+                            {
+                                <option value="@workgroup.Id" 
+                                    selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">
+                                    @workgroup.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="take" class="form-label">Task Count</label>
+                        <select id="take" name="take" class="form-select">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter"></i> Apply Filter
+                        </button>
+                        <a asp-action="TaskQueue" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+
+    <!-- Task Queue Table -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-ol me-2"></i>Prioritized Tasks</h5>
+                <span class="badge bg-light text-dark">@Model.Count() Tasks</span>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%;">#</th>
+                                <th style="width: 10%;">Priority</th>
+                                <th style="width: 10%;">PE Number</th>
+                                <th style="width: 15%;">Task</th>
+                                <th style="width: 15%;">Customer</th>
+                                <th style="width: 10%;">Workgroup</th>
+                                <th style="width: 10%;">Due Date</th>
+                                <th style="width: 10%;">Time Left</th>
+                                <th style="width: 15%;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var rowNumber = 1;
+                            }
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@(rowNumber++)</td>
+                                    <td>
+                                        @{
+                                            string badgeClass = item.PriorityLevel switch
+                                            {
+                                                "URGENT P1" => "bg-danger",
+                                                "URGENT P2" => "bg-danger",
+                                                "URGENT" => "bg-danger",
+                                                "OLA VIOLATION" => "bg-warning text-dark",
+                                                "APPROACHING DEADLINE" => "bg-info text-dark",
+                                                _ => "bg-success"
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@item.PriorityLevel</span>
+                                        <small class="d-block text-muted mt-1">Score: @item.PriorityScore.ToString("F1")</small>
+                                    </td>
+                                    <td>@item.Task.PENumber</td>
+                                    <td>@item.Task.Task</td>
+                                    <td>@item.Task.PlannedEvent?.Customer</td>
+                                    <td>@(item.Task.TaskWorkGroup == "NULL" ? "" : item.Task.TaskWorkGroup)</td>
+                                    <td>@(item.EffectiveDeadline?.ToString("yyyy-MM-dd") ?? "Not set")</td>
+                                    <td>
+                                        @{
+                                            string daysClass = item.IsOverdue ? "text-danger fw-bold" : 
+                                                (item.DaysUntilDue <= 2) ? "text-warning fw-bold" : "text-success";
+                                        }
+                                        <span class="@daysClass">
+                                            @item.DueStatus
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a asp-controller="PlannedEvents" asp-action="Details" 
+                                               asp-route-id="@item.Task.PlannedEvent?.Id" 
+                                               class="btn btn-primary btn-sm">
+                                                <i class="bi bi-eye"></i> View PE
+                                            </a>
+                                            @* Removed the Mark Urgent button to make this view read-only *@
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Legend for Priority Scores -->
+                <div class="card mt-3 bg-light">
+                    <div class="card-body">
+                        <h5>Priority Scoring System</h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <span class="badge bg-danger me-1">URGENT P1</span> Opening Ceremony (Score: 8+)
+                            </div>
+                            <div class="col-md-3">
+                                <span class="badge bg-danger me-1">URGENT P2</span> Critical Customer (Score: 6+)
+                            </div>
+                            <div class="col-md-3">
+                                <span class="badge bg-warning text-dark me-1">OLA VIOLATION</span> (Score: 5+)
+                            </div>
+                            <div class="col-md-3 mt-2">
+                                <span class="badge bg-info text-dark me-1">APPROACHING</span> Due within 2 days (Score: 3+)
+                            </div>
+                            <div class="col-md-3 mt-2">
+                                <span class="badge bg-success me-1">REGULAR</span> Regular task (Score: 1+)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i> No tasks found in the queue.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Auto-submit form when workgroup changes
+            document.getElementById('workgroupId')?.addEventListener('change', function () {
+                document.querySelector('form').submit();
+            });
+            
+            // Auto-submit form when take count changes
+            document.getElementById('take')?.addEventListener('change', function () {
+                document.querySelector('form').submit();
+            });
+        });
+        
+        function confirmUrgent(event, taskName) {
+            if (confirm(`Are you sure you want to mark task "${taskName}" as urgent?`)) {
+                return true;
+            }
+            event.preventDefault();
+            return false;
+        }
+    </script>
+    
+}

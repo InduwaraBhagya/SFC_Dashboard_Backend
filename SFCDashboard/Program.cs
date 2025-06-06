@@ -58,6 +58,7 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddRazorPages()
     .AddMicrosoftIdentityUI();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<SFCDashboard.Services.TaskQueueingService>();
 
 var app = builder.Build();
 
