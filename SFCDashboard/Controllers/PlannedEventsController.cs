@@ -1432,5 +1432,89 @@ ViewData["RegularTaskCount"] = prioritizedTasks.Count(t =>
             return View(new List<TaskQueueItem>());
         }
     }
+
+// POST: PlannedEvents/RemoveUrgentStatus
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> RemoveUrgentStatus(int id)
+{
+    try
+    {
+        var plannedEvent = await _context.PlannedEvents.FindAsync(id);
+
+        if (plannedEvent == null)
+        {
+            TempData["ErrorMessage"] = "Record not found.";
+            return RedirectToAction(nameof(UrgentRecords));
+        }
+
+        // Change status from urgent back to ongoing
+        if (plannedEvent.PEStatus?.ToLower() == "urgent")
+        {
+            plannedEvent.PEStatus = "ongoing";
+            
+            // Reset priority by removing urgent-related text
+            if (!string.IsNullOrEmpty(plannedEvent.Priority))
+            {
+                plannedEvent.Priority = plannedEvent.Priority
+                    .Replace("[URGENT: Opening Ceremony - Priority 1]", "")
+                    .Replace("[URGENT: Critical Customer - Priority 2]", "")
+                    .Trim();
+            }
+            
+            _context.Update(plannedEvent);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("PE {peNumber} urgent status removed, returned to normal records", 
+                plannedEvent.PeNumber);
+
+            // Update related tasks to remove urgent status
+            var peNumber = plannedEvent.PeNumber;
+            var relatedTasks = await _context.PETasks
+                .Where(t => t.PENumber == peNumber)
+                .ToListAsync();
+                
+            foreach (var task in relatedTasks)
+            {
+                if (task.IsUrgent)
+                {
+                    task.IsUrgent = false;
+                    
+                    // Remove urgent-related text from task priority
+                    if (!string.IsNullOrEmpty(task.Priority))
+                    {
+                        task.Priority = task.Priority
+                            .Replace(" (Inherited from PE)", "")
+                            .Replace("[URGENT: Opening Ceremony - Priority 1]", "")
+                            .Replace("[URGENT: Critical Customer - Priority 2]", "")
+                            .Trim();
+                    }
+                }
+            }
+            
+            if (relatedTasks.Any())
+            {
+                _context.UpdateRange(relatedTasks);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Removed urgent status from {count} tasks for PE {peNumber}", 
+                    relatedTasks.Count, peNumber);
+            }
+
+            TempData["SuccessMessage"] = $"PE {plannedEvent.PeNumber} has been moved back to regular records.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = $"PE {plannedEvent.PeNumber} is not currently marked as urgent.";
+        }
+
+        return RedirectToAction(nameof(UrgentRecords));
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error removing urgent status from PE {id}", id);
+        TempData["ErrorMessage"] = "An error occurred while updating the record status.";
+        return RedirectToAction(nameof(UrgentRecords));
+    }
+}
     }
 }
