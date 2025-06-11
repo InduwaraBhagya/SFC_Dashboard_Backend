@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/Layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
     @* <link rel="stylesheet" href="~/SFCDashboard.styles.css" asp-append-version="true" /> *@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -461,7 +462,69 @@
             padding-bottom: 0.5rem;
             min-height: 110px;
         }
-        
+
+        /* Notification styles */
+        .notification-btn {
+            background: none;
+            border: none;
+            padding: 0.375rem;
+        }
+
+        .notification-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .notification-badge {
+            transform: translate(-50%, -50%) !important;
+            font-size: 0.65rem;
+            padding: 0.25rem 0.4rem;
+        }
+
+        .notification-menu {
+            padding: 0;
+            border: none;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        [data-theme="dark"] .notification-menu {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .dropdown-header {
+            border-color: var(--border-color) !important;
+            color: var(--text-color);
+        }
+
+        /* Add to the existing styles section */
+        [data-theme="dark"] .notification-item {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .notification-item:hover {
+            background-color: var(--hover-bg) !important;
+        }
+
+        [data-theme="dark"] .notification-content {
+            color: var(--text-color) !important;
+        }
+
+        .notification-item {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .notification-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification-item.unread {
+            background-color: rgba(13, 110, 253, 0.05);
+            border-left: 3px solid #0d6efd;
+        }
     </style>
 </head>
 
@@ -544,6 +607,46 @@
                         <i class="bi bi-moon-fill" id="darkModeIcon"></i>
                         <span id="darkModeText">Dark</span>
                     </button>
+
+                    <!-- Add this before the dark mode toggle button -->
+                    <div class="dropdown me-3 notification-dropdown">
+                        <button class="btn notification-btn position-relative" type="button" id="notificationDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="~/images/notification.png" alt="Notifications"
+                                style="width: 24px; height: 24px;" />
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
+                                id="reminderCount">
+                                0
+                            </span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end notification-menu shadow"
+                            aria-labelledby="notificationDropdown"
+                            style="width: 350px; max-height: 500px; overflow-y: auto;">
+                            <div class="dropdown-header d-flex flex-column p-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">Notifications</h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary me-2" id="markAllRead">
+                                            <i class="bi bi-check-all"></i> Mark all read
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary" id="refreshNotifications">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="btn-group btn-group-sm w-100">
+                                    <button type="button" class="btn btn-outline-primary active"
+                                        data-filter="unread">Unread
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
+                                </div>
+                            </div>
+                            <div id="notificationList" class="notification-list">
+                                <!-- Reminders will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
 
                     <partial name="_LoginPartial" />
                 </div>
@@ -630,6 +733,164 @@
                 document.body.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
                 updateDarkModeButton(newTheme);
+            });
+        });
+
+        // Notification functionality
+        let currentFilter = 'unread';
+
+        function loadReminders() {
+            fetch(`/PlannedEvents/GetReminders?showAll=${currentFilter === 'all'}`)
+                .then(response => response.json())
+                .then(data => {
+                    const notificationList = document.getElementById('notificationList');
+                    notificationList.innerHTML = '';
+
+                    if (data.length === 0) {
+                        notificationList.innerHTML = `
+                    <div class="p-3 text-center text-muted">
+                        <i class="bi bi-bell-slash me-2"></i>No notifications
+                    </div>`;
+                    } else {
+                        const filteredData = currentFilter === 'unread'
+                            ? data.filter(r => !r.isRead)
+                            : data;
+
+                        if (filteredData.length === 0) {
+                            notificationList.innerHTML = `
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-bell-slash me-2"></i>No ${currentFilter} notifications
+                        </div>`;
+                            return;
+                        }
+
+                        filteredData.forEach(reminder => {
+                            const reminderElement = document.createElement('div');
+                            reminderElement.className = `message-item ${!reminder.isRead ? 'unread' : ''} system-reminder p-3 border-bottom`;
+                            reminderElement.setAttribute('data-message-id', `reminder-${reminder.id}`);
+                            reminderElement.setAttribute('data-pe-id', reminder.plannedEventId);
+                            reminderElement.setAttribute('data-reminder-id', reminder.id);
+                            reminderElement.onclick = function () {
+                                handleReminderClick(this);
+                            };
+
+                            reminderElement.innerHTML = `
+                        <div class="message-content">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="message-sender mb-1">
+                                        <span class="badge bg-warning text-dark me-1">Reminder</span>
+                                        Task On Hold
+                                    </h6>
+                                    <div class="message-subject">
+                                        ${reminder.message}
+                                    </div>
+                                </div>
+                                <span class="message-time text-muted small">${formatDate(reminder.createdDate)}</span>
+                            </div>
+                        </div>`;
+
+                            notificationList.appendChild(reminderElement);
+                        });
+                    }
+                    updateReminderCount();
+                });
+        }
+
+        function handleReminderClick(element) {
+            const reminderId = element.getAttribute('data-reminder-id');
+            const peId = element.getAttribute('data-pe-id');
+
+            // Mark as read
+            fetch('/PlannedEvents/MarkReminderAsRead', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ id: reminderId })
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        element.classList.remove('unread');
+                        updateReminderCount();
+                    }
+                });
+
+            // Navigate to PE details
+            if (peId) {
+                window.location.href = `/PlannedEvents/Details/${peId}`;
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        function updateReminderCount() {
+            fetch('/PlannedEvents/GetReminderCount')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('reminderCount');
+                    badge.textContent = data.count;
+                    badge.style.display = data.count > 0 ? 'block' : 'none';
+                });
+        }
+
+        // Load reminders initially and set up auto-refresh
+        document.addEventListener('DOMContentLoaded', function () {
+            loadReminders();
+
+            // Refresh button
+            document.getElementById('refreshNotifications').addEventListener('click', function () {
+                loadReminders();
+            });
+
+            // Mark all as read button
+            document.getElementById('markAllRead').addEventListener('click', function () {
+                fetch('/PlannedEvents/MarkAllRemindersAsRead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.querySelectorAll('.message-item.unread').forEach(item => {
+                                item.classList.remove('unread');
+                            });
+                            updateReminderCount();
+                        }
+                    });
+            });
+
+            // Auto refresh every 5 minutes
+            setInterval(loadReminders, 300000);
+
+            document.querySelectorAll('.btn-group button[data-filter]').forEach(button => {
+                button.addEventListener('click', function () {
+                    // Remove active class from all filter buttons
+                    document.querySelectorAll('.btn-group button[data-filter]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    // Add active class to clicked button
+                    this.classList.add('active');
+
+                    // Update filter and reload reminders
+                    currentFilter = this.getAttribute('data-filter');
+                    loadReminders();
+                });
             });
         });
     </script>

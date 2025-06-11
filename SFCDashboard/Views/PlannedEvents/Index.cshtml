@@ -118,7 +118,7 @@
                 <div class="flex-shrink-0 ms-3">
                     <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" 
                        class="btn btn-primary">
-                        <i class="bi bi-arrow-right"></i> Start Working
+                        <i class="bi bi-arrow-right"></i> Next assigned PE
                     </a>
                 </div>
             </div>
@@ -597,8 +597,8 @@
 <div class="inbox-filters mt-3">
     <div class="btn-group w-100" role="group" aria-label="Message filters">
         <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
-        <button type="button" class="btn btn-outline-primary" data-filter="all">All Messages</button>
         <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
+        <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
     </div>
 </div>
 
@@ -658,11 +658,7 @@
         {
               foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
         {
-            if (issue.SenderId == 1) // System messages
-            {
-                    @await Html.PartialAsync("_ReminderMessage", issue as PEIssueViewModel)
-            }
-            else
+           
             {
                             <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
                                  data-message-id="issue-@issue.CreatedAt.Ticks"
@@ -932,17 +928,32 @@ filterButtons.forEach(button => {
 
         // Show/hide messages based on filter
         messageItems.forEach(item => {
-            if (filter === 'all') {
-                item.style.display = 'flex';
-            } else if (filter === 'unread' && item.classList.contains('unread')) {
-                item.style.display = 'flex';
-            } else if (filter === 'read' && !item.classList.contains('unread')) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
+            
+            const isUnread = item.classList.contains('unread');
+            const isRead = !isUnread;
+
+           switch(filter) {
+                case 'unread':
+                    // Show only unread messages
+                    item.style.display = isUnread ? 'flex' : 'none';
+                    break;
+                case 'read':
+                    // Show only read messages
+                    item.style.display = !isUnread ? 'flex' : 'none';
+                    break;
+                case 'all':
+                    // Show all messages
+                    item.style.display = 'flex';
+                    break;
             }
         });
     });
+});
+// Update the initial visibility setup
+messageItems.forEach(item => {
+    // Show only unread messages by default
+    const isUnread = item.classList.contains('unread');
+    item.style.display = isUnread ? 'flex' : 'none';
 });
             
             // Handle search functionality

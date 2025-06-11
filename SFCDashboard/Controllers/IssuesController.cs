@@ -109,9 +109,9 @@ namespace SFCDashboard.Controllers
             {
                 _context.PEIssues.Add(issue);
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Issue created by user {UserName} ({UserId}) for receiver {ReceiverId}", 
+                _logger.LogInformation("Issue created by user {UserName} ({UserId}) for receiver {ReceiverId}",
                     currentUser.Name, currentUser.Id, model.ReceiverId);
-                
+
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -151,27 +151,27 @@ namespace SFCDashboard.Controllers
             if (currentUser == null) return RedirectToAction("Index", "Home");
 
             var issues = await _context.PEIssues
-.Where(i => i.ReceiverId == currentUser.Id && !i.IsHiddenFromInbox && !i.IsResolved)                .Select(i => new PEIssueViewModel
-                {
-                    Id = i.Id,
-                    SenderId = i.SenderId,
-                    SenderName = _context.Users
+.Where(i => i.ReceiverId == currentUser.Id && !i.IsHiddenFromInbox && !i.IsResolved).Select(i => new PEIssueViewModel
+{
+    Id = i.Id,
+    SenderId = i.SenderId,
+    SenderName = _context.Users
                         .Where(u => u.Id == i.SenderId)
                         .Select(u => u.Name)
                         .FirstOrDefault() ?? "Unknown",
-                    ReceiverId = i.ReceiverId,
-                    ReceiverName = currentUser.Name,
-                    IssueText = i.IssueText,
-                    AttachmentPath = i.AttachmentPath,
-                    CreatedAt = i.CreatedAt,
-                    PlannedEventId = i.PlannedEventId,
-                    IsRead = i.IsRead,
-                    IsReply = i.IsReply,
-                    OriginalIssueId = i.OriginalIssueId,
-                    IsResolved = i.IsResolved,
-                    IsResolutionRequest = i.IsResolutionRequest,
-                    PETaskId = i.PETaskId
-                })
+    ReceiverId = i.ReceiverId,
+    ReceiverName = currentUser.Name,
+    IssueText = i.IssueText,
+    AttachmentPath = i.AttachmentPath,
+    CreatedAt = i.CreatedAt,
+    PlannedEventId = i.PlannedEventId,
+    IsRead = i.IsRead,
+    IsReply = i.IsReply,
+    OriginalIssueId = i.OriginalIssueId,
+    IsResolved = i.IsResolved,
+    IsResolutionRequest = i.IsResolutionRequest,
+    PETaskId = i.PETaskId
+})
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
@@ -226,7 +226,7 @@ namespace SFCDashboard.Controllers
 
             // Get current user ID for sender
             var currentUserId = await GetCurrentUserIdAsync();
-            
+
             // Create the reply
             var reply = new PEIssue
             {
@@ -240,10 +240,10 @@ namespace SFCDashboard.Controllers
                 IsReply = true,
                 OriginalIssueId = issueId                   // Link to the original issue
             };
-            
+
             _context.PEIssues.Add(reply);
             await _context.SaveChangesAsync();
-            
+
             return RedirectToAction("Details", "PlannedEvents", new { id = originalIssue.PlannedEventId });
         }
 
@@ -259,10 +259,10 @@ namespace SFCDashboard.Controllers
                 PlannedEventId = plannedEventId,
                 PETaskId = taskId ?? 0
             };
-            
+
             return View(model);
         }
-        
+
         // POST: Issues/CreateForPE - PE-specific issue creation
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -273,7 +273,7 @@ namespace SFCDashboard.Controllers
                 _logger.LogInformation("CreateForPE called with model: {PE}, {Text}, {Receiver}, {Attachment}",
                     model.PlannedEventId, model.IssueText, model.ReceiverId,
                     Attachment != null ? Attachment.FileName : "No attachment");
-                
+
                 if (model.IssueText == null || string.IsNullOrWhiteSpace(model.IssueText))
                 {
                     _logger.LogWarning("Issue text is empty or null");
@@ -284,22 +284,22 @@ namespace SFCDashboard.Controllers
                 // Process attachment only if one was provided
                 if (Attachment != null && Attachment.Length > 0)
                 {
-                    _logger.LogInformation("Processing attachment: {FileName}, Size: {Size}KB", 
+                    _logger.LogInformation("Processing attachment: {FileName}, Size: {Size}KB",
                         Attachment.FileName, Attachment.Length / 1024);
-                
+
                     try
                     {
                         string uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "issues", model.PlannedEventId.ToString());
                         Directory.CreateDirectory(uploadsDir);
-                
+
                         var uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(Attachment.FileName)}";
                         var filePath = Path.Combine(uploadsDir, uniqueFileName);
-                
+
                         using (var stream = new FileStream(filePath, FileMode.Create))
                         {
                             await Attachment.CopyToAsync(stream);
                         }
-                
+
                         model.AttachmentPath = $"/uploads/issues/{model.PlannedEventId}/{uniqueFileName}";
                         _logger.LogInformation("Attachment saved to: {Path}", model.AttachmentPath);
                     }
@@ -309,19 +309,19 @@ namespace SFCDashboard.Controllers
                         // Continue without attachment rather than failing the whole request
                     }
                 }
-        
+
                 // Set creation time and user info
                 model.CreatedAt = DateTime.Now;
-        
+
                 var currentUser = await GetCurrentUserAsync();
                 if (currentUser != null)
                 {
                     model.SenderId = currentUser.Id;
                 }
-        
+
                 // Add the issue
                 _context.PEIssues.Add(model);
-        
+
                 // Set the PE on hold
                 var pe = await _context.PlannedEvents.FindAsync(model.PlannedEventId);
                 if (pe != null)
@@ -338,12 +338,12 @@ namespace SFCDashboard.Controllers
 
                 // Override the PETaskId with the correct value
                 model.PETaskId = taskListId;
-                
+
                 // NEW: Check if this issue text already exists in SubTaskList
                 var existingSubTask = await _context.SubTaskLists
                     .Where(s => s.PETaskListId == taskListId && s.SubTaskName == model.IssueText)
                     .FirstOrDefaultAsync();
-                    
+
                 if (existingSubTask != null)
                 {
                     // Update frequency and last reported date
@@ -363,14 +363,14 @@ namespace SFCDashboard.Controllers
                         CreatedAt = DateTime.Now,
                         LastReported = DateTime.Now
                     };
-                    
+
                     _context.SubTaskLists.Add(newSubTask);
                     await _context.SaveChangesAsync();  // Try saving immediately to isolate any issues
                     _logger.LogInformation($"Successfully added new subtask: {newSubTask.SubTaskName} for task ID: {taskListId}");
                 }
 
                 await _context.SaveChangesAsync();
-        
+
                 TempData["SuccessMessage"] = "Issue reported successfully!";
                 return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
             }
@@ -384,59 +384,59 @@ namespace SFCDashboard.Controllers
 
         // For AJAX: Get issue suggestions for a PE/tasklist
         [HttpGet]
-public async Task<IActionResult> GetIssueSuggestions(int taskId)
-{
-    try
-    {
-        // First, get suggestions from SubTaskList table (more reliable)
-        var subTaskSuggestions = await _context.SubTaskLists
-            .Where(s => s.PETaskListId == taskId)
-            .OrderByDescending(s => s.Frequency) // Most common issues first
-            .ThenByDescending(s => s.LastReported) // Then most recent
-            .Take(10) // Increased to show more options
-            .Select(s => new 
-            {
-                IssueText = s.SubTaskName,
-                Frequency = s.Frequency,
-                LastReported = s.LastReported,
-                Source = "common" // Indicate this comes from common issues
-            })
-            .ToListAsync();
-        
-        // Then, get previous issues for this task (as before)
-        var recentIssueSuggestions = await _context.PEIssues
-            .Where(i => i.PETaskId == taskId && !i.IsReply && !i.IsResolutionRequest)
-            .OrderByDescending(i => i.CreatedAt)
-            .Take(5)
-            .Select(i => new 
-            {
-                IssueText = i.IssueText,
-                ReportedBy = _context.Users
-                    .Where(u => u.Id == i.SenderId)
-                    .Select(u => u.Name)
-                    .FirstOrDefault() ?? "Unknown",
-                CreatedAt = i.CreatedAt,
-                IsResolved = i.IsResolved,
-                Source = "recent" // Indicate this is from recent issues
-            })
-            .ToListAsync();
-        
-        // Combine and return both types of suggestions
-        var combinedSuggestions = new
+        public async Task<IActionResult> GetIssueSuggestions(int taskId)
         {
-            CommonIssues = subTaskSuggestions,
-            RecentIssues = recentIssueSuggestions
-        };
-        
-        _logger.LogInformation($"Found {subTaskSuggestions.Count} common subtasks and {recentIssueSuggestions.Count} recent issues for task ID {taskId}");
-        return Json(combinedSuggestions);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, $"Error fetching issue suggestions for task ID {taskId}");
-        return Json(new { CommonIssues = new List<object>(), RecentIssues = new List<object>() });
-    }
-}
+            try
+            {
+                // First, get suggestions from SubTaskList table (more reliable)
+                var subTaskSuggestions = await _context.SubTaskLists
+                    .Where(s => s.PETaskListId == taskId)
+                    .OrderByDescending(s => s.Frequency) // Most common issues first
+                    .ThenByDescending(s => s.LastReported) // Then most recent
+                    .Take(10) // Increased to show more options
+                    .Select(s => new
+                    {
+                        IssueText = s.SubTaskName,
+                        Frequency = s.Frequency,
+                        LastReported = s.LastReported,
+                        Source = "common" // Indicate this comes from common issues
+                    })
+                    .ToListAsync();
+
+                // Then, get previous issues for this task (as before)
+                var recentIssueSuggestions = await _context.PEIssues
+                    .Where(i => i.PETaskId == taskId && !i.IsReply && !i.IsResolutionRequest)
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Take(5)
+                    .Select(i => new
+                    {
+                        IssueText = i.IssueText,
+                        ReportedBy = _context.Users
+                            .Where(u => u.Id == i.SenderId)
+                            .Select(u => u.Name)
+                            .FirstOrDefault() ?? "Unknown",
+                        CreatedAt = i.CreatedAt,
+                        IsResolved = i.IsResolved,
+                        Source = "recent" // Indicate this is from recent issues
+                    })
+                    .ToListAsync();
+
+                // Combine and return both types of suggestions
+                var combinedSuggestions = new
+                {
+                    CommonIssues = subTaskSuggestions,
+                    RecentIssues = recentIssueSuggestions
+                };
+
+                _logger.LogInformation($"Found {subTaskSuggestions.Count} common subtasks and {recentIssueSuggestions.Count} recent issues for task ID {taskId}");
+                return Json(combinedSuggestions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching issue suggestions for task ID {taskId}");
+                return Json(new { CommonIssues = new List<object>(), RecentIssues = new List<object>() });
+            }
+        }
 
         [HttpPost]
         public async Task<IActionResult> MarkAsRead(int id)
@@ -466,7 +466,7 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
         }
 
         [HttpPost]
-        public async Task<IActionResult> Reply(int issueId, int plannedEventId, int receiverId, 
+        public async Task<IActionResult> Reply(int issueId, int plannedEventId, int receiverId,
             string replyText, IFormFile attachment)
         {
             try
@@ -478,7 +478,7 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
                     TempData["ErrorMessage"] = "Unable to determine current user.";
                     return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
                 }
-                
+
                 // Create the reply with the current user as the sender
                 var reply = new PEIssue
                 {
@@ -498,15 +498,15 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
                 {
                     var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "issues", plannedEventId.ToString());
                     Directory.CreateDirectory(uploadsFolder);
-                    
+
                     var uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(attachment.FileName)}";
                     var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                    
+
                     using (var stream = new FileStream(filePath, FileMode.Create))
                     {
                         await attachment.CopyToAsync(stream);
                     }
-                    
+
                     reply.AttachmentPath = $"/uploads/issues/{plannedEventId}/{uniqueFileName}";
                 }
 
@@ -530,9 +530,9 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
             try
             {
                 // Log the request for debugging
-                _logger.LogInformation("MarkAsFixed called with issueId: {IssueId}, PE: {PlannedEventId}, details: {Details}", 
+                _logger.LogInformation("MarkAsFixed called with issueId: {IssueId}, PE: {PlannedEventId}, details: {Details}",
                     issueId, plannedEventId, resolutionDetails);
-                    
+
                 var issue = await _context.PEIssues.FindAsync(issueId);
                 if (issue == null)
                 {
@@ -572,13 +572,13 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Issue marked as fixed. A confirmation request has been sent to the reporter.";
-                
+
                 // Return to the PE details page or index based on where the request came from
                 if (Request.Headers["Referer"].ToString().Contains("Details"))
                 {
                     return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
                 }
-                
+
                 return RedirectToAction("Index", "PlannedEvents");
             }
             catch (Exception ex)
@@ -594,7 +594,7 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
         public async Task<IActionResult> ConfirmResolution(int resolutionId, bool isConfirmed)
         {
             _logger.LogInformation($"ConfirmResolution called with resolutionId: {resolutionId}, isConfirmed: {isConfirmed}");
-            
+
             try
             {
                 var resolution = await _context.PEIssueResolutions.FindAsync(resolutionId);
@@ -621,14 +621,14 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
                     resolution.IsConfirmed = true;
                     resolution.ConfirmedDate = DateTime.Now;
                     _context.Update(resolution);
-                    
+
                     // Mark issue as resolved
                     if (issue != null)
                     {
                         issue.IsResolved = true;
                         _context.Update(issue);
                         _logger.LogInformation($"Issue {issue.Id} marked as resolved");
-                        
+
                         // Find and mark the original issue as resolved if this is a reply
                         if (issue.OriginalIssueId.HasValue)
                         {
@@ -640,12 +640,12 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
                                 _logger.LogInformation($"Original issue {originalIssue.Id} also marked as resolved");
                             }
                         }
-                        
+
                         // Find the resolution request message and hide it from inbox
                         var resolutionRequestMessage = await _context.PEIssues
-                            .FirstOrDefaultAsync(i => i.IsResolutionRequest && 
+                            .FirstOrDefaultAsync(i => i.IsResolutionRequest &&
                                             i.OriginalIssueId == issue.Id);
-                        
+
                         if (resolutionRequestMessage != null)
                         {
                             resolutionRequestMessage.IsHiddenFromInbox = true;
@@ -657,16 +657,16 @@ public async Task<IActionResult> GetIssueSuggestions(int taskId)
                     {
                         _logger.LogWarning($"Issue not found for resolution id: {resolutionId}");
                     }
-                    
+
                     // Update planned event - ONLY if no other active issues remain
                     if (pe != null)
                     {
                         // Check if any unresolved root issues remain (improved query)
                         var hasOtherActiveIssues = await _context.PEIssues
-                            .AnyAsync(i => i.PlannedEventId == pe.Id && 
-                                      !i.IsResolved && 
+                            .AnyAsync(i => i.PlannedEventId == pe.Id &&
+                                      !i.IsResolved &&
                                       i.OriginalIssueId == null);  // Only consider root issues
-pe.IsHold = false;
+                        pe.IsHold = false;
                         if (!hasOtherActiveIssues)
                         {
                             pe.IsHold = false;  // Set IsHold to false
@@ -682,7 +682,7 @@ pe.IsHold = false;
                     {
                         _logger.LogWarning($"PE not found for resolution id: {resolutionId}");
                     }
-                    
+
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Resolution confirmed and issue marked as resolved.";
                 }
@@ -690,7 +690,7 @@ pe.IsHold = false;
                 {
                     // If rejected, delete the resolution request and create a notification
                     _context.Remove(resolution);
-                    
+
                     // Notify the user who attempted to fix the issue
                     var notification = new PEIssue
                     {
@@ -704,10 +704,10 @@ pe.IsHold = false;
                         IsReply = true,
                         OriginalIssueId = issue.Id
                     };
-                    
+
                     _context.PEIssues.Add(notification);
                     await _context.SaveChangesAsync();
-                    
+
                     TempData["SuccessMessage"] = "Resolution rejected. The responder has been notified.";
                 }
 
@@ -722,69 +722,71 @@ pe.IsHold = false;
         }
 
         [HttpGet]
-public async Task<IActionResult> GetResolution(int id)
-{
-    try
-    {
-        // Try by direct ID first
-        var resolution = await _context.PEIssueResolutions
-            .FirstOrDefaultAsync(r => r.Id == id && !r.IsConfirmed);
-        
-        // If not found, try by issue ID
-        if (resolution == null)
+        public async Task<IActionResult> GetResolution(int id)
         {
-            resolution = await _context.PEIssueResolutions
-                .FirstOrDefaultAsync(r => r.IssueId == id && !r.IsConfirmed);
+            try
+            {
+                // Try by direct ID first
+                var resolution = await _context.PEIssueResolutions
+                    .FirstOrDefaultAsync(r => r.Id == id && !r.IsConfirmed);
+
+                // If not found, try by issue ID
+                if (resolution == null)
+                {
+                    resolution = await _context.PEIssueResolutions
+                        .FirstOrDefaultAsync(r => r.IssueId == id && !r.IsConfirmed);
+                }
+
+                if (resolution == null)
+                {
+                    _logger.LogWarning($"Resolution not found for ID or IssueID: {id}");
+                    return NotFound(new { error = "No resolution found for this issue" });
+                }
+
+                _logger.LogInformation($"Resolution found: ID={resolution.Id}, IssueID={resolution.IssueId}, Details={resolution.ResolutionDetails}");
+
+                return Json(new
+                {
+                    id = resolution.Id,
+                    issueId = resolution.IssueId,
+                    details = resolution.ResolutionDetails,
+                    date = resolution.ResolutionDate
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving resolution for ID: {id}");
+                return StatusCode(500, new { error = "An error occurred while retrieving the resolution" });
+            }
         }
-        
-        if (resolution == null)
-        {
-            _logger.LogWarning($"Resolution not found for ID or IssueID: {id}");
-            return NotFound(new { error = "No resolution found for this issue" });
-        }
-        
-        _logger.LogInformation($"Resolution found: ID={resolution.Id}, IssueID={resolution.IssueId}, Details={resolution.ResolutionDetails}");
-        
-        return Json(new { 
-            id = resolution.Id,
-            issueId = resolution.IssueId,
-            details = resolution.ResolutionDetails,
-            date = resolution.ResolutionDate
-        });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, $"Error retrieving resolution for ID: {id}");
-        return StatusCode(500, new { error = "An error occurred while retrieving the resolution" });
-    }
-}
 
         [HttpGet]
-public async Task<IActionResult> GetResolutionById(int id)
-{
-    try
-    {
-        var resolution = await _context.PEIssueResolutions.FindAsync(id);
-        
-        if (resolution == null)
+        public async Task<IActionResult> GetResolutionById(int id)
         {
-            _logger.LogWarning($"Resolution not found for ID: {id}");
-            return NotFound(new { error = "Resolution not found" });
+            try
+            {
+                var resolution = await _context.PEIssueResolutions.FindAsync(id);
+
+                if (resolution == null)
+                {
+                    _logger.LogWarning($"Resolution not found for ID: {id}");
+                    return NotFound(new { error = "Resolution not found" });
+                }
+
+                return Json(new
+                {
+                    id = resolution.Id,
+                    issueId = resolution.IssueId,
+                    details = resolution.ResolutionDetails,
+                    date = resolution.ResolutionDate
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving resolution for ID: {id}");
+                return StatusCode(500, new { error = "An error occurred while retrieving the resolution" });
+            }
         }
-        
-        return Json(new { 
-            id = resolution.Id,
-            issueId = resolution.IssueId,
-            details = resolution.ResolutionDetails,
-            date = resolution.ResolutionDate
-        });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, $"Error retrieving resolution for ID: {id}");
-        return StatusCode(500, new { error = "An error occurred while retrieving the resolution" });
-    }
-}
 
         #endregion
 
@@ -825,7 +827,7 @@ public async Task<IActionResult> GetResolutionById(int id)
         {
             // Extract service ID from email (whatever logic you're using)
             if (string.IsNullOrEmpty(email)) return string.Empty;
-            
+
             // Assuming email format is name@domain.com or serviceId@domain.com
             return email.Split('@').FirstOrDefault() ?? string.Empty;
         }

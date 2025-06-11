@@ -246,11 +246,11 @@
                                         {
                                             "completed" => "badge bg-success",
                                             "in progress" => "badge bg-warning text-dark",
-                                            "ongoing" => "badge bg-info",
+                                            "ongoing" => "badge bg-success", // Changed bg-info to bg-success for regular tasks
                                             "pending" => "badge bg-secondary",
                                             _ => "badge bg-secondary"
                                         };
-                                        displayStatus = Model.PEStatus;
+                                        displayStatus = Model.PEStatus?.ToLower() == "ongoing" ? "Regular" : Model.PEStatus;
                                     }
                                 }
                                 <span class="@statusClass">@displayStatus</span>

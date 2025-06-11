@@ -803,6 +803,89 @@
 [data-theme="dark"] .workgroup-filter-section .alert i {
     color: #63a8ff;
 }
+/* Notification menu styles */
+.notification-menu {
+    min-width: 350px;
+    max-width: 400px;
+}
 
+/* Button group styles */
+.btn-group .btn-outline-primary.active {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+/* Dark mode specific styles */
+[data-theme="dark"] .btn-group .btn-outline-primary {
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .btn-group .btn-outline-primary.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+/* Enhanced Radio Button Styles */
+.form-check-input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #0b0b0b;
+    margin-top: 0.3rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.form-check-input[type="radio"]:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.25);
+}
+
+.form-check-input[type="radio"]:hover {
+    border-color: #0d6efd;
+}
+
+.form-check {
+    padding-left: 2rem;
+    margin-bottom: 1rem;
+}
+
+.form-check-label {
+    cursor: pointer;
+    padding-left: 0.5rem;
+}
+
+/* Dark mode styles */
+[data-theme="dark"] .form-check-input[type="radio"] {
+    border-color: #6c757d;
+    background-color: transparent;
+}
+
+[data-theme="dark"] .form-check-input[type="radio"]:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+[data-theme="dark"] .form-check-input[type="radio"]:hover {
+    border-color: #0d6efd;
+}
+
+/* Priority badges */
+.form-check-label strong {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.priority-hint {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    margin-left: 1.75rem;
+}
+
+[data-theme="dark"] .priority-hint {
+    color: #adb5bd;
+}
 
 
