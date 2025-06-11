@@ -32,7 +32,13 @@ namespace SFCDashboard.Services
                     .Include(t => t.PlannedEvent)
                     .Where(t => t.TaskStatus != "COMPLETED" && 
                                (t.PlannedEvent == null || t.PlannedEvent.IsHold == false));
-                    
+        
+                // Filter PEs - use simpler condition that EF Core can translate
+                query = query.Where(t => t.PlannedEvent == null || 
+                                       (t.PlannedEvent.PeNumber != null && 
+                                        t.PlannedEvent.PeNumber.StartsWith("PE") &&
+                                        t.PlannedEvent.PeNumber.Length >= 6));
+        
                 // Apply workgroup filter if specified
                 if (workgroupId.HasValue)
                 {
@@ -44,8 +50,18 @@ namespace SFCDashboard.Services
                     }
                 }
 
-                // Get all active tasks
+                // Get all tasks that match our basic filters
                 var tasks = await query.ToListAsync();
+                
+                // Apply the year filter in memory after fetching from database
+                tasks = tasks.Where(t => 
+                    t.PlannedEvent == null || 
+                    (t.PlannedEvent.PeNumber != null &&
+                     t.PlannedEvent.PeNumber.StartsWith("PE") &&
+                     t.PlannedEvent.PeNumber.Length >= 6 &&
+                     int.TryParse(t.PlannedEvent.PeNumber.Substring(2, 4), out int year) &&
+                     year >= 2024)
+                ).ToList();
 
                 // Calculate priority score for each task
                 foreach (var task in tasks)
@@ -90,25 +106,49 @@ namespace SFCDashboard.Services
                     if (task.IsUrgent)
                     {
                         if (task.Priority?.Contains("Opening Ceremony") == true)
-                            priorityScore += (int)TaskPriority.UrgentOpeningCeremony;
+                        {
+                            // P1 - Opening Ceremony - Highest priority with a large base value
+                            priorityScore = 1000 + (int)TaskPriority.UrgentOpeningCeremony;
+                            
+                            // Add urgency based on when it was marked (more recent = higher priority)
+                            if (task.UrgentMarkedDate.HasValue)
+                            {
+                                var daysSinceMarked = (today - task.UrgentMarkedDate.Value.Date).Days;
+                                priorityScore += Math.Max(0, 5 - daysSinceMarked); // More points if more recently marked
+                            }
+                        }
                         else if (task.Priority?.Contains("Critical Customer") == true)
-                            priorityScore += (int)TaskPriority.UrgentCriticalCustomer;
+                        {
+                            // P2 - Critical Customer - Second highest priority with a large base value
+                            priorityScore = 800 + (int)TaskPriority.UrgentCriticalCustomer + 1.5;
+                            
+                            // Add urgency based on when it was marked (more recent = higher priority)
+                            if (task.UrgentMarkedDate.HasValue)
+                            {
+                                var daysSinceMarked = (today - task.UrgentMarkedDate.Value.Date).Days;
+                                priorityScore += Math.Max(0, 5 - daysSinceMarked); // More points if more recently marked
+                            }
+                        }
                         else
-                            priorityScore += (int)TaskPriority.UrgentCriticalCustomer; // Default urgent priority
+                        {
+                            // Regular urgent tasks - base value ensures they're high priority
+                            priorityScore = 500 + (int)TaskPriority.UrgentCriticalCustomer;
+                        }
                     }
                     
                     // 2. Check for OLA violation
                     if (task.IsOLAViolate)
                     {
-                        priorityScore += (int)TaskPriority.OLAViolation;
+                        // Reduce the base points for OLA violation (currently using TaskPriority.OLAViolation enum value)
+                        priorityScore += (int)TaskPriority.OLAViolation * 0.75; // Reduce to 75% of original value
                         
-                        // Add additional weight based on how overdue the task is relative to its OLA
-                        // (1 point per 10% of OLA period overdue, max 5 additional points)
+                        // Reduce the additional points for overdue tasks
                         if (daysUntilDue < 0)
                         {
                             var daysOverdue = Math.Abs(daysUntilDue);
                             var percentageOverdue = (daysOverdue / (double)olaInDays) * 100;
-                            var additionalPoints = Math.Min(5, percentageOverdue / 10.0);
+                            // Reduce max additional points from 5 to 3 and reduce the rate of accumulation
+                            var additionalPoints = Math.Min(3, percentageOverdue / 15.0); // Changed from 10.0 to 15.0
                             priorityScore += additionalPoints;
                         }
                     }
@@ -179,9 +219,13 @@ namespace SFCDashboard.Services
 
         private string GetPriorityLevelName(double priorityScore)
         {
-            // Simplified priority level determination based on score ranges
-            if (priorityScore >= 10)
-                return "High";
+            // Updated priority level determination with new score ranges
+            if (priorityScore >= 1000)
+                return "URGENT P1";
+            else if (priorityScore >= 800)
+                return "URGENT P2"; 
+            else if (priorityScore >= 500)
+                return "URGENT";
             else if (priorityScore >= 5)
                 return "Medium";
             else
@@ -209,7 +253,8 @@ namespace SFCDashboard.Services
         public DateTime? EffectiveDeadline { get; set; }
         public int OLAInDays { get; set; }
         public double OLAPercentRemaining { get; set; }
-        
+        public DateTime? UrgentMarkedDate => Task?.UrgentMarkedDate;
+
         // Helper properties for UI display
         public bool IsOverdue => DaysUntilDue < 0;
         

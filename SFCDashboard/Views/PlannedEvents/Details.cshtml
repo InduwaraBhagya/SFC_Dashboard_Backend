@@ -391,6 +391,12 @@
                                 @if (task.IsUrgent)
                                         {
                                             <span class="badge bg-danger">URGENT</span>
+                                            @if (task.UrgentMarkedDate.HasValue)
+                                            {
+                                                <small class="text-danger d-block">
+                                                    <i class="bi bi-clock-history"></i> Marked on: @task.UrgentMarkedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                                </small>
+                                            }
                                         }
                                         @if (task.UrgentRequested && !task.IsUrgent)
                                         {

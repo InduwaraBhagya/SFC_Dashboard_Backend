@@ -157,6 +157,12 @@
                                         }
                                         <span class="badge @badgeClass">@item.PriorityLevel</span>
                                         <small class="d-block text-muted mt-1">Score: @item.PriorityScore.ToString("F1")</small>
+                                        @if (item.Task.UrgentMarkedDate.HasValue)
+                                        {
+                                            <small class="d-block text-danger mt-1">
+                                                <i class="bi bi-clock-history"></i> Marked urgent on: @item.Task.UrgentMarkedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                            </small>
+                                        }
                                     </td>
                                     <td>@item.Task.PENumber</td>
                                     <td>@item.Task.Task</td>
@@ -194,13 +200,16 @@
                         <h5>Priority Scoring System</h5>
                         <div class="row">
                             <div class="col-md-3">
-                                <span class="badge bg-danger me-1">URGENT P1</span> Opening Ceremony (Score: 8+)
+                                <span class="badge bg-danger me-1">URGENT P1</span> Opening Ceremony (Score: 1000+)
                             </div>
                             <div class="col-md-3">
-                                <span class="badge bg-danger me-1">URGENT P2</span> Critical Customer (Score: 6+)
+                                <span class="badge bg-danger me-1">URGENT P2</span> Critical Customer (Score: 800+)
                             </div>
                             <div class="col-md-3">
-                                <span class="badge bg-warning text-dark me-1">OLA VIOLATION</span> (Score: 5+)
+                                <span class="badge bg-danger me-1">URGENT</span> Regular Urgent (Score: 500+)
+                            </div>
+                            <div class="col-md-3">
+                                <span class="badge bg-warning text-dark me-1">OLA VIOLATION</span> (Score: 3.75+)
                             </div>
                             <div class="col-md-3 mt-2">
                                 <span class="badge bg-info text-dark me-1">APPROACHING</span> Due within 2 days (Score: 3+)

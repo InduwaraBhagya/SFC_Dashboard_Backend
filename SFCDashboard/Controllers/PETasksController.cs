@@ -56,6 +56,7 @@ namespace SFCDashboard.Controllers
 
             // Mark this task as urgent immediately (no approval needed)
             task.IsUrgent = true;
+            task.UrgentMarkedDate = DateTime.Now; // Store the current date and time
             task.UrgentRequested = false;
             
             // Check if the PE has a priority set, and use it for the task
@@ -131,6 +132,7 @@ namespace SFCDashboard.Controllers
                 case "OpeningCeremony":
                     markAsUrgent = true;
                     task.IsUrgent = true;
+                    task.UrgentMarkedDate = DateTime.Now; // Store the current date and time
                     priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
                     priorityLevel = 1;
                     // Clear any previous priority and set the new one
@@ -140,6 +142,7 @@ namespace SFCDashboard.Controllers
                 case "CriticalCustomer":
                     markAsUrgent = true;
                     task.IsUrgent = true;
+                    task.UrgentMarkedDate = DateTime.Now; // Store the current date and time
                     priorityMessage = "[URGENT: Critical Customer - Priority 2]";
                     priorityLevel = 2;
                     // Clear any previous priority and set the new one
@@ -158,6 +161,9 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction(nameof(UrgentRequestsList));
             }
 
+            // Always set UrgentRequested to false after processing
+            task.UrgentRequested = false;
+    
             _context.Update(task);
 
             // Update the PlannedEvent if needed
@@ -447,37 +453,7 @@ namespace SFCDashboard.Controllers
             return Json(history);
         }
 
-        // Add this method to PETasksController
-        private async Task UpdateTasksPriorityFromPE(string peNumber, string pePriority)
-        {
-            if (string.IsNullOrEmpty(peNumber) || string.IsNullOrEmpty(pePriority))
-                return;
-                
-            _logger.LogInformation("Updating all tasks for PE {peNumber} with priority: {priority}", 
-                peNumber, pePriority);
-                
-            // Get all tasks for this PE
-            var tasks = await _context.PETasks
-                .Where(t => t.PENumber == peNumber && t.TaskStatus != "COMPLETED")
-                .ToListAsync();
-                
-            if (tasks.Any())
-            {
-                foreach (var task in tasks)
-                {
-                    // Set the priority and update urgent flag
-                    task.Priority = pePriority ;
-                    task.IsUrgent = true;
-                    task.UrgentRequested = false; // Clear any pending urgent requests
-                    
-                    _context.Update(task);
-                    _logger.LogInformation("Updated task ID {taskId} with inherited priority", task.Id);
-                }
-                
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Updated {count} tasks with priority from PE {peNumber}", 
-                    tasks.Count, peNumber);
-            }
-        }
+       
+        
     }
 }

@@ -851,6 +851,7 @@ public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReaso
                 if (task != null)
                 {
                     task.IsUrgent = true;
+                    task.UrgentMarkedDate = DateTime.Now;
                     task.UrgentRequested = false;
                     task.Priority = priorityMessage + " (Inherited from PE)";
                     

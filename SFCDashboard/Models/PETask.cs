@@ -31,6 +31,7 @@ namespace SFCDashboard.Models
         public DateTime? ACtualTaskCompleteDate { get; set; }
 
         public bool IsUrgent { get; set; }
+        public DateTime? UrgentMarkedDate { get; set; } // New property to track when task was marked urgent
         public bool UrgentRequested { get; set; } = false;
         public string? Priority { get; set; }
         public PlannedEvent? PlannedEvent { get; set; }
