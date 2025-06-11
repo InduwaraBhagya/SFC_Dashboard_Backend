@@ -24,6 +24,7 @@ namespace SFCDashboard.Controllers
             return email[..Math.Min(email.Length, 6)];
         }
 
+        // GET
         public async Task<IActionResult> Index()
         {
             if (!User.Identity?.IsAuthenticated == true)
@@ -36,6 +37,7 @@ namespace SFCDashboard.Controllers
 
             // Get existing user details from database
             var existingUser = await _context.Users
+                .Include(u => u.UserWorkGroups)
                 .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
 
             if (existingUser == null)
@@ -45,17 +47,25 @@ namespace SFCDashboard.Controllers
                 existingUser = new SystemUser
                 {
                     Name = name,
-                    ServiceId = serviceId
+                    ServiceId = serviceId,
+                    UserWorkGroups = new List<UserWorkGroup>()
                 };
             }
 
-            ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name");
-            return View(existingUser);
+            var vm = new SystemUserViewModel
+            {
+                Name = existingUser?.Name ?? "",
+                ServiceId = existingUser?.ServiceId ?? "",
+                WorkGroupIds = existingUser?.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>()
+            };
+            ViewData["WorkGroupIds"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", vm.WorkGroupIds);
+            return View(vm);
         }
 
+        // POST
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(SystemUser user)
+        public async Task<IActionResult> Index(SystemUserViewModel vm)
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
@@ -67,19 +77,50 @@ namespace SFCDashboard.Controllers
 
             // Get existing user
             var existingUser = await _context.Users
+                .Include(u => u.UserWorkGroups)
                 .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
 
             if (existingUser != null)
             {
-                // Update existing user's WorkGroup
-                existingUser.WorkGroupId = user.WorkGroupId;
+                // Update existing user's name
+                existingUser.Name = vm.Name;
+
+                // Update user-workgroup relations
+                var existingWgIds = existingUser.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
+
+                // Remove old relations
+                var toRemove = existingUser.UserWorkGroups?.Where(uwg => !vm.WorkGroupIds.Contains(uwg.WorkGroupId)).ToList() ?? new List<UserWorkGroup>();
+                _context.UserWorkGroups.RemoveRange(toRemove);
+
+                // Add new relations
+                var toAdd = vm.WorkGroupIds.Where(wgId => !existingWgIds.Contains(wgId)).ToList();
+                foreach (var wgId in toAdd)
+                {
+                    _context.UserWorkGroups.Add(new UserWorkGroup
+                    {
+                        SystemUserId = existingUser.Id,
+                        WorkGroupId = wgId
+                    });
+                }
+
                 _context.Update(existingUser);
             }
             else
             {
                 // Create new user if doesn't exist
-                user.ServiceId = serviceId;
-                user.Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty;
+                var user = new SystemUser
+                {
+                    ServiceId = serviceId,
+                    Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty,
+                    UserWorkGroups = new List<UserWorkGroup>()
+                };
+                foreach (var wgId in vm.WorkGroupIds)
+                {
+                    user.UserWorkGroups.Add(new UserWorkGroup
+                    {
+                        WorkGroupId = wgId
+                    });
+                }
                 _context.Add(user);
             }
 
@@ -96,8 +137,8 @@ namespace SFCDashboard.Controllers
                 }
             }
 
-            ViewData["WorkGroupId"] = new SelectList(_context.WorkGroups, "Id", "Name", user.WorkGroupId);
-            return View(user);
+            ViewData["WorkGroupIds"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", vm.WorkGroupIds);
+            return View(vm);
         }
     }
 }

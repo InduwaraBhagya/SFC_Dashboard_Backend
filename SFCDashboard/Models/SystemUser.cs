@@ -17,15 +17,12 @@ public class SystemUser
 
     public int? UserRoleId { get; set; }
 
-    public int? WorkGroupId { get; set; }
-
     // Navigation properties
     [ForeignKey("UserRoleId")]
     public virtual UserRole? UserRole { get; set; }
 
     // Navigation properties
-    [ForeignKey("WorkGroupId")]
-    public virtual WorkGroup? WorkGroup { get; set; }
+     public virtual ICollection<UserWorkGroup>? UserWorkGroups { get; set; }
     public virtual ICollection<PlannedEvent>? AssignedEvents { get; set; }
     public virtual ICollection<TaskHistory>? TaskChanges { get; set; }
     public virtual ICollection<TaskExtensionRequest>? RequestedExtensions { get; set; }

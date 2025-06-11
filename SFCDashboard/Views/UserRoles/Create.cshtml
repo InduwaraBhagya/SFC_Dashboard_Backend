@@ -1,4 +1,5 @@
-﻿@model SFCDashboard.Models.UserRole
+﻿@using SFCDashboard.Models
+@model SFCDashboard.Models.UserRole
 
 @{
     ViewData["Title"] = "Create Role";
@@ -66,9 +67,6 @@
                                                        value="@permission.Id" 
                                                        class="form-check-input" 
                                                        id="perm_@permission.Id" />
-                                                <label class="form-check-label fw-medium" for="perm_@permission.Id">
-                                                    @permission.Name
-                                                </label>
                                                 @if (!string.IsNullOrEmpty(permission.Description))
                                                 {
                                                     <small class="text-muted d-block mt-1">@permission.Description</small>

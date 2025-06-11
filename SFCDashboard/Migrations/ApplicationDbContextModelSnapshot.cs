@@ -22,6 +22,50 @@ namespace SFCDashboard.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Project", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Projects");
+                });
+
+            modelBuilder.Entity("ProjectPEMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("PlannedEventId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlannedEventId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("ProjectPEMappings");
+                });
+
             modelBuilder.Entity("SFCDB.Models.PERecord", b =>
                 {
                     b.Property<int>("ID")
@@ -1025,6 +1069,21 @@ namespace SFCDashboard.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.UserWorkGroup", b =>
+                {
+                    b.Property<int>("SystemUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkGroupId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SystemUserId", "WorkGroupId");
+
+                    b.HasIndex("WorkGroupId");
+
+                    b.ToTable("UserWorkGroups");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.WorkGroup", b =>
                 {
                     b.Property<int>("Id")
@@ -1064,16 +1123,30 @@ namespace SFCDashboard.Migrations
                     b.Property<int?>("UserRoleId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("WorkGroupId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("UserRoleId");
 
-                    b.HasIndex("WorkGroupId");
-
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("ProjectPEMapping", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
+                        .WithMany()
+                        .HasForeignKey("PlannedEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Project", "Project")
+                        .WithMany("ProjectPEs")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PlannedEvent");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("SFCDB.Models.UrgentReason", b =>
@@ -1248,19 +1321,37 @@ namespace SFCDashboard.Migrations
                     b.Navigation("PlannedEvent");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.UserWorkGroup", b =>
+                {
+                    b.HasOne("SystemUser", "SystemUser")
+                        .WithMany("UserWorkGroups")
+                        .HasForeignKey("SystemUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.WorkGroup", "WorkGroup")
+                        .WithMany("UserWorkGroups")
+                        .HasForeignKey("WorkGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SystemUser");
+
+                    b.Navigation("WorkGroup");
+                });
+
             modelBuilder.Entity("SystemUser", b =>
                 {
                     b.HasOne("SFCDashboard.Models.UserRole", "UserRole")
                         .WithMany()
                         .HasForeignKey("UserRoleId");
 
-                    b.HasOne("SFCDashboard.Models.WorkGroup", "WorkGroup")
-                        .WithMany("Users")
-                        .HasForeignKey("WorkGroupId");
-
                     b.Navigation("UserRole");
+                });
 
-                    b.Navigation("WorkGroup");
+            modelBuilder.Entity("Project", b =>
+                {
+                    b.Navigation("ProjectPEs");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.UserRole", b =>
@@ -1272,7 +1363,7 @@ namespace SFCDashboard.Migrations
                 {
                     b.Navigation("AssignedEvents");
 
-                    b.Navigation("Users");
+                    b.Navigation("UserWorkGroups");
                 });
 
             modelBuilder.Entity("SystemUser", b =>
@@ -1284,6 +1375,8 @@ namespace SFCDashboard.Migrations
                     b.Navigation("RequestedExtensions");
 
                     b.Navigation("TaskChanges");
+
+                    b.Navigation("UserWorkGroups");
                 });
 #pragma warning restore 612, 618
         }
