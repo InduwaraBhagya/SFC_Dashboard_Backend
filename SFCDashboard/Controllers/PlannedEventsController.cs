@@ -658,8 +658,9 @@ namespace SFCDashboard.Controllers
                     {
                         if (hasDrawFiberAccess)
                         {
-                            query = query.Where(p =>
-                                p.TaskWg != null && p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"
+                            query = query.Where(p => p.TaskWg != null &&
+                                (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                                || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
                             );
                         }
                         else
@@ -750,8 +751,9 @@ namespace SFCDashboard.Controllers
                     {
                         if (hasDrawFiberAccess)
                         {
-                            query = query.Where(p =>
-                                p.TaskWg != null && p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"
+                             query = query.Where(p => p.TaskWg != null &&
+                                (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                                || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
                             );
                         }
                         else
@@ -848,8 +850,9 @@ namespace SFCDashboard.Controllers
                 {
                     if (hasDrawFiberAccess)
                         {
-                            query = query.Where(p =>
-                                p.TaskWg != null && p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"
+                             query = query.Where(p => p.TaskWg != null &&
+                                (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                                || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
                             );
                         }
                         else
@@ -947,8 +950,9 @@ namespace SFCDashboard.Controllers
                     {
                         if (hasDrawFiberAccess)
                         {
-                            query = query.Where(p =>
-                                p.TaskWg != null && p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"
+                             query = query.Where(p => p.TaskWg != null &&
+                                (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                                || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
                             );
                         }
                         else
@@ -1598,6 +1602,7 @@ namespace SFCDashboard.Controllers
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
+            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
 
             // Get PE numbers with OLA violation
             var violatingPENumbers = await _context.PETasks
@@ -1636,8 +1641,18 @@ namespace SFCDashboard.Controllers
 
                 if (workgroupNames.Any())
                 {
-                    query = query.Where(p => p.TaskWg != null &&
-                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            (workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
                 }
             }
 
