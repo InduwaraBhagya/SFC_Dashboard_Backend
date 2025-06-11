@@ -37,5 +37,6 @@ namespace SFCDashboard.Models
         public PlannedEvent? PlannedEvent { get; set; }
         public DateTime? EstimatedTime { get; set; }
         public bool IsOLAViolate { get; set; }// Change from TimeSpan? to DateTime?
+        public DateTime OLADateTime { get; internal set; }
     }
 }

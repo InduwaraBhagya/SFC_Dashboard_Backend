@@ -324,6 +324,56 @@ namespace SFCDashboard.Migrations
                     b.ToTable("UrgentReasons");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.Escalation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IgnoreReason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("IgnoredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("IgnoredById")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsIgnored")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OLAViolationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RecipientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IgnoredById");
+
+                    b.HasIndex("RecipientId");
+
+                    b.HasIndex("TaskId");
+
+                    b.ToTable("Escalations");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -486,6 +536,9 @@ namespace SFCDashboard.Migrations
                     b.Property<string>("OLA")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("OLADateTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("PENumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -510,6 +563,9 @@ namespace SFCDashboard.Migrations
 
                     b.Property<string>("TaskWorkGroup")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UrgentMarkedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("UrgentRequested")
                         .HasColumnType("bit");
@@ -596,6 +652,12 @@ namespace SFCDashboard.Migrations
                             Id = 5,
                             Description = "Admin permissions",
                             Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Description = "Can view all records",
+                            Name = "ViewAll"
                         });
                 });
 
@@ -1077,9 +1139,17 @@ namespace SFCDashboard.Migrations
                     b.Property<int>("WorkGroupId")
                         .HasColumnType("int");
 
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WorkGroupId1")
+                        .HasColumnType("int");
+
                     b.HasKey("SystemUserId", "WorkGroupId");
 
                     b.HasIndex("WorkGroupId");
+
+                    b.HasIndex("WorkGroupId1");
 
                     b.ToTable("UserWorkGroups");
                 });
@@ -1158,6 +1228,29 @@ namespace SFCDashboard.Migrations
                         .IsRequired();
 
                     b.Navigation("PERecord");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.Escalation", b =>
+                {
+                    b.HasOne("SystemUser", "IgnoredBy")
+                        .WithMany()
+                        .HasForeignKey("IgnoredById");
+
+                    b.HasOne("SystemUser", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientId");
+
+                    b.HasOne("SFCDashboard.Models.PETask", "PETask")
+                        .WithMany()
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IgnoredBy");
+
+                    b.Navigation("PETask");
+
+                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
@@ -1330,10 +1423,14 @@ namespace SFCDashboard.Migrations
                         .IsRequired();
 
                     b.HasOne("SFCDashboard.Models.WorkGroup", "WorkGroup")
-                        .WithMany("UserWorkGroups")
+                        .WithMany()
                         .HasForeignKey("WorkGroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.WorkGroup", null)
+                        .WithMany("UserWorkGroups")
+                        .HasForeignKey("WorkGroupId1");
 
                     b.Navigation("SystemUser");
 

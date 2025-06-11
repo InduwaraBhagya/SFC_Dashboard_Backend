@@ -22,9 +22,14 @@ public class SystemUser
     public virtual UserRole? UserRole { get; set; }
 
     // Navigation properties
-     public virtual ICollection<UserWorkGroup>? UserWorkGroups { get; set; }
+    public virtual ICollection<UserWorkGroup> UserWorkGroups { get; set; }
     public virtual ICollection<PlannedEvent>? AssignedEvents { get; set; }
     public virtual ICollection<TaskHistory>? TaskChanges { get; set; }
     public virtual ICollection<TaskExtensionRequest>? RequestedExtensions { get; set; }
     public virtual ICollection<TaskExtensionRequest>? ApprovedExtensions { get; set; }
+
+    public SystemUser()
+    {
+        UserWorkGroups = new HashSet<UserWorkGroup>();
+    }
 }

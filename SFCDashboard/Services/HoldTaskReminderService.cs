@@ -49,8 +49,12 @@ namespace SFCDashboard.Services
             {
                 // Get users in the workgroup
                 var workgroupUsers = await context.Users
-                    .Where(u => u.WorkGroup.Name == task.TaskWg)
-                    .ToListAsync();
+    .Where(u => u.UserWorkGroups.Any(uwg => 
+        context.WorkGroups.Any(wg => 
+            wg.Id == uwg.WorkGroupId && wg.Name == task.TaskWg)))
+    .ToListAsync();
+    
+
 
                 foreach (var user in workgroupUsers)
                 {

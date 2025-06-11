@@ -12,7 +12,7 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250609035405_initialMigration")]
+    [Migration("20250611100751_initialMigration")]
     partial class initialMigration
     {
         /// <inheritdoc />
@@ -514,6 +514,9 @@ namespace SFCDashboard.Migrations
                     b.Property<string>("TaskWorkGroup")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("UrgentMarkedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("UrgentRequested")
                         .HasColumnType("bit");
 
@@ -599,6 +602,12 @@ namespace SFCDashboard.Migrations
                             Id = 5,
                             Description = "Admin permissions",
                             Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Description = "Can view all records",
+                            Name = "ViewAll"
                         });
                 });
 
@@ -1072,6 +1081,29 @@ namespace SFCDashboard.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.UserWorkGroup", b =>
+                {
+                    b.Property<int>("SystemUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WorkGroupId1")
+                        .HasColumnType("int");
+
+                    b.HasKey("SystemUserId", "WorkGroupId");
+
+                    b.HasIndex("WorkGroupId");
+
+                    b.HasIndex("WorkGroupId1");
+
+                    b.ToTable("UserWorkGroups");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.WorkGroup", b =>
                 {
                     b.Property<int>("Id")
@@ -1111,14 +1143,9 @@ namespace SFCDashboard.Migrations
                     b.Property<int?>("UserRoleId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("WorkGroupId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("UserRoleId");
-
-                    b.HasIndex("WorkGroupId");
 
                     b.ToTable("Users");
                 });
@@ -1314,19 +1341,36 @@ namespace SFCDashboard.Migrations
                     b.Navigation("PlannedEvent");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.UserWorkGroup", b =>
+                {
+                    b.HasOne("SystemUser", "SystemUser")
+                        .WithMany("UserWorkGroups")
+                        .HasForeignKey("SystemUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.WorkGroup", "WorkGroup")
+                        .WithMany()
+                        .HasForeignKey("WorkGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.WorkGroup", null)
+                        .WithMany("UserWorkGroups")
+                        .HasForeignKey("WorkGroupId1");
+
+                    b.Navigation("SystemUser");
+
+                    b.Navigation("WorkGroup");
+                });
+
             modelBuilder.Entity("SystemUser", b =>
                 {
                     b.HasOne("SFCDashboard.Models.UserRole", "UserRole")
                         .WithMany()
                         .HasForeignKey("UserRoleId");
 
-                    b.HasOne("SFCDashboard.Models.WorkGroup", "WorkGroup")
-                        .WithMany("Users")
-                        .HasForeignKey("WorkGroupId");
-
                     b.Navigation("UserRole");
-
-                    b.Navigation("WorkGroup");
                 });
 
             modelBuilder.Entity("Project", b =>
@@ -1343,7 +1387,7 @@ namespace SFCDashboard.Migrations
                 {
                     b.Navigation("AssignedEvents");
 
-                    b.Navigation("Users");
+                    b.Navigation("UserWorkGroups");
                 });
 
             modelBuilder.Entity("SystemUser", b =>
@@ -1355,6 +1399,8 @@ namespace SFCDashboard.Migrations
                     b.Navigation("RequestedExtensions");
 
                     b.Navigation("TaskChanges");
+
+                    b.Navigation("UserWorkGroups");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,0 +1,153 @@
+slt intern\sfcdnew\SFCDashboard\wwwroot\css\escalation.css
+.escalation-dropdown .dropdown-menu {
+    width: 300px;
+    padding: 0;
+}
+
+.escalation-header {
+    padding: 8px 16px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: bold;
+}
+
+.escalation-body {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.escalation-item {
+    border-bottom: 1px solid #f1f1f1;
+    padding: 10px 15px;
+}
+
+.escalation-item:hover {
+    background-color: #f8f9fa;
+}
+
+.escalation-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 10px;
+}
+
+/* Enhanced Notification Bell Styles */
+.notification-bell {
+    padding: 0.5rem;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+.notification-bell:hover {
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.notification-bell .bi-bell-fill {
+    animation: bell-shake 6s ease-in-out infinite;
+    transform-origin: 50% 0%;
+}
+
+@keyframes bell-shake {
+    0%, 92%, 94%, 98%, 100% { transform: rotate(0); }
+    93% { transform: rotate(10deg); }
+    95% { transform: rotate(-10deg); }
+    97% { transform: rotate(10deg); }
+    99% { transform: rotate(-10deg); }
+}
+
+/* When there are notifications, increase animation frequency */
+.has-notifications .bi-bell-fill {
+    animation: bell-shake-active 2s ease-in-out infinite;
+}
+
+@keyframes bell-shake-active {
+    0%, 80%, 84%, 92%, 100% { transform: rotate(0); }
+    82% { transform: rotate(12deg); }
+    86% { transform: rotate(-12deg); }
+    88% { transform: rotate(12deg); }
+    90% { transform: rotate(-12deg); }
+    94% { transform: rotate(10deg); }
+    96% { transform: rotate(-10deg); }
+    98% { transform: rotate(5deg); }
+}
+
+/* Notification Dropdown Styling */
+.notification-dropdown {
+    width: 350px;
+    padding: 0;
+    border-radius: 0.5rem;
+}
+
+.notification-header {
+    background-color: #f8f9fa;
+}
+
+[data-theme="dark"] .notification-header {
+    background-color: #2d2d2d;
+    border-bottom-color: #404040 !important;
+}
+
+/* Individual Notification Items */
+.escalation-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+.escalation-item:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Escalation Types */
+.escalation-engineer {
+    border-left: 4px solid #ffc107;
+}
+
+.escalation-dgm {
+    border-left: 4px solid #fd7e14;
+}
+
+.escalation-gm {
+    border-left: 4px solid #dc3545;
+}
+
+.escalation-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.escalation-title {
+    font-weight: 500;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+
+.escalation-message {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* Dark Mode Support */
+[data-theme="dark"] .escalation-item {
+    border-bottom-color: rgba(255,255,255,0.05);
+}
+
+[data-theme="dark"] .escalation-item:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+
+[data-theme="dark"] .escalation-title {
+    color: #fff;
+}
+
+[data-theme="dark"] .escalation-message,
+[data-theme="dark"] .escalation-time {
+    color: rgba(255,255,255,0.7);
+}
+
+[data-theme="dark"] .no-escalations {
+    color: rgba(255,255,255,0.7);
+}

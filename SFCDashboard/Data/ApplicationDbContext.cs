@@ -34,7 +34,7 @@ namespace SFCDashboard.Data
 
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectPEMapping> ProjectPEMappings { get; set; }
-
+        public DbSet<Escalation> Escalations { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
              base.OnModelCreating(modelBuilder);
@@ -49,7 +49,7 @@ namespace SFCDashboard.Data
 
         modelBuilder.Entity<UserWorkGroup>()
             .HasOne(uwg => uwg.WorkGroup)
-            .WithMany(wg => wg.UserWorkGroups)
+            .WithMany()
             .HasForeignKey(uwg => uwg.WorkGroupId);
             
             // Configure relationships that need special handling
@@ -88,6 +88,15 @@ namespace SFCDashboard.Data
                 .HasOne(pp => pp.PlannedEvent)
                 .WithMany()
                 .HasForeignKey(pp => pp.PlannedEventId);
+
+            // Configure Escalation and PETask relationship
+            modelBuilder.Entity<Escalation>()
+                .HasOne(e => e.PETask)
+                .WithMany()
+                .HasForeignKey(e => e.TaskId);
+            
+            // Make sure System.Threading.Tasks.Task is not registered as an entity
+            modelBuilder.Ignore<System.Threading.Tasks.Task>();
         }
         public DbSet<PETaskList> PETaskList { get; set; } = default!;
         public DbSet<UrgentReason> UrgentReasons { get; set; }

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SFCDashboard.Migrations
 {
     /// <inheritdoc />
-    public partial class olaviolate : Migration
+    public partial class initialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -133,6 +133,20 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Projects",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ProjectName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Projects", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserRoles",
                 columns: table => new
                 {
@@ -238,8 +252,7 @@ namespace SFCDashboard.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ServiceId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    UserRoleId = table.Column<int>(type: "int", nullable: true),
-                    WorkGroupId = table.Column<int>(type: "int", nullable: true)
+                    UserRoleId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -248,11 +261,6 @@ namespace SFCDashboard.Migrations
                         name: "FK_Users_UserRoles_UserRoleId",
                         column: x => x.UserRoleId,
                         principalTable: "UserRoles",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Users_WorkGroups_WorkGroupId",
-                        column: x => x.WorkGroupId,
-                        principalTable: "WorkGroups",
                         principalColumn: "Id");
                 });
 
@@ -339,6 +347,37 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserWorkGroups",
+                columns: table => new
+                {
+                    SystemUserId = table.Column<int>(type: "int", nullable: false),
+                    WorkGroupId = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false),
+                    WorkGroupId1 = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserWorkGroups", x => new { x.SystemUserId, x.WorkGroupId });
+                    table.ForeignKey(
+                        name: "FK_UserWorkGroups_Users_SystemUserId",
+                        column: x => x.SystemUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserWorkGroups_WorkGroups_WorkGroupId",
+                        column: x => x.WorkGroupId,
+                        principalTable: "WorkGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserWorkGroups_WorkGroups_WorkGroupId1",
+                        column: x => x.WorkGroupId1,
+                        principalTable: "WorkGroups",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Notifications",
                 columns: table => new
                 {
@@ -415,6 +454,7 @@ namespace SFCDashboard.Migrations
                     ActualTaskCreatedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ACtualTaskCompleteDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsUrgent = table.Column<bool>(type: "bit", nullable: false),
+                    UrgentMarkedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UrgentRequested = table.Column<bool>(type: "bit", nullable: false),
                     Priority = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     EstimatedTime = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -428,6 +468,32 @@ namespace SFCDashboard.Migrations
                         column: x => x.PENumber,
                         principalTable: "PlannedEvents",
                         principalColumn: "PE_NUMBER",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProjectPEMappings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ProjectId = table.Column<int>(type: "int", nullable: false),
+                    PlannedEventId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProjectPEMappings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProjectPEMappings_PlannedEvents_PlannedEventId",
+                        column: x => x.PlannedEventId,
+                        principalTable: "PlannedEvents",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProjectPEMappings_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -559,7 +625,8 @@ namespace SFCDashboard.Migrations
                     { 2, "Can send \"Planned Event\" urgent requests", "CanSendPEUrgentRequests" },
                     { 3, "Can view and accept Planned Event urgent requests", "CanAcceptUrgentRequests" },
                     { 4, "Can mark a \"Task\" of a specific PE as Urgent", "CanMakeTasksUrgent" },
-                    { 5, "Admin permissions", "Admin" }
+                    { 5, "Admin permissions", "Admin" },
+                    { 6, "Can view all records", "ViewAll" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -596,6 +663,16 @@ namespace SFCDashboard.Migrations
                 name: "IX_PlannedEvents_WorkGroupId",
                 table: "PlannedEvents",
                 column: "WorkGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProjectPEMappings_PlannedEventId",
+                table: "ProjectPEMappings",
+                column: "PlannedEventId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProjectPEMappings_ProjectId",
+                table: "ProjectPEMappings",
+                column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RolePermissions_PermissionId",
@@ -663,9 +740,14 @@ namespace SFCDashboard.Migrations
                 column: "UserRoleId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Users_WorkGroupId",
-                table: "Users",
+                name: "IX_UserWorkGroups_WorkGroupId",
+                table: "UserWorkGroups",
                 column: "WorkGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserWorkGroups_WorkGroupId1",
+                table: "UserWorkGroups",
+                column: "WorkGroupId1");
         }
 
         /// <inheritdoc />
@@ -676,6 +758,9 @@ namespace SFCDashboard.Migrations
 
             migrationBuilder.DropTable(
                 name: "PEIssueResolutions");
+
+            migrationBuilder.DropTable(
+                name: "ProjectPEMappings");
 
             migrationBuilder.DropTable(
                 name: "RolePermissions");
@@ -699,7 +784,13 @@ namespace SFCDashboard.Migrations
                 name: "UrgentReasons");
 
             migrationBuilder.DropTable(
+                name: "UserWorkGroups");
+
+            migrationBuilder.DropTable(
                 name: "PEIssues");
+
+            migrationBuilder.DropTable(
+                name: "Projects");
 
             migrationBuilder.DropTable(
                 name: "Permissions");
@@ -720,10 +811,10 @@ namespace SFCDashboard.Migrations
                 name: "Users");
 
             migrationBuilder.DropTable(
-                name: "UserRoles");
+                name: "WorkGroups");
 
             migrationBuilder.DropTable(
-                name: "WorkGroups");
+                name: "UserRoles");
         }
     }
 }

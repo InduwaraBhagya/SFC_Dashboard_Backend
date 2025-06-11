@@ -1,0 +1,103 @@
+@model SFCDashboard.Models.Escalation
+
+@{
+    ViewData["Title"] = "Escalation Details";
+}
+
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4>Escalation Details</h4>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Task #@Model.TaskId</h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">OLA Violation Time:</dt>
+                        <dd class="col-sm-8">@Model.OLAViolationTime.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                        
+                        <dt class="col-sm-4">Escalation Level:</dt>
+                        <dd class="col-sm-8">@Model.Level.ToString()</dd>
+                        
+                        <dt class="col-sm-4">Created At:</dt>
+                        <dd class="col-sm-8">@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">Recipient:</dt>
+                        <dd class="col-sm-8">@(Model.Recipient != null ? Model.Recipient.Name : "Not assigned")</dd>
+                        
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.IsIgnored)
+                            {
+                                <span class="badge bg-secondary">Ignored</span>
+                            }
+                            else if (Model.IsRead)
+                            {
+                                <span class="badge bg-info">Read</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Pending</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <hr/>
+            
+            @if (Model.IsIgnored && !string.IsNullOrEmpty(Model.IgnoreReason))
+            {
+                <div class="alert alert-secondary">
+                    <h6>Ignore Reason:</h6>
+                    <p>@Model.IgnoreReason</p>
+                    <small class="text-muted">
+                        Ignored by @(Model.IgnoredBy?.Name ?? "Unknown") on @(Model.IgnoredAt?.ToString("yyyy-MM-dd HH:mm") ?? "N/A")
+                    </small>
+                </div>
+            }
+            
+            <div class="mt-4">
+                <a href="/Task/Details/@Model.TaskId" class="btn btn-primary">View Task Details</a>
+                
+                @if (!Model.IsIgnored)
+                {
+                    <button type="button" class="btn btn-warning ml-2" data-toggle="modal" data-target="#ignoreModal">
+                        Ignore Escalation
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ignore Modal -->
+<div class="modal fade" id="ignoreModal" tabindex="-1" role="dialog" aria-labelledby="ignoreModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ignoreModalLabel">Ignore Escalation</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form asp-action="Ignore" asp-route-id="@Model.Id" method="post">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="reason">Please provide a reason for ignoring this escalation:</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Confirm Ignore</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

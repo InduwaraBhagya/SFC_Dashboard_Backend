@@ -27,7 +27,8 @@ builder.Services.AddSingleton<PERecordSyncService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<PERecordSyncService>());
 builder.Services.AddHostedService<OLAViolationService>();
 builder.Services.AddHostedService<HoldTaskReminderService>(); // Add this line
-
+builder.Services.AddScoped<EscalationService>();
+builder.Services.AddHostedService<EscalationBackgroundService>();
 // Load Azure AD Configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
 var isDevelopment = builder.Environment.IsDevelopment();

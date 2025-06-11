@@ -4,6 +4,7 @@ namespace SFCDashboard.Models
 {
     public class UserWorkGroup
     {
+        public int Id { get; set; }
         public int SystemUserId { get; set; }
         public int WorkGroupId { get; set; }
 
