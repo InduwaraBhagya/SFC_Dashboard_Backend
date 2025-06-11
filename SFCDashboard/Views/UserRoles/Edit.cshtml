@@ -44,9 +44,7 @@
                                                        class="form-check-input" 
                                                        id="perm_@permission.Id"
                                                        @(selectedPermissions.Contains(permission.Id) ? "checked" : "") />
-                                                <label class="form-check-label fw-medium" for="perm_@permission.Id">
-                                                    @permission.Name
-                                                </label>
+                    
                                                 @if (!string.IsNullOrEmpty(permission.Description))
                                                 {
                                                     <small class="text-muted d-block mt-1">@permission.Description</small>

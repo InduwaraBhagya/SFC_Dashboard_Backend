@@ -632,19 +632,10 @@ namespace SFCDashboard.Controllers
                         var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
                         if (workgroup != null)
                         {
-                            if (hasDrawFiberAccess)
-                            {
-                                query = query.Where(p =>
-                                    p.TaskWg != null && (
-                                        p.TaskWg.Contains(workgroup.Name)
-                                        || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                                    )
-                                );
-                            }
-                            else
-                            {
+                        
+                        
                                 query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
-                            }
+
                             ViewData["FilteredWorkgroup"] = workgroup.Name;
                             ViewData["SelectedWorkgroupId"] = workgroupId;
                         }
@@ -728,30 +719,38 @@ namespace SFCDashboard.Controllers
                 // --- UPDATED WORKGROUP FILTERING ---
                 if (canViewAll)
                 {
-                    if (workgroupId.HasValue)
-                    {
-                        if (hasDrawFiberAccess)
-                        {
-                            query = query.Where(p =>
-                                p.TaskWg != null && p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"
-                            );
-                        }
-                        else
-                        {
-                            query = query.Where(p => p.TaskWg != null &&
-                                userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
-                        }
-                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                        ViewData["SelectedWorkgroupId"] = workgroupId;
-                    }
+                    // If workgroupId is provided, filter by that workgroup
+                    // if (workgroupId.HasValue)
+                    // {
+                    //     var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+                    //     if (workgroup != null)
+                    //     {
+                    //         if (hasDrawFiberAccess)
+                    //         {
+                    //             query = query.Where(p => p.TaskWg != null && (
+                    //                 p.TaskWg.Contains(workgroup.Name) ||
+                    //                 (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                    //             ));
+                    //         }
+                    //         else
+                    //         {
+                    //             query = query.Where(p => p.TaskWg != null &&
+                    //                 p.TaskWg.Contains(workgroup.Name));
+                    //         }
+
+                    //         ViewData["FilteredWorkgroup"] = workgroup.Name;
+                    //         ViewData["SelectedWorkgroupId"] = workgroupId;
+                    //     }
+                    // }
                 }
                 else
                 {
+                    // Non-ViewAll users: Filter by their assigned workgroups
                     if (userWorkgroupNames.Any())
                     {
                         if (hasDrawFiberAccess)
                         {
-                             query = query.Where(p => p.TaskWg != null &&
+                            query = query.Where(p => p.TaskWg != null &&
                                 (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
                                 || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
                             );
