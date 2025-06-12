@@ -102,15 +102,15 @@ slt intern\sfcdnew\SFCDashboard\wwwroot\css\escalation.css
 
 /* Escalation Types */
 .escalation-engineer {
-    border-left: 4px solid #ffc107;
+    border-left: 3px solid #ffc107 !important;
 }
 
 .escalation-dgm {
-    border-left: 4px solid #fd7e14;
+    border-left: 3px solid #dc3545 !important;
 }
 
 .escalation-gm {
-    border-left: 4px solid #dc3545;
+    border-left: 3px solid #000 !important;
 }
 
 .escalation-time {

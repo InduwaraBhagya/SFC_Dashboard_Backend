@@ -77,8 +77,8 @@ var workGroup = await _context.WorkGroups
                     {
                         // Get role IDs once
                         var engineerRoleId = await _context.UserRoles.Where(r => r.Name == "Engineer").Select(r => r.Id).FirstOrDefaultAsync();
-                        var dgmRoleId = await _context.UserRoles.Where(r => r.Name == "DGM").Select(r => r.Id).FirstOrDefaultAsync();
-                        var gmRoleId = await _context.UserRoles.Where(r => r.Name == "GM").Select(r => r.Id).FirstOrDefaultAsync();
+                        var dgmRoleId = await _context.UserRoles.Where(r => r.Name == "Deputy General Manager").Select(r => r.Id).FirstOrDefaultAsync();
+                        var gmRoleId = await _context.UserRoles.Where(r => r.Name == "General Manager").Select(r => r.Id).FirstOrDefaultAsync();
 
                         if (level == EscalationLevel.Engineer)
                         {
