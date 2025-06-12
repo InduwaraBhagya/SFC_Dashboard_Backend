@@ -18,3 +18,39 @@
 
     <button type="submit" class="btn btn-primary">Create</button>
 </form>
+
+<style>
+    /* Dark mode text color adjustments */
+    [data-theme="dark"] .table td,
+    [data-theme="dark"] .table th {
+        color: var(--text-color, #ffffff) !important;
+    }
+
+    [data-theme="dark"] .detail-text,
+    [data-theme="dark"] .table-striped tbody tr td {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    /* For better contrast in dark mode */
+    [data-theme="dark"] .table-striped>tbody>tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    [data-theme="dark"] .table-striped>tbody>tr:nth-of-type(even) {
+        background-color: var(--table-bg, #2d2d2d) !important;
+    }
+
+    /* Ensure text remains visible for table cells with status badges */
+    [data-theme="dark"] .table td .badge {
+        color: #ffffff !important;
+    }
+
+    [data-theme="dark"] .parameter-text {
+        color: var(--text-color, #ffffff) !important;
+    }
+
+    /* For hover states */
+    [data-theme="dark"] .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.075) !important;
+    }
+</style>

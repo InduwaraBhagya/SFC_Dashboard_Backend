@@ -250,36 +250,38 @@ namespace SFCDashboard.Controllers
 
             // Get latest issues for the inbox
             // In your inbox action methods
+            // In PlannedEventsController.cs, in the Index action
             var inboxIssues = await _context.PEIssues
-                .Where(i => i.ReceiverId == currentUserId && !i.IsHiddenFromInbox)
+                .Where(i => i.ReceiverId == currentUserId
+                    && !i.IsHiddenFromInbox
+                    && i.SenderId != 1)  // Exclude system reminders (SenderId = 1)
                 .OrderByDescending(i => i.CreatedAt)
-                            .Take(10)
-                            .Select(i => new PEIssueViewModel
-                            {
-                                Id = i.Id, // Make sure to include this
-                                SenderId = i.SenderId,
-                                SenderName = _context.Users
-                                    .Where(u => u.Id == i.SenderId)
-                                    .Select(u => u.Name)
-                                    .FirstOrDefault() ?? "Unknown Sender",
-                                ReceiverId = i.ReceiverId,
-                                ReceiverName = _context.Users
-                                    .Where(u => u.Id == i.ReceiverId)
-                                    .Select(u => u.Name)
-                                    .FirstOrDefault() ?? "Unknown Receiver",
-                                IssueText = i.IssueText,
-                                AttachmentPath = i.AttachmentPath,
-                                CreatedAt = i.CreatedAt,
-                                PlannedEventId = i.PlannedEventId,
-                                IsRead = i.IsRead,
-                                IsReply = i.IsReply,
-                                OriginalIssueId = i.OriginalIssueId,
-                                IsResolved = i.IsResolved,
-                                IsResolutionRequest = i.IsResolutionRequest,
-                                PETaskId = i.PETaskId
-
-                            })
-                            .ToListAsync();
+                .Take(10)
+                .Select(i => new PEIssueViewModel
+                {
+                    Id = i.Id,
+                    SenderId = i.SenderId,
+                    SenderName = _context.Users
+                        .Where(u => u.Id == i.SenderId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverId = i.ReceiverId,
+                    ReceiverName = _context.Users
+                        .Where(u => u.Id == i.ReceiverId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Receiver",
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId,
+                    IsRead = i.IsRead,
+                    IsReply = i.IsReply,
+                    OriginalIssueId = i.OriginalIssueId,
+                    IsResolved = i.IsResolved,
+                    IsResolutionRequest = i.IsResolutionRequest,
+                    PETaskId = i.PETaskId
+                })
+                .ToListAsync();
 
             // Add unread count
             var unreadCount = inboxIssues.Count(i => !i.IsRead);
@@ -431,9 +433,61 @@ namespace SFCDashboard.Controllers
                 ViewBag.PETasksByPeId = new Dictionary<int, IEnumerable<PETask>>();
                 return View(new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, 10));
             }
-
         }
 
+        //here this part for handle reminder as notification
+        [HttpGet]
+        public async Task<IActionResult> GetReminders(bool showAll = true)
+        {
+            var userId = GetCurrentUserId();
+            var query = _context.PEIssues
+                .Where(i => i.ReceiverId == userId && i.SenderId == 1);
+
+            if (!showAll)
+            {
+                query = query.Where(i => !i.IsRead);
+            }
+
+            var reminders = await query
+                .OrderByDescending(i => i.CreatedAt)
+                .Select(i => new
+                {
+                    i.Id,
+                    i.PlannedEventId,
+                    message = i.IssueText,
+                    createdDate = i.CreatedAt.ToString("MMM dd, yyyy HH:mm:ss"),
+                    isRead = i.IsRead
+                })
+                .ToListAsync();
+
+            return Json(reminders);
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetReminderCount()
+        {
+            var userId = GetCurrentUserId();
+            var count = await _context.PEIssues
+                .CountAsync(i => i.ReceiverId == userId && i.SenderId == 1 && !i.IsRead);
+
+            return Json(new { count });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkAllRemindersAsRead()
+        {
+            var userId = GetCurrentUserId();
+            var unreadReminders = await _context.PEIssues
+                .Where(i => i.ReceiverId == userId && i.SenderId == 1 && !i.IsRead)
+                .ToListAsync();
+
+            foreach (var reminder in unreadReminders)
+            {
+                reminder.IsRead = true;
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
 
         // GET: PlannedEvents/Details/5
         public async Task<IActionResult> Details(int? id, string returnUrl = null)
@@ -1172,6 +1226,7 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
+            plannedEvent.PECreatedDate = DateTime.Now; // Set the current date/time
 
             // Update PE status and priority based on the selected reason
             switch (urgentReason)
