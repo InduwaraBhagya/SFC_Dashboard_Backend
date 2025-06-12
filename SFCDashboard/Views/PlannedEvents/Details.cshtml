@@ -597,7 +597,7 @@
 </div>
 
 <!-- Report Issue Button -->
-@if (!Model.IsHold)
+@if (!Model.IsHold && (ViewData["CanReportIssues"] as bool? == true))
 {
     <button class="btn btn-danger my-3" data-bs-toggle="modal" data-bs-target="#reportIssueModal">
         <i class="bi bi-flag"></i> Report Issue

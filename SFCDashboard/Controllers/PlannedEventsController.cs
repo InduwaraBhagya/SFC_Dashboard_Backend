@@ -501,6 +501,7 @@ namespace SFCDashboard.Controllers
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
             ViewData["CanMakeTasksUrgent"] = currentUser?.UserRole?.HasPermission("CanMakeTasksUrgent") == true;
+            ViewData["CanReportIssues"] = currentUser?.UserRole?.HasPermission("CanReportIssues") == true;
 
             // Get the planned event first
             var plannedEvent = await _context.PlannedEvents.FindAsync(id);
