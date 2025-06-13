@@ -49,7 +49,7 @@ namespace SFCDashboard.Data
 
         modelBuilder.Entity<UserWorkGroup>()
             .HasOne(uwg => uwg.WorkGroup)
-            .WithMany()
+            .WithMany(wg => wg.UserWorkGroups)
             .HasForeignKey(uwg => uwg.WorkGroupId);
             
             // Configure relationships that need special handling
@@ -105,7 +105,4 @@ namespace SFCDashboard.Data
         public DbSet<UserWorkGroup> UserWorkGroups { get; set; }
     }
 
-    public class PE
-    {
-    }
 }
