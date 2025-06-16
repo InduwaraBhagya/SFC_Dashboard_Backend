@@ -1674,11 +1674,12 @@ namespace SFCDashboard.Controllers
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
+            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
 
             _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
-            // Use IsHold flag instead of just checking PEStatus
+            // Use IsHold flag 
             var query = _context.PlannedEvents.Where(p => p.IsHold == true);
 
             // If user has ViewAll, show count of all records (ignore workgroupIds)
@@ -1705,8 +1706,18 @@ namespace SFCDashboard.Controllers
 
                 if (workgroupNames.Any())
                 {
-                    query = query.Where(p => p.TaskWg != null &&
-                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            (workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
                 }
             }
 
