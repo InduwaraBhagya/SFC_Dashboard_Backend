@@ -23,7 +23,7 @@ namespace SFCDashboard.Models
         
         public bool IsRead { get; set; }
         public bool IsIgnored { get; set; }
-        public string IgnoreReason { get; set; }
+        public string? IgnoreReason { get; set; }
         public DateTime? IgnoredAt { get; set; }
         public int? IgnoredById { get; set; }
         [ForeignKey("IgnoredById")]

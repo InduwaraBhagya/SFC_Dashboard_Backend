@@ -60,7 +60,10 @@ namespace SFCDashboard.Services
                         CreatedAt = DateTime.Now,
                         Level = level,
                         IsRead = false,
-                        IsIgnored = false
+                        IsIgnored = false,
+                        IgnoreReason = null, 
+                        IgnoredAt = null,
+                        IgnoredById = null
                     };
                     
                     // Find the appropriate recipient

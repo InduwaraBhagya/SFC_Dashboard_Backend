@@ -47,6 +47,19 @@ namespace SFCDashboard.Controllers
                 .ThenInclude(uwg => uwg.WorkGroup)
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
+                if (await IsUserInSalesWorkgroup())
+    {
+        return RedirectToAction(nameof(SalesView), new
+        {
+            searchType,
+            peNumber,
+            customer,
+            jobReference,
+            soNumber,
+            pageIndex
+        });
+    }
+
             // Check if user belongs to NET-PROJ-ACC-CABLE workgroup
             bool hasDrawFiberAccess = currentUser?.UserWorkGroups?
                 .Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
@@ -434,6 +447,153 @@ namespace SFCDashboard.Controllers
                 return View(new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, 10));
             }
         }
+
+        private async Task<bool> IsUserInSalesWorkgroup()
+{
+    if (!User.Identity?.IsAuthenticated == true)
+        return false;
+
+    var email = User.Identity?.Name;
+    if (string.IsNullOrEmpty(email))
+        return false;
+
+    var user = await _context.Users
+        .Include(u => u.UserWorkGroups)
+            .ThenInclude(uwg => uwg.WorkGroup)
+        .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
+
+    return user?.UserWorkGroups
+        ?.Any(uwg => uwg.WorkGroup.Name.Contains("SALES", StringComparison.OrdinalIgnoreCase)) 
+        ?? false;
+}
+
+        public async Task<IActionResult> SalesView(string searchType, string peNumber, string customer,
+    string jobReference, string soNumber, int? pageIndex = 1)
+{
+    // Check if user has SALES in workgroup name
+    var currentUser = await _context.Users
+        .Include(u => u.UserWorkGroups)
+            .ThenInclude(uwg => uwg.WorkGroup)
+        .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+
+    var salesWorkgroup = currentUser?.UserWorkGroups
+        ?.FirstOrDefault(uwg => uwg.WorkGroup.Name.Contains("SALES"))
+        ?.WorkGroup.Name;
+
+    if (string.IsNullOrEmpty(salesWorkgroup))
+    {
+        return RedirectToAction(nameof(Index));
+    }
+
+    // Base query filtering by SECTION_HANDLED_BY
+    var query = _context.PlannedEvents
+        .Where(p => p.SectionHandledBy == salesWorkgroup);
+
+    // Calculate dashboard counts
+    ViewData["SalesUrgentCount"] = await query
+        .CountAsync(p => p.PEStatus == "urgent" && !p.IsHold);
+
+    ViewData["SalesInProgressCount"] = await query
+        .CountAsync(p => (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") 
+            && !p.IsHold);
+
+    ViewData["SalesOLAViolateCount"] = await query
+        .Where(p => _context.PETasks
+            .Any(t => t.PENumber == p.PeNumber && t.IsOLAViolate))
+        .CountAsync();
+
+    ViewData["SalesHoldCount"] = await query
+        .CountAsync(p => p.IsHold);
+
+    // Apply search filters
+    if (!string.IsNullOrEmpty(searchType))
+    {
+        switch (searchType.ToLower())
+        {
+            case "customer" when !string.IsNullOrEmpty(customer):
+                query = query.Where(p => p.Customer.Contains(customer));
+                ViewData["CustomerFilter"] = customer;
+                break;
+            case "jobreference" when !string.IsNullOrEmpty(jobReference):
+                query = query.Where(p => p.JobReference.Contains(jobReference));
+                ViewData["JobReferenceFilter"] = jobReference;
+                break;
+            case "sonumber" when !string.IsNullOrEmpty(soNumber):
+                query = query.Where(p => p.SoNumber.Contains(soNumber));
+                ViewData["SONumberFilter"] = soNumber;
+                break;
+            default: // peNumber
+                if (!string.IsNullOrEmpty(peNumber))
+                    query = query.Where(p => p.PeNumber.Contains(peNumber));
+                ViewData["PENumberFilter"] = peNumber;
+                break;
+        }
+    }
+
+    ViewData["SearchType"] = searchType ?? "peNumber";
+    ViewData["SalesWorkgroup"] = salesWorkgroup;
+
+    // Get tasks for the paginated PEs
+    int pageSize = 10;
+    var paginatedList = await PaginatedList<PlannedEvent>.CreateAsync(
+        query.OrderByDescending(p => p.ServiceRequiredDate), 
+        pageIndex ?? 1,
+        pageSize);
+
+    var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
+    var allTasks = await _context.PETasks
+        .Where(t => peNumbers.Contains(t.PENumber))
+        .OrderBy(t => t.TaskSeq)
+        .ToListAsync();
+
+    var peTasksByPeNumber = allTasks
+        .GroupBy(t => t.PENumber)
+        .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
+    ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+
+    // Get issues for the paginated PEs
+    var peIds = paginatedList.Select(pe => pe.Id).ToList();
+    var allIssues = await _context.PEIssues
+        .Where(i => peIds.Contains(i.PlannedEventId))
+        .OrderByDescending(i => i.CreatedAt)
+        .Select(i => new PEIssueViewModel
+        {
+            Id = i.Id,
+            SenderId = i.SenderId,
+            SenderName = _context.Users
+                .Where(u => u.Id == i.SenderId)
+                .Select(u => u.Name)
+                .FirstOrDefault() ?? "Unknown Sender",
+            ReceiverId = i.ReceiverId,
+            ReceiverName = _context.Users
+                .Where(u => u.Id == i.ReceiverId)
+                .Select(u => u.Name)
+                .FirstOrDefault() ?? "Unknown Receiver",
+            IssueText = i.IssueText,
+            AttachmentPath = i.AttachmentPath,
+            CreatedAt = i.CreatedAt,
+            PlannedEventId = i.PlannedEventId,
+            IsResolved = i.IsResolved,
+            IsHiddenFromInbox = i.IsHiddenFromInbox
+        })
+        .ToListAsync();
+
+    var issuesByPlannedEventId = allIssues
+        .GroupBy(i => i.PlannedEventId)
+        .ToDictionary(g => g.Key, g => g.ToList());
+    ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
+
+    return View(paginatedList);
+}
+
+private string ExtractServiceId(string email)
+{
+    if (string.IsNullOrEmpty(email))
+        return string.Empty;
+
+    // Extract up to the first 6 characters of the email or service ID
+    return email.Length > 6 ? email.Substring(0, 6) : email;
+}
 
         //here this part for handle reminder as notification
         [HttpGet]
