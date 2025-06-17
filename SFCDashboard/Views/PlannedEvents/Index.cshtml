@@ -787,55 +787,55 @@
     <script>
         $(document).ready(function() {
             $('#workgroup-ids').select2({
-    theme: 'default',
-    width: '100%',
-    placeholder: 'Select workgroup...',
-    allowClear: true,
-    ajax: {
-        url: '/PlannedEvents/GetWorkgroups',
-        dataType: 'json',
-        delay: 250,
-        data: function(params) {
-            return {
-                search: params.term || '',
-                page: params.page || 1
-            };
-        },
-        processResults: function(data, params) {
-            params.page = params.page || 1;
-            return {
-                results: data.items.map(function(item) {
+            theme: 'default',
+            width: '100%',
+            placeholder: 'Select workgroup...',
+            allowClear: true,
+            ajax: {
+                url: '/PlannedEvents/GetWorkgroups',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
                     return {
-                        id: item.id,
-                        text: item.name
+                        search: params.term || '',
+                        page: params.page || 1
                     };
-                }),
-                pagination: {
-                    more: data.hasMore
-                }
-            };
-        },
-        cache: true
-    }
-});
+                },
+                processResults: function(data, params) {
+                    params.page = params.page || 1;
+                    return {
+                        results: data.items.map(function(item) {
+                            return {
+                                id: item.id,
+                                text: item.name
+                            };
+                        }),
+                        pagination: {
+                            more: data.hasMore
+                        }
+                    };
+                },
+                cache: true
+            }
+        });
 
-            // Load pre-selected workgroups
-    var preselectedIds = @Html.Raw(Json.Serialize(ViewData["SelectedWorkgroupIds"] ?? new List<int>()));
-    if (preselectedIds && preselectedIds.length > 0) {
-    $.ajax({
-        url: '/PlannedEvents/GetSelectedWorkgroups',
-        type: 'GET',
-        data: { ids: [preselectedId] },
-        success: function(data) {
-            data.forEach(function(item) {
-                var option = new Option(item.name, item.id, true, true);
-                $('#workgroup-ids').append(option);
+                    // Load pre-selected workgroups
+            var preselectedIds = @Html.Raw(Json.Serialize(ViewData["SelectedWorkgroupIds"] ?? new List<int>()));
+            if (preselectedIds && preselectedIds.length > 0) {
+            $.ajax({
+                url: '/PlannedEvents/GetSelectedWorkgroups',
+                type: 'GET',
+                data: { ids: [preselectedId] },
+                success: function(data) {
+                    data.forEach(function(item) {
+                        var option = new Option(item.name, item.id, true, true);
+                        $('#workgroup-ids').append(option);
+                    });
+                    $('#workgroup-ids').trigger('change');
+                }
             });
-            $('#workgroup-ids').trigger('change');
-        }
-    });
-    }
-});
+            }
+        });
     </script>
 
     <script src="~/js/index.js"></script>    

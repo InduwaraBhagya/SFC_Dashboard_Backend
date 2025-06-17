@@ -449,151 +449,174 @@ namespace SFCDashboard.Controllers
         }
 
         private async Task<bool> IsUserInSalesWorkgroup()
-{
-    if (!User.Identity?.IsAuthenticated == true)
-        return false;
+        {
+            if (!User.Identity?.IsAuthenticated == true)
+                return false;
 
-    var email = User.Identity?.Name;
-    if (string.IsNullOrEmpty(email))
-        return false;
+            var email = User.Identity?.Name;
+            if (string.IsNullOrEmpty(email))
+                return false;
 
-    var user = await _context.Users
-        .Include(u => u.UserWorkGroups)
-            .ThenInclude(uwg => uwg.WorkGroup)
-        .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
+            var user = await _context.Users
+                .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
 
-    return user?.UserWorkGroups
-        ?.Any(uwg => uwg.WorkGroup.Name.Contains("SALES", StringComparison.OrdinalIgnoreCase)) 
-        ?? false;
-}
+            return user?.UserWorkGroups
+                ?.Any(uwg => uwg.WorkGroup.Name.Contains("SALES", StringComparison.OrdinalIgnoreCase)) 
+                ?? false;
+        }
 
         public async Task<IActionResult> SalesView(string searchType, string peNumber, string customer,
-    string jobReference, string soNumber, int? pageIndex = 1)
-{
-    // Check if user has SALES in workgroup name
-    var currentUser = await _context.Users
-        .Include(u => u.UserWorkGroups)
-            .ThenInclude(uwg => uwg.WorkGroup)
-        .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
-
-    var salesWorkgroup = currentUser?.UserWorkGroups
-        ?.FirstOrDefault(uwg => uwg.WorkGroup.Name.Contains("SALES"))
-        ?.WorkGroup.Name;
-
-    if (string.IsNullOrEmpty(salesWorkgroup))
-    {
-        return RedirectToAction(nameof(Index));
-    }
-
-    // Base query filtering by SECTION_HANDLED_BY
-    var query = _context.PlannedEvents
-        .Where(p => p.SectionHandledBy == salesWorkgroup);
-
-    // Calculate dashboard counts
-    ViewData["SalesUrgentCount"] = await query
-        .CountAsync(p => p.PEStatus == "urgent" && !p.IsHold);
-
-    ViewData["SalesInProgressCount"] = await query
-        .CountAsync(p => (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") 
-            && !p.IsHold);
-
-    ViewData["SalesOLAViolateCount"] = await query
-        .Where(p => _context.PETasks
-            .Any(t => t.PENumber == p.PeNumber && t.IsOLAViolate))
-        .CountAsync();
-
-    ViewData["SalesHoldCount"] = await query
-        .CountAsync(p => p.IsHold);
-
-    // Apply search filters
-    if (!string.IsNullOrEmpty(searchType))
-    {
-        switch (searchType.ToLower())
+        string jobReference, string soNumber, int? pageIndex = 1)
         {
-            case "customer" when !string.IsNullOrEmpty(customer):
-                query = query.Where(p => p.Customer.Contains(customer));
-                ViewData["CustomerFilter"] = customer;
-                break;
-            case "jobreference" when !string.IsNullOrEmpty(jobReference):
-                query = query.Where(p => p.JobReference.Contains(jobReference));
-                ViewData["JobReferenceFilter"] = jobReference;
-                break;
-            case "sonumber" when !string.IsNullOrEmpty(soNumber):
-                query = query.Where(p => p.SoNumber.Contains(soNumber));
-                ViewData["SONumberFilter"] = soNumber;
-                break;
-            default: // peNumber
-                if (!string.IsNullOrEmpty(peNumber))
-                    query = query.Where(p => p.PeNumber.Contains(peNumber));
-                ViewData["PENumberFilter"] = peNumber;
-                break;
+            // Get user's sales workgroup
+            var salesWorkgroups = await GetUserSalesWorkgroups();
+
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Get PE numbers with OLA violation first (we'll use this for multiple counts)
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            // Base query for records where user's workgroup matches either TaskWg or SectionHandledBy
+            var baseQuery = _context.PlannedEvents
+                .Where(p => salesWorkgroups.Any(wg => 
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+
+            // Calculate dashboard counts using the same logic as specific views
+            ViewData["UrgentCount"] = await baseQuery
+                .Where(p => 
+                    p.PEStatus == "urgent" && 
+                    !p.IsHold &&
+                    !violatingPENumbers.Contains(p.PeNumber))
+                .CountAsync();
+
+            ViewData["InProgressCount"] = await baseQuery
+                .Where(p => 
+                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                    !p.IsHold &&
+                    !violatingPENumbers.Contains(p.PeNumber))
+                .CountAsync();
+
+            ViewData["OLAViolateCount"] = await baseQuery
+                .Where(p => violatingPENumbers.Contains(p.PeNumber))
+                .CountAsync();
+
+            ViewData["HoldCount"] = await baseQuery
+                .Where(p => p.IsHold)
+                .CountAsync();
+
+            bool isSearchPerformed = !string.IsNullOrEmpty(searchType) && (
+            !string.IsNullOrEmpty(peNumber) ||
+            !string.IsNullOrEmpty(customer) ||
+            !string.IsNullOrEmpty(jobReference) ||
+            !string.IsNullOrEmpty(soNumber));
+            
+        var query = baseQuery;
+
+        if (isSearchPerformed)
+            {
+                switch (searchType.ToLower())
+                {
+                    case "customer" when !string.IsNullOrEmpty(customer):
+                        query = query.Where(p => p.Customer.Contains(customer));
+                        ViewData["CustomerFilter"] = customer;
+                        break;
+                    case "jobreference" when !string.IsNullOrEmpty(jobReference):
+                        query = query.Where(p => p.JobReference.Contains(jobReference));
+                        ViewData["JobReferenceFilter"] = jobReference;
+                        break;
+                    case "sonumber" when !string.IsNullOrEmpty(soNumber):
+                        query = query.Where(p => p.SoNumber.Contains(soNumber));
+                        ViewData["SONumberFilter"] = soNumber;
+                        break;
+                    default: // peNumber
+                        if (!string.IsNullOrEmpty(peNumber))
+                            query = query.Where(p => p.PeNumber.Contains(peNumber));
+                        ViewData["PENumberFilter"] = peNumber;
+                        break;
+                }
+            }
+            else
+            {
+                // Return empty list if no search performed
+                return View(new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, 1, 10));
+            }
+
+            ViewData["SearchType"] = searchType ?? "peNumber";
+            ViewData["SalesWorkgroups"] = string.Join(", ", salesWorkgroups);
+
+            // Get tasks for the paginated PEs
+            int pageSize = 10;
+            var paginatedList = await PaginatedList<PlannedEvent>.CreateAsync(
+                query.OrderByDescending(p => p.ServiceRequiredDate),
+                pageIndex ?? 1,
+                pageSize);
+
+            var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
+            var allTasks = await _context.PETasks
+                .Where(t => peNumbers.Contains(t.PENumber))
+                .OrderBy(t => t.TaskSeq)
+                .ToListAsync();
+
+            var peTasksByPeNumber = allTasks
+                .GroupBy(t => t.PENumber)
+                .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
+            ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+
+            // Get issues for the paginated PEs
+            var peIds = paginatedList.Select(pe => pe.Id).ToList();
+            var allIssues = await _context.PEIssues
+                .Where(i => peIds.Contains(i.PlannedEventId))
+                .OrderByDescending(i => i.CreatedAt)
+                .Select(i => new PEIssueViewModel
+                {
+                    Id = i.Id,
+                    SenderId = i.SenderId,
+                    SenderName = _context.Users
+                        .Where(u => u.Id == i.SenderId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverId = i.ReceiverId,
+                    ReceiverName = _context.Users
+                        .Where(u => u.Id == i.ReceiverId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Receiver",
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId,
+                    IsResolved = i.IsResolved,
+                    IsHiddenFromInbox = i.IsHiddenFromInbox
+                })
+                .ToListAsync();
+
+            var issuesByPlannedEventId = allIssues
+                .GroupBy(i => i.PlannedEventId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
+
+            return View(paginatedList);
         }
-    }
 
-    ViewData["SearchType"] = searchType ?? "peNumber";
-    ViewData["SalesWorkgroup"] = salesWorkgroup;
-
-    // Get tasks for the paginated PEs
-    int pageSize = 10;
-    var paginatedList = await PaginatedList<PlannedEvent>.CreateAsync(
-        query.OrderByDescending(p => p.ServiceRequiredDate), 
-        pageIndex ?? 1,
-        pageSize);
-
-    var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
-    var allTasks = await _context.PETasks
-        .Where(t => peNumbers.Contains(t.PENumber))
-        .OrderBy(t => t.TaskSeq)
-        .ToListAsync();
-
-    var peTasksByPeNumber = allTasks
-        .GroupBy(t => t.PENumber)
-        .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
-    ViewBag.PETasksByPeNumber = peTasksByPeNumber;
-
-    // Get issues for the paginated PEs
-    var peIds = paginatedList.Select(pe => pe.Id).ToList();
-    var allIssues = await _context.PEIssues
-        .Where(i => peIds.Contains(i.PlannedEventId))
-        .OrderByDescending(i => i.CreatedAt)
-        .Select(i => new PEIssueViewModel
+        private string ExtractServiceId(string email)
         {
-            Id = i.Id,
-            SenderId = i.SenderId,
-            SenderName = _context.Users
-                .Where(u => u.Id == i.SenderId)
-                .Select(u => u.Name)
-                .FirstOrDefault() ?? "Unknown Sender",
-            ReceiverId = i.ReceiverId,
-            ReceiverName = _context.Users
-                .Where(u => u.Id == i.ReceiverId)
-                .Select(u => u.Name)
-                .FirstOrDefault() ?? "Unknown Receiver",
-            IssueText = i.IssueText,
-            AttachmentPath = i.AttachmentPath,
-            CreatedAt = i.CreatedAt,
-            PlannedEventId = i.PlannedEventId,
-            IsResolved = i.IsResolved,
-            IsHiddenFromInbox = i.IsHiddenFromInbox
-        })
-        .ToListAsync();
+            if (string.IsNullOrEmpty(email))
+                return string.Empty;
 
-    var issuesByPlannedEventId = allIssues
-        .GroupBy(i => i.PlannedEventId)
-        .ToDictionary(g => g.Key, g => g.ToList());
-    ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
+            // Extract up to the first 6 characters of the email or service ID
+            return email.Length > 6 ? email.Substring(0, 6) : email;
+        }
 
-    return View(paginatedList);
-}
-
-private string ExtractServiceId(string email)
-{
-    if (string.IsNullOrEmpty(email))
-        return string.Empty;
-
-    // Extract up to the first 6 characters of the email or service ID
-    return email.Length > 6 ? email.Substring(0, 6) : email;
-}
 
         //here this part for handle reminder as notification
         [HttpGet]
@@ -622,6 +645,7 @@ private string ExtractServiceId(string email)
 
             return Json(reminders);
         }
+
         [HttpGet]
         public async Task<IActionResult> GetReminderCount()
         {
@@ -1247,8 +1271,7 @@ private string ExtractServiceId(string email)
             _logger.LogInformation("Retrieved {count} pending urgent PE requests", pendingRequests.Count);
             return View(pendingRequests);
         }
-        // POST: PlannedEvents/ProcessUrgentRequest
-        [HttpPost]
+        
         // POST: PlannedEvents/ProcessUrgentRequest
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -1700,6 +1723,154 @@ private string ExtractServiceId(string email)
             return View(result);
         }
 
+
+        public async Task<IActionResult> SalesInProgressRecords(int? pageIndex = 1)
+        {
+            // Get user's sales workgroup
+            var salesWorkgroups = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(InProgressRecords));
+            }
+
+            // Get PE numbers with OLA violation
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            // Query in-progress records for sales section
+            var query = _context.PlannedEvents
+                .Where(p =>
+                    salesWorkgroups.Any(wg =>
+                        (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                        (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                    ) &&
+                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                    !p.IsHold &&
+                    !violatingPENumbers.Contains(p.PeNumber)
+                );
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            return View(records);
+        }
+
+
+        public async Task<IActionResult> SalesHoldRecords(int? pageIndex = 1)
+        {
+            var salesWorkgroups = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(HoldRecords));
+            }
+
+            var query = _context.PlannedEvents
+                .Where(p => salesWorkgroups.Any(wg => 
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))) &&
+                    p.IsHold);
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            return View(records);
+        }
+
+        public async Task<IActionResult> SalesUrgentRecords(int? pageIndex = 1)
+        {
+            var salesWorkgroups = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(UrgentRecords));
+            }
+
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.PlannedEvents
+                .Where(p => salesWorkgroups.Any(wg => 
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))) &&
+                    p.PEStatus == "urgent" &&
+                    !p.IsHold &&
+                    !violatingPENumbers.Contains(p.PeNumber));
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            return View(records);
+        }
+
+
+        public async Task<IActionResult> SalesOLAViolateRecords(int? pageIndex = 1)
+        {
+            var salesWorkgroups = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(OLAViolateRecords));
+            }
+
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.PlannedEvents
+                .Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))) &&
+                    violatingPENumbers.Contains(p.PeNumber));
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            // Get violation details
+           var violatingTasks = await _context.PETasks
+                .Where(t => t.IsOLAViolate &&
+                       records.Select(p => p.PeNumber).Contains(t.PENumber))
+                .ToListAsync();
+
+            var currentDate = DateTime.Today;
+            var violationDetails = violatingTasks
+                .GroupBy(t => t.PENumber)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new
+                    {
+                        TasksCount = g.Count(),
+                        MaxDaysOverdue = g.Max(t =>
+                            t.EstimatedTime.HasValue
+                                ? (currentDate - t.EstimatedTime.Value).Days
+                                : (t.ActualTaskCreatedDate.HasValue && t.OLA != null &&
+                                   int.TryParse(t.OLA, out var olaDays))
+                                    ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays)).Days
+                                    : 0
+                        ),
+                        OldestViolation = g.Min(t =>
+                            t.EstimatedTime ??
+                            (t.ActualTaskCreatedDate.HasValue && t.OLA != null &&
+                             int.TryParse(t.OLA, out var olaDays)
+                                ? t.ActualTaskCreatedDate.Value.AddDays(olaDays)
+                                : (DateTime?)null))
+                    }
+                );
+            ViewBag.ViolationDetails = violationDetails;
+
+            return View(records);
+        }
+
+
         private async Task<int> GetUrgentCount(List<int> workgroupIds)
         {
             _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
@@ -2024,6 +2195,26 @@ private string ExtractServiceId(string email)
                     currentCreatedDate = task.TaskCompleteDate;
                 }
             }
+        }
+
+        private async Task<List<string>> GetUserSalesWorkgroups()
+        {
+            if (!User.Identity?.IsAuthenticated == true)
+                return new List<string>();
+
+            var email = User.Identity?.Name;
+            if (string.IsNullOrEmpty(email))
+                return new List<string>();
+
+            var user = await _context.Users
+                .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
+
+            // Return ALL workgroups instead of just sales workgroups
+            return user?.UserWorkGroups
+                ?.Select(uwg => uwg.WorkGroup.Name)
+                .ToList() ?? new List<string>();
         }
 
         [HttpGet]

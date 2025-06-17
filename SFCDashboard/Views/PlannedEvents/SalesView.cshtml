@@ -21,45 +21,60 @@
 @{var selectedName = ViewData[""] as string;}
 
 <div class="container-fluid mt-4">
-    
-
-    <div class="row">
-        <!-- Left Column - Existing Content -->
-        <div class="col-lg-8">
-            <div class="search-section mb-4">
-                <form method="get" asp-action="SalesView">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label for="searchType" class="form-label">Search By:</label>
-                                <select class="form-select" id="searchType" name="searchType" onchange="toggleSearchFields()">
-                                    <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
-                                    <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
-                                    <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
-                                    <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-    <div class="form-group">
-        <label for="indexSearchInput" class="form-label" id="indexSearchLabel">PE Number:</label>
-        <input type="text" class="form-control" id="indexSearchInput" name="peNumber" placeholder="Enter PE Number"
-            value="@(
-                ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
-                ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
-                ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
-                ViewData["PENumberFilter"]
-            )" />
+    <!-- Update header section -->
+    <div class="dashboard-header mb-4">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="display-5 mb-0">Sales PE Records</h1>
+                <p class="text-muted mt-2">Filtered for section: @ViewData["SalesWorkgroup"]</p>
+            </div>
+            <div class="col-auto">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="refreshDashboard()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-primary btn-ripple w-100">Search</button>
+    <!-- Update search section -->
+    <div class="search-section mb-4">
+        <form method="get" asp-action="SalesView">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchType" class="form-label">Search By:</label>
+                        <select class="form-select shadow-sm" id="searchType" name="searchType" onchange="toggleSearchFields()">
+                            <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
+                            <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
+                            <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
+                            <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="form-group">
+                        <label for="indexSearchInput" class="form-label" id="indexSearchLabel">Search Term:</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control shadow-sm" id="indexSearchInput" 
+                                   name="@ViewData["SearchType"]" 
+                                   placeholder="Enter search term..."
+                                   value="@(ViewData[ViewData["SearchType"]?.ToString() + "Filter"])" required />
+                            <button class="btn btn-primary" type="submit">Search</button>
                         </div>
                     </div>
-                </form>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <a href="@Url.Action("SalesView")" class="btn btn-secondary w-100">
+                        <i class="bi bi-x-circle me-2"></i>Clear
+                    </a>
+                </div>
             </div>
+        </form>
+    </div>
 
             <div class="container-fluid mt-4">
 
@@ -346,12 +361,12 @@
 
             <div class="row mb-4">
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card urgent-card">
+                    <a href="@Url.Action("SalesUrgentRecords")" class="dashboard-card urgent-card">
                         <div class="card-content">
-                            <h4>Urgent Records</h4>
+                            <h4>Sales Urgent Records</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-danger" style="font-size: 1.2rem;">
-                                    @ViewData["SalesUrgentCount"] Tasks
+                                    @ViewData["UrgentCount"] Tasks
                                 </span>
                             </div>
                         </div>
@@ -361,21 +376,13 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card inprogress-card">
+                    <a href="@Url.Action("SalesInProgressRecords")" class="dashboard-card inprogress-card">
                         <div class="card-content">
-                            <h4>Regular Records</h4>
+                            <h4>Sales Regular Records</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-success" style="font-size: 1.2rem;">
-                                    @ViewData["SalesInProgressCount"] Tasks
+                                    @ViewData["InProgressCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
-                                {
-                                    <div class="mt-1 filter-badge">
-                                        <span class="badge bg-success text-white">
-                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
-                                        </span>
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -384,21 +391,13 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card ola-card">
+                    <a href="@Url.Action("SalesOLAViolateRecords")" class="dashboard-card ola-card">
                         <div class="card-content">
-                            <h4>OLA Violate Records</h4>
+                            <h4>Sales OLA Violations</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-dark" style="font-size: 1.2rem;">
-                                    @ViewData["SalesOLAViolateCount"] Tasks
+                                    @ViewData["OLAViolateCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
-                                {
-                                    <div class="mt-1 filter-badge">
-                                        <span class="badge bg-dark text-white">
-                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
-                                        </span>
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -407,21 +406,13 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("HoldRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card hold-card">
+                    <a href="@Url.Action("SalesHoldRecords")" class="dashboard-card hold-card">
                         <div class="card-content">
-                            <h4>Hold Records</h4>
+                            <h4>Sales Hold Records</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-warning" style="font-size: 1.2rem;">
-                                    @(ViewData["SalesHoldCount"] != null ? ViewData["SalesHoldCount"] : 0) Tasks
+                                    @ViewData["HoldCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
-                                {
-                                    <div class="mt-1 filter-badge">
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
-                                        </span>
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -435,55 +426,55 @@
         <!-- Right Column - Message Inbox -->
         <div class="col-lg-4">
             <div class="message-inbox-container">
-<div class="inbox-header">
-    <h3>
-        <i class="fas fa-inbox me-2"></i>Message Inbox
-        @{
-            var unreadCount = 0;
-            
-            // Count unread issues
-            if (ViewData["InboxIssues"] != null)
-            {
-                unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
-            }
-            
-            // Count pending urgent PE requests
-            if (ViewData["PendingUrgentRequests"] != null)
-            {
-                unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
-            }
-            
-            // Count pending urgent task requests
-            if (ViewData["PendingTaskRequests"] != null)
-            {
-                unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
-            }
-            
-            if (unreadCount > 0)
-            {
-                <span class="badge bg-danger rounded-pill ms-2">@unreadCount Unread</span>
-            }
-        }
-    </h3>
+                <div class="inbox-header">
+                    <h3>
+                        <i class="fas fa-inbox me-2"></i>Message Inbox
+                        @{
+                            var unreadCount = 0;
+                            
+                            // Count unread issues
+                            if (ViewData["InboxIssues"] != null)
+                            {
+                                unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
+                            }
+                            
+                            // Count pending urgent PE requests
+                            if (ViewData["PendingUrgentRequests"] != null)
+                            {
+                                unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
+                            }
+                            
+                            // Count pending urgent task requests
+                            if (ViewData["PendingTaskRequests"] != null)
+                            {
+                                unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
+                            }
+                            
+                            if (unreadCount > 0)
+                            {
+                                <span class="badge bg-danger rounded-pill ms-2">@unreadCount Unread</span>
+                            }
+                        }
+                    </h3>
 
-                <!-- Message search bar -->
-                <div class="inbox-search-container mt-3">
-                    <div class="input-group">
-                        <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
-                        <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
-                            <i class="fas fa-search"></i>
-                        </button>
+                                <!-- Message search bar -->
+                                <div class="inbox-search-container mt-3">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
+                                        <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                <!-- Add this section after the inbox-search-container -->
+                <div class="inbox-filters mt-3">
+                    <div class="btn-group w-100" role="group" aria-label="Message filters">
+                        <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
+                        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
+                        <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
                     </div>
                 </div>
-
-<!-- Add this section after the inbox-search-container -->
-<div class="inbox-filters mt-3">
-    <div class="btn-group w-100" role="group" aria-label="Message filters">
-        <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
-        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
-        <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
-    </div>
-</div>
 
                 <div class="messages-container mt-3">
                     @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
@@ -628,7 +619,62 @@
 @section Scripts {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
+    <script>
+        $(document).ready(function() {
+            $('#workgroup-ids').select2({
+            theme: 'default',
+            width: '100%',
+            placeholder: 'Select workgroup...',
+            allowClear: true,
+            ajax: {
+                url: '/PlannedEvents/GetWorkgroups',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        search: params.term || '',
+                        page: params.page || 1
+                    };
+                },
+                processResults: function(data, params) {
+                    params.page = params.page || 1;
+                    return {
+                        results: data.items.map(function(item) {
+                            return {
+                                id: item.id,
+                                text: item.name
+                            };
+                        }),
+                        pagination: {
+                            more: data.hasMore
+                        }
+                    };
+                },
+                cache: true
+            }
+        });
+
+                    // Load pre-selected workgroups
+            var preselectedIds = @Html.Raw(Json.Serialize(ViewData["SelectedWorkgroupIds"] ?? new List<int>()));
+            if (preselectedIds && preselectedIds.length > 0) {
+            $.ajax({
+                url: '/PlannedEvents/GetSelectedWorkgroups',
+                type: 'GET',
+                data: { ids: [preselectedId] },
+                success: function(data) {
+                    data.forEach(function(item) {
+                        var option = new Option(item.name, item.id, true, true);
+                        $('#workgroup-ids').append(option);
+                    });
+                    $('#workgroup-ids').trigger('change');
+                }
+            });
+            }
+        });
+    </script>
 
     <script src="~/js/index.js"></script>    
 }
@@ -700,17 +746,17 @@
                         <i class="fas fa-question-circle me-2"></i>
                         <strong>Resolution Request:</strong> Has this issue been resolved?
                     </div>
-<form id="confirmResolutionFormModal1" method="post" asp-controller="Issues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
-    <!-- No hidden isConfirmed field here, it's added dynamically -->
-    <div class="d-flex justify-content-end">
-        <button type="button" class="btn btn-outline-danger me-2" id="rejectResolutionBtn">
-            <i class="fas fa-times me-2"></i>No, Still an Issue
-        </button>
-        <button type="button" class="btn btn-success" id="confirmResolutionBtn">
-            <i class="fas fa-check me-2"></i>Yes, Issue Fixed
-        </button>
-    </div>
-</form>
+                    <form id="confirmResolutionFormModal1" method="post" asp-controller="Issues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
+                        <!-- No hidden isConfirmed field here, it's added dynamically -->
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-outline-danger me-2" id="rejectResolutionBtn">
+                                <i class="fas fa-times me-2"></i>No, Still an Issue
+                            </button>
+                            <button type="button" class="btn btn-success" id="confirmResolutionBtn">
+                                <i class="fas fa-check me-2"></i>Yes, Issue Fixed
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
             <div class="modal-footer">
