@@ -44,8 +44,7 @@ namespace SFCDashboard.Controllers
                 // Get all escalations for this user's role (read and unread, but not ignored)
                 escalations = await _context.Escalations
                     .Include(e => e.PETask)
-                    .Include(e => e.Recipient)
-                    .Where(e => e.Recipient.UserRoleId == currentUser.UserRoleId && !e.IsIgnored)
+                    .Where(e => e.RecipientId == currentUser.UserRoleId)
                     .OrderByDescending(e => e.CreatedAt)
                     .ToListAsync();
             }
@@ -54,8 +53,7 @@ namespace SFCDashboard.Controllers
                 // Get only unread escalations for this user's role
                 escalations = await _context.Escalations
                     .Include(e => e.PETask)
-                    .Include(e => e.Recipient)
-                    .Where(e => e.Recipient.UserRoleId == currentUser.UserRoleId && !e.IsRead && !e.IsIgnored)
+                    .Where(e => e.RecipientId == currentUser.UserRoleId )
                     .OrderByDescending(e => e.CreatedAt)
                     .ToListAsync();
             }
@@ -65,7 +63,7 @@ namespace SFCDashboard.Controllers
                 id = e.Id,
                 taskId = e.TaskId,
                 taskWorkGroup = e.PETask?.TaskWorkGroup, // Include TaskWorkGroup from PETask
-                level = (int)e.Level,
+                level = e.Level,
                 createdAt = e.CreatedAt,
                 isRead = e.IsRead
             }).ToList();
@@ -75,15 +73,27 @@ namespace SFCDashboard.Controllers
         
         public async Task<IActionResult> Details(int id)
         {
-            var escalation = await _escalationService.GetEscalationDetailsAsync(id);
-            
+            var escalation = await _context.Escalations
+                .Include(e => e.PETask) // Assuming you have navigation property
+                .FirstOrDefaultAsync(e => e.Id == id);
+                
             if (escalation == null)
             {
                 return NotFound();
             }
             
-            // Mark as read
-            await _escalationService.MarkAsReadAsync(id);
+            // Get the planned event ID
+            int? plannedEventId = null;
+            var task = await _context.PETasks.FirstOrDefaultAsync(t => t.Id == escalation.TaskId);
+            if (task != null && !string.IsNullOrEmpty(task.PENumber))
+            {
+                var plannedEvent = await _context.PlannedEvents
+                    .FirstOrDefaultAsync(pe => pe.PeNumber == task.PENumber);
+                plannedEventId = plannedEvent?.Id;
+            }
+            
+            // Pass the ID to the view
+            ViewData["PlannedEventId"] = plannedEventId;
             
             return View(escalation);
         }
@@ -99,7 +109,7 @@ namespace SFCDashboard.Controllers
             // Get current user ID (implement according to your auth system)
             int userId = int.Parse(User.FindFirst("UserId").Value);
             
-            await _escalationService.IgnoreEscalationAsync(id, reason, userId);
+            //await _escalationService.IgnoreEscalationAsync(id, reason, userId);
             
             return RedirectToAction("Index", "Home");
         }
@@ -141,6 +151,54 @@ namespace SFCDashboard.Controllers
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
             return user?.Id ?? 0;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            try
+            {
+                // Get current user ID
+                int userId = await GetCurrentUserIdAsync();
+                if (userId == 0)
+                    return RedirectToAction("Index", "Home");
+                
+                // Get the current user with role and workgroup information
+                var currentUser = await _context.Users
+                    .Include(u => u.UserRole)
+                    .Include(u => u.UserWorkGroups)
+                        .ThenInclude(uwg => uwg.WorkGroup)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+                
+                if (currentUser == null)
+                    return RedirectToAction("Index", "Home");
+                
+                // Get user's role ID and workgroup names
+                int userRoleId = currentUser.UserRoleId ?? 0;
+                var userWorkgroups = currentUser.UserWorkGroups
+                    .Select(uwg => uwg.WorkGroup.Name)
+                    .ToList();
+                    
+
+                
+                // Get escalations where:
+                // 1. This user is the direct recipient (RecipientId = userId)
+                // OR
+                // 2. The user has the same role as the recipient AND is in the same workgroup as the escalated task
+                var escalations = await _context.Escalations
+                    .Include(e => e.PETask)
+                    .Where(e => e.RecipientId == userRoleId && 
+                            userWorkgroups.Contains(e.PETask.TaskWorkGroup))
+                    .OrderByDescending(e => e.CreatedAt)
+                    .ToListAsync();
+                
+                
+                return View(escalations);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "An error occurred while retrieving escalations.";
+                return RedirectToAction("Index", "Home");
+            }
         }
     }
 }

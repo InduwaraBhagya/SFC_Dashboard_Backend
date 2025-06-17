@@ -458,7 +458,9 @@ namespace SFCDashboard.Migrations
                     UrgentRequested = table.Column<bool>(type: "bit", nullable: false),
                     Priority = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     EstimatedTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsOLAViolate = table.Column<bool>(type: "bit", nullable: false)
+                    IsOLAViolate = table.Column<bool>(type: "bit", nullable: false),
+                    OLADateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ViolationStartTime = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -493,37 +495,6 @@ namespace SFCDashboard.Migrations
                         name: "FK_ProjectPEMappings_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TaskEscalations",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PlannedEventId = table.Column<int>(type: "int", nullable: false),
-                    EscalationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    EscalationReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    EscalatedToUserId = table.Column<int>(type: "int", nullable: false),
-                    IsResolved = table.Column<bool>(type: "bit", nullable: false),
-                    ResolvedTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ResolutionComments = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TaskEscalations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TaskEscalations_PlannedEvents_PlannedEventId",
-                        column: x => x.PlannedEventId,
-                        principalTable: "PlannedEvents",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_TaskEscalations_Users_EscalatedToUserId",
-                        column: x => x.EscalatedToUserId,
-                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -596,6 +567,39 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Escalations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TaskId = table.Column<int>(type: "int", nullable: false),
+                    RecipientId = table.Column<int>(type: "int", nullable: true),
+                    Level = table.Column<int>(type: "int", nullable: true),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    IsResolved = table.Column<bool>(type: "bit", nullable: false),
+                    IgnoredById = table.Column<int>(type: "int", nullable: true),
+                    PlannedEventId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Escalations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Escalations_PETasks_TaskId",
+                        column: x => x.TaskId,
+                        principalTable: "PETasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Escalations_PlannedEvents_PlannedEventId",
+                        column: x => x.PlannedEventId,
+                        principalTable: "PlannedEvents",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TaskEstimationHistory",
                 columns: table => new
                 {
@@ -626,8 +630,19 @@ namespace SFCDashboard.Migrations
                     { 3, "Can view and accept Planned Event urgent requests", "CanAcceptUrgentRequests" },
                     { 4, "Can mark a \"Task\" of a specific PE as Urgent", "CanMakeTasksUrgent" },
                     { 5, "Admin permissions", "Admin" },
-                    { 6, "Can view all records", "ViewAll" }
+                    { 6, "Can view all records", "ViewAll" },
+                    { 7, "Can report issues on Planned Events", "CanReportIssues" }
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Escalations_PlannedEventId",
+                table: "Escalations",
+                column: "PlannedEventId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Escalations_TaskId",
+                table: "Escalations",
+                column: "TaskId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_PlannedEventId",
@@ -690,16 +705,6 @@ namespace SFCDashboard.Migrations
                 column: "PETaskListId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskEscalations_EscalatedToUserId",
-                table: "TaskEscalations",
-                column: "EscalatedToUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TaskEscalations_PlannedEventId",
-                table: "TaskEscalations",
-                column: "PlannedEventId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_TaskEstimationHistory_TaskId",
                 table: "TaskEstimationHistory",
                 column: "TaskId");
@@ -754,6 +759,9 @@ namespace SFCDashboard.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "Escalations");
+
+            migrationBuilder.DropTable(
                 name: "Notifications");
 
             migrationBuilder.DropTable(
@@ -767,9 +775,6 @@ namespace SFCDashboard.Migrations
 
             migrationBuilder.DropTable(
                 name: "SubTaskLists");
-
-            migrationBuilder.DropTable(
-                name: "TaskEscalations");
 
             migrationBuilder.DropTable(
                 name: "TaskEstimationHistory");

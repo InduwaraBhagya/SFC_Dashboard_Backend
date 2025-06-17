@@ -12,8 +12,8 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250612065140_allowNullIgnorereasion")]
-    partial class allowNullIgnorereasion
+    [Migration("20250617074159_initialMigration")]
+    partial class initialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -338,27 +338,24 @@ namespace SFCDashboard.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("IgnoreReason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("IgnoredAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<int?>("IgnoredById")
                         .HasColumnType("int");
-
-                    b.Property<bool>("IsIgnored")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
-                    b.Property<int>("Level")
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("Level")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("OLAViolationTime")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PlannedEventId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("RecipientId")
                         .HasColumnType("int");
@@ -366,11 +363,13 @@ namespace SFCDashboard.Migrations
                     b.Property<int>("TaskId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("IgnoredById");
-
-                    b.HasIndex("RecipientId");
+                    b.HasIndex("PlannedEventId");
 
                     b.HasIndex("TaskId");
 
@@ -572,6 +571,9 @@ namespace SFCDashboard.Migrations
 
                     b.Property<bool>("UrgentRequested")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ViolationStartTime")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -976,46 +978,6 @@ namespace SFCDashboard.Migrations
                     b.ToTable("SubTaskLists");
                 });
 
-            modelBuilder.Entity("SFCDashboard.Models.TaskEscalation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("EscalatedToUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("EscalationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("EscalationTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsResolved")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("PlannedEventId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ResolutionComments")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("ResolvedTime")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EscalatedToUserId");
-
-                    b.HasIndex("PlannedEventId");
-
-                    b.ToTable("TaskEscalations");
-                });
-
             modelBuilder.Entity("SFCDashboard.Models.TaskEstimationHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -1241,13 +1203,9 @@ namespace SFCDashboard.Migrations
 
             modelBuilder.Entity("SFCDashboard.Models.Escalation", b =>
                 {
-                    b.HasOne("SystemUser", "IgnoredBy")
-                        .WithMany()
-                        .HasForeignKey("IgnoredById");
-
-                    b.HasOne("SystemUser", "Recipient")
-                        .WithMany()
-                        .HasForeignKey("RecipientId");
+                    b.HasOne("SFCDashboard.Models.PlannedEvent", null)
+                        .WithMany("Escalations")
+                        .HasForeignKey("PlannedEventId");
 
                     b.HasOne("SFCDashboard.Models.PETask", "PETask")
                         .WithMany()
@@ -1255,11 +1213,7 @@ namespace SFCDashboard.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("IgnoredBy");
-
                     b.Navigation("PETask");
-
-                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
@@ -1347,25 +1301,6 @@ namespace SFCDashboard.Migrations
                         .IsRequired();
 
                     b.Navigation("PETaskList");
-                });
-
-            modelBuilder.Entity("SFCDashboard.Models.TaskEscalation", b =>
-                {
-                    b.HasOne("SystemUser", "EscalatedTo")
-                        .WithMany()
-                        .HasForeignKey("EscalatedToUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
-                        .WithMany()
-                        .HasForeignKey("PlannedEventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("EscalatedTo");
-
-                    b.Navigation("PlannedEvent");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.TaskEstimationHistory", b =>
@@ -1458,6 +1393,11 @@ namespace SFCDashboard.Migrations
             modelBuilder.Entity("Project", b =>
                 {
                     b.Navigation("ProjectPEs");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.PlannedEvent", b =>
+                {
+                    b.Navigation("Escalations");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.UserRole", b =>

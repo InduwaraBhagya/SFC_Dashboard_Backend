@@ -16,7 +16,6 @@ namespace SFCDashboard.Data
         public DbSet<WorkGroup> WorkGroups { get; set; }
         public DbSet<SystemUser> Users { get; set; }
         public DbSet<PlannedEvent> PlannedEvents { get; set; }
-        public DbSet<TaskEscalation> TaskEscalations { get; set; }
         public DbSet<TaskExtensionRequest> TaskExtensionRequests { get; set; }
         public DbSet<TaskHistory> TaskHistories { get; set; }
         public DbSet<Notification> Notifications { get; set; }
