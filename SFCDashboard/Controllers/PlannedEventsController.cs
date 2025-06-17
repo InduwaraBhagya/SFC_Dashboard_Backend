@@ -471,14 +471,14 @@ namespace SFCDashboard.Controllers
         string jobReference, string soNumber, int? pageIndex = 1)
         {
             // Get user's sales workgroup
-            var salesWorkgroups = await GetUserSalesWorkgroups();
-
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
             {
                 return RedirectToAction(nameof(Index));
             }
 
-            // Get PE numbers with OLA violation first (we'll use this for multiple counts)
+
+            // Get PE numbers with OLA violation
             var violatingPENumbers = await _context.PETasks
                 .Where(t => t.IsOLAViolate)
                 .Select(t => t.PENumber)
@@ -486,11 +486,15 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
 
             // Base query for records where user's workgroup matches either TaskWg or SectionHandledBy
-            var baseQuery = _context.PlannedEvents
-                .Where(p => salesWorkgroups.Any(wg => 
+            var baseQuery = _context.PlannedEvents.AsQueryable();
+
+            if (!canViewAll)
+            {
+                baseQuery = baseQuery.Where(p => salesWorkgroups.Any(wg => 
                     (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
                     (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
                 ));
+            }
 
             // Calculate dashboard counts using the same logic as specific views
             ViewData["UrgentCount"] = await baseQuery
@@ -554,6 +558,7 @@ namespace SFCDashboard.Controllers
 
             ViewData["SearchType"] = searchType ?? "peNumber";
             ViewData["SalesWorkgroups"] = string.Join(", ", salesWorkgroups);
+            ViewData["CanViewAll"] = canViewAll;
 
             // Get tasks for the paginated PEs
             int pageSize = 10;
@@ -1727,7 +1732,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> SalesInProgressRecords(int? pageIndex = 1)
         {
             // Get user's sales workgroup
-            var salesWorkgroups = await GetUserSalesWorkgroups();
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
             {
                 return RedirectToAction(nameof(InProgressRecords));
@@ -1740,50 +1745,62 @@ namespace SFCDashboard.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            // Query in-progress records for sales section
-            var query = _context.PlannedEvents
-                .Where(p =>
-                    salesWorkgroups.Any(wg =>
-                        (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                        (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                    ) &&
-                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
-                    !p.IsHold &&
-                    !violatingPENumbers.Contains(p.PeNumber)
-                );
+
+            var query = _context.PlannedEvents.AsQueryable();
+
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
+
+            query = query.Where(p =>
+                (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                !p.IsHold &&
+                !violatingPENumbers.Contains(p.PeNumber));
 
             var records = await query
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToListAsync();
 
+            ViewData["CanViewAll"] = canViewAll;
             return View(records);
+    
         }
 
 
         public async Task<IActionResult> SalesHoldRecords(int? pageIndex = 1)
         {
-            var salesWorkgroups = await GetUserSalesWorkgroups();
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
             {
                 return RedirectToAction(nameof(HoldRecords));
             }
 
-            var query = _context.PlannedEvents
-                .Where(p => salesWorkgroups.Any(wg => 
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))) &&
-                    p.IsHold);
+            var query = _context.PlannedEvents.Where(p => p.IsHold);
+
+            // Apply workgroup filtering only if user doesn't have ViewAll permission
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
 
             var records = await query
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToListAsync();
 
+            ViewData["CanViewAll"] = canViewAll;
             return View(records);
         }
 
         public async Task<IActionResult> SalesUrgentRecords(int? pageIndex = 1)
         {
-            var salesWorkgroups = await GetUserSalesWorkgroups();
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
             {
                 return RedirectToAction(nameof(UrgentRecords));
@@ -1796,24 +1813,30 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
 
             var query = _context.PlannedEvents
-                .Where(p => salesWorkgroups.Any(wg => 
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))) &&
-                    p.PEStatus == "urgent" &&
-                    !p.IsHold &&
-                    !violatingPENumbers.Contains(p.PeNumber));
+                .Where(p => p.PEStatus == "urgent" &&
+                       !p.IsHold &&
+                       !violatingPENumbers.Contains(p.PeNumber));
+
+            // Apply workgroup filtering only if user doesn't have ViewAll permission
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
 
             var records = await query
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToListAsync();
 
+            ViewData["CanViewAll"] = canViewAll;
             return View(records);
         }
 
-
         public async Task<IActionResult> SalesOLAViolateRecords(int? pageIndex = 1)
         {
-            var salesWorkgroups = await GetUserSalesWorkgroups();
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
             {
                 return RedirectToAction(nameof(OLAViolateRecords));
@@ -1826,17 +1849,22 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
 
             var query = _context.PlannedEvents
-                .Where(p => salesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))) &&
-                    violatingPENumbers.Contains(p.PeNumber));
+                .Where(p => violatingPENumbers.Contains(p.PeNumber));
+
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg => 
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
 
             var records = await query
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToListAsync();
 
             // Get violation details
-           var violatingTasks = await _context.PETasks
+            var violatingTasks = await _context.PETasks
                 .Where(t => t.IsOLAViolate &&
                        records.Select(p => p.PeNumber).Contains(t.PENumber))
                 .ToListAsync();
@@ -1867,6 +1895,7 @@ namespace SFCDashboard.Controllers
                 );
             ViewBag.ViolationDetails = violationDetails;
 
+            ViewData["CanViewAll"] = canViewAll;
             return View(records);
         }
 
@@ -2197,24 +2226,31 @@ namespace SFCDashboard.Controllers
             }
         }
 
-        private async Task<List<string>> GetUserSalesWorkgroups()
+        private async Task<(List<string> workgroups, bool canViewAll)> GetUserSalesWorkgroups()
         {
             if (!User.Identity?.IsAuthenticated == true)
-                return new List<string>();
+                return (new List<string>(), false);
 
             var email = User.Identity?.Name;
             if (string.IsNullOrEmpty(email))
-                return new List<string>();
+                return (new List<string>(), false);
 
             var user = await _context.Users
+                .Include(u => u.UserRole)
+                    .ThenInclude(r => r.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
                 .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
 
-            // Return ALL workgroups instead of just sales workgroups
-            return user?.UserWorkGroups
+            bool canViewAll = user?.UserRole?.HasPermission("ViewAll") == true;
+
+            // Get all workgroups
+            var workgroups = user?.UserWorkGroups
                 ?.Select(uwg => uwg.WorkGroup.Name)
                 .ToList() ?? new List<string>();
+
+            return (workgroups, canViewAll);
         }
 
         [HttpGet]
