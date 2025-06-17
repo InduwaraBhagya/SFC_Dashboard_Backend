@@ -116,4 +116,27 @@ $(document).ready(function () {
         
         return "just now";
     }
+    
+    // Only select filter buttons inside the notification dropdown
+    document.querySelectorAll('.notification-dropdown .btn-group button[data-filter]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.querySelectorAll('.notification-dropdown .btn-group button[data-filter]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            currentFilter = this.getAttribute('data-filter');
+            loadCombinedNotifications();
+        });
+    });
+    
+    document.querySelectorAll('.notification-dropdown .btn-group button[data-type]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.querySelectorAll('.notification-dropdown .btn-group button[data-type]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            currentType = this.getAttribute('data-type');
+            loadCombinedNotifications();
+        });
+    });
 });
