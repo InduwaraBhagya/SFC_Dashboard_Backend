@@ -469,6 +469,8 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> SalesView(string searchType, string peNumber, string customer,
         string jobReference, string soNumber, int? pageIndex = 1)
         {
+            var currentUserId = await GetCurrentUserIdAsync();
+
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
@@ -517,6 +519,87 @@ namespace SFCDashboard.Controllers
             ViewData["HoldCount"] = await baseQuery
                 .Where(p => p.IsHold)
                 .CountAsync();
+
+
+            // Get pending urgent requests
+            var pendingUrgentRequests = await _context.PlannedEvents
+                .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
+                .OrderByDescending(p => p.PECreatedDate)
+                .Take(10)
+                .ToListAsync();
+            ViewData["PendingUrgentRequests"] = pendingUrgentRequests;
+
+            // Get pending task urgent requests
+            var pendingTaskRequests = await _context.PETasks
+                .Where(t => t.UrgentRequested && !t.IsUrgent)
+                .Include(t => t.PlannedEvent)
+                .OrderByDescending(t => t.TaskCreatedDate)
+                .Take(5)
+                .ToListAsync();
+            ViewData["PendingTaskRequests"] = pendingTaskRequests;
+
+            // Get latest inbox issues
+            var inboxIssues = await _context.PEIssues
+                .Where(i => i.ReceiverId == currentUserId && !i.IsHiddenFromInbox)
+                .OrderByDescending(i => i.CreatedAt)
+                .Take(10)
+                .Select(i => new PEIssueViewModel
+                {
+                    Id = i.Id,
+                    SenderId = i.SenderId,
+                    SenderName = _context.Users
+                        .Where(u => u.Id == i.SenderId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverId = i.ReceiverId,
+                    ReceiverName = _context.Users
+                        .Where(u => u.Id == i.ReceiverId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Receiver",
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId,
+                    IsRead = i.IsRead,
+                    IsReply = i.IsReply,
+                    OriginalIssueId = i.OriginalIssueId,
+                    IsResolved = i.IsResolved,
+                    IsResolutionRequest = i.IsResolutionRequest,
+                    PETaskId = i.PETaskId
+                })
+                .ToListAsync();
+
+            // Calculate unread count
+            var unreadCount = inboxIssues.Count(i => !i.IsRead);
+            unreadCount += pendingUrgentRequests.Count;
+            unreadCount += pendingTaskRequests.Count;
+
+            ViewData["InboxIssues"] = inboxIssues;
+            ViewData["TotalMessages"] = inboxIssues.Count;
+            ViewData["UnreadMessages"] = unreadCount;
+
+            // Add resolutions lookup for resolution requests
+            if (inboxIssues.Any())
+            {
+                Dictionary<int, PEIssueResolution> resolutionsByIssueId = new Dictionary<int, PEIssueResolution>();
+                var issueIds = inboxIssues
+                    .Where(i => i.IsResolutionRequest)
+                    .Select(i => i.OriginalIssueId ?? i.Id)
+                    .ToList();
+
+                if (issueIds.Any())
+                {
+                    var resolutions = await _context.PEIssueResolutions
+                        .Where(r => issueIds.Contains(r.IssueId) && !r.IsConfirmed)
+                        .ToListAsync();
+
+                    foreach (var resolution in resolutions)
+                    {
+                        resolutionsByIssueId[resolution.IssueId] = resolution;
+                    }
+                }
+                ViewBag.ResolutionsByIssueId = resolutionsByIssueId;
+            }
 
             bool isSearchPerformed = !string.IsNullOrEmpty(searchType) && (
             !string.IsNullOrEmpty(peNumber) ||
