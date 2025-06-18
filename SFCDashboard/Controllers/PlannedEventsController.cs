@@ -266,8 +266,7 @@ namespace SFCDashboard.Controllers
             // In PlannedEventsController.cs, in the Index action
             var inboxIssues = await _context.PEIssues
                 .Where(i => i.ReceiverId == currentUserId
-                    && !i.IsHiddenFromInbox
-                    && i.SenderId != 1)  // Exclude system reminders (SenderId = 1)
+                    && !i.IsHiddenFromInbox) 
                 .OrderByDescending(i => i.CreatedAt)
                 .Take(10)
                 .Select(i => new PEIssueViewModel
