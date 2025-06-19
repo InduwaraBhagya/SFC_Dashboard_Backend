@@ -839,6 +839,46 @@
                     }
                 });
             }
+
+        $(document).on('click', '#acceptUrgentRequestBtn', function() {
+        const requestType = $('#urgentRequestType').val();
+        const requestId = $('#urgentRequestId').val();
+        let priorityText = $('#urgentRequestDetails .row:nth-child(3) .col-sm-8').text() || '';
+        let urgentReason = 'OpeningCeremony';
+        if (priorityText.includes('Priority 2') || priorityText.toLowerCase().includes('critical customer')) {
+            urgentReason = 'CriticalCustomer';
+        } else if (priorityText.includes('Priority 0') || priorityText.toLowerCase().includes('network outage')) {
+            urgentReason = 'NetworkOutage';
+        } else if (priorityText.includes('Priority 1') || priorityText.toLowerCase().includes('opening ceremony')) {
+            urgentReason = 'OpeningCeremony';
+        }
+        const form = $('#urgentRequestForm');
+        // Remove any previous urgentReason fields
+        form.find('input[name="urgentReason"]').remove();
+        $('<input>').attr({type: 'hidden', name: 'urgentReason', value: urgentReason}).appendTo(form);
+        if (requestType === 'pe') {
+            form.attr('action', '/PlannedEvents/ProcessUrgentRequest');
+        } else {
+            form.attr('action', '/PETasks/ProcessUrgentRequest');
+        }
+        form.submit();
+    });
+
+    $(document).on('click', '#rejectUrgentRequestBtn', function() {
+        const requestType = $('#urgentRequestType').val();
+        const requestId = $('#urgentRequestId').val();
+        const form = $('#urgentRequestForm');
+        // Remove any previous urgentReason fields
+        form.find('input[name="urgentReason"]').remove();
+        $('<input>').attr({type: 'hidden', name: 'urgentReason', value: 'Reject'}).appendTo(form);
+        if (requestType === 'pe') {
+            form.attr('action', '/PlannedEvents/ProcessUrgentRequest');
+        } else {
+            form.attr('action', '/PETasks/ProcessUrgentRequest');
+        }
+        form.submit();
+    });
+    
         });
         document.addEventListener('DOMContentLoaded', function () {
         var select = document.getElementById('searchType');
@@ -876,131 +916,63 @@
             document.getElementById('refreshInbox').addEventListener('click', function() {
                 window.location.reload();
             });
-            
-            // Accept button handler
- // Update the urgent request accept button handler
-document.getElementById('acceptUrgentRequestBtn').addEventListener('click', function() {
-    const requestType = document.getElementById('urgentRequestType').value;
-    const requestId = document.getElementById('urgentRequestId').value;
-    
-    // Get the current priority reason from the displayed data
-    let priorityText = document.querySelector('#urgentRequestDetails .row:nth-child(3) .col-sm-8').innerText || '';
-    let urgentReason = 'OpeningCeremony'; // Default fallback
-    
-    // Determine the correct reason based on the priority text displayed in the modal
-    if (priorityText.includes('Priority 2') || priorityText.toLowerCase().includes('critical customer')) {
-        urgentReason = 'CriticalCustomer';
-        console.log('Setting urgentReason to CriticalCustomer based on priority text');
-    } else if (priorityText.includes('Priority 0') || priorityText.toLowerCase().includes('network outage')) {
-        urgentReason = 'NetworkOutage';
-        console.log('Setting urgentReason to NetworkOutage based on priority text');
-    } else if (priorityText.includes('Priority 1') || priorityText.toLowerCase().includes('opening ceremony')) {
-        urgentReason = 'OpeningCeremony';
-        console.log('Setting urgentReason to OpeningCeremony based on priority text');
-    }
-    
-    // Submit the form to the appropriate endpoint
-    const form = document.getElementById('urgentRequestForm');
-    
-    // Create hidden field for urgentReason
-    const reasonField = document.createElement('input');
-    reasonField.type = 'hidden';
-    reasonField.name = 'urgentReason';
-    reasonField.value = urgentReason;
-    
-    console.log('Submitting urgent request with reason:', urgentReason);
-    
-    form.appendChild(reasonField);
-    
-    if (requestType === 'pe') {
-        form.action = '/PlannedEvents/ProcessUrgentRequest';
-    } else {
-        form.action = '/PETasks/ProcessUrgentRequest';
-    }
-    
-    form.submit();
-});
-            
-            // Reject button handler
-            document.getElementById('rejectUrgentRequestBtn').addEventListener('click', function() {
-                const requestType = document.getElementById('urgentRequestType').value;
-                const requestId = document.getElementById('urgentRequestId').value;
-                
-                // Submit the form to the appropriate endpoint
-                const form = document.getElementById('urgentRequestForm');
-                
-                // Create hidden field for urgentReason with Reject value
-                const reasonField = document.createElement('input');
-                reasonField.type = 'hidden';
-                reasonField.name = 'urgentReason';
-                reasonField.value = 'Reject';
-                
-                form.appendChild(reasonField);
-                
-                if (requestType === 'pe') {
-                    form.action = '/PlannedEvents/ProcessUrgentRequest';
-                } else {
-                    form.action = '/PETasks/ProcessUrgentRequest';
-                }
-                
-                form.submit();
-            });
-        });
-        
-        function initializeMessageInbox() {
-            const messageItems = document.querySelectorAll('.message-item');
-            const filterButtons = document.querySelectorAll('.inbox-filters button');
-            const inboxSearch = document.querySelector('.inbox-search');
-            
-            // Ensure all messages are visible on first load
-    messageItems.forEach(item => {
-        if (item.classList.contains('unread')) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-        }
+
     });
+                
+                function initializeMessageInbox() {
+                    const messageItems = document.querySelectorAll('.message-item');
+                    const filterButtons = document.querySelectorAll('.inbox-filters button');
+                    const inboxSearch = document.querySelector('.inbox-search');
+                    
+                    // Ensure all messages are visible on first load
+            messageItems.forEach(item => {
+                if (item.classList.contains('unread')) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
 
             // Message filtering
-// Replace the existing filter button handling code with this
-filterButtons.forEach(button => {
-    button.addEventListener('click', function() {
-        // Remove active class from all buttons
-        filterButtons.forEach(btn => btn.classList.remove('active'));
-        // Add active class to clicked button
-        this.classList.add('active');
+            // Replace the existing filter button handling code with this
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
 
-        const filter = this.getAttribute('data-filter');
+                    const filter = this.getAttribute('data-filter');
 
-        // Show/hide messages based on filter
-        messageItems.forEach(item => {
-            
-            const isUnread = item.classList.contains('unread');
-            const isRead = !isUnread;
+                    // Show/hide messages based on filter
+                    messageItems.forEach(item => {
+                        
+                        const isUnread = item.classList.contains('unread');
+                        const isRead = !isUnread;
 
-           switch(filter) {
-                case 'unread':
-                    // Show only unread messages
-                    item.style.display = isUnread ? 'flex' : 'none';
-                    break;
-                case 'read':
-                    // Show only read messages
-                    item.style.display = !isUnread ? 'flex' : 'none';
-                    break;
-                case 'all':
-                    // Show all messages
-                    item.style.display = 'flex';
-                    break;
-            }
-        });
-    });
-});
-// Update the initial visibility setup
-messageItems.forEach(item => {
-    // Show only unread messages by default
-    const isUnread = item.classList.contains('unread');
-    item.style.display = isUnread ? 'flex' : 'none';
-});
+                    switch(filter) {
+                            case 'unread':
+                                // Show only unread messages
+                                item.style.display = isUnread ? 'flex' : 'none';
+                                break;
+                            case 'read':
+                                // Show only read messages
+                                item.style.display = !isUnread ? 'flex' : 'none';
+                                break;
+                            case 'all':
+                                // Show all messages
+                                item.style.display = 'flex';
+                                break;
+                        }
+                    });
+                });
+            });
+            // Update the initial visibility setup
+            messageItems.forEach(item => {
+                // Show only unread messages by default
+                const isUnread = item.classList.contains('unread');
+                item.style.display = isUnread ? 'flex' : 'none';
+            });
             
             // Handle search functionality
             if (inboxSearch) {
