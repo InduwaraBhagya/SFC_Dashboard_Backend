@@ -277,6 +277,7 @@ namespace SFCDashboard.Controllers
                         CreatedAt = DateTime.Now,
                         IsRead = false,
                         IsReply = true,
+                        IsReminder = false,
                         OriginalIssueId = issue.Id
                     };
 

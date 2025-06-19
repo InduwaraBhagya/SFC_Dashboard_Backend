@@ -664,7 +664,7 @@ namespace SFCDashboard.Controllers
             // Get issues for the paginated PEs
             var peIds = paginatedList.Select(pe => pe.Id).ToList();
             var allIssues = await _context.PEIssues
-                .Where(i => peIds.Contains(i.PlannedEventId))
+                .Where(i => peIds.Contains(i.PlannedEventId) && i.IsReminder == false)
                 .OrderByDescending(i => i.CreatedAt)
                 .Select(i => new PEIssueViewModel
                 {
@@ -815,7 +815,7 @@ namespace SFCDashboard.Controllers
 
             // Load issues/subtasks for this PE (assuming you use PEIssue or Subtask table)
             var issues = await _context.PEIssues
-    .Where(i => i.PlannedEventId == plannedEvent.Id)
+    .Where(i => i.PlannedEventId == plannedEvent.Id && i.IsReminder == false)
     .OrderByDescending(i => i.CreatedAt)
     .Select(i => new PEIssueViewModel
     {

@@ -68,7 +68,8 @@ namespace SFCDashboard.Services
                         IsReply = false,
                         IsResolutionRequest = false,
                         SenderId = 1, // System user ID
-                        ReceiverId = user.Id
+                        ReceiverId = user.Id,
+                        IsReminder= true
                     };
 
                     context.PEIssues.Add(message);
