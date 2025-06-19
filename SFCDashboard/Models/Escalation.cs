@@ -20,8 +20,21 @@ namespace SFCDashboard.Models
         
         public bool IsRead { get; set; }
         public bool IsResolved { get; set; }
+                
+   
+        public bool IsIgnored { get; set; }
+
+        [MaxLength(500)]
+        public string? IgnoreReason { get; set; }
+
+        public DateTime? IgnoredAt { get; set; }
         
+
+        [ForeignKey("IgnoredBy")]
         public int? IgnoredById { get; set; }
+        
+
+        public virtual SystemUser IgnoredBy { get; set; }
     }
     
     public enum EscalationLevel

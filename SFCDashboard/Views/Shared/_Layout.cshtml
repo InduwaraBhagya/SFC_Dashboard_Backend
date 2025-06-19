@@ -536,7 +536,7 @@
             <div class="container-fluid">
                 <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="PlannedEvents"
                     asp-action="Index">
-                    <img src="~/images/logo.png" alt="SFCDashboard" class="logo-img" />
+                    <img src="~/images/logo.png" alt="SFCDashboard" height="40" class="logo-img" />
                 </a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -562,11 +562,11 @@
                                     <i class="bi bi-person-badge-fill me-1"></i> Add Role
                                 </a>
                             </li>
-                            <li class="nav-item">
+                            @*<li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-controller="PETaskLists" asp-action="Index">
                                     <i class="bi bi-list-task me-1"></i> Add Task
                                 </a>
-                            </li>
+                            </li>*@
                             <li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="ImportExcel">
                                     <i class="bi bi-file-earmark-arrow-up-fill me-1"></i> Import Excel
@@ -618,7 +618,7 @@
                     </button>
 
                     <!-- Combined Notifications Dropdown -->
-                    <div class="dropdown me-3 notification-dropdown">
+                    @* <div class="dropdown me-3 notification-dropdown">
                         <button class="btn notification-btn position-relative" type="button" id="notificationDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false">
                             <img src="~/images/notification.png" alt="Notifications"
@@ -659,7 +659,7 @@
                                 <!-- Notifications will be loaded here -->
                             </div>
                         </div>
-                    </div>
+                    </div> *@
 
                     <partial name="_LoginPartial" />
                 </div>
@@ -858,8 +858,8 @@
 
             // Dark mode functionality
             const darkModeToggle = document.getElementById('darkModeToggle');
-            const darkModeIcon = document.getElementById('darkModeIcon');
             const darkModeText = document.getElementById('darkModeText');
+            const darkModeIcon = document.getElementById('darkModeIcon');
             const body = document.body;
 
             // Check for saved theme preference or default to light mode
@@ -1329,6 +1329,14 @@
         
         // Auto refresh every 5 minutes
         setInterval(loadCombinedNotifications, 300000);
+    });
+</script>
+<script>
+    // Add this to your script section or a shared _Layout.cshtml file
+    $.ajaxSetup({
+        headers: {
+            'RequestVerificationToken': $('input:hidden[name="__RequestVerificationToken"]').val()
+        }
     });
 </script>
 </body>

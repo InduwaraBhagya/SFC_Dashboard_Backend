@@ -593,24 +593,20 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmResolution(int resolutionId, bool isConfirmed)
         {
-            _logger.LogInformation($"ConfirmResolution called with resolutionId: {resolutionId}, isConfirmed: {isConfirmed}");
-
             try
             {
                 var resolution = await _context.PEIssueResolutions.FindAsync(resolutionId);
                 if (resolution == null)
                 {
-                    _logger.LogWarning($"Resolution not found for id: {resolutionId}");
-                    TempData["ErrorMessage"] = "Resolution not found.";
-                    return RedirectToAction("Index", "PlannedEvents");
+                    TempData["ErrorMessage"] = "Resolution request not found.";
+                    return RedirectToAction("Index");
                 }
 
                 var issue = await _context.PEIssues.FindAsync(resolution.IssueId);
                 if (issue == null)
                 {
-                    _logger.LogWarning($"Issue not found for resolution id: {resolutionId}");
-                    TempData["ErrorMessage"] = "Issue not found.";
-                    return RedirectToAction("Index", "PlannedEvents");
+                    TempData["ErrorMessage"] = "Original issue not found.";
+                    return RedirectToAction("Index");
                 }
 
                 var pe = await _context.PlannedEvents.FindAsync(resolution.PlannedEventId);
@@ -637,25 +633,9 @@ namespace SFCDashboard.Controllers
                             {
                                 originalIssue.IsResolved = true;
                                 _context.Update(originalIssue);
-                                _logger.LogInformation($"Original issue {originalIssue.Id} also marked as resolved");
+                                _logger.LogInformation($"Original issue {originalIssue.Id} marked as resolved");
                             }
                         }
-
-                        // Find the resolution request message and hide it from inbox
-                        var resolutionRequestMessage = await _context.PEIssues
-                            .FirstOrDefaultAsync(i => i.IsResolutionRequest &&
-                                            i.OriginalIssueId == issue.Id);
-
-                        if (resolutionRequestMessage != null)
-                        {
-                            resolutionRequestMessage.IsHiddenFromInbox = true;
-                            _context.Update(resolutionRequestMessage);
-                            _logger.LogInformation($"Resolution request message {resolutionRequestMessage.Id} hidden from inbox");
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogWarning($"Issue not found for resolution id: {resolutionId}");
                     }
 
                     // Update planned event - ONLY if no other active issues remain
@@ -666,11 +646,12 @@ namespace SFCDashboard.Controllers
                             .AnyAsync(i => i.PlannedEventId == pe.Id &&
                                       !i.IsResolved &&
                                       i.OriginalIssueId == null);  // Only consider root issues
-                        pe.IsHold = false;
+                        
+                        pe.IsHold = hasOtherActiveIssues; // Set IsHold to false if no active issues remain
+                        _context.Update(pe);
+                        
                         if (!hasOtherActiveIssues)
                         {
-                            pe.IsHold = false;  // Set IsHold to false
-                            _context.Update(pe);
                             _logger.LogInformation($"PE {pe.Id} removed from hold status as all issues are resolved");
                         }
                         else
@@ -717,7 +698,7 @@ namespace SFCDashboard.Controllers
             {
                 _logger.LogError(ex, "Error in ConfirmResolution");
                 TempData["ErrorMessage"] = $"Error processing resolution: {ex.Message}";
-                return RedirectToAction("Index", "PlannedEvents");
+                return RedirectToAction("Index");
             }
         }
 

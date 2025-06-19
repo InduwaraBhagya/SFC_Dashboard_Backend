@@ -292,5 +292,79 @@
         function refreshEscalations() {
             location.reload();
         }
+
+        // When the resolve button is clicked
+        function resolveEscalation(escalationId, taskId) {
+            // Update the escalation status to resolved
+            updateEscalationStatus(escalationId, true);
+            
+            // Mark the task to no longer send escalations
+            disableEscalationsForTask(taskId);
+        }
+
+        function updateEscalationStatus(escalationId, isResolved) {
+            // API call or database update to mark escalation as resolved
+            return fetch('/api/escalations/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: escalationId,
+                    resolved: isResolved
+                })
+            });
+        }
+
+        function disableEscalationsForTask(taskId) {
+            // API call or database update to stop future escalations for this task
+            return fetch('/api/tasks/updateEscalationSettings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: taskId,
+                    sendEscalations: false
+                })
+            });
+        }
+
+        function resolveIssue(resolutionId) {
+            // Display loading indicator
+            $("#resolve-status-" + resolutionId).html("<span class='text-info'>Processing...</span>");
+            
+            $.ajax({
+                url: '@Url.Action("ConfirmResolution", "Issues")',
+                type: 'POST',
+                data: {
+                    resolutionId: resolutionId,
+                    isConfirmed: true
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update UI to show resolved status
+                        $("#resolve-button-" + resolutionId).prop('disabled', true).removeClass('btn-primary').addClass('btn-success');
+                        $("#resolve-status-" + resolutionId).html("<span class='text-success'>✓ Resolved</span>");
+                        
+                        // Show success message
+                        toastr.success(response.message);
+                        
+                        // Optionally update any other UI elements
+                        $("#issue-row-" + resolutionId).addClass('resolved-item');
+                    } else {
+                        // Show error
+                        $("#resolve-status-" + resolutionId).html("");
+                        toastr.error(response.message);
+                    }
+                },
+                error: function() {
+                    $("#resolve-status-" + resolutionId).html("");
+                    toastr.error("Server error occurred. Please try again.");
+                }
+            });
+            
+            return false; // Prevent form submission
+        }
     </script>
 }

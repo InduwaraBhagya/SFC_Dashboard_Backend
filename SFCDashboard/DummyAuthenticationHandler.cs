@@ -15,7 +15,7 @@ public class DummyAuthenticationHandler : AuthenticationHandler<AuthenticationSc
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var claims = new[] { new Claim(ClaimTypes.Name, "123456") };
+        var claims = new[] { new Claim(ClaimTypes.Name, "123852") };
         var identity = new ClaimsIdentity(claims, "DummyScheme");
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, "DummyScheme");

@@ -31,6 +31,11 @@
                             placeholder="Search PE by number or customer...">
                     </div>
                 </div>
+                <div class="col-md-6 text-end">
+                    <button id="assignSelectedPEs" class="btn btn-primary" style="display:none">
+                        <i class="bi bi-plus-circle me-1"></i>Assign Selected PEs
+                    </button>
+                </div>
             </div>
             <div id="searchResults" class="mt-3">
                 <!-- Search results will be displayed here -->
@@ -47,29 +52,48 @@
             @if (Model.ProjectPEs.Any())
             {
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table" id="assignedPEsTable">
                         <thead>
                             <tr>
                                 <th>PE Number</th>
                                 <th>Customer</th>
                                 <th>Job Reference</th>
                                 <th>Required Date</th>
-                                <th>Progress</th> <!-- New column -->
+                                <th>Current Task</th> <!-- Add this column -->
+                                <th>Progress</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var pe in Model.ProjectPEs)
+                            @foreach (var pe in Model.ProjectPEs) // Changed from assignedPEs to Model.ProjectPEs
                             {
                                 var tasks = _context.PETasks
                                 .Where(t => t.PENumber == pe.PlannedEvent.PeNumber)
                                 .ToList();
 
-                                var totalTasks = tasks.Count;
-                                var completedTasks = tasks.Count(t => t.TaskStatus?.ToLower() == "completed");
-                                var progressPercent = totalTasks > 0 ? (completedTasks * 100) / totalTasks : 0;
+                                // Get current task
+                                var currentTask = tasks
+                                .Where(t => t.TaskStatus?.ToLower() != "completed")
+                                .OrderBy(t => t.TaskSeq)
+                                .FirstOrDefault();
 
-                                var progressClass = progressPercent switch
+                                decimal totalOLA = tasks.Sum(t => decimal.TryParse(t.OLA, out decimal ola) ? ola : 0);
+                                decimal completedOLA = tasks
+                                .Where(t => t.TaskStatus?.ToLower() == "completed")
+                                .Sum(t => decimal.TryParse(t.OLA, out decimal ola) ? ola : 0);
+
+                                var progressPercent = totalOLA > 0 ? Math.Round((completedOLA / totalOLA) * 100, 2) : 0;
+
+                                // Get exceeded OLA tasks
+                                var exceededOLA = tasks.Where(t =>
+                                t.TaskStatus?.ToLower() == "completed" &&
+                                t.ActualTaskCreatedDate.HasValue &&
+                                t.ACtualTaskCompleteDate.HasValue &&
+                                ((decimal)(t.ACtualTaskCompleteDate.Value - t.ActualTaskCreatedDate.Value).TotalDays) >
+                                (decimal.TryParse(t.OLA, out decimal ola) ? ola : 0)
+                                );
+
+                                var progressClass = exceededOLA.Any() ? "bg-danger" : progressPercent switch
                                 {
                                     100 => "bg-success",
                                     > 60 => "bg-info",
@@ -89,6 +113,16 @@
                                         else
                                         {
                                             <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (currentTask != null)
+                                        {
+                                            <span class="badge bg-info">@currentTask.Task</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">No Active Task</span>
                                         }
                                     </td>
                                     <td>
@@ -130,94 +164,294 @@
     </div>
 </div>
 
+<!-- Add this modal HTML at the bottom of your view, before scripts -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove <strong id="peName"></strong> from this project?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep it</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Yes, Remove it</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function () {
-            // Search functionality
-            $('#searchInput').on('keyup', function () {
-                var searchTerm = $(this).val().trim();
+            let currentSearchPage = 1;
+            let selectedPEs = new Set();
+
+            function loadSearchResults() {
+                var searchTerm = $('#searchInput').val().trim();
                 var searchResults = $('#searchResults');
 
-                if (searchTerm.length > 2) {
-                    $.get('/Project/Search', {
-                        searchTerm: searchTerm,
-                        projectId: @Model.Id
-                                })
-                        .done(function (data) {
-                            if (data && data.length > 0) {
-                                var html = '<div class="table-responsive">';
-                                html += '<table class="table table-hover">';
-                                html += '<thead><tr><th>PE Number</th><th>Customer</th><th>Action</th></tr></thead>';
-                                html += '<tbody>';
-
-                                data.forEach(function (pe) {
-                                    html += `<tr>
-                                    <td>${pe.peNumber}</td>
-                                    <td>${pe.customer}</td>
-                                    <td>
-                                        ${pe.isAssigned ?
-                                            '<span class="badge bg-secondary"><i class="bi bi-check-circle me-1"></i>Already Assigned</span>' :
-                                            `<button class="btn btn-sm btn-primary assign-pe" data-pe-id="${pe.id}">
-                                                <i class="bi bi-plus-circle me-1"></i>Assign
-                                            </button>`
-                                        }
-                                    </td>
-                                </tr>`;
-                                });
-
-                                html += '</tbody></table></div>';
-                                searchResults.html(html);
-                            } else {
-                                searchResults.html('<div class="alert alert-info">No results found</div>');
-                            }
+                $.get('/Project/Search', {
+                    searchTerm: searchTerm,
+                    projectId: @Model.Id
                         })
-                        .fail(function (error) {
-                            searchResults.html('<div class="alert alert-danger">Error performing search</div>');
-                            console.error('Search error:', error);
-                        });
-                } else {
-                    searchResults.empty();
-                }
+                    .done(function (data) {
+                        if (data.items && data.items.length > 0) {
+                            var html = '<div class="table-responsive">';
+                            html += '<table class="table table-hover">';
+                            html += '<thead><tr><th><input type="checkbox" id="selectAll"></th><th>PE Number</th><th>Customer</th></tr></thead>';
+                            html += '<tbody>';
+
+                            data.items.forEach(function (pe) {
+                                var isChecked = selectedPEs.has(pe.id);
+                                html += `<tr>
+                                <td>${!pe.isAssigned ?
+                                        `<input type="checkbox" class="pe-checkbox" data-pe-id="${pe.id}" ${isChecked ? 'checked' : ''}>` :
+                                        ''}
+                                </td>
+                                <td>${pe.peNumber}</td>
+                                <td>${pe.customer}</td>
+                            </tr>`;
+                            });
+
+                            html += '</tbody></table></div>';
+                            searchResults.html(html);
+                            updateAssignButton();
+                        } else {
+                            searchResults.html('<div class="alert alert-info">No results found</div>');
+                        }
+                    });
+            }
+
+            // Search input handler
+            $('#searchInput').on('keyup', function () {
+                currentSearchPage = 1;
+                loadSearchResults(currentSearchPage);
             });
 
-            // Assign PE
-            $(document).on('click', '.assign-pe', function () {
-                var peId = $(this).data('pe-id');
+            // Assigned PEs pagination click handler
+            $(document).on('click', '#assignedPEsTable .page-link', function (e) {
+                e.preventDefault();
+                var page = $(this).data('page');
+                // Load assigned PEs for the selected page
+                window.location.href = `?page=${page}`;
+            });
 
-                $.post('/Project/AssignPEToProject', {
-                    plannedEventId: peId,
-                    projectId: @Model.Id
-                                                                })
-                    .done(function (response) {
+            // Handle individual checkbox changes
+            $(document).on('change', '.pe-checkbox', function () {
+                const peId = $(this).data('pe-id');
+                if (this.checked) {
+                    selectedPEs.add(peId);
+                } else {
+                    selectedPEs.delete(peId);
+                }
+                updateAssignButton();
+            });
+
+            // Handle "Select All" checkbox
+            $(document).on('change', '#selectAll', function () {
+                const isChecked = this.checked;
+                $('.pe-checkbox').each(function () {
+                    this.checked = isChecked;
+                    const peId = $(this).data('pe-id');
+                    if (isChecked) {
+                        selectedPEs.add(peId);
+                    } else {
+                        selectedPEs.delete(peId);
+                    }
+                });
+                updateAssignButton();
+            });
+
+            function updateAssignButton() {
+                const btn = $('#assignSelectedPEs');
+                btn.toggle(selectedPEs.size > 0);
+            }
+
+            // Handle assign button click
+            $('#assignSelectedPEs').on('click', function () {
+                const data = {
+                    projectId: @Model.Id,
+                    plannedEventIds: Array.from(selectedPEs)
+                };
+
+                $.ajax({
+                    url: '/Project/AssignMultiplePEsToProject',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (response) {
                         if (response.success) {
                             location.reload();
                         }
-                    })
-                    .fail(function (error) {
-                        alert('Error assigning PE to project');
-                    });
+                    },
+                    error: function () {
+                        alert('Error assigning PEs to project');
+                    }
+                });
             });
 
             // Remove PE with confirmation
-            $(document).on('click', '.remove-pe', function () {
-                var peId = $(this).data('pe-id');
-                var peNumber = $(this).data('pe-number');
+            let deleteModal;
+            let peToDelete = null;
 
-                if (confirm(`Are you sure you want to remove PE ${peNumber} from this project?`)) {
+            $(document).ready(function() {
+                deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+
+                $(document).on('click', '.remove-pe', function(e) {
+                    e.preventDefault();
+                    peToDelete = {
+                        id: $(this).data('pe-id'),
+                        number: $(this).data('pe-number')
+                    };
+                    
+                    $('#peName').text(peToDelete.number);
+                    deleteModal.show();
+                });
+
+                $('#confirmDelete').on('click', function() {
+                    if (!peToDelete) return;
+
                     $.post('/Project/RemovePEFromProject', {
-                        plannedEventId: peId,
+                        plannedEventId: peToDelete.id,
                         projectId: @Model.Id
-                                                                    })
-                        .done(function (response) {
-                            if (response.success) {
-                                location.reload();
-                            }
-                        })
-                        .fail(function (error) {
-                            alert('Error removing PE from project');
-                        });
-                }
+                    })
+                    .done(function(response) {
+                        if (response.success) {
+                            deleteModal.hide();
+                            location.reload();
+                        }
+                    })
+                    .fail(function(error) {
+                        alert('Error removing PE from project');
+                    });
+                });
             });
+
+            // Pagination for assigned PEs
+            $(document).on('click', '.pagination .page-link', function (e) {
+                e.preventDefault();
+                var page = $(this).data('page');
+                loadAssignedPEs(page);
+            });
+
+            function loadAssignedPEs(page) {
+                $.get('/Project/GetAssignedPEs', {
+                    projectId: @Model.Id,
+                    page: page
+                })
+                    .done(function (data) {
+                        if (data && data.assignedPEs && data.assignedPEs.length > 0) {
+                            var html = '';
+                            data.assignedPEs.forEach(function (pe) {
+                                var progressClass = pe.progress.isExceeded ? "bg-danger" :
+                                    pe.progress.percent == 100 ? "bg-success" :
+                                        pe.progress.percent > 60 ? "bg-info" :
+                                            pe.progress.percent > 30 ? "bg-warning" : "bg-danger";
+
+                                html += `<tr>
+                                                                    <td>${pe.peNumber}</td>
+                                                                    <td>${pe.customer}</td>
+                                                                    <td>${pe.jobReference || ''}</td>
+                                                                    <td>${pe.requiredDate ? new Date(pe.requiredDate).toLocaleDateString() : '<span class="text-muted">-</span>'}</td>
+                                                                    <td>
+                                                                        ${pe.currentTask ?
+                                        `<span class="badge bg-info">${pe.currentTask}</span>` :
+                                        '<span class="badge bg-secondary">No Active Task</span>'}
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="d-flex align-items-center">
+                                                                            <div class="progress flex-grow-1" style="height: 8px;">
+                                                                                <div class="progress-bar ${progressClass}" role="progressbar"
+                                                                                    style="width: ${pe.progress.percent}%;" 
+                                                                                    aria-valuenow="${pe.progress.percent}"
+                                                                                    aria-valuemin="0" 
+                                                                                    aria-valuemax="100">
+                                                                                </div>
+                                                                            </div>
+                                                                            <span class="ms-2 small">${pe.progress.percent}%</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="btn-group">
+                                                                            <a href="/PlannedEvents/Details/${pe.id}"
+                                                                                class="btn btn-sm btn-info me-2" target="_blank">
+                                                                                <i class="bi bi-eye"></i> View Details
+                                                                            </a>
+                                                                            <button class="btn btn-sm btn-danger remove-pe" 
+                                                                                data-pe-id="${pe.id}"
+                                                                                data-pe-number="${pe.peNumber}">
+                                                                                <i class="bi bi-trash"></i> Remove
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>`;
+                            });
+
+                            $('#assignedPEsTable tbody').html(html);
+                            updatePagination(data.totalPages, data.currentPage);
+                        }
+                    });
+            }
+
+            function updatePagination(totalPages, currentPage) {
+                var html = '<nav aria-label="Page navigation"><ul class="pagination justify-content-center">';
+
+                // First page button
+                html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" data-page="1" aria-label="First">
+                                            <i class="bi bi-chevron-double-left"></i>
+                                        </a>
+                                    </li>`;
+
+                // Previous button
+                html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    </li>`;
+
+                // Calculate page range
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, currentPage + 2);
+
+                if (startPage > 1) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+
+                // Page numbers
+                for (var i = startPage; i <= endPage; i++) {
+                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+                                        </li>`;
+                }
+
+                if (endPage < totalPages) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+
+                // Next button
+                html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>`;
+
+                // Last page button
+                html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                        <a class="page-link" href="#" data-page="${totalPages}" aria-label="Last">
+                                            <i class="bi bi-chevron-double-right"></i>
+                                        </a>
+                                    </li>`;
+
+                html += '</ul></nav>';
+                $('.pagination').html(html);
+            }
+
+            // Load first page initially
+            loadAssignedPEs(1);
         });
     </script>
 }
@@ -440,5 +674,136 @@
 
     [data-theme="dark"] .text-muted {
         color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    /* Pagination styling */
+    .pagination {
+        margin: 2rem 0;
+        gap: 0.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .pagination .page-item {
+        margin: 0;
+    }
+
+    .pagination .page-link {
+        color: #495057;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.7rem 1.2rem;
+        font-size: 0.95rem;
+        line-height: 1.25;
+        min-width: 45px;
+        text-align: center;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        font-weight: 500;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Active state */
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #4361ee, #3498db);
+        border-color: transparent;
+        color: #fff;
+        font-weight: 600;
+        box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+        transform: translateY(-1px);
+    }
+
+    /* Hover state */
+    .pagination .page-link:hover:not(.disabled) {
+        background-color: #f8f9fa;
+        border-color: #4361ee;
+        color: #4361ee;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        z-index: 2;
+    }
+
+    /* Disabled state */
+    .pagination .page-item.disabled .page-link {
+        color: #adb5bd;
+        pointer-events: none;
+        background-color: #f8f9fa;
+        border-color: #e9ecef;
+        opacity: 0.8;
+    }
+
+    /* Navigation icons */
+    .pagination .page-link i {
+        font-size: 0.9rem;
+        line-height: 1;
+        position: relative;
+        top: 1px;
+    }
+
+    /* Ellipsis styling */
+    .pagination .page-item.disabled span.page-link {
+        background: transparent;
+        border: none;
+        color: #6c757d;
+        padding: 0.7rem 0.5rem;
+    }
+
+    /* Dark mode styles */
+    [data-theme="dark"] .pagination .page-link {
+        background-color: var(--card-bg, #2d2d2d);
+        border-color: var(--border-color, #404040);
+        color: var(--text-color, #e9ecef);
+    }
+
+    [data-theme="dark"] .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #4361ee, #3498db);
+        border-color: transparent;
+        color: #fff;
+    }
+
+    [data-theme="dark"] .pagination .page-link:hover:not(.disabled) {
+        background-color: var(--hover-bg, #3d3d3d);
+        border-color: #4361ee;
+        color: #fff;
+    }
+
+    [data-theme="dark"] .pagination .page-item.disabled .page-link {
+        background-color: var(--card-bg, #2d2d2d);
+        border-color: var(--border-color, #404040);
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Ripple effect on click */
+    .pagination .page-link::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        border-radius: 100%;
+        transform: scale(1) translate(-50%, -50%);
+        transform-origin: 50% 50%;
+    }
+
+    .pagination .page-link:active::after {
+        animation: ripple 0.6s ease-out;
+    }
+
+    @@keyframes ripple {
+        0% {
+            transform: scale(0) translate(-50%, -50%);
+            opacity: 0.5;
+        }
+
+        100% {
+            transform: scale(20) translate(-50%, -50%);
+            opacity: 0;
+        }
     }
 </style>
