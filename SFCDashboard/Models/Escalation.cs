@@ -10,23 +10,30 @@ namespace SFCDashboard.Models
         
         public int TaskId { get; set; }
         [ForeignKey("TaskId")]
-        public virtual PETask PETask { get; set; }  // Changed from Task to PETask
-        
-        public DateTime OLAViolationTime { get; set; }
-        public DateTime CreatedAt { get; set; }
-        
-        public EscalationLevel Level { get; set; }
+        public virtual PETask PETask { get; set; }
         
         public int? RecipientId { get; set; }
-        [ForeignKey("RecipientId")]
-        public virtual SystemUser Recipient { get; set; }
+        public int? Level { get; set; }
+        public string Title { get; set; }
+        public string Message { get; set; }
+        public DateTime CreatedAt { get; set; }
         
         public bool IsRead { get; set; }
+        public bool IsResolved { get; set; }
+                
+   
         public bool IsIgnored { get; set; }
+
+        [MaxLength(500)]
         public string? IgnoreReason { get; set; }
+
         public DateTime? IgnoredAt { get; set; }
+        
+
+        [ForeignKey("IgnoredBy")]
         public int? IgnoredById { get; set; }
-        [ForeignKey("IgnoredById")]
+        
+
         public virtual SystemUser IgnoredBy { get; set; }
     }
     

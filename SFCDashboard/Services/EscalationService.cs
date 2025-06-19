@@ -79,22 +79,22 @@ namespace SFCDashboard.Services
                     
                     // Check if we already have an escalation for this task at this level
                     var existingEscalation = await _context.Escalations
-                        .Where(e => e.TaskId == task.Id && e.Level == level && !e.IsIgnored)
+                        .Where(e => e.TaskId == task.Id && e.Level == (int)level)
                         .FirstOrDefaultAsync();
                     
                     if (existingEscalation == null)
                     {
                         // Create new escalation
-                        var escalation = new Escalation
-                        {
-                            TaskId = task.Id,
-                            OLAViolationTime = task.OLADateTime,
-                            CreatedAt = DateTime.Now,
-                            Level = level,
-                            IsRead = false,
-                            IsIgnored = false,
-                            IgnoreReason = ""
-                        };
+var escalation = new Escalation
+{
+    TaskId = task.Id,
+    RecipientId = await GetRecipientIdForLevel(level, task),  // Await the async method to get the int value
+    Title = $"Task {task.PENumber} violating SLA",
+    Message = $"Task {task.PENumber} has been violating SLA since {task.ViolationStartTime:g}",
+    CreatedAt = DateTime.Now,
+    IsRead = false,
+    IsResolved = false  // Changed from IsIgnored to IsResolved based on your model
+};
                         
                         // Find the appropriate recipient
                         SystemUser recipient = null;
@@ -342,7 +342,7 @@ var workGroup = await _context.WorkGroups
         {
             return await _context.Escalations
                 .Include(e => e.PETask)
-                .Where(e => e.RecipientId == userId && !e.IsRead && !e.IsIgnored)
+                .Where(e => e.RecipientId == userId && !e.IsRead)
                 .OrderByDescending(e => e.CreatedAt)
                 .ToListAsync();
         }
@@ -358,28 +358,162 @@ var workGroup = await _context.WorkGroups
             }
         }
         
-        public async Task IgnoreEscalationAsync(int escalationId, string reason, int userId)
-        {
-            var escalation = await _context.Escalations.FindAsync(escalationId);
+        // public async Task IgnoreEscalationAsync(int escalationId, string reason, int userId)
+        // {
+        //     var escalation = await _context.Escalations.FindAsync(escalationId);
             
-            if (escalation != null)
-            {
-                escalation.IsIgnored = true;
-                escalation.IgnoreReason = reason;
-                escalation.IgnoredAt = DateTime.Now;
-                escalation.IgnoredById = userId;
+        //     if (escalation != null)
+        //     {
+        //         escalation.IsIgnored = true;
+        //         escalation.IgnoreReason = reason;
+        //         escalation.IgnoredAt = DateTime.Now;
+        //         escalation.IgnoredById = userId;
                 
-                await _context.SaveChangesAsync();
-            }
-        }
+        //         await _context.SaveChangesAsync();
+        //     }
+        // }
         
         public async Task<Escalation> GetEscalationDetailsAsync(int id)
         {
             return await _context.Escalations
                 .Include(e => e.PETask)
-                .Include(e => e.Recipient)
-                .Include(e => e.IgnoredBy)
                 .FirstOrDefaultAsync(e => e.Id == id);
+        }
+
+        public async Task ProcessViolationEscalationsAsync()
+        {
+            // Get all violated tasks that need escalation
+            var violatedTasks = await _context.PETasks
+                .Where(p => p.IsOLAViolate && p.TaskStatus != "Completed" && p.TaskStatus != "Closed")
+                .ToListAsync();
+
+            foreach (var task in violatedTasks)
+            {
+                // Calculate violation duration
+                DateTime violationStartTime = task.ViolationStartTime != null ? task.ViolationStartTime.Value :
+                                             (task.OLADateTime != default(DateTime) ? task.OLADateTime : DateTime.UtcNow);
+                TimeSpan violationDuration = DateTime.UtcNow - violationStartTime;
+                
+                // Determine recipient based on violation duration
+                int recipientId = await DetermineRecipientAsync(task, violationDuration);
+                
+                // Check if we already created an escalation for this recipient and task
+                bool escalationExists = await _context.Escalations
+                    .AnyAsync(e => e.TaskId == task.Id && e.RecipientId == recipientId && !e.IsResolved);
+                
+                if (!escalationExists && recipientId > 0)
+                {
+                    // Create the escalation
+                    var escalation = new Escalation
+                    {
+                        TaskId = task.Id,
+                        RecipientId = recipientId,
+                        Title = $"Task {task.PENumber} violating SLA",
+                        Message = $"Task {task.PENumber} has been violating SLA for {Math.Floor(violationDuration.TotalDays)} days and {violationDuration.Hours} hours",
+                        CreatedAt = DateTime.UtcNow,
+                        IsRead = false,
+                        IsResolved = false
+                    };
+
+                    _context.Escalations.Add(escalation);
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Created escalation for task {TaskId} to recipient {RecipientId} after {ViolationDays} days violation", 
+                        task.Id, recipientId, Math.Floor(violationDuration.TotalDays));
+                }
+            }
+        }
+
+        private async Task<int> DetermineRecipientAsync(PETask task, TimeSpan violationDuration)
+        {
+            // Get the task's workgroup to determine the hierarchy
+            string taskWorkgroup = task.TaskWorkGroup;
+            if (string.IsNullOrEmpty(taskWorkgroup))
+            {
+                _logger.LogWarning("Task {TaskId} has no workgroup assigned", task.Id);
+                return 0;
+            }
+
+            // Immediately when violation occurs - send to engineer
+            if (violationDuration.TotalHours < 24)
+            {
+                // Find engineer responsible for this task
+                var engineer= await _context.Users
+                    .Include(u => u.UserRole)
+                    .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup.Name == taskWorkgroup) && 
+                           u.UserRole.Name == "Engineer")
+                    .FirstOrDefaultAsync();
+                var level = 1;
+                
+                return engineer?.Id ?? 0;
+            }
+            // After 1 day - send to DGM
+            else if (violationDuration.TotalHours < 48)
+            {
+                // Find DGM for this workgroup
+                var dgm = await _context.Users
+                    .Include(u => u.UserRole)
+                    .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup.Name == taskWorkgroup) && 
+                           u.UserRole.Name == "Deputy General Manager")
+                    .FirstOrDefaultAsync();
+                var level = 2;
+                return dgm?.Id ?? 0;
+            }
+            // After 2 days - send to GM
+            else
+            {
+                // Find GM
+                var gm = await _context.Users
+                    .Include(u => u.UserRole)
+                    .Where(u => u.UserRole.Name == "General Manager")
+                    .FirstOrDefaultAsync();
+                var level = 3;
+                return gm?.Id ?? 0;
+            }
+        }
+
+        private async Task<int> GetRecipientIdForLevel(EscalationLevel level, PETask task)
+        {
+            // Get the task's workgroup to determine the hierarchy
+            string taskWorkgroup = task.TaskWorkGroup;
+            if (string.IsNullOrEmpty(taskWorkgroup))
+            {
+                _logger.LogWarning("Task {TaskId} has no workgroup assigned", task.Id);
+                return 0;
+            }
+
+            switch (level)
+            {
+                case EscalationLevel.Engineer:
+                    // Find engineer responsible for this task
+                    var engineer = await _context.Users
+                        .Include(u => u.UserRole)
+                        .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup.Name == taskWorkgroup) && 
+                               u.UserRole.Name == "Engineer")
+                        .FirstOrDefaultAsync();
+                    return engineer?.Id ?? 0;
+                    
+                case EscalationLevel.DGM:
+                    // Find DGM for this workgroup
+                    var dgm = await _context.Users
+                        .Include(u => u.UserRole)
+                        .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup.Name == taskWorkgroup) && 
+                               u.UserRole.Name == "Deputy General Manager")
+                        .FirstOrDefaultAsync();
+                    return dgm?.Id ?? 0;
+                    
+                case EscalationLevel.GM:
+                    // Find GM
+                    var gm = await _context.Users
+                        .Include(u => u.UserRole)
+                        .Where(u => u.UserRole.Name == "General Manager")
+                        .FirstOrDefaultAsync();
+                    return gm?.Id ?? 0;
+                    
+                default:
+                    _logger.LogWarning("Unknown escalation level: {Level} for task {TaskId}", level, task.Id);
+                    return 0;
+            }
         }
     }
 }

@@ -76,6 +76,7 @@ namespace SFCDashboard.Services
                 if (task.IsOLAViolate != isOlaViolate)
                 {
                     task.IsOLAViolate = isOlaViolate;
+                    task.ViolationStartTime = DateTime.UtcNow;
                     dbContext.Update(task);
                 }
             }

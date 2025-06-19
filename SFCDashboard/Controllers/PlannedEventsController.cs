@@ -331,6 +331,7 @@ namespace SFCDashboard.Controllers
             }
 
             ViewBag.InboxIssues = inboxIssues;
+        ViewData["InboxIssues"] = inboxIssues;
 
             // Create a lookup dictionary for resolutions
             if (inboxIssues != null && inboxIssues.Any())
