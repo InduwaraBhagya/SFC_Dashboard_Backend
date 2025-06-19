@@ -47,6 +47,19 @@ namespace SFCDashboard.Controllers
                 .ThenInclude(uwg => uwg.WorkGroup)
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
+                if (await IsUserInSalesWorkgroup())
+    {
+        return RedirectToAction(nameof(SalesView), new
+        {
+            searchType,
+            peNumber,
+            customer,
+            jobReference,
+            soNumber,
+            pageIndex
+        });
+    }
+
             // Check if user belongs to NET-PROJ-ACC-CABLE workgroup
             bool hasDrawFiberAccess = currentUser?.UserWorkGroups?
                 .Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
@@ -253,8 +266,7 @@ namespace SFCDashboard.Controllers
             // In PlannedEventsController.cs, in the Index action
             var inboxIssues = await _context.PEIssues
                 .Where(i => i.ReceiverId == currentUserId
-                    && !i.IsHiddenFromInbox
-                    && i.SenderId != 1)  // Exclude system reminders (SenderId = 1)
+                    && !i.IsHiddenFromInbox) 
                 .OrderByDescending(i => i.CreatedAt)
                 .Take(10)
                 .Select(i => new PEIssueViewModel
@@ -435,6 +447,264 @@ namespace SFCDashboard.Controllers
             }
         }
 
+        private async Task<bool> IsUserInSalesWorkgroup()
+        {
+            if (!User.Identity?.IsAuthenticated == true)
+                return false;
+
+            var email = User.Identity?.Name;
+            if (string.IsNullOrEmpty(email))
+                return false;
+
+            var user = await _context.Users
+                .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
+
+            return user?.UserWorkGroups
+                ?.Any(uwg => uwg.WorkGroup.Name.Contains("SALES", StringComparison.OrdinalIgnoreCase)) 
+                ?? false;
+        }
+
+        public async Task<IActionResult> SalesView(string searchType, string peNumber, string customer,
+        string jobReference, string soNumber, int? pageIndex = 1)
+        {
+            var currentUserId = await GetCurrentUserIdAsync();
+
+            // Get user's sales workgroup
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+
+            // Get PE numbers with OLA violation
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            // Base query for records where user's workgroup matches either TaskWg or SectionHandledBy
+            var baseQuery = _context.PlannedEvents.AsQueryable();
+
+            if (!canViewAll)
+            {
+                baseQuery = baseQuery.Where(p => salesWorkgroups.Any(wg => 
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
+
+            // Calculate dashboard counts using the same logic as specific views
+            ViewData["UrgentCount"] = await baseQuery
+                .Where(p => 
+                    p.PEStatus == "urgent" && 
+                    !p.IsHold &&
+                    !violatingPENumbers.Contains(p.PeNumber))
+                .CountAsync();
+
+            ViewData["InProgressCount"] = await baseQuery
+                .Where(p => 
+                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                    !p.IsHold &&
+                    !violatingPENumbers.Contains(p.PeNumber))
+                .CountAsync();
+
+            ViewData["OLAViolateCount"] = await baseQuery
+                .Where(p => violatingPENumbers.Contains(p.PeNumber))
+                .CountAsync();
+
+            ViewData["HoldCount"] = await baseQuery
+                .Where(p => p.IsHold)
+                .CountAsync();
+
+
+            // Get pending urgent requests
+            var pendingUrgentRequests = await _context.PlannedEvents
+                .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
+                .OrderByDescending(p => p.PECreatedDate)
+                .Take(10)
+                .ToListAsync();
+            ViewData["PendingUrgentRequests"] = pendingUrgentRequests;
+
+            // Get pending task urgent requests
+            var pendingTaskRequests = await _context.PETasks
+                .Where(t => t.UrgentRequested && !t.IsUrgent)
+                .Include(t => t.PlannedEvent)
+                .OrderByDescending(t => t.TaskCreatedDate)
+                .Take(5)
+                .ToListAsync();
+            ViewData["PendingTaskRequests"] = pendingTaskRequests;
+
+            // Get latest inbox issues
+            var inboxIssues = await _context.PEIssues
+                .Where(i => i.ReceiverId == currentUserId && !i.IsHiddenFromInbox)
+                .OrderByDescending(i => i.CreatedAt)
+                .Take(10)
+                .Select(i => new PEIssueViewModel
+                {
+                    Id = i.Id,
+                    SenderId = i.SenderId,
+                    SenderName = _context.Users
+                        .Where(u => u.Id == i.SenderId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverId = i.ReceiverId,
+                    ReceiverName = _context.Users
+                        .Where(u => u.Id == i.ReceiverId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Receiver",
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId,
+                    IsRead = i.IsRead,
+                    IsReply = i.IsReply,
+                    OriginalIssueId = i.OriginalIssueId,
+                    IsResolved = i.IsResolved,
+                    IsResolutionRequest = i.IsResolutionRequest,
+                    PETaskId = i.PETaskId
+                })
+                .ToListAsync();
+
+            // Calculate unread count
+            var unreadCount = inboxIssues.Count(i => !i.IsRead);
+            unreadCount += pendingUrgentRequests.Count;
+            unreadCount += pendingTaskRequests.Count;
+
+            ViewData["InboxIssues"] = inboxIssues;
+            ViewData["TotalMessages"] = inboxIssues.Count;
+            ViewData["UnreadMessages"] = unreadCount;
+
+            // Add resolutions lookup for resolution requests
+            if (inboxIssues.Any())
+            {
+                Dictionary<int, PEIssueResolution> resolutionsByIssueId = new Dictionary<int, PEIssueResolution>();
+                var issueIds = inboxIssues
+                    .Where(i => i.IsResolutionRequest)
+                    .Select(i => i.OriginalIssueId ?? i.Id)
+                    .ToList();
+
+                if (issueIds.Any())
+                {
+                    var resolutions = await _context.PEIssueResolutions
+                        .Where(r => issueIds.Contains(r.IssueId) && !r.IsConfirmed)
+                        .ToListAsync();
+
+                    foreach (var resolution in resolutions)
+                    {
+                        resolutionsByIssueId[resolution.IssueId] = resolution;
+                    }
+                }
+                ViewBag.ResolutionsByIssueId = resolutionsByIssueId;
+            }
+
+            bool isSearchPerformed = !string.IsNullOrEmpty(searchType) && (
+            !string.IsNullOrEmpty(peNumber) ||
+            !string.IsNullOrEmpty(customer) ||
+            !string.IsNullOrEmpty(jobReference) ||
+            !string.IsNullOrEmpty(soNumber));
+            
+        var query = baseQuery;
+
+        if (isSearchPerformed)
+            {
+                switch (searchType.ToLower())
+                {
+                    case "customer" when !string.IsNullOrEmpty(customer):
+                        query = query.Where(p => p.Customer.Contains(customer));
+                        ViewData["CustomerFilter"] = customer;
+                        break;
+                    case "jobreference" when !string.IsNullOrEmpty(jobReference):
+                        query = query.Where(p => p.JobReference.Contains(jobReference));
+                        ViewData["JobReferenceFilter"] = jobReference;
+                        break;
+                    case "sonumber" when !string.IsNullOrEmpty(soNumber):
+                        query = query.Where(p => p.SoNumber.Contains(soNumber));
+                        ViewData["SONumberFilter"] = soNumber;
+                        break;
+                    default: // peNumber
+                        if (!string.IsNullOrEmpty(peNumber))
+                            query = query.Where(p => p.PeNumber.Contains(peNumber));
+                        ViewData["PENumberFilter"] = peNumber;
+                        break;
+                }
+            }
+            else
+            {
+                // Return empty list if no search performed
+                return View(new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, 1, 10));
+            }
+
+            ViewData["SearchType"] = searchType ?? "peNumber";
+            ViewData["SalesWorkgroups"] = string.Join(", ", salesWorkgroups);
+            ViewData["CanViewAll"] = canViewAll;
+
+            // Get tasks for the paginated PEs
+            int pageSize = 10;
+            var paginatedList = await PaginatedList<PlannedEvent>.CreateAsync(
+                query.OrderByDescending(p => p.ServiceRequiredDate),
+                pageIndex ?? 1,
+                pageSize);
+
+            var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
+            var allTasks = await _context.PETasks
+                .Where(t => peNumbers.Contains(t.PENumber))
+                .OrderBy(t => t.TaskSeq)
+                .ToListAsync();
+
+            var peTasksByPeNumber = allTasks
+                .GroupBy(t => t.PENumber)
+                .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
+            ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+
+            // Get issues for the paginated PEs
+            var peIds = paginatedList.Select(pe => pe.Id).ToList();
+            var allIssues = await _context.PEIssues
+                .Where(i => peIds.Contains(i.PlannedEventId))
+                .OrderByDescending(i => i.CreatedAt)
+                .Select(i => new PEIssueViewModel
+                {
+                    Id = i.Id,
+                    SenderId = i.SenderId,
+                    SenderName = _context.Users
+                        .Where(u => u.Id == i.SenderId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Sender",
+                    ReceiverId = i.ReceiverId,
+                    ReceiverName = _context.Users
+                        .Where(u => u.Id == i.ReceiverId)
+                        .Select(u => u.Name)
+                        .FirstOrDefault() ?? "Unknown Receiver",
+                    IssueText = i.IssueText,
+                    AttachmentPath = i.AttachmentPath,
+                    CreatedAt = i.CreatedAt,
+                    PlannedEventId = i.PlannedEventId,
+                    IsResolved = i.IsResolved,
+                    IsHiddenFromInbox = i.IsHiddenFromInbox
+                })
+                .ToListAsync();
+
+            var issuesByPlannedEventId = allIssues
+                .GroupBy(i => i.PlannedEventId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
+
+            return View(paginatedList);
+        }
+
+        private string ExtractServiceId(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+                return string.Empty;
+
+            // Extract up to the first 6 characters of the email or service ID
+            return email.Length > 6 ? email.Substring(0, 6) : email;
+        }
+
+
         //here this part for handle reminder as notification
         [HttpGet]
         public async Task<IActionResult> GetReminders(bool showAll = true)
@@ -462,6 +732,7 @@ namespace SFCDashboard.Controllers
 
             return Json(reminders);
         }
+
         [HttpGet]
         public async Task<IActionResult> GetReminderCount()
         {
@@ -1087,8 +1358,7 @@ namespace SFCDashboard.Controllers
             _logger.LogInformation("Retrieved {count} pending urgent PE requests", pendingRequests.Count);
             return View(pendingRequests);
         }
-        // POST: PlannedEvents/ProcessUrgentRequest
-        [HttpPost]
+        
         // POST: PlannedEvents/ProcessUrgentRequest
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -1540,12 +1810,191 @@ namespace SFCDashboard.Controllers
             return View(result);
         }
 
+
+        public async Task<IActionResult> SalesInProgressRecords(int? pageIndex = 1)
+        {
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                .ThenInclude(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                
+            // Get user's sales workgroup
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(InProgressRecords));
+            }
+
+            // Get PE numbers with OLA violation
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+
+            var query = _context.PlannedEvents.AsQueryable();
+
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
+
+            query = query.Where(p =>
+                (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                !p.IsHold &&
+                !violatingPENumbers.Contains(p.PeNumber));
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            ViewData["CanViewAll"] = canViewAll;
+            ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
+            return View(records);
+    
+        }
+
+
+        public async Task<IActionResult> SalesHoldRecords(int? pageIndex = 1)
+        {
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(HoldRecords));
+            }
+
+            var query = _context.PlannedEvents.Where(p => p.IsHold);
+
+            // Apply workgroup filtering only if user doesn't have ViewAll permission
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            ViewData["CanViewAll"] = canViewAll;
+            return View(records);
+        }
+
+        public async Task<IActionResult> SalesUrgentRecords(int? pageIndex = 1)
+        {
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(UrgentRecords));
+            }
+
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.PlannedEvents
+                .Where(p => p.PEStatus == "urgent" &&
+                       !p.IsHold &&
+                       !violatingPENumbers.Contains(p.PeNumber));
+
+            // Apply workgroup filtering only if user doesn't have ViewAll permission
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            ViewData["CanViewAll"] = canViewAll;
+            return View(records);
+        }
+
+        public async Task<IActionResult> SalesOLAViolateRecords(int? pageIndex = 1)
+        {
+            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
+            if (!salesWorkgroups.Any())
+            {
+                return RedirectToAction(nameof(OLAViolateRecords));
+            }
+
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.PlannedEvents
+                .Where(p => violatingPENumbers.Contains(p.PeNumber));
+
+            if (!canViewAll)
+            {
+                query = query.Where(p => salesWorkgroups.Any(wg => 
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+            }
+
+            var records = await query
+                .OrderByDescending(p => p.ServiceRequiredDate)
+                .ToListAsync();
+
+            // Get violation details
+            var violatingTasks = await _context.PETasks
+                .Where(t => t.IsOLAViolate &&
+                       records.Select(p => p.PeNumber).Contains(t.PENumber))
+                .ToListAsync();
+
+            var currentDate = DateTime.Today;
+            var violationDetails = violatingTasks
+                .GroupBy(t => t.PENumber)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new
+                    {
+                        TasksCount = g.Count(),
+                        MaxDaysOverdue = g.Max(t =>
+                            t.EstimatedTime.HasValue
+                                ? (currentDate - t.EstimatedTime.Value).Days
+                                : (t.ActualTaskCreatedDate.HasValue && t.OLA != null &&
+                                   int.TryParse(t.OLA, out var olaDays))
+                                    ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays)).Days
+                                    : 0
+                        ),
+                        OldestViolation = g.Min(t =>
+                            t.EstimatedTime ??
+                            (t.ActualTaskCreatedDate.HasValue && t.OLA != null &&
+                             int.TryParse(t.OLA, out var olaDays)
+                                ? t.ActualTaskCreatedDate.Value.AddDays(olaDays)
+                                : (DateTime?)null))
+                    }
+                );
+            ViewBag.ViolationDetails = violationDetails;
+
+            ViewData["CanViewAll"] = canViewAll;
+            return View(records);
+        }
+
+
         private async Task<int> GetUrgentCount(List<int> workgroupIds)
         {
             _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
-            // Get current user and check ViewAll permission
+            // Get current user and check permissions
             var currentUser = await _context.Users
                 .Include(u => u.UserRole)
                     .ThenInclude(r => r.RolePermissions)
@@ -1555,6 +2004,8 @@ namespace SFCDashboard.Controllers
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
+            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?
+                .Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
 
             // Get PE numbers with OLA violation
             var violatingPENumbers = await _context.PETasks
@@ -1563,10 +2014,13 @@ namespace SFCDashboard.Controllers
                 .Distinct()
                 .ToListAsync();
 
+            // Base query for urgent records
             var query = _context.PlannedEvents
-                .Where(p => p.PEStatus == "urgent" && p.IsHold == false && !violatingPENumbers.Contains(p.PeNumber));
+                .Where(p => p.PEStatus == "urgent" &&
+                           p.IsHold == false &&
+                           !violatingPENumbers.Contains(p.PeNumber));
 
-            // If user has ViewAll, show count of all records (ignore workgroupIds)
+            // If user has ViewAll, no workgroup filtering needed
             if (canViewAll)
             {
                 var countAll = await query.CountAsync();
@@ -1574,11 +2028,12 @@ namespace SFCDashboard.Controllers
                 return countAll;
             }
 
-            // Otherwise, restrict by workgroupIds
+            // For non-ViewAll users, get their workgroups
             if (workgroupIds == null || !workgroupIds.Any())
             {
-                // Restrict to user's assigned workgroups if not ViewAll
-                workgroupIds = currentUser?.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
+                workgroupIds = currentUser?.UserWorkGroups?
+                    .Select(uwg => uwg.WorkGroupId)
+                    .ToList() ?? new List<int>();
             }
 
             if (workgroupIds.Any())
@@ -1590,14 +2045,30 @@ namespace SFCDashboard.Controllers
 
                 if (workgroupNames.Any())
                 {
-                    query = query.Where(p => p.TaskWg != null &&
-                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    if (hasDrawFiberAccess)
+                    {
+                        // Include both workgroup matches and Draw Fiber tasks
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        // Only include workgroup matches
+                        query = query.Where(p =>
+                            p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        );
+                    }
                 }
             }
 
             var count = await query.CountAsync();
-            _logger.LogInformation("Urgent count: {count} for workgroup: {workgroupId}",
-                count, workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
+            _logger.LogInformation("Urgent count: {count} for workgroups: {workgroups}",
+                count, string.Join(", ", workgroupIds));
 
             return count;
         }
@@ -1618,22 +2089,34 @@ namespace SFCDashboard.Controllers
                 .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
+            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?
+                .Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
 
-            var query = _context.PETasks.Where(p => p.IsOLAViolate);
+            // Get PE numbers with OLA violation
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
 
-            // If user has ViewAll, show count of all records (ignore workgroupIds)
+            // Base query for OLA violating records
+            var query = _context.PlannedEvents
+                .Where(p => violatingPENumbers.Contains(p.PeNumber));
+
+            // If user has ViewAll, show count of all records
             if (canViewAll)
             {
-                var countAll = await query.Select(p => p.PENumber).Distinct().CountAsync();
+                var countAll = await query.CountAsync();
                 _logger.LogInformation("OLA violate count (ViewAll): {count}", countAll);
                 return countAll;
             }
 
-            // Otherwise, restrict by workgroupIds
+            // For non-ViewAll users, get their workgroups
             if (workgroupIds == null || !workgroupIds.Any())
             {
-                // Restrict to user's assigned workgroups if not ViewAll
-                workgroupIds = currentUser?.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
+                workgroupIds = currentUser?.UserWorkGroups?
+                    .Select(uwg => uwg.WorkGroupId)
+                    .ToList() ?? new List<int>();
             }
 
             if (workgroupIds.Any())
@@ -1645,26 +2128,41 @@ namespace SFCDashboard.Controllers
 
                 if (workgroupNames.Any())
                 {
-                    query = query.Where(p => p.TaskWorkGroup != null &&
-                        workgroupNames.Any(name => p.TaskWorkGroup.Contains(name)));
+                    if (hasDrawFiberAccess)
+                    {
+                        // Include both workgroup matches and Draw Fiber tasks
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        // Only include workgroup matches
+                        query = query.Where(p =>
+                            p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        );
+                    }
                 }
             }
 
-            // Count unique PE Numbers that have at least one violating task
-            var count = await query.Select(p => p.PENumber).Distinct().CountAsync();
-
-            _logger.LogInformation("OLA violate count: {count} for workgroup: {workgroupId}",
-                count, workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
+            var count = await query.CountAsync();
+            _logger.LogInformation("OLA violate count: {count} for workgroups: {workgroups}",
+                count, string.Join(", ", workgroupIds));
 
             return count;
         }
 
 
-
-
         private async Task<int> GetHoldCount(List<int> workgroupIds)
         {
-            // Get current user and check ViewAll permission
+            _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
+                workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
+
+            // Get current user and check permissions
             var currentUser = await _context.Users
                 .Include(u => u.UserRole)
                     .ThenInclude(r => r.RolePermissions)
@@ -1682,7 +2180,7 @@ namespace SFCDashboard.Controllers
             // Use IsHold flag 
             var query = _context.PlannedEvents.Where(p => p.IsHold == true);
 
-            // If user has ViewAll, show count of all records (ignore workgroupIds)
+            // If user has ViewAll, show count of all records
             if (canViewAll)
             {
                 var countAll = await query.CountAsync();
@@ -1690,11 +2188,12 @@ namespace SFCDashboard.Controllers
                 return countAll;
             }
 
-            // Otherwise, restrict by workgroupIds
+            // For non-ViewAll users, get their workgroups
             if (workgroupIds == null || !workgroupIds.Any())
             {
-                // Restrict to user's assigned workgroups if not ViewAll
-                workgroupIds = currentUser?.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
+                workgroupIds = currentUser?.UserWorkGroups?
+                    .Select(uwg => uwg.WorkGroupId)
+                    .ToList() ?? new List<int>();
             }
 
             if (workgroupIds.Any())
@@ -1708,25 +2207,32 @@ namespace SFCDashboard.Controllers
                 {
                     if (hasDrawFiberAccess)
                     {
-                        query = query.Where(p => p.TaskWg != null &&
-                            (workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
-                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
+                        // Include both workgroup matches and Draw Fiber tasks
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
                         );
                     }
                     else
                     {
-                        query = query.Where(p => p.TaskWg != null &&
-                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                        // Only include workgroup matches
+                        query = query.Where(p =>
+                            p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        );
                     }
                 }
             }
 
             var count = await query.CountAsync();
-            _logger.LogInformation("Hold count: {count} for workgroup: {workgroupId}",
-                count, workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
+            _logger.LogInformation("Hold count: {count} for workgroups: {workgroups}",
+                count, string.Join(", ", workgroupIds));
 
             return count;
         }
+
 
 
 
@@ -1875,6 +2381,33 @@ namespace SFCDashboard.Controllers
                     currentCreatedDate = task.TaskCompleteDate;
                 }
             }
+        }
+
+        private async Task<(List<string> workgroups, bool canViewAll)> GetUserSalesWorkgroups()
+        {
+            if (!User.Identity?.IsAuthenticated == true)
+                return (new List<string>(), false);
+
+            var email = User.Identity?.Name;
+            if (string.IsNullOrEmpty(email))
+                return (new List<string>(), false);
+
+            var user = await _context.Users
+                .Include(u => u.UserRole)
+                    .ThenInclude(r => r.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
+                .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
+
+            bool canViewAll = user?.UserRole?.HasPermission("ViewAll") == true;
+
+            // Get all workgroups
+            var workgroups = user?.UserWorkGroups
+                ?.Select(uwg => uwg.WorkGroup.Name)
+                .ToList() ?? new List<string>();
+
+            return (workgroups, canViewAll);
         }
 
         [HttpGet]

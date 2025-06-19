@@ -1,4 +1,4 @@
-        document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
             // Make the next task card clickable on mobile
             const nextTaskCard = document.getElementById('next-task-card');
             if (nextTaskCard) {
@@ -400,8 +400,8 @@ function showResolutionConfirm(element) {
         $('#directResolutionId').val(resolutionId);
         
         // If we also have the details from the attribute, use them directly
-        if (resolutionDetails && resolutionDetails.trim() !== '') {
-            $('#resolutionDetailsText').text(resolutionDetails);
+        if (resolutionDetails && String(resolutionDetails).trim() !== '') {
+            $('#resolutionDetailsText').text(String(resolutionDetails));
         } else {
             // Otherwise fetch the details for this resolution
             fetchResolutionDetails(resolutionId);

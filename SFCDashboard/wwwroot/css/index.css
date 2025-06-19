@@ -238,18 +238,96 @@
 
     /* Message Inbox Styles */
     .message-inbox-container {
-        background-color: #fff;
+        background-color: var(--card-bg, #fff);
         border-radius: 0.75rem;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
         padding: 1.5rem;
-        height: 100%;
+        height: 80vh; /* Fixed height as 80% of viewport height */
         position: sticky;
         top: 1rem;
-        max-height: calc(100vh - 2rem);
         display: flex;
         flex-direction: column;
         border: 1px solid rgba(0, 0, 0, 0.05);
         margin-bottom: 2rem;
+    }
+
+    /* Fixed height header section */
+    .inbox-header {
+        flex-shrink: 0;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Fixed height search and filters */
+    .inbox-search-container,
+    .inbox-filters {
+        flex-shrink: 0;
+        margin-bottom: 1rem;
+    }
+
+    /* Scrollable messages container */
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: calc(80vh - 180px); /* Subtract header + filters height */
+        padding-right: 0.5rem;
+        margin-right: -0.5rem;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb, #c1c1c1) var(--scrollbar-track, #f1f1f1);
+    }
+
+    /* Message items styling */
+    .message-item {
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.5rem;
+        background-color: var(--message-bg, #f8f9fa);
+        transition: all 0.3s ease;
+        position: relative;
+        border-left: 3px solid transparent;
+    }
+
+    .message-item:last-child {
+        margin-bottom: 0.5rem; /* Add small margin to last item */
+    }
+
+    /* Custom scrollbar styles */
+    .messages-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .messages-container::-webkit-scrollbar-track {
+        background: var(--scrollbar-track, #f1f1f1);
+        border-radius: 3px;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb, #c1c1c1);
+        border-radius: 3px;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover, #a8a8a8);
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 992px) {
+        .message-inbox-container {
+            height: 60vh;
+        }
+        .messages-container {
+            height: calc(60vh - 180px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .message-inbox-container {
+            height: 50vh;
+        }
+        .messages-container {
+            height: calc(50vh - 180px);
+        }
     }
 
     .inbox-header {
@@ -342,7 +420,7 @@
 
         .message-item.unread {
             background-color: #fff;
-            border-left: 3px solid #dc3545;
+            border-left: 3px solid #0d6efd;
             opacity: 1;
             font-weight: 500;
         }
@@ -350,12 +428,15 @@
         .message-item.read {
             background-color: #f8f9fa;
             border-left: 3px solid #6c757d;
-            opacity: 0.8;
         }
 
         .message-item.unread .message-subject {
             font-weight: 600;
             color: #000;
+        }
+
+        .message-item.unread .message-sender {
+            font-weight: 600;
         }
 
         .message-item.unread::before {
@@ -365,16 +446,8 @@
             right: 15px;
             width: 8px;
             height: 8px;
-            background-color: #dc3545;
+            background-color: #0d6efd;
             border-radius: 50%;
-        }
-
-        .message-item.important {
-            border-left: 3px solid #f0ad4e;
-        }
-
-        .message-item.unread .message-sender {
-            font-weight: 700;
         }
 
     .message-indicator {

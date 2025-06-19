@@ -1,0 +1,1581 @@
+@using System.Linq
+@using SFCDashboard.Models
+@model PaginatedList<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "PE Records";
+    bool isSearchPerformed = !string.IsNullOrEmpty(ViewData["PENumberFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["CustomerFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["JobReferenceFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["SONumberFilter"]?.ToString());
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@{var selectedName = ViewData[""] as string;}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Left Column - Main Content -->
+        <div class="col-lg-8">
+        <div class="search-section mb-4">
+            <form method="get" asp-action="SalesView">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="searchType" class="form-label">Search By:</label>
+                            <select class="form-select shadow-sm" id="searchType" name="searchType" onchange="toggleSearchFields()">
+                                <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
+                                <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
+                                <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
+                                <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="form-group">
+                            <label for="indexSearchInput" class="form-label" id="indexSearchLabel">Search Term:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control shadow-sm" id="indexSearchInput" 
+                                    name="@ViewData["SearchType"]" 
+                                    placeholder="Enter search term..."
+                                    value="@(ViewData[ViewData["SearchType"]?.ToString() + "Filter"])" required />
+                                <button class="btn btn-primary" type="submit">Search</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <a href="@Url.Action("SalesView")" class="btn btn-secondary w-100">
+                            <i class="bi bi-x-circle me-2"></i>Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+                <div class="container-fluid mt-4">
+
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">PE Number: @item.PeNumber</h5>
+                                <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@item.PeNumber" aria-expanded="false">
+                                    Show Details
+                                </button>
+                            </div>
+                            <div id="@item.PeNumber">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Status</dt>
+                                                <dd class="col-sm-8">@item.PEStatus</dd>
+                                                <dt class="col-sm-4">Customer</dt>
+                                                <dd class="col-sm-8">@item.Customer</dd>
+                                                <dt class="col-sm-4">Service Type</dt>
+                                                <dd class="col-sm-8">@item.ServiceType</dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Start Date</dt>
+                                                <dd class="col-sm-8">@item.PECreatedDate.ToString("dd/MM/yyyy")</dd>
+                                                <dt class="col-sm-4">Required Date</dt>
+                                                <dd class="col-sm-8">@item.ServiceRequiredDate?.ToString("dd/MM/yyyy")</dd>
+                                                <dt class="col-sm-4">SO Number</dt>
+                                                <dd class="col-sm-8">@item.SoNumber</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+
+                                    <div class="collapse" id="collapse-@item.PeNumber">
+                                        <hr class="details-divider" />
+
+                                        <div class="details-header mb-3">
+                                            <h5 class="details-title text-primary">
+                                                <i class="bi bi-file-earmark-text me-2"></i>
+                                                PE Details: <span class="text-dark">@item.PeNumber</span>
+                                            </h5>
+                                        </div>
+
+                                        <div class="details-content">
+                                            <div class="row g-4">
+                                                <!-- Location Details Card -->
+                                                <div class="col-md-6">
+                                                    <div class="details-card shadow-sm border-start border-4 border-info bg-light mb-3">
+                                                        <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
+                                                            <i class="bi bi-geo-alt me-2"></i>
+                                                            <span>Location Details</span>
+                                                        </div>
+                                                        <div class="details-card-body px-3 py-2">
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Province:</span> <span class="detail-value fw-semibold">@item.Province</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Region:</span> <span class="detail-value fw-semibold">@item.Region</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">RTOM:</span> <span class="detail-value fw-semibold">@item.Rtom</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">RTOM Description:</span> <span class="detail-value">@item.RtomDescription</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="details-card shadow-sm border-start border-4 border-success bg-light mb-3">
+                                                        <div class="details-card-header bg-success text-white rounded-top px-3 py-2">
+                                                            <i class="bi bi-clipboard-data me-2"></i>
+                                                            <span>Project Details</span>
+                                                        </div>
+                                                        <div class="details-card-body px-3 py-2">
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Job Reference:</span> <span class="detail-value">@item.JobReference</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Contractor:</span> <span class="detail-value">@item.ContractorName</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Activity:</span> <span class="detail-value">@item.PeActivity</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Nature:</span> <span class="detail-value">@item.PeNature</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Title:</span> <span class="detail-value">@item.PeTitle</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Objective:</span> <span class="detail-value">@item.PeObjective</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Area:</span> <span class="detail-value">@item.PeArea</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="details-card shadow-sm border-start border-4 border-warning bg-light mb-3">
+                                                        <div class="details-card-header bg-warning text-dark rounded-top px-3 py-2">
+                                                            <i class="bi bi-list-task me-2"></i>
+                                                            <span>Task Information</span>
+                                                        </div>
+                                                        <div class="details-card-body px-3 py-2">
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Task Sequence:</span> <span class="detail-value">@item.TaskSeq</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Task Name:</span> <span class="detail-value">@item.TaskName</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Task Workgroup:</span> <span class="detail-value">@item.TaskWg</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Actual Start Date:</span> <span class="detail-value">@item.WoActualStartDate</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="details-card shadow-sm border-start border-4 border-primary bg-light mb-3">
+                                                        <div class="details-card-header bg-primary text-white rounded-top px-3 py-2">
+                                                            <i class="bi bi-gear-fill me-2"></i>
+                                                            <span>Service Details</span>
+                                                        </div>
+                                                        <div class="details-card-body px-3 py-2">
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Service Category:</span> <span class="detail-value">@item.ServiceCategory</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Service Speed:</span> <span class="detail-value">@item.ServiceSpeed</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Order Type:</span> <span class="detail-value">@item.OrderType</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">CRM Order:</span> <span class="detail-value">@item.CrmOrder</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="details-card shadow-sm border-start border-4 border-secondary bg-light mb-3">
+                                                        <div class="details-card-header bg-secondary text-white rounded-top px-3 py-2">
+                                                            <i class="bi bi-person me-2"></i>
+                                                            <span>Customer Information</span>
+                                                        </div>
+                                                        <div class="details-card-body px-3 py-2">
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Customer Type:</span> <span class="detail-value">@item.CusType</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Account Manager:</span> <span class="detail-value">@item.AccountManager</span></div>
+                                                            <div class="detail-item"><span class="detail-label text-secondary">Section Handled By:</span> <span class="detail-value">@item.SectionHandledBy</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Location Information Section -->
+                                            <div class="details-card shadow-sm border-start border-4 border-info bg-light mt-3">
+                                                <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
+                                                    <i class="bi bi-pin-map me-2"></i>
+                                                    <span>Location Information</span>
+                                                </div>
+                                                <div class="details-card-body px-3 py-2">
+                                                    <div class="detail-item"><span class="detail-label text-secondary">Location A:</span> <span class="detail-value">@item.LocationAAddress</span></div>
+                                                    <div class="detail-item"><span class="detail-label text-secondary">Location B:</span> <span class="detail-value">@item.LocationBAddress</span></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Comments Section (Only Show if Comments Exist) -->
+                                            @if (!string.IsNullOrEmpty(item.PeWoComments) || !string.IsNullOrEmpty(item.WoComments))
+                                            {
+                                                <div class="details-card mt-3">
+                                                    <div class="details-card-header">
+                                                        <i class="bi bi-chat-left-text me-2"></i>
+                                                        <h6>Comments</h6>
+                                                    </div>
+                                                    <div class="details-card-body">
+                                                        @if (!string.IsNullOrEmpty(item.PeWoComments))
+                                                        {
+                                                            <div class="comment-block">
+                                                                <div class="comment-header">PE Work Order Comments:</div>
+                                                                <div class="comment-content">@item.PeWoComments</div>
+                                                            </div>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(item.WoComments))
+                                                        {
+                                                            <div class="comment-block @(string.IsNullOrEmpty(item.PeWoComments) ? "" : "mt-3")">
+                                                                <div class="comment-header">Work Order Comments:</div>
+                                                                <div class="comment-content">@item.WoComments</div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            <!-- PE Tasks Table -->
+                                            <div class="card mt-4">
+                                                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">PE Tasks</h6>
+                                                    @{
+                                                        var peTasks = ViewBag.PETasksByPeNumber != null && ViewBag.PETasksByPeNumber.ContainsKey(item.PeNumber)
+                                                        ? (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasksByPeNumber[item.PeNumber]
+                                                        : null;
+                                                    }
+                                                    @if (peTasks == null || !peTasks.Any())
+                                                    {
+                                                        <span class="badge bg-warning text-dark">No tasks found</span>
+                                                    }
+                                                </div>
+                                                <div class="card-body">
+                                                    @if (peTasks != null && peTasks.Any())
+                                                    {
+                                                        <div class="table-responsive">
+                                                            <table class="table table-hover task-table">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>Seq</th>
+                                                                        <th>Task</th>
+                                                                        <th>Workgroup</th>
+                                                                        <th>OLA</th>
+                                                                        <th>Status</th>
+                                                                        <th>Created Date</th>
+                                                                        <th>Target Date</th>
+                                                                        <th>Actual Date</th>
+                                                                        <th>Priority</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach (var task in peTasks)
+                                                                    {
+                                                                        <tr class="@(task.IsUrgent ? "table-warning" :
+                                                                        task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" :
+                                                                        task.TaskStatus?.ToLower() == "completed" ? "table-success" :
+                                                                        task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                                                            <td>@task.TaskSeq</td>
+                                                                            <td>@task.Task</td>
+                                                                            <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                                                            <td>@task.OLA days</td>
+                                                                            <td>
+                                                                                @{
+                                                                                    string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                                                                    {
+                                                                                        "completed" => "badge bg-success",
+                                                                                        "inprogress" => "badge bg-warning text-dark",
+                                                                                        _ => "badge bg-secondary"
+                                                                                    };
+                                                                                }
+                                                                                <span class="@taskStatusClass">@task.TaskStatus</span>
+                                                                            </td>
+                                                                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                                                                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                                                            <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
+                                                                            <td>
+                                                                                @if (task.IsUrgent)
+                                                                                {
+                                                                                    <span class="badge bg-danger">URGENT</span>
+                                                                                }
+                                                                                @if (task.UrgentRequested && !task.IsUrgent)
+                                                                                {
+                                                                                    <span class="badge bg-warning">URGENT REQUESTED</span>
+                                                                                }
+                                                                                @if (!string.IsNullOrEmpty(task.Priority))
+                                                                                {
+                                                                                    <small class="d-block text-muted mt-1">@task.Priority</small>
+                                                                                }
+                                                                            </td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="alert alert-info">
+                                                            <i class="bi bi-info-circle me-2"></i>
+                                                            No tasks have been assigned to this PE record yet.
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <!-- End PE Tasks Table -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else if (isSearchPerformed)
+                {
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No records found.
+                    </div>
+                }
+
+                @if (Model != null && Model.Any())
+                {
+                    <!-- Pagination Controls -->
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.PageIndex == 1 ? "disabled" : "")">
+                                <a class="page-link" href="?pageIndex=1&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">First</a>
+                            </li>
+                            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                <a class="page-link" href="?pageIndex=@(Model.PageIndex - 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Previous</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">@Model.PageIndex</span>
+                            </li>
+                            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                <a class="page-link" href="?pageIndex=@(Model.PageIndex + 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Next</a>
+                            </li>
+                            <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?pageIndex=@Model.TotalPages&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Last</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <a href="@Url.Action("SalesUrgentRecords")" class="dashboard-card urgent-card">
+                            <div class="card-content">
+                                <h4>Sales Urgent Records</h4>
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-danger" style="font-size: 1.2rem;">
+                                        @ViewData["UrgentCount"] Tasks
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="img-container">
+                                <img src="~/images/urgent.png" alt="Urgent" class="dashboard-img" />
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="@Url.Action("SalesInProgressRecords")" class="dashboard-card inprogress-card">
+                            <div class="card-content">
+                                <h4>Sales Regular Records</h4>
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-success" style="font-size: 1.2rem;">
+                                        @ViewData["InProgressCount"] Tasks
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="img-container">
+                                <img src="~/images/work-in-progress.png" alt="Regular Records" class="dashboard-img" />
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="@Url.Action("SalesOLAViolateRecords")" class="dashboard-card ola-card">
+                            <div class="card-content">
+                                <h4>Sales OLA Violations</h4>
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-dark" style="font-size: 1.2rem;">
+                                        @ViewData["OLAViolateCount"] Tasks
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="img-container">
+                                <img src="~/images/ola _Validate.png" alt="OLA Violate" class="dashboard-img" />
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="@Url.Action("SalesHoldRecords")" class="dashboard-card hold-card">
+                            <div class="card-content">
+                                <h4>Sales Hold Records</h4>
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-warning" style="font-size: 1.2rem;">
+                                        @ViewData["HoldCount"] Tasks
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="img-container">
+                                <img src="~/images/hold.png" alt="Hold Records" class="dashboard-img" />
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <!-- Right Column - Message Inbox -->
+            <div class="col-lg-4">
+                <div class="message-inbox-container">
+                    <div class="inbox-header">
+                        <h3>
+                            <i class="fas fa-inbox me-2"></i>Message Inbox
+                            @{
+                                var unreadCount = 0;
+                                
+                                // Count unread issues
+                                if (ViewData["InboxIssues"] != null)
+                                {
+                                    unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
+                                }
+                                
+                                // Count pending urgent PE requests
+                                if (ViewData["PendingUrgentRequests"] != null)
+                                {
+                                    unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
+                                }
+                                
+                                // Count pending urgent task requests
+                                if (ViewData["PendingTaskRequests"] != null)
+                                {
+                                    unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
+                                }
+                                
+                                if (unreadCount > 0)
+                                {
+                                    <span class="badge bg-danger rounded-pill ms-2">@unreadCount Unread</span>
+                                }
+                            }
+                        </h3>
+
+                                    <!-- Message search bar -->
+                                    <div class="inbox-search-container mt-3">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
+                                            <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                    <!-- Add this section after the inbox-search-container -->
+                    <div class="inbox-filters mt-3">
+                        <div class="btn-group w-100" role="group" aria-label="Message filters">
+                            <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
+                            <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
+                            <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
+                        </div>
+                    </div>
+
+                    <div class="messages-container mt-3">
+                        @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
+                        {<!-- Urgent Request Confirmation Messages -->
+                        @if (ViewData["PendingUrgentRequests"] != null)
+                        {
+                            foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
+                            {
+                                <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender">Urgent Request: @request.PeNumber</h6>
+                                            <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            <span class="badge bg-danger me-1">Action Required</span>
+                                            Confirm Urgent Status
+                                        </div>
+                                        <div class="message-preview">
+                                            Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        
+                        <!-- Task Urgent Requests -->
+                        @if (ViewData["PendingTaskRequests"] != null)
+                        {
+                            foreach (var task in (IEnumerable<PETask>)ViewData["PendingTaskRequests"])
+                            {
+                                <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
+                                            <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            <span class="badge bg-warning text-dark me-1">Task</span>
+                                            @task.Task Needs Priority
+                                        </div>
+                                        <div class="message-preview">
+                                            @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                        
+                        <!-- Issue Messages -->
+        @if (ViewData["InboxIssues"] != null)
+            {
+                foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
+            {
+            
+                            
+                                <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
+                                    data-message-id="issue-@issue.CreatedAt.Ticks"
+                                    data-issue-id="@issue.Id"
+                                    data-pe-id="@issue.PlannedEventId"
+                                    data-sender="@issue.SenderName"
+                                    data-sender-id="@issue.SenderId"
+                                    data-issue-text="@issue.IssueText"
+                                    data-attachment="@issue.AttachmentPath"
+                                    data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
+                                    data-is-read="@issue.IsRead.ToString().ToLower()"
+                                    data-is-reply="@issue.IsReply.ToString().ToLower()"
+                                    data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
+                                    data-original-issue-id="@issue.OriginalIssueId"
+                                    @if (issue.IsResolutionRequest)
+                                    {
+                                        <text>
+                                        data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
+                                        data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                        onclick="showResolutionConfirm(this)"
+                                        </text>
+                                    }
+                                    else
+                                    {
+                                        <text>onclick="showIssueDetails(this)"</text>
+                                    }>
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender">
+                                                @if (issue.IsResolutionRequest)
+                                                {
+                                                    <span class="badge bg-success me-1">Resolution</span>
+                                                }
+                                                From @issue.SenderName
+                                            </h6>
+                                            <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            @if (issue.IsResolutionRequest)
+                                            {
+                                                <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                            }
+                                            else if (issue.IsReply)
+                                            {
+                                                <span class="badge bg-info text-dark me-1">Reply</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger text-white me-1">Issue</span>
+                                            }
+                                            @issue.IssueText
+                                        </div>
+                                        <div class="message-preview">
+                                            @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                            {
+                                                <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
+                                            }
+                                            else
+                                            {
+                                                <span>No attachment</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#workgroup-ids').select2({
+            theme: 'default',
+            width: '100%',
+            placeholder: 'Select workgroup...',
+            allowClear: true,
+            ajax: {
+                url: '/PlannedEvents/GetWorkgroups',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        search: params.term || '',
+                        page: params.page || 1
+                    };
+                },
+                processResults: function(data, params) {
+                    params.page = params.page || 1;
+                    return {
+                        results: data.items.map(function(item) {
+                            return {
+                                id: item.id,
+                                text: item.name
+                            };
+                        }),
+                        pagination: {
+                            more: data.hasMore
+                        }
+                    };
+                },
+                cache: true
+            }
+        });
+
+                    // Load pre-selected workgroups
+            var preselectedIds = @Html.Raw(Json.Serialize(ViewData["SelectedWorkgroupIds"] ?? new List<int>()));
+            if (preselectedIds && preselectedIds.length > 0) {
+            $.ajax({
+                url: '/PlannedEvents/GetSelectedWorkgroups',
+                type: 'GET',
+                data: { ids: [preselectedId] },
+                success: function(data) {
+                    data.forEach(function(item) {
+                        var option = new Option(item.name, item.id, true, true);
+                        $('#workgroup-ids').append(option);
+                    });
+                    $('#workgroup-ids').trigger('change');
+                }
+            });
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Make the next task card clickable on mobile
+            const nextTaskCard = document.getElementById('next-task-card');
+            if (nextTaskCard) {
+                nextTaskCard.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on the "View All" or "Start Working" buttons
+                    if (!e.target.closest('a')) {
+                        const startButton = this.querySelector('.btn-primary');
+                        if (startButton && startButton.href) {
+                            window.location.href = startButton.href;
+                        }
+                    }
+                });
+            }
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+        var select = document.getElementById('searchType');
+        var input = document.getElementById('indexSearchInput');
+        var label = document.getElementById('indexSearchLabel');
+
+        function updateInputNameAndPlaceholder() {
+            input.name = select.value;
+            switch (select.value) {
+                case "peNumber":
+                    input.placeholder = "Enter PE Number";
+                    label.textContent = "PE Number:";
+                    break;
+                case "customer":
+                    input.placeholder = "Enter Customer Name";
+                    label.textContent = "Customer:";
+                    break;
+                case "jobReference":
+                    input.placeholder = "Enter Job Reference";
+                    label.textContent = "Job Reference:";
+                    break;
+                case "soNumber":
+                    input.placeholder = "Enter SO Number";
+                    label.textContent = "SO Number:";
+                    break;
+            }
+        }
+        select.addEventListener('change', updateInputNameAndPlaceholder);
+        updateInputNameAndPlaceholder();
+
+            // Initialize message inbox
+            initializeMessageInbox();
+            
+            // Refresh inbox button
+            document.getElementById('refreshInbox').addEventListener('click', function() {
+                window.location.reload();
+            });
+            
+            // Accept button handler
+ // Update the urgent request accept button handler
+document.getElementById('acceptUrgentRequestBtn').addEventListener('click', function() {
+    const requestType = document.getElementById('urgentRequestType').value;
+    const requestId = document.getElementById('urgentRequestId').value;
+    
+    // Get the current priority reason from the displayed data
+    let priorityText = document.querySelector('#urgentRequestDetails .row:nth-child(3) .col-sm-8').innerText || '';
+    let urgentReason = 'OpeningCeremony'; // Default fallback
+    
+    // Determine the correct reason based on the priority text displayed in the modal
+    if (priorityText.includes('Priority 2') || priorityText.toLowerCase().includes('critical customer')) {
+        urgentReason = 'CriticalCustomer';
+        console.log('Setting urgentReason to CriticalCustomer based on priority text');
+    } else if (priorityText.includes('Priority 0') || priorityText.toLowerCase().includes('network outage')) {
+        urgentReason = 'NetworkOutage';
+        console.log('Setting urgentReason to NetworkOutage based on priority text');
+    } else if (priorityText.includes('Priority 1') || priorityText.toLowerCase().includes('opening ceremony')) {
+        urgentReason = 'OpeningCeremony';
+        console.log('Setting urgentReason to OpeningCeremony based on priority text');
+    }
+    
+    // Submit the form to the appropriate endpoint
+    const form = document.getElementById('urgentRequestForm');
+    
+    // Create hidden field for urgentReason
+    const reasonField = document.createElement('input');
+    reasonField.type = 'hidden';
+    reasonField.name = 'urgentReason';
+    reasonField.value = urgentReason;
+    
+    console.log('Submitting urgent request with reason:', urgentReason);
+    
+    form.appendChild(reasonField);
+    
+    if (requestType === 'pe') {
+        form.action = '/PlannedEvents/ProcessUrgentRequest';
+    } else {
+        form.action = '/PETasks/ProcessUrgentRequest';
+    }
+    
+    form.submit();
+});
+            
+            // Reject button handler
+            document.getElementById('rejectUrgentRequestBtn').addEventListener('click', function() {
+                const requestType = document.getElementById('urgentRequestType').value;
+                const requestId = document.getElementById('urgentRequestId').value;
+                
+                // Submit the form to the appropriate endpoint
+                const form = document.getElementById('urgentRequestForm');
+                
+                // Create hidden field for urgentReason with Reject value
+                const reasonField = document.createElement('input');
+                reasonField.type = 'hidden';
+                reasonField.name = 'urgentReason';
+                reasonField.value = 'Reject';
+                
+                form.appendChild(reasonField);
+                
+                if (requestType === 'pe') {
+                    form.action = '/PlannedEvents/ProcessUrgentRequest';
+                } else {
+                    form.action = '/PETasks/ProcessUrgentRequest';
+                }
+                
+                form.submit();
+            });
+        });
+        
+        function initializeMessageInbox() {
+            const messageItems = document.querySelectorAll('.message-item');
+            const filterButtons = document.querySelectorAll('.inbox-filters button');
+            const inboxSearch = document.querySelector('.inbox-search');
+            
+            // Ensure all messages are visible on first load
+    messageItems.forEach(item => {
+        if (item.classList.contains('unread')) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+            // Message filtering
+// Replace the existing filter button handling code with this
+filterButtons.forEach(button => {
+    button.addEventListener('click', function() {
+        // Remove active class from all buttons
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        // Add active class to clicked button
+        this.classList.add('active');
+
+        const filter = this.getAttribute('data-filter');
+
+        // Show/hide messages based on filter
+        messageItems.forEach(item => {
+            
+            const isUnread = item.classList.contains('unread');
+            const isRead = !isUnread;
+
+           switch(filter) {
+                case 'unread':
+                    // Show only unread messages
+                    item.style.display = isUnread ? 'flex' : 'none';
+                    break;
+                case 'read':
+                    // Show only read messages
+                    item.style.display = !isUnread ? 'flex' : 'none';
+                    break;
+                case 'all':
+                    // Show all messages
+                    item.style.display = 'flex';
+                    break;
+            }
+        });
+    });
+});
+// Update the initial visibility setup
+messageItems.forEach(item => {
+    // Show only unread messages by default
+    const isUnread = item.classList.contains('unread');
+    item.style.display = isUnread ? 'flex' : 'none';
+});
+            
+            // Handle search functionality
+            if (inboxSearch) {
+                inboxSearch.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    
+                    messageItems.forEach(item => {
+                        const content = item.textContent.toLowerCase();
+                        if (content.includes(searchTerm)) {
+                            item.style.display = 'flex';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
+            // Handle message clicks for urgent requests
+            document.querySelectorAll('.urgent-request').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Extract the ID from data-message-id attribute
+                    const messageId = this.getAttribute('data-message-id');
+                    const peId = messageId.replace('urgent-pe-', '');
+                    
+                    // Show PE urgent confirmation modal with details
+                    showUrgentRequestModal('pe', peId);
+                });
+            });
+
+            // Handle task urgent request clicks
+            document.querySelectorAll('.task-urgent-request').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Extract the ID from data-message-id attribute
+                    const messageId = this.getAttribute('data-message-id');
+                    const taskId = messageId.replace('urgent-task-', '');
+                    
+                    // Show task urgent confirmation modal
+                    showUrgentRequestModal('task', taskId);
+                });
+            });
+        }
+        
+        // Add function to show urgent request details modal
+        function showUrgentRequestModal(type, id) {
+            // Set the form values
+            document.getElementById('urgentRequestType').value = type;
+            document.getElementById('urgentRequestId').value = id;
+            
+            // Fetch record details based on type (PE or Task)
+            let url = '';
+            if (type === 'pe') {
+                url = '/PlannedEvents/GetUrgentRequestDetails/' + id;
+            } else {
+                url = '/PETasks/GetUrgentRequestDetails/' + id;
+            }
+            
+            // Show loading indicator
+            document.getElementById('urgentRequestDetails').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading details...</p></div>';
+            
+            // Show the modal while fetching details
+            const modal = new bootstrap.Modal(document.getElementById('urgentRequestModal'));
+            modal.show();
+            
+            // Fetch details from server
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update the modal with details
+                    let detailsHtml = `
+                        <div class="alert alert-info mb-3">
+                            <div class="row">
+                                <div class="col-sm-4 fw-bold">PE Number:</div>
+                                <div class="col-sm-8">${data.peNumber}</div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-sm-4 fw-bold">Customer:</div>
+                                <div class="col-sm-8">${data.customer || 'Not specified'}</div>
+                            </div>`;
+                            
+                    if (type === 'task') {
+                        detailsHtml += `
+                            <div class="row mt-2">
+                                <div class="col-sm-4 fw-bold">Task:</div>
+                                <div class="col-sm-8">${data.taskName}</div>
+                            </div>`;
+                    }
+                    
+                    detailsHtml += `
+                        <div class="row mt-2">
+                            <div class="col-sm-4 fw-bold">Priority:</div>
+                            <div class="col-sm-8">${data.priority || 'Not specified'}</div>
+                        </div>
+                    </div>`;
+                    
+                    // Show request reason if available
+                    if (data.urgentRequestReason) {
+                        detailsHtml += `
+                        <div class="alert alert-warning">
+                            <h6 class="fw-bold">Request Reason:</h6>
+                            <p>${data.urgentRequestReason}</p>
+                        </div>`;
+                    }
+                    
+                    document.getElementById('urgentRequestDetails').innerHTML = detailsHtml;
+                })
+                .catch(error => {
+                    console.error('Error fetching urgent request details:', error);
+                    document.getElementById('urgentRequestDetails').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Failed to load request details. Please try again.
+                        </div>`;
+                });
+        }
+
+        function showIssueDetails(element) {
+            // Extract issue data from the element's data attributes
+            const issueId = $(element).data('issue-id');
+            const peId = $(element).data('pe-id');
+            const sender = $(element).data('sender');
+            const senderId = $(element).data('sender-id');
+            const issueText = $(element).data('issue-text');
+            const attachment = $(element).data('attachment');
+            const date = $(element).data('date');
+            const isRead = $(element).data('is-read') === 'true';
+            const isResolutionRequest = $(element).data('is-resolution-request') === 'true';
+            const originalIssueId = $(element).data('original-issue-id');
+            
+            // Build the issue details content
+            let detailsHtml = `
+                <div class="message-detail-header">
+                    <h5>${isResolutionRequest ? '<span class="badge bg-success">Resolution Request</span> ' : ''}${issueText}</h5>
+                    <div class="message-info">
+                        <span class="fw-bold">From:</span> ${sender} · 
+                        <span class="fw-bold">Date:</span> ${date}
+                    </div>
+                </div>
+                <div class="message-detail-body my-3">
+                    <p>${issueText}</p>
+                    ${attachment ? `<div class="attachment-section mt-3">
+                        <h6 class="fw-bold">Attachment:</h6>
+                        <a href="${attachment}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-paperclip me-2"></i>View Attachment
+                        </a>
+                    </div>` : ''}
+                </div>`;
+            
+            // Update the modal content
+            $('#issueDetailsContent').html(detailsHtml);
+            $('#viewPEDetailsBtn').attr('href', `/PlannedEvents/Details/${peId}`);
+            
+            // Set up the reply button data
+            $('#replyIssueBtn').data('issue-id', issueId);
+            $('#replyIssueBtn').data('pe-id', peId);
+            $('#replyIssueBtn').data('sender-id', senderId);
+            $('#replyIssueBtn').data('original-issue-id', originalIssueId);
+            
+            // Set up the resolve button data
+            $('#resolveIssueBtn').data('issue-id', issueId);
+            $('#resolveIssueBtn').data('pe-id', peId);
+            
+            // Handle resolution request specific UI
+            if (isResolutionRequest) {
+                $('#replyIssueBtn').addClass('d-none');
+                $('#resolveIssueBtn').addClass('d-none');
+                
+                // Check if there's a resolution record for this issue
+                $.get(`/Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
+                    if (resolution && resolution.id) {
+                        // Show resolution confirmation section
+                        $('#resolutionConfirmationSection').removeClass('d-none');
+                        $('#resolutionId').val(resolution.id);
+                    }
+                });
+            } else {
+                $('#replyIssueBtn').removeClass('d-none');
+                $('#resolveIssueBtn').removeClass('d-none');
+                $('#resolutionConfirmationSection').addClass('d-none');
+            }
+            
+            // Fetch PE record details
+            fetchPEDetails(peId);
+            
+            // Mark as read if not already read
+            if (!isRead) {
+                markIssueAsRead(issueId);
+                $(element).removeClass('unread');
+                $(element).data('is-read', 'true');
+                
+                // Update unread count in the header
+                updateUnreadCount();
+            }
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('issueDetailsModal'));
+            modal.show();
+        }
+
+        // Update the showResolutionConfirm function
+function showResolutionConfirm(element) {
+    const resolutionId = $(element).data('resolution-id');
+    const resolutionDetails = $(element).data('resolution-details');
+    const peId = $(element).data('pe-id');
+    const issueId = $(element).data('issue-id');
+    
+    console.log('Resolution data:', {
+        resolutionId,
+        resolutionDetails,
+        peId,
+        issueId
+    });
+    
+    // Always clear previous values and content
+    $('#directResolutionId').val('');
+    $('#resolutionDetailsText').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ms-2">Loading resolution details...</span>');
+    
+    // Check if we have the resolution ID from the data attribute
+    if (resolutionId && resolutionId !== '0') {
+        $('#directResolutionId').val(resolutionId);
+        
+        // If we also have the details from the attribute, use them directly
+        if (resolutionDetails && String(resolutionDetails).trim() !== '') {
+            $('#resolutionDetailsText').text(String(resolutionDetails));
+        } else {
+            // Otherwise fetch the details for this resolution
+            fetchResolutionDetails(resolutionId);
+        }
+    } else {
+        // If no resolution ID from data attribute, query by issue ID
+        fetchResolutionByIssueId(issueId);
+    }
+    
+    // Set up other modal elements
+    $('#viewPEDetailsLink').attr('href', `/PlannedEvents/Details/${peId}`);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('resolutionConfirmModal'));
+    modal.show();
+    
+    // Mark as read
+    if (issueId) {
+        markIssueAsRead(issueId);
+        $(element).removeClass('unread');
+        $(element).data('is-read', 'true');
+        updateUnreadCount();
+    }
+}
+
+// Helper function to fetch resolution by ID
+function fetchResolutionDetails(resolutionId) {
+    fetch(`/Issues/GetResolutionById/${resolutionId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.details) {
+                $('#resolutionDetailsText').text(data.details);
+            } else {
+                $('#resolutionDetailsText').html('<em>No resolution details available</em>');
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching resolution details:', err);
+            $('#resolutionDetailsText').html('<em class="text-danger">Could not load resolution details. Please try again later.</em>');
+        });
+}
+
+// Helper function to fetch resolution by issue ID
+function fetchResolutionByIssueId(issueId) {
+    fetch(`/Issues/GetResolution/${issueId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.id) {
+                $('#directResolutionId').val(data.id);
+                $('#resolutionDetailsText').text(data.details || 'No details provided');
+            } else {
+                $('#resolutionDetailsText').html('<em>No resolution found for this issue</em>');
+                // Hide the buttons if no resolution is found
+                $('#confirmResolutionForm button').hide();
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching resolution:', err);
+            $('#resolutionDetailsText').html('<em class="text-danger">Could not load resolution details. Please try again later.</em>');
+        });
+}
+
+        // Helper function to submit resolution confirmation
+function submitResolutionForm(isConfirmed) {
+    // Set the hidden field value based on the button clicked
+    $('#directIsConfirmed').val(isConfirmed);
+    
+    // Get the resolution ID and validate it
+    const resolutionId = $('#directResolutionId').val();
+    console.log('Submitting form with Resolution ID:', resolutionId);
+    console.log('Is Confirmed:', isConfirmed);
+    
+    if (!resolutionId || resolutionId === '0') {
+        alert('Error: No resolution ID found. Please refresh the page and try again.');
+        return;
+    }
+    
+    // Disable buttons to prevent double submission
+    const buttons = $('#confirmResolutionForm button');
+    buttons.prop('disabled', true);
+    
+    // Add a spinner to the button that was clicked
+    const clickedButton = isConfirmed ? 
+        $('#confirmResolutionForm button:contains("Yes")') : 
+        $('#confirmResolutionForm button:contains("No")');
+    
+    const originalButtonHtml = clickedButton.html();
+    clickedButton.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+    
+    // Submit the form
+    try {
+        document.getElementById('confirmResolutionForm').submit();
+    } catch (err) {
+        console.error('Error submitting form:', err);
+        alert('Error submitting form. Please try again.');
+        
+        // Re-enable buttons on error
+        buttons.prop('disabled', false);
+        clickedButton.html(originalButtonHtml);
+    }
+}
+
+        // Add these handlers when the document is ready
+        $(document).ready(function() {
+            
+            
+            // Handle reply button click
+            $('#replyIssueBtn').on('click', function() {
+                const issueId = $(this).data('issue-id');
+                const peId = $(this).data('pe-id');
+                const senderId = $(this).data('sender-id');
+                const originalIssueId = $(this).data('original-issue-id') || issueId;
+                
+                // Set values for the reply form
+                $('#replyIssueId').val(originalIssueId);
+                $('#replyPlannedEventId').val(peId);
+               // $('#replySenderId').val(getCurrentUserId());
+                $('#replyReceiverId').val(senderId);
+                
+                // Hide the details modal and show the reply modal
+                $('#issueDetailsModal').modal('hide');
+                $('#issueReplyModal').modal('show');
+            });
+            
+            // Handle resolve button click
+            $('#resolveIssueBtn').on('click', function() {
+                const issueId = $(this).data('issue-id');
+                const peId = $(this).data('pe-id');
+                
+                // Set values for the resolve form
+                $('#resolveIssueId').val(issueId);
+                $('#resolvePlannedEventId').val(peId);
+                
+                // Hide the details modal and show the resolve modal
+                $('#issueDetailsModal').modal('hide');
+                $('#issueResolveModal').modal('show');
+            });
+            
+            // Handle resolution confirmation
+            $('#confirmResolutionBtn').on('click', function() {
+    const form = $('#confirmResolutionForm');
+    
+    
+    // First make sure the input isn't duplicated if clicked multiple times
+    form.find('input[name="isConfirmed"]').remove();
+    
+    // Add the isConfirmed field
+    $('<input>').attr({
+        type: 'hidden',
+        name: 'isConfirmed',
+        value: 'true'
+    }).appendTo(form);
+    
+    // Actually submit the form
+    form.submit();
+    
+    // Log the submission for debugging
+    console.log('Submitting confirmation form with resolution ID:', $('#resolutionId').val());
+});
+            
+            // Handle resolution rejection
+            $('#rejectResolutionBtn').on('click', function() {
+                const form = $('#confirmResolutionForm');
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'isConfirmed',
+                    value: 'false'
+                }).appendTo(form);
+                form.submit();
+            });
+        });
+
+        // Helper function to get current user ID (should be set by server)
+        function getCurrentUserId() {
+            return document.getElementById('currentUserId') ? document.getElementById('currentUserId').value : null;
+        }
+
+        // Add this missing function that's referenced in showIssueDetails
+        function fetchPEDetails(peId) {
+            // Fetch PE details
+            fetch(`/PlannedEvents/GetBasicDetails/${peId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update the PE details section with basic info
+                    let peDetailsHtml = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-2"><strong>PE Number:</strong> ${data.peNumber}</div>
+                                <div class="mb-2"><strong>Customer:</strong> ${data.customer || 'N/A'}</div>
+                                <div class="mb-2"><strong>Status:</strong> <span class="badge ${data.peStatus === 'Hold' ? 'bg-warning' : 'bg-primary'}">${data.peStatus}</span></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2"><strong>Service Type:</strong> ${data.serviceType || 'N/A'}</div>
+                                <div class="mb-2"><strong>Task:</strong> ${data.taskName}</div>
+                                <div class="mb-2"><strong>Workgroup:</strong> ${data.taskWg}</div>
+                            </div>
+                        </div>`;
+                    
+                    $('#relatedPEDetails').html(peDetailsHtml);
+                })
+                .catch(error => {
+                    console.error('Error fetching PE details:', error);
+                    $('#relatedPEDetails').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Failed to load PE details. Please try again.
+                        </div>`);
+                });
+        }
+
+        // Add this function to update unread count
+function updateUnreadCount() {
+    const unreadBadge = document.querySelector('.inbox-header .badge');
+    const currentCount = parseInt(unreadBadge?.textContent) || 0;
+    
+    if (currentCount > 1) {
+        const newCount = currentCount - 1;
+        unreadBadge.textContent = `${newCount} Unread`;
+    } else if (currentCount === 1) {
+        unreadBadge.remove();
+    }
+}
+
+        // Add this function to mark issues as read
+        function markIssueAsRead(issueId) {
+            // Call API to mark issue as read
+            fetch(`/Issues/MarkAsRead/${issueId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Get the anti-forgery token from any form on the page
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    console.error('Error marking issue as read');
+                }
+            });
+                updateUnreadCount();
+
+        }
+    </script>
+
+    
+
+ 
+}
+
+
+<!-- Simplify the modal with just Accept/Reject buttons -->
+<div class="modal fade" id="urgentRequestModal" tabindex="-1" aria-labelledby="urgentRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="urgentRequestModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Urgent Request Confirmation
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="urgentRequestDetails">
+                    <!-- Details will be loaded here -->
+                </div>
+
+                <form id="urgentRequestForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="urgentRequestId" name="id" />
+                    <input type="hidden" id="urgentRequestType" name="requestType" />
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="acceptUrgentRequestBtn">
+                    <i class="fas fa-check-circle me-2"></i>Accept
+                </button>
+                <button type="button" class="btn btn-danger" id="rejectUrgentRequestBtn">
+                    <i class="fas fa-times-circle me-2"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Details Modal (update the modal to have specialized view for resolution requests) -->
+<div class="modal fade" id="issueDetailsModal" tabindex="-1" aria-labelledby="issueDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title" id="issueDetailsModalLabel">
+                    <i class="fas fa-exclamation-circle me-2"></i>Issue Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="issueDetailsContent">
+                    <!-- Details will be loaded here -->
+                </div>
+
+                <div class="pe-details-section mt-4 border-top pt-3">
+                    <h6 class="fw-bold">Related PE Record</h6>
+                    <div id="relatedPEDetails" class="bg-light p-3 rounded">
+                        <!-- PE Details will be loaded here -->
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Loading PE details...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Resolution confirmation section (only shown for resolution requests) -->
+                <div id="resolutionConfirmationSection" class="d-none mt-4 border-top pt-3">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-question-circle me-2"></i>
+                        <strong>Resolution Request:</strong> Has this issue been resolved?
+                    </div>
+                    <form id="confirmResolutionFormModal1" method="post" asp-controller="Issues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
+                        <!-- No hidden isConfirmed field here, it's added dynamically -->
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-outline-danger me-2" id="rejectResolutionBtn">
+                                <i class="fas fa-times me-2"></i>No, Still an Issue
+                            </button>
+                            <button type="button" class="btn btn-success" id="confirmResolutionBtn">
+                                <i class="fas fa-check me-2"></i>Yes, Issue Fixed
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewPEDetailsBtn" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                </a>
+                <button type="button" class="btn btn-info" id="replyIssueBtn">
+                    <i class="fas fa-reply me-2"></i>Reply
+                </button>
+                <button type="button" class="btn btn-success" id="resolveIssueBtn">
+                    <i class="fas fa-check-circle me-2"></i>Mark as Fixed
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Resolution Confirmation Modal (for direct confirmation from inbox) -->
+<div class="modal fade" id="resolutionConfirmModal" tabindex="-1" aria-labelledby="resolutionConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="resolutionConfirmModalLabel">Confirm Issue Resolution</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">The issue has been marked as resolved with the following notes:</p>
+                <div class="border p-3 bg-light mb-3 resolution-details-container" id="resolutionDetailsText">
+                    <!-- Resolution details will be shown here -->
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2">Loading resolution details...</span>
+                </div>
+                <p class="mb-0">If you confirm this resolution:</p>
+                <ul>
+                    <li>The issue will be marked as resolved</li>
+                    <li>The PE status will be changed back to "ongoing"</li>
+                </ul>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Has this issue been fixed satisfactorily?
+                </div>
+            </div>
+            <div class="modal-footer">
+    <form id="confirmResolutionForm" method="post" asp-controller="Issues" asp-action="ConfirmResolution">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" id="directResolutionId" name="resolutionId" />
+        <input type="hidden" id="directIsConfirmed" name="isConfirmed" value="false" />
+        
+        <a id="viewPEDetailsLink" href="#" class="btn btn-info me-auto" target="_blank">
+            <i class="fas fa-external-link-alt me-2"></i>View PE Details
+        </a>
+        
+        <button type="button" class="btn btn-outline-danger" onclick="submitResolutionForm(false)">
+            <i class="fas fa-times me-2"></i>No, Still an Issue
+        </button>
+        <button type="button" class="btn btn-success" onclick="submitResolutionForm(true)">
+            <i class="fas fa-check me-2"></i>Yes, Issue Fixed
+        </button>
+    </form>
+</div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Reply Modal -->
+<div class="modal fade" id="issueReplyModal" tabindex="-1" aria-labelledby="issueReplyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title" id="issueReplyModalLabel">Reply to Issue</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+<form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
+    <div class="modal-body">
+        <input type="hidden" id="replyIssueId" name="issueId" />
+        <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
+        <input type="hidden" id="replyReceiverId" name="receiverId" />
+        
+        <div class="mb-3">
+            <label for="replyText" class="form-label">Reply</label>
+            <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
+            <input type="file" class="form-control" id="replyAttachment" name="attachment" />
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Send Reply</button>
+    </div>
+</form>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Resolution Modal -->
+<div class="modal fade" id="issueResolveModal" tabindex="-1" aria-labelledby="issueResolveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="issueResolveModalLabel">Mark Issue as Fixed</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="issueResolveForm" method="post" asp-controller="Issues" asp-action="MarkAsFixed">
+                <div class="modal-body">
+                    <input type="hidden" id="resolveIssueId" name="IssueId" />
+                    <input type="hidden" id="resolvePlannedEventId" name="PlannedEventId" />
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Marking this issue as fixed will send a confirmation request to the reporter.
+                        If confirmed, the PE record status will be changed back to "ongoing".
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="resolutionDetails" class="form-label">Resolution Details</label>
+                        <textarea class="form-control" id="resolutionDetails" name="ResolutionDetails" rows="4" required
+                                  placeholder="Describe how the issue was fixed..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle me-2"></i>Confirm Resolution
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@functions {
+    private string GetResolutionDetails(int issueId)
+    {
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return "";
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return "";
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.ResolutionDetails ?? "";
+                
+            return "";
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return "";
+        }
+    }
+
+    private int GetResolutionId(int issueId)
+    {
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return 0;
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return 0;
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.Id ?? 0;
+                
+            return 0;
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return 0;
+        }
+    }
+}
