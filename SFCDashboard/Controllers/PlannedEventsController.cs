@@ -1813,6 +1813,12 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> SalesInProgressRecords(int? pageIndex = 1)
         {
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                .ThenInclude(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
@@ -1848,6 +1854,7 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
 
             ViewData["CanViewAll"] = canViewAll;
+            ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
             return View(records);
     
         }

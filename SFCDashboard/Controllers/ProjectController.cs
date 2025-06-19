@@ -21,15 +21,8 @@ public class ProjectController : Controller
         return View(projects);
     }
 
-    public async Task<IActionResult> Search(string searchTerm, int projectId) // Added projectId parameter
+    public async Task<IActionResult> Search(string searchTerm, int projectId)
     {
-        if (string.IsNullOrWhiteSpace(searchTerm))
-        {
-            return Json(Array.Empty<object>());
-        }
-
-        searchTerm = searchTerm.Trim().ToLower();
-
         // Get currently assigned PE IDs for this project
         var currentProjectPEs = await _context.ProjectPEMappings
             .Where(p => p.ProjectId == projectId)
@@ -37,8 +30,9 @@ public class ProjectController : Controller
             .ToListAsync();
 
         var results = await _context.PlannedEvents
-            .Where(p => (p.PeNumber != null && p.PeNumber.ToLower().Contains(searchTerm)) ||
-                       (p.Customer != null && p.Customer.ToLower().Contains(searchTerm)))
+            .Where(p => string.IsNullOrWhiteSpace(searchTerm) ||
+                        (p.PeNumber != null && p.PeNumber.ToLower().Contains(searchTerm.ToLower())) ||
+                        (p.Customer != null && p.Customer.ToLower().Contains(searchTerm.ToLower())))
             .Select(p => new
             {
                 id = p.Id,
@@ -46,10 +40,9 @@ public class ProjectController : Controller
                 customer = p.Customer ?? "No Customer",
                 isAssigned = currentProjectPEs.Contains(p.Id)
             })
-            .Take(10)
             .ToListAsync();
 
-        return Json(results);
+        return Json(new { items = results });
     }
 
     [HttpPost]
@@ -90,6 +83,47 @@ public class ProjectController : Controller
         await _context.SaveChangesAsync();
 
         return Json(new { success = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AssignMultiplePEsToProject([FromBody] MultipleAssignmentModel model)
+    {
+        if (model.PlannedEventIds == null || !model.PlannedEventIds.Any())
+        {
+            return BadRequest("No PEs selected");
+        }
+
+        var project = await _context.Projects.FindAsync(model.ProjectId);
+        if (project == null)
+        {
+            return NotFound("Project not found");
+        }
+
+        // Get existing mappings
+        var existingMappings = await _context.ProjectPEMappings
+            .Where(p => p.ProjectId == model.ProjectId && model.PlannedEventIds.Contains(p.PlannedEventId))
+            .Select(p => p.PlannedEventId)
+            .ToListAsync();
+
+        // Only add new mappings
+        var newMappings = model.PlannedEventIds
+            .Except(existingMappings)
+            .Select(peId => new ProjectPEMapping
+            {
+                ProjectId = model.ProjectId,
+                PlannedEventId = peId
+            });
+
+        await _context.ProjectPEMappings.AddRangeAsync(newMappings);
+        await _context.SaveChangesAsync();
+
+        return Json(new { success = true });
+    }
+
+    public class MultipleAssignmentModel
+    {
+        public int ProjectId { get; set; }
+        public List<int> PlannedEventIds { get; set; }
     }
 
     [HttpGet]

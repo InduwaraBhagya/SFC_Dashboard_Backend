@@ -103,6 +103,23 @@
                                            class="btn btn-primary btn-sm">
                                             <i class="bi bi-eye"></i> View Details
                                         </a>
+                                        @if (ViewData["CanSendUrgentRequests"] as bool? == true)
+                                        {
+                                            @if (item.HasPendingUrgentRequest)
+                                            {
+                                                <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                                    <i class="bi bi-clock"></i> Urgent Request Pending
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-danger btn-sm urgent-request-btn"
+                                                    data-pe-id="@item.Id" data-pe-number="@item.PeNumber"
+                                                    data-customer="@item.Customer">
+                                                    <i class="bi bi-exclamation-triangle"></i> Urgent
+                                                </button>
+                                            }
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -121,57 +138,205 @@
     </div>
 </div>
 
+<div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="urgentPEModalLabel">Request Urgent Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>PE Number:</strong> <span id="modalPeNumberValue"></span><br>
+                    <strong>Customer:</strong> <span id="modalCustomerValue"></span>
+                </div>
+                <form id="urgentPERequestForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="peIdField" />
+
+                    <div class="form-group mb-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
+                                value="OpeningCeremony" required />
+                            <label class="form-check-label" for="openingCeremony">
+                                <strong>Opening Ceremony</strong> [Priority 1]
+                            </label>
+                            <small class="form-text text-muted d-block">Highest priority for events that will receive
+                                public attention</small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer"
+                                value="CriticalCustomer" />
+                            <label class="form-check-label" for="criticalCustomer">
+                                <strong>Critical Customer</strong> [Priority 2]
+                            </label>
+                            <small class="form-text text-muted d-block">High priority for key business customers</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmPEUrgentRequest">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Add search functionality
-            const searchForm = document.getElementById('searchForm');
-            const searchInputs = searchForm.querySelectorAll('input');
-            const tableBody = document.querySelector('table tbody');
-            const noRecordsAlert = document.querySelector('.alert-info');
+        @* $(document).ready(function() {
+            $("#workgroup-search").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "/SystemUsers/SearchWorkgroups",
+                        data: { term: request.term },
+                        type: "GET",
+                        success: function(data) {
+                            // Remove duplicates from the response
+                            let uniqueData = [...new Map(data.map(item => 
+                                [item.label, item])).values()];
+                            response(uniqueData);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error searching workgroups:", status, error);
+                        }
+                    });
+                },
+                minLength: 2,
+                select: function(event, ui) {
+                    $("#workgroup-search").val(ui.item.label);
+                    $("#selected-workgroup-id").val(ui.item.id);
+                    $("#workgroupFilterForm").submit();
+                    return false;
+                }
+            }).autocomplete("instance")._renderItem = function(ul, item) {
+                return $("<li>")
+                    .append(`<div>${item.label}</div>`)
+                    .appendTo(ul);
+            };
+        }); *@
 
-            function filterTable() {
-                const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
-                const reference = document.getElementById('searchReference').value.trim().toLowerCase();
-                const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+            document.addEventListener('DOMContentLoaded', function () {
+                console.log('DOM loaded, setting up modal handlers');
 
-                let visibleRows = 0;
-                const rows = tableBody.getElementsByTagName('tr');
+                // Ensure Bootstrap is loaded
+                if (typeof bootstrap !== 'undefined') {
+                    console.log('Bootstrap is loaded properly');
+                } else {
+                    console.error('Bootstrap is not loaded!');
+                }
 
-                Array.from(rows).forEach(row => {
-                    const cells = row.getElementsByTagName('td');
-                    const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
-                    const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
-                    const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
+                // Handle showing the PE urgent modal - use a more specific class
+                const buttons = document.querySelectorAll('.urgent-request-btn');
+                console.log('Found ' + buttons.length + ' urgent request buttons');
 
-                    if (matchPeNumber && matchReference && matchCustomer) {
-                        row.style.display = '';
-                        visibleRows++;
-                    } else {
-                        row.style.display = 'none';
-                    }
+                buttons.forEach(function (button) {
+                    button.addEventListener('click', function (event) {
+                        console.log('Button clicked!');
+                        event.preventDefault();
+
+                        const peId = this.getAttribute('data-pe-id');
+                        const peNumber = this.getAttribute('data-pe-number');
+                        const customer = this.getAttribute('data-customer');
+
+                        console.log('PE ID: ' + peId + ', Number: ' + peNumber + ', Customer: ' + customer);
+
+                        document.getElementById('peIdField').value = peId;
+                        document.getElementById('modalPeNumberValue').textContent = peNumber;
+                        document.getElementById('modalCustomerValue').textContent = customer || 'Not specified';
+
+                        // Try direct DOM method first
+                        try {
+                            const modalElement = document.getElementById('urgentPEModal');
+                            const modal = new bootstrap.Modal(modalElement);
+                            modal.show();
+                            console.log('Modal shown with bootstrap.Modal');
+                        } catch (e) {
+                            console.error('Error showing modal: ', e);
+                            // Fallback to jQuery if available
+                            if (typeof $ !== 'undefined') {
+                                $('#urgentPEModal').modal('show');
+                                console.log('Modal shown with jQuery fallback');
+                            }
+                        }
+                    });
                 });
 
-                // Update record count
-                document.querySelector('.badge').textContent = visibleRows + ' Records';
+                // Handle form submission from the modal
+                document.getElementById('confirmPEUrgentRequest').addEventListener('click', function () {
+                    // Check if a radio button is selected
+                    const selectedReason = document.querySelector('input[name="urgentReason"]:checked');
+                    if (!selectedReason) {
+                        alert('Please select a reason for the urgent request.');
+                        return;
+                    }
 
-                // Show/hide no records message
-                if (noRecordsAlert) {
-                    noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
+                    // Hide the modal immediately
+                    const modalElement = document.getElementById('urgentPEModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    modalInstance.hide();
+
+                    // Submit the form with a slight delay to allow modal to close
+                    setTimeout(function () {
+                        const form = document.getElementById('urgentPERequestForm');
+                        form.action = '@Url.Action("RequestUrgentWithReason", "PlannedEvents")';
+                        form.submit();
+                    }, 300);
+                });
+
+                // Add search functionality
+                const searchForm = document.getElementById('searchForm');
+                const searchInputs = searchForm.querySelectorAll('input');
+                const tableBody = document.querySelector('table tbody');
+                const noRecordsAlert = document.querySelector('.alert-info');
+
+                function filterTable() {
+                    const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+                    const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+                    const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+
+                    let visibleRows = 0;
+                    const rows = tableBody.getElementsByTagName('tr');
+
+                    Array.from(rows).forEach(row => {
+                        const cells = row.getElementsByTagName('td');
+                        const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                        const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
+                        const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
+
+                        if (matchPeNumber && matchReference && matchCustomer) {
+                            row.style.display = '';
+                            visibleRows++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+
+                    // Update record count
+                    document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+                    // Show/hide no records message
+                    if (noRecordsAlert) {
+                        noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
+                    }
                 }
-            }
 
-            // Add real-time search
-            searchInputs.forEach(input => {
-                input.addEventListener('input', filterTable);
-            });
+                // Add real-time search
+                searchInputs.forEach(input => {
+                    input.addEventListener('input', filterTable);
+                });
 
-            // Prevent form submission (using real-time filter instead)
-            searchForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                filterTable();
+                // Prevent form submission (using real-time filter instead)
+                searchForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    filterTable();
+                });
+
             });
-        });
     </script>
 }
