@@ -396,7 +396,10 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @foreach (var task in peTasks)
+                                                        @{
+                                                            var orderedTasks = peTasks.OrderBy(t => t.TaskSeq).ToList();
+                                                        }
+                                                        @foreach (var task in orderedTasks)
                                                         {
                                                             <tr class="@(task.IsUrgent ? "table-warning" : 
                                                                 task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
@@ -431,7 +434,16 @@
                                                                     }
                                                                     <span class="@taskStatusClass">@task.TaskStatus</span>
                                                                 </td>
-                                                                <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                                                                <td>
+                                                                    @if (task == orderedTasks.First() && item.CreatedDateFromPE.HasValue)
+                                                                    {
+                                                                        @item.CreatedDateFromPE.Value.ToString("yyyy-MM-dd")
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @task.TaskCreatedDate.ToString("yyyy-MM-dd")
+                                                                    }
+                                                                </td>
                                                                 <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
                                                                 <td>@(task.ActualTaskCreatedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
                                                                 <td>@(task.ACtualTaskCompleteDate?.ToString("yyyy-MM-dd") ?? "-")</td>

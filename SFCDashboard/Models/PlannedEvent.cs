@@ -180,5 +180,7 @@ namespace SFCDashboard.Models
         public bool IsHold { get; set; } = false; // Default value is false
 
         public bool HasPendingUrgentRequest => PEStatus == "PENDING_URGENT_CONFIRMATION";
+        [Column("CreatedDateFromPE")]
+        public DateTime? CreatedDateFromPE { get; set; }
     }
 }

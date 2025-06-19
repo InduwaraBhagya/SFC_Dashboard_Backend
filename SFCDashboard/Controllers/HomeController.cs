@@ -6,13 +6,6 @@ namespace SFCDashboard.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-
-        public HomeController(ILogger<HomeController> logger)
-        {
-            _logger = logger;
-        }
-
         public IActionResult Index()
         {
             return View();
@@ -38,9 +31,9 @@ namespace SFCDashboard.Controllers
 
         private static string ExtractServiceId(string email)
         {
-            if (string.IsNullOrEmpty(email)) 
+            if (string.IsNullOrEmpty(email))
                 return string.Empty;
-            
+
             return email[..Math.Min(email.Length, 6)];
         }
     }

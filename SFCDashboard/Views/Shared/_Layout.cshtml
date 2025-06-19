@@ -534,7 +534,7 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container-fluid">
-                <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="PlannedEvents"
+                <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="Home"
                     asp-action="Index">
                     <img src="~/images/logo.png" alt="SFCDashboard" class="logo-img" />
                 </a>
@@ -545,6 +545,11 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="PlannedEvents" asp-action="Index">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
                         @if (isAdmin)
                         {
                             <li class="nav-item">
@@ -572,7 +577,7 @@
                                     <i class="bi bi-file-earmark-arrow-up-fill me-1"></i> Import Excel
                                 </a>
                             </li>
-                           @*li class="nav-item">
+                            @*li class="nav-item">
                                 <a class="nav-link" asp-controller="Permissions" asp-action="Index">
                                     <i class="bi bi-shield-check me-1"></i> Manage Permissions
                                 </a>
@@ -582,7 +587,7 @@
                                     <i class="bi bi-folder-fill me-1"></i> Projects
                                 </a>
                             </li>
-                            
+
 
 
                         }
@@ -609,8 +614,8 @@
 
                     <!-- Dark Mode Toggle Button -->
                     <button class="dark-mode-toggle me-3" id="darkModeToggle" type="button"></button>
-                        <i class="bi bi-moon-fill" id="darkModeIcon"></i>
-                        <span id="darkModeText">Dark</span>
+                    <i class="bi bi-moon-fill" id="darkModeIcon"></i>
+                    <span id="darkModeText">Dark</span>
                     </button>
 
                     <!-- Combined Notifications Dropdown -->
@@ -641,14 +646,18 @@
                                     </div>
                                 </div>
                                 <div class="btn-group btn-group-sm w-100 mb-2">
-                                    <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread
+                                    <button type="button" class="btn btn-outline-primary active"
+                                        data-filter="unread">Unread
                                     </button>
                                     <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
                                 </div>
                                 <div class="btn-group btn-group-sm w-100">
-                                    <button type="button" class="btn btn-outline-primary active" data-type="all">All</button>
-                                    <button type="button" class="btn btn-outline-primary" data-type="reminders">Reminders</button>
-                                    <button type="button" class="btn btn-outline-primary" data-type="escalations">Escalations</button>
+                                    <button type="button" class="btn btn-outline-primary active"
+                                        data-type="all">All</button>
+                                    <button type="button" class="btn btn-outline-primary"
+                                        data-type="reminders">Reminders</button>
+                                    <button type="button" class="btn btn-outline-primary"
+                                        data-type="escalations">Escalations</button>
                                 </div>
                             </div>
                             <div id="combinedNotificationList" class="notification-list">
@@ -686,68 +695,68 @@
     @await RenderSectionAsync("Scripts", required: false)
     <script>
         $(document).ready(function () {
-    // Load escalations when page is loaded
-    loadEscalations();
-    
-    // Refresh escalations every 2 minutes
-    setInterval(loadEscalations, 2 * 60 * 1000);
-    
-    function loadEscalations() {
-        $.ajax({
-            url: '/Escalation/GetUserEscalations',
-            type: 'GET',
-            data: { filter: currentFilter || 'unread' },
-            success: function(data) {
-                updateEscalationUI(data);
-            },
-            error: function() {
-                console.error('Failed to load escalations');
+            // Load escalations when page is loaded
+            loadEscalations();
+
+            // Refresh escalations every 2 minutes
+            setInterval(loadEscalations, 2 * 60 * 1000);
+
+            function loadEscalations() {
+                $.ajax({
+                    url: '/Escalation/GetUserEscalations',
+                    type: 'GET',
+                    data: { filter: currentFilter || 'unread' },
+                    success: function (data) {
+                        updateEscalationUI(data);
+                    },
+                    error: function () {
+                        console.error('Failed to load escalations');
+                    }
+                });
             }
-        });
-    }
-    
-    function updateEscalationUI(data) {
-        var $bellIcon = $('.notification-bell');
-        var $badge = $('.escalation-badge');
-        var $count = $('.escalation-count');
-        var $noEscalations = $('.no-escalations');
-        var $escalationList = $('.escalation-list');
-        
-        // Clear previous escalations
-        $escalationList.empty();
-        
-        // Update badge and count
-        if (data.count > 0) {
-            $badge.text(data.count).show();
-            $count.text(data.count);
-            $bellIcon.addClass('has-notifications');
-            $noEscalations.hide();
-            
-            // Add escalations to dropdown
-            $.each(data.escalations, function (i, escalation) {
-                var escalationClass = '';
-                var levelText = '';
-                
-                switch(escalation.level) {
-                    case 1: 
-                        escalationClass = 'escalation-engineer';
-                        levelText = 'Engineer Level';
-                        break;
-                    case 2: 
-                        escalationClass = 'escalation-dgm';
-                        levelText = 'DGM Level';
-                        break;
-                    case 3: 
-                        escalationClass = 'escalation-gm';
-                        levelText = 'GM Level';
-                        break;
-                }
-                
-                // Format time as relative (e.g., "2 hours ago")
-                var createdAt = new Date(escalation.createdAt);
-                var timeAgo = timeSince(createdAt);
-                
-                var html = `
+
+            function updateEscalationUI(data) {
+                var $bellIcon = $('.notification-bell');
+                var $badge = $('.escalation-badge');
+                var $count = $('.escalation-count');
+                var $noEscalations = $('.no-escalations');
+                var $escalationList = $('.escalation-list');
+
+                // Clear previous escalations
+                $escalationList.empty();
+
+                // Update badge and count
+                if (data.count > 0) {
+                    $badge.text(data.count).show();
+                    $count.text(data.count);
+                    $bellIcon.addClass('has-notifications');
+                    $noEscalations.hide();
+
+                    // Add escalations to dropdown
+                    $.each(data.escalations, function (i, escalation) {
+                        var escalationClass = '';
+                        var levelText = '';
+
+                        switch (escalation.level) {
+                            case 1:
+                                escalationClass = 'escalation-engineer';
+                                levelText = 'Engineer Level';
+                                break;
+                            case 2:
+                                escalationClass = 'escalation-dgm';
+                                levelText = 'DGM Level';
+                                break;
+                            case 3:
+                                escalationClass = 'escalation-gm';
+                                levelText = 'GM Level';
+                                break;
+                        }
+
+                        // Format time as relative (e.g., "2 hours ago")
+                        var createdAt = new Date(escalation.createdAt);
+                        var timeAgo = timeSince(createdAt);
+
+                        var html = `
                     <a href="/Escalation/Details/${escalation.id}" class="dropdown-item escalation-item ${escalationClass}">
                         <div class="d-flex justify-content-between align-items-start">
                             <h6 class="escalation-title">Task #${escalation.taskId} OLA Violation</h6>
@@ -759,75 +768,75 @@
                         </p>
                     </a>
                 `;
-                
-                $escalationList.append(html);
+
+                        $escalationList.append(html);
+                    });
+                } else {
+                    $badge.hide();
+                    $count.text('0');
+                    $bellIcon.removeClass('has-notifications');
+                    $noEscalations.show();
+                }
+            }
+
+            function getBadgeClass(level) {
+                switch (level) {
+                    case 1: return "bg-warning text-dark";
+                    case 2: return "bg-orange";
+                    case 3: return "bg-danger";
+                    default: return "bg-secondary";
+                }
+            }
+
+            function truncateText(text, maxLength) {
+                if (!text) return '';
+                return text.length > maxLength ? text.substr(0, maxLength) + '...' : text;
+            }
+
+            function timeSince(date) {
+                var seconds = Math.floor((new Date() - date) / 1000);
+
+                var interval = Math.floor(seconds / 31536000);
+                if (interval >= 1) return interval + " year" + (interval > 1 ? "s" : "") + " ago";
+
+                interval = Math.floor(seconds / 2592000);
+                if (interval >= 1) return interval + " month" + (interval > 1 ? "s" : "") + " ago";
+
+                interval = Math.floor(seconds / 86400);
+                if (interval >= 1) return interval + " day" + (interval > 1 ? "s" : "") + " ago";
+
+                interval = Math.floor(seconds / 3600);
+                if (interval >= 1) return interval + " hour" + (interval > 1 ? "s" : "") + " ago";
+
+                interval = Math.floor(seconds / 60);
+                if (interval >= 1) return interval + " minute" + (interval > 1 ? "s" : "") + " ago";
+
+                return "just now";
+            }
+
+            // Only select filter buttons inside the notification dropdown
+            document.querySelectorAll('.notification-dropdown .btn-group button[data-filter]').forEach(button => {
+                button.addEventListener('click', function () {
+                    document.querySelectorAll('.notification-dropdown .btn-group button[data-filter]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    currentFilter = this.getAttribute('data-filter');
+                    loadCombinedNotifications();
+                });
             });
-        } else {
-            $badge.hide();
-            $count.text('0');
-            $bellIcon.removeClass('has-notifications');
-            $noEscalations.show();
-        }
-    }
-    
-    function getBadgeClass(level) {
-        switch(level) {
-            case 1: return "bg-warning text-dark";
-            case 2: return "bg-orange";
-            case 3: return "bg-danger";
-            default: return "bg-secondary";
-        }
-    }
-    
-    function truncateText(text, maxLength) {
-        if (!text) return '';
-        return text.length > maxLength ? text.substr(0, maxLength) + '...' : text;
-    }
-    
-    function timeSince(date) {
-        var seconds = Math.floor((new Date() - date) / 1000);
-        
-        var interval = Math.floor(seconds / 31536000);
-        if (interval >= 1) return interval + " year" + (interval > 1 ? "s" : "") + " ago";
-        
-        interval = Math.floor(seconds / 2592000);
-        if (interval >= 1) return interval + " month" + (interval > 1 ? "s" : "") + " ago";
-        
-        interval = Math.floor(seconds / 86400);
-        if (interval >= 1) return interval + " day" + (interval > 1 ? "s" : "") + " ago";
-        
-        interval = Math.floor(seconds / 3600);
-        if (interval >= 1) return interval + " hour" + (interval > 1 ? "s" : "") + " ago";
-        
-        interval = Math.floor(seconds / 60);
-        if (interval >= 1) return interval + " minute" + (interval > 1 ? "s" : "") + " ago";
-        
-        return "just now";
-    }
-    
-    // Only select filter buttons inside the notification dropdown
-    document.querySelectorAll('.notification-dropdown .btn-group button[data-filter]').forEach(button => {
-        button.addEventListener('click', function() {
-            document.querySelectorAll('.notification-dropdown .btn-group button[data-filter]').forEach(btn => {
-                btn.classList.remove('active');
+
+            document.querySelectorAll('.notification-dropdown .btn-group button[data-type]').forEach(button => {
+                button.addEventListener('click', function () {
+                    document.querySelectorAll('.notification-dropdown .btn-group button[data-type]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    currentType = this.getAttribute('data-type');
+                    loadCombinedNotifications();
+                });
             });
-            this.classList.add('active');
-            currentFilter = this.getAttribute('data-filter');
-            loadCombinedNotifications();
         });
-    });
-    
-    document.querySelectorAll('.notification-dropdown .btn-group button[data-type]').forEach(button => {
-        button.addEventListener('click', function() {
-            document.querySelectorAll('.notification-dropdown .btn-group button[data-type]').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-            currentType = this.getAttribute('data-type');
-            loadCombinedNotifications();
-        });
-    });
-});
         document.addEventListener('DOMContentLoaded', function () {
             // Search functionality
             var select = document.getElementById('navbarSearchType');
@@ -1047,86 +1056,86 @@
         });
     </script>
     <!-- Combined notification functionality -->
-<script>
-    let currentFilter = 'unread';
-    let currentType = 'all';
-    
-    function loadCombinedNotifications() {
-        // Load both reminders and escalations
-        Promise.all([
-            fetch(`/PlannedEvents/GetReminders?showAll=${currentFilter === 'all'}`).then(response => response.json()),
-            fetch(`/Escalation/GetUserEscalations?filter=${currentFilter}`).then(response => response.json())
-        ])
-        .then(([reminders, escalations]) => {
-            const notificationList = document.getElementById('combinedNotificationList');
-            notificationList.innerHTML = '';
-            
-            // Process reminders data
-            let reminderData = reminders || [];
-            
-            // Process escalations data
-            let escalationData = escalations?.escalations || [];
-            
-            // Filter based on current type
-            if (currentType === 'reminders') {
-                escalationData = [];
-            } else if (currentType === 'escalations') {
-                reminderData = [];
-            }
-            
-            // Filter based on read/unread
-            if (currentFilter === 'unread') {
-                reminderData = reminderData.filter(r => !r.isRead);
-                escalationData = escalationData.filter(e => !e.isRead);
-            }
-            
-            // Combine and sort by date
-            const combined = [
-                ...reminderData.map(r => ({
-                    type: 'reminder',
-                    id: r.id,
-                    peId: r.plannedEventId,
-                    message: r.message,
-                    date: new Date(r.createdDate),
-                    isRead: r.isRead
-                })),
-                ...escalationData.map(e => ({
-                    type: 'escalation',
-                    id: e.id,
-                    peId: e.taskId,
-                    level: e.level,
-                    message: `Task #${e.taskId} - ${e.taskWorkGroup || 'Unknown workgroup'}`,
-                    date: new Date(e.createdAt),
-                    isRead: e.isRead
-                }))
-            ].sort((a, b) => b.date - a.date);  // Sort by date, newest first
-            
-            // Check if no notifications
-            if (combined.length === 0) {
-                notificationList.innerHTML = `
+    <script>
+        let currentFilter = 'unread';
+        let currentType = 'all';
+
+        function loadCombinedNotifications() {
+            // Load both reminders and escalations
+            Promise.all([
+                fetch(`/PlannedEvents/GetReminders?showAll=${currentFilter === 'all'}`).then(response => response.json()),
+                fetch(`/Escalation/GetUserEscalations?filter=${currentFilter}`).then(response => response.json())
+            ])
+                .then(([reminders, escalations]) => {
+                    const notificationList = document.getElementById('combinedNotificationList');
+                    notificationList.innerHTML = '';
+
+                    // Process reminders data
+                    let reminderData = reminders || [];
+
+                    // Process escalations data
+                    let escalationData = escalations?.escalations || [];
+
+                    // Filter based on current type
+                    if (currentType === 'reminders') {
+                        escalationData = [];
+                    } else if (currentType === 'escalations') {
+                        reminderData = [];
+                    }
+
+                    // Filter based on read/unread
+                    if (currentFilter === 'unread') {
+                        reminderData = reminderData.filter(r => !r.isRead);
+                        escalationData = escalationData.filter(e => !e.isRead);
+                    }
+
+                    // Combine and sort by date
+                    const combined = [
+                        ...reminderData.map(r => ({
+                            type: 'reminder',
+                            id: r.id,
+                            peId: r.plannedEventId,
+                            message: r.message,
+                            date: new Date(r.createdDate),
+                            isRead: r.isRead
+                        })),
+                        ...escalationData.map(e => ({
+                            type: 'escalation',
+                            id: e.id,
+                            peId: e.taskId,
+                            level: e.level,
+                            message: `Task #${e.taskId} - ${e.taskWorkGroup || 'Unknown workgroup'}`,
+                            date: new Date(e.createdAt),
+                            isRead: e.isRead
+                        }))
+                    ].sort((a, b) => b.date - a.date);  // Sort by date, newest first
+
+                    // Check if no notifications
+                    if (combined.length === 0) {
+                        notificationList.innerHTML = `
                     <div class="p-3 text-center text-muted">
                         <i class="bi bi-bell-slash me-2"></i>No ${currentFilter} ${currentType} notifications
                     </div>
                 `;
-                return;
-            }
-            
-            // Add combined notifications to the list
-            combined.forEach(notification => {
-                const notificationElement = document.createElement('div');
-                
-                if (notification.type === 'reminder') {
-                    // Add reminder element
-                    notificationElement.className = `message-item ${!notification.isRead ? 'unread' : ''} system-reminder p-3 border-bottom`;
-                    notificationElement.setAttribute('data-message-id', `reminder-${notification.id}`);
-                    notificationElement.setAttribute('data-pe-id', notification.peId);
-                    notificationElement.setAttribute('data-reminder-id', notification.id);
-                    notificationElement.setAttribute('data-type', 'reminder');
-                    notificationElement.onclick = function() {
-                        handleReminderClick(this);
-                    };
-                    
-                    notificationElement.innerHTML = `
+                        return;
+                    }
+
+                    // Add combined notifications to the list
+                    combined.forEach(notification => {
+                        const notificationElement = document.createElement('div');
+
+                        if (notification.type === 'reminder') {
+                            // Add reminder element
+                            notificationElement.className = `message-item ${!notification.isRead ? 'unread' : ''} system-reminder p-3 border-bottom`;
+                            notificationElement.setAttribute('data-message-id', `reminder-${notification.id}`);
+                            notificationElement.setAttribute('data-pe-id', notification.peId);
+                            notificationElement.setAttribute('data-reminder-id', notification.id);
+                            notificationElement.setAttribute('data-type', 'reminder');
+                            notificationElement.onclick = function () {
+                                handleReminderClick(this);
+                            };
+
+                            notificationElement.innerHTML = `
                         <div class="message-content">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
@@ -1142,35 +1151,35 @@
                             </div>
                         </div>
                     `;
-                } else {
-                    // Add escalation element
-                    let levelClass = '';
-                    let levelBadge = '';
-                    
-                    switch(notification.level) {
-                        case 1:
-                            levelClass = 'escalation-engineer';
-                            levelBadge = '<span class="badge bg-warning text-dark me-1">Engineer</span>';
-                            break;
-                        case 2:
-                            levelClass = 'escalation-dgm';
-                            levelBadge = '<span class="badge bg-danger me-1">DGM</span>';
-                            break;
-                        case 3:
-                            levelClass = 'escalation-gm';
-                            levelBadge = '<span class="badge bg-dark me-1">GM</span>';
-                            break;
-                    }
-                    
-                    notificationElement.className = `message-item ${!notification.isRead ? 'unread' : ''} ${levelClass} p-3 border-bottom`;
-                    notificationElement.setAttribute('data-message-id', `escalation-${notification.id}`);
-                    notificationElement.setAttribute('data-escalation-id', notification.id);
-                    notificationElement.setAttribute('data-type', 'escalation');
-                    notificationElement.onclick = function() {
-                        handleEscalationClick(this);
-                    };
-                    
-                    notificationElement.innerHTML = `
+                        } else {
+                            // Add escalation element
+                            let levelClass = '';
+                            let levelBadge = '';
+
+                            switch (notification.level) {
+                                case 1:
+                                    levelClass = 'escalation-engineer';
+                                    levelBadge = '<span class="badge bg-warning text-dark me-1">Engineer</span>';
+                                    break;
+                                case 2:
+                                    levelClass = 'escalation-dgm';
+                                    levelBadge = '<span class="badge bg-danger me-1">DGM</span>';
+                                    break;
+                                case 3:
+                                    levelClass = 'escalation-gm';
+                                    levelBadge = '<span class="badge bg-dark me-1">GM</span>';
+                                    break;
+                            }
+
+                            notificationElement.className = `message-item ${!notification.isRead ? 'unread' : ''} ${levelClass} p-3 border-bottom`;
+                            notificationElement.setAttribute('data-message-id', `escalation-${notification.id}`);
+                            notificationElement.setAttribute('data-escalation-id', notification.id);
+                            notificationElement.setAttribute('data-type', 'escalation');
+                            notificationElement.onclick = function () {
+                                handleEscalationClick(this);
+                            };
+
+                            notificationElement.innerHTML = `
                         <div class="message-content">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
@@ -1186,147 +1195,147 @@
                             </div>
                         </div>
                     `;
-                }
-                
-                notificationList.appendChild(notificationElement);
+                        }
+
+                        notificationList.appendChild(notificationElement);
+                    });
+
+                    // Update the notification count
+                    updateCombinedCount(
+                        reminderData.filter(r => !r.isRead).length +
+                        escalationData.filter(e => !e.isRead).length
+                    );
+                });
+        }
+
+        function handleReminderClick(element) {
+            const reminderId = element.getAttribute('data-reminder-id');
+            const peId = element.getAttribute('data-pe-id');
+
+            // Mark as read
+            fetch('/PlannedEvents/MarkReminderAsRead', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ id: reminderId })
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        element.classList.remove('unread');
+                        loadCombinedNotifications();
+                    }
+                });
+
+            // Navigate to PE details
+            if (peId) {
+                window.location.href = `/PlannedEvents/Details/${peId}`;
+            }
+        }
+
+        function handleEscalationClick(element) {
+            const escalationId = element.getAttribute('data-escalation-id');
+
+            // Navigate to escalation details
+            if (escalationId) {
+                window.location.href = `/Escalation/Details/${escalationId}`;
+            }
+        }
+
+        function formatDate(date) {
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
             });
-            
-            // Update the notification count
-            updateCombinedCount(
-                reminderData.filter(r => !r.isRead).length + 
-                escalationData.filter(e => !e.isRead).length
-            );
-        });
-    }
-    
-    function handleReminderClick(element) {
-        const reminderId = element.getAttribute('data-reminder-id');
-        const peId = element.getAttribute('data-pe-id');
-        
-        // Mark as read
-        fetch('/PlannedEvents/MarkReminderAsRead', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify({ id: reminderId })
-        }).then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    element.classList.remove('unread');
+        }
+
+        function updateCombinedCount(count) {
+            const badge = document.getElementById('combinedCount');
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'block' : 'none';
+        }
+
+        // Load notifications initially and set up functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            loadCombinedNotifications();
+
+            // Refresh button
+            document.getElementById('refreshNotifications').addEventListener('click', function () {
+                loadCombinedNotifications();
+            });
+
+            // Mark all as read button
+            document.getElementById('markAllRead').addEventListener('click', function () {
+                // Mark reminders as read
+                fetch('/PlannedEvents/MarkAllRemindersAsRead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                });
+
+                // Mark escalations as read (You'll need to implement this endpoint)
+                fetch('/Escalation/MarkAllAsRead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                });
+
+                // Update UI
+                document.querySelectorAll('.message-item.unread').forEach(item => {
+                    item.classList.remove('unread');
+                });
+
+                // Reload notifications
+                loadCombinedNotifications();
+            });
+
+            // Filter buttons
+            document.querySelectorAll('.btn-group button[data-filter]').forEach(button => {
+                button.addEventListener('click', function () {
+                    // Remove active class from all filter buttons
+                    document.querySelectorAll('.btn-group button[data-filter]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    // Add active class to clicked button
+                    this.classList.add('active');
+
+                    // Update filter and reload notifications
+                    currentFilter = this.getAttribute('data-filter');
                     loadCombinedNotifications();
-                }
-            });
-        
-        // Navigate to PE details
-        if (peId) {
-            window.location.href = `/PlannedEvents/Details/${peId}`;
-        }
-    }
-    
-    function handleEscalationClick(element) {
-        const escalationId = element.getAttribute('data-escalation-id');
-        
-        // Navigate to escalation details
-        if (escalationId) {
-            window.location.href = `/Escalation/Details/${escalationId}`;
-        }
-    }
-    
-    function formatDate(date) {
-        return date.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    }
-    
-    function updateCombinedCount(count) {
-        const badge = document.getElementById('combinedCount');
-        badge.textContent = count;
-        badge.style.display = count > 0 ? 'block' : 'none';
-    }
-    
-    // Load notifications initially and set up functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        loadCombinedNotifications();
-        
-        // Refresh button
-        document.getElementById('refreshNotifications').addEventListener('click', function() {
-            loadCombinedNotifications();
-        });
-        
-        // Mark all as read button
-        document.getElementById('markAllRead').addEventListener('click', function() {
-            // Mark reminders as read
-            fetch('/PlannedEvents/MarkAllRemindersAsRead', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                }
-            });
-            
-            // Mark escalations as read (You'll need to implement this endpoint)
-            fetch('/Escalation/MarkAllAsRead', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                }
-            });
-            
-            // Update UI
-            document.querySelectorAll('.message-item.unread').forEach(item => {
-                item.classList.remove('unread');
-            });
-            
-            // Reload notifications
-            loadCombinedNotifications();
-        });
-        
-        // Filter buttons
-        document.querySelectorAll('.btn-group button[data-filter]').forEach(button => {
-            button.addEventListener('click', function() {
-                // Remove active class from all filter buttons
-                document.querySelectorAll('.btn-group button[data-filter]').forEach(btn => {
-                    btn.classList.remove('active');
                 });
-                
-                // Add active class to clicked button
-                this.classList.add('active');
-                
-                // Update filter and reload notifications
-                currentFilter = this.getAttribute('data-filter');
-                loadCombinedNotifications();
             });
-        });
-        
-        // Type filter buttons
-        document.querySelectorAll('.btn-group button[data-type]').forEach(button => {
-            button.addEventListener('click', function() {
-                // Remove active class from all type buttons
-                document.querySelectorAll('.btn-group button[data-type]').forEach(btn => {
-                    btn.classList.remove('active');
+
+            // Type filter buttons
+            document.querySelectorAll('.btn-group button[data-type]').forEach(button => {
+                button.addEventListener('click', function () {
+                    // Remove active class from all type buttons
+                    document.querySelectorAll('.btn-group button[data-type]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    // Add active class to clicked button
+                    this.classList.add('active');
+
+                    // Update type filter and reload notifications
+                    currentType = this.getAttribute('data-type');
+                    loadCombinedNotifications();
                 });
-                
-                // Add active class to clicked button
-                this.classList.add('active');
-                
-                // Update type filter and reload notifications
-                currentType = this.getAttribute('data-type');
-                loadCombinedNotifications();
             });
+
+            // Auto refresh every 5 minutes
+            setInterval(loadCombinedNotifications, 300000);
         });
-        
-        // Auto refresh every 5 minutes
-        setInterval(loadCombinedNotifications, 300000);
-    });
-</script>
+    </script>
 </body>
 
 </html>
