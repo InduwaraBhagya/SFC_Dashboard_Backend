@@ -944,6 +944,78 @@
     border-color: #0d6efd;
 }
 
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .dropdown-menu .dropdown-item {
+    background-color: #23272b !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .dropdown-menu .dropdown-item:hover,
+[data-theme="dark"] .dropdown-menu .dropdown-item:focus {
+    background-color: #343a40 !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .dropdown-header {
+    background-color: #23272b !important;
+    color: #fff !important;
+    border-bottom: 1px solid #404040 !important;
+}
+
+/* Dark mode for Select2 containers */
+[data-theme="dark"] .select2-container--default .select2-selection--single {
+    background-color: #23272b !important;
+    color: #fff !important;
+    border-color: #404040 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--multiple {
+    background-color: #23272b !important;
+    color: #fff !important;
+    border-color: #404040 !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection__rendered {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection__placeholder {
+    color: #adb5bd !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection__arrow b {
+    border-color: #fff transparent transparent transparent !important;
+}
+
+[data-theme="dark"] .select2-dropdown {
+    background-color: #23272b !important;
+    color: #fff !important;
+    border-color: #404040 !important;
+}
+
+/* Dark mode for .text-muted */
+[data-theme="dark"] .text-muted {
+    color: #adb5bd !important;
+}
+
+[data-theme="dark"] .select2-results__option {
+    background-color: #23272b !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .select2-results__option--highlighted,
+[data-theme="dark"] .select2-results__option--selected {
+    background-color: #343a40 !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .select2-search--dropdown .select2-search__field {
+    background-color: #333 !important;
+    color: #fff !important;
+    border-color: #404040 !important;
+}
+
+
 /* Priority badges */
 .form-check-label strong {
     display: inline-block;
