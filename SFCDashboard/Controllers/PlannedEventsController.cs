@@ -21,14 +21,15 @@ namespace SFCDashboard.Controllers
             _taskQueueService = taskQueueService;
         }
 
-        private async Task<int> GetCurrentUserIdAsync()
+        private async Task<int>
+        GetCurrentUserIdAsync()
         {
             var serviceId = User.Identity?.Name;
             if (string.IsNullOrEmpty(serviceId))
                 return 0;
 
-            // Extract the substring before the query
-            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+            // Extract the substring before the query (standardize to 6 chars)
+            var serviceIdShort = ExtractServiceId(serviceId);
 
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
@@ -39,13 +40,15 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> Index(string searchType, string peNumber, string customer,
             string jobReference, string soNumber, List<int> workgroupIds, int pageIndex = 1)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
+
             var currentUser = await _context.Users
                 .Include(u => u.UserRole)
                 .ThenInclude(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                 .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
                 if (await IsUserInSalesWorkgroup())
     {
@@ -61,8 +64,7 @@ namespace SFCDashboard.Controllers
     }
 
             // Check if user belongs to NET-PROJ-ACC-CABLE workgroup
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?
-                .Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             ViewData["HasDrawFiberAccess"] = hasDrawFiberAccess;
             ViewData["CanAcceptUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanAcceptUrgentRequests") == true;
@@ -257,9 +259,6 @@ namespace SFCDashboard.Controllers
                 .Take(5)
                 .ToListAsync();
             ViewData["PendingTaskRequests"] = pendingTaskRequests;
-
-            // Get current user ID
-            var currentUserId = await GetCurrentUserIdAsync();
 
             // Get latest issues for the inbox
             // In your inbox action methods
@@ -718,7 +717,7 @@ namespace SFCDashboard.Controllers
         [HttpGet]
         public async Task<IActionResult> GetReminders(bool showAll = true)
         {
-            var userId = GetCurrentUserId();
+            var userId = await GetCurrentUserIdAsync();
             var query = _context.PEIssues
                 .Where(i => i.ReceiverId == userId && i.SenderId == 1);
 
@@ -745,7 +744,7 @@ namespace SFCDashboard.Controllers
         [HttpGet]
         public async Task<IActionResult> GetReminderCount()
         {
-            var userId = GetCurrentUserId();
+            var userId = await GetCurrentUserIdAsync();
             var count = await _context.PEIssues
                 .CountAsync(i => i.ReceiverId == userId && i.SenderId == 1 && !i.IsRead);
 
@@ -755,7 +754,7 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAllRemindersAsRead()
         {
-            var userId = GetCurrentUserId();
+            var userId = await GetCurrentUserIdAsync();
             var unreadReminders = await _context.PEIssues
                 .Where(i => i.ReceiverId == userId && i.SenderId == 1 && !i.IsRead)
                 .ToListAsync();
@@ -772,13 +771,14 @@ namespace SFCDashboard.Controllers
         // GET: PlannedEvents/Details/5
         public async Task<IActionResult> Details(int? id, string returnUrl = null)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _context.Users
                 .Include(u => u.UserRole)
                     .ThenInclude(r => r.RolePermissions)
                     .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
             ViewData["CanMakeTasksUrgent"] = currentUser?.UserRole?.HasPermission("CanMakeTasksUrgent") == true;
             ViewData["CanReportIssues"] = currentUser?.UserRole?.HasPermission("CanReportIssues") == true;
@@ -792,12 +792,13 @@ namespace SFCDashboard.Controllers
 
             // Check if current task is "Draw Fiber"
             bool isCurrentTaskDrawFiber = plannedEvent.TaskName?.Trim().ToLower() == "draw fiber";
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             // Only allow estimated time management if user has permission, is in the right workgroup,
             // AND the current task is "Draw Fiber"
             ViewData["CanManageEstimatedTime"] =
                 currentUser?.UserRole?.HasPermission("CanManageEstimatedTime") == true &&
-                currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup != null && uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") == true &&
+                hasDrawFiberAccess &&
                 isCurrentTaskDrawFiber;
 
 
@@ -956,6 +957,7 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> InProgressRecords(int? workgroupId)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             var currentUser = await _context.Users
                     .Include(u => u.UserRole)
@@ -963,7 +965,7 @@ namespace SFCDashboard.Controllers
                     .ThenInclude(rp => rp.Permission)
                     .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                    .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                    .FirstOrDefaultAsync(u => u.Id == currentUserId);
             try
             {
                 // Get PE numbers with OLA violation
@@ -973,7 +975,7 @@ namespace SFCDashboard.Controllers
                     .Distinct()
                     .ToListAsync();
 
-                bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+                bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
 
                 // Base query, EXCLUDING OLA Violate records
@@ -1044,6 +1046,7 @@ namespace SFCDashboard.Controllers
         // GET: PlannedEvents/OLAViolateRecords
         public async Task<IActionResult> OLAViolateRecords(int? workgroupId)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             workgroupId = workgroupId ?? userWorkgroupIds.FirstOrDefault();
 
@@ -1053,9 +1056,9 @@ namespace SFCDashboard.Controllers
                    .ThenInclude(rp => rp.Permission)
                    .Include(u => u.UserWorkGroups)
                    .ThenInclude(uwg => uwg.WorkGroup)
-                   .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                   .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             try
             {
@@ -1166,6 +1169,7 @@ namespace SFCDashboard.Controllers
         }
         public async Task<IActionResult> HoldRecords(string peNumber, string reference, string customer, int? workgroupId)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
             // Get current user's workgroup info
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
@@ -1175,9 +1179,9 @@ namespace SFCDashboard.Controllers
                     .ThenInclude(rp => rp.Permission)
                     .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                    .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                    .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             // Start with base query that explicitly filters for IsHold = true
             var query = _context.PlannedEvents.Where(p => p.IsHold == true);
@@ -1253,6 +1257,8 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> UrgentRecords(int? workgroupId)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
+            
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
             var currentUser = await _context.Users
@@ -1261,9 +1267,9 @@ namespace SFCDashboard.Controllers
                     .ThenInclude(rp => rp.Permission)
                     .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                    .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                    .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             try
             {
@@ -1628,13 +1634,15 @@ namespace SFCDashboard.Controllers
         }
         private async Task<(List<int> workgroupIds, List<string> workgroupNames, bool canViewAll)> GetCurrentUserWorkGroupsAsync()
         {
+            int currentUserId = await GetCurrentUserIdAsync();
+
             var currentUser = await _context.Users
                 .Include(u => u.UserRole)
                     .ThenInclude(r => r.RolePermissions)
                         .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
             if (currentUser == null)
                 return (new List<int>(), new List<string>(), false);
@@ -1670,15 +1678,6 @@ namespace SFCDashboard.Controllers
             return (workgroupIds.FirstOrDefault(), canViewAll);
         }
 
-        private int GetCurrentUserId()
-        {
-            var serviceId = User.Identity?.Name;
-            if (string.IsNullOrEmpty(serviceId))
-                return 0;
-
-            var user = _context.Users.FirstOrDefault(u => u.ServiceId == serviceId);
-            return user?.Id ?? 0;
-        }
 
         public async Task<IActionResult> GlobalSearch(string searchType, string peNumber, string customer, string jobReference, string soNumber, int pageIndex = 1)
         {
@@ -1822,12 +1821,13 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> SalesInProgressRecords(int? pageIndex = 1)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _context.Users
                 .Include(u => u.UserRole)
                 .ThenInclude(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
-                
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())
@@ -2000,6 +2000,8 @@ namespace SFCDashboard.Controllers
 
         private async Task<int> GetUrgentCount(List<int> workgroupIds)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
+
             _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
@@ -2010,11 +2012,10 @@ namespace SFCDashboard.Controllers
                         .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?
-                .Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             // Get PE numbers with OLA violation
             var violatingPENumbers = await _context.PETasks
@@ -2085,6 +2086,7 @@ namespace SFCDashboard.Controllers
 
         private async Task<int> GetOLAViolateCount(List<int> workgroupIds)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
             _logger.LogInformation("Getting OLA violate count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
@@ -2095,12 +2097,10 @@ namespace SFCDashboard.Controllers
                         .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?
-                .Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
-
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
             // Get PE numbers with OLA violation
             var violatingPENumbers = await _context.PETasks
                 .Where(t => t.IsOLAViolate)
@@ -2168,6 +2168,8 @@ namespace SFCDashboard.Controllers
 
         private async Task<int> GetHoldCount(List<int> workgroupIds)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
+
             _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
@@ -2178,10 +2180,10 @@ namespace SFCDashboard.Controllers
                         .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
@@ -2247,6 +2249,7 @@ namespace SFCDashboard.Controllers
 
         private async Task<int> GetInProgressCount(List<int> workgroupIds)
         {
+            int currentUserId = await GetCurrentUserIdAsync();
             _logger.LogInformation("Getting in-progress count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
@@ -2257,10 +2260,10 @@ namespace SFCDashboard.Controllers
                         .ThenInclude(rp => rp.Permission)
                 .Include(u => u.UserWorkGroups)
                     .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == GetCurrentUserId());
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = currentUser?.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE") ?? false;
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             // Get PE numbers with OLA violation
             var violatingPENumbers = await _context.PETasks

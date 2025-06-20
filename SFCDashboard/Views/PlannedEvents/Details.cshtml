@@ -30,27 +30,40 @@
 
 @if (drawFiberTasks.Any() && ViewData["CanManageEstimatedTime"] as bool? == true)
 {
-    <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">
-            <strong>Add or Update Estimated Time for a Task</strong>
-        </div>
-        <div class="card-body">
-            <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" method="post"
-                class="row g-3 align-items-center">
-                <input type="hidden" name="taskId" value="@drawFiberTasks.First().Id" />
-
-                <div class="col-auto">
-                    <label for="estimatedTime" class="col-form-label">Estimated Date:</label>
-                </div>
-                <div class="col-auto">
-                    <input type="date" name="estimatedTime" id="estimatedTime" class="form-control" required />
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
+    <div class="card shadow-sm border-0 mb-4 rounded-3 overflow-hidden">
+    <div class="card-header bg-gradient text-white d-flex align-items-center" 
+         style="background-color: #4285F4;">
+        <i class="bi bi-clock me-2"></i>
+        <strong>Estimate Task Completion</strong>
     </div>
+    <div class="card-body p-4">
+        <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" 
+              method="post" class="row g-3">
+            <input type="hidden" name="taskId" value="@drawFiberTasks.First().Id" />
+
+            <div class="col-md-8">
+                <label for="estimatedTime" class="form-label fw-semibold text-muted small">
+                    ESTIMATED COMPLETION DATE
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="bi bi-calendar3"></i>
+                    </span>
+                    <input type="date" 
+                           name="estimatedTime" 
+                           id="estimatedTime" 
+                           class="form-control border-start-0 shadow-none ps-0" 
+                           required />
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-check2 me-2"></i> Save Estimate
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 }
 
 <!-- Timeline/Gantt Chart Section (Updated) -->

@@ -21,35 +21,6 @@
 @{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
 
 <div class="container-fluid mt-4">
-    <!--workgroup filter section -->
-<div class="workgroup-filter-section mb-3">
-    @if ((ViewData["CanViewAll"] as bool? == true) || ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count > 1))
-    {
-        <form id="workgroupFilterForm" method="get" asp-action="Index">
-            <div class="row align-items-center">
-                <div class="col-auto">
-                    <label for="workgroup-ids" class="form-label mb-0">
-                        <i class="bi bi-filter"></i> Filter by Workgroup:
-                    </label>
-                </div>
-                <div class="col-md-3">
-                    <select id="workgroup-ids" name="workgroupIds" class="form-select select2" multiple="multiple"></select>
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Apply Filter</button>
-                    <a href="@Url.Action("Index")" class="btn btn-secondary">Clear Filter</a>
-                </div>
-            </div>
-        </form>
-    }
-    else if ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count == 1)
-    {
-        var workgroup = (ViewData["UserWorkGroups"] as List<WorkGroup>)?.FirstOrDefault();
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Showing records for your workgroup: @workgroup?.Name
-        </div>
-    }
-</div>
 @inject SFCDashboard.Services.TaskQueueingService TaskQueueService
 @{
     var nextTask = await TaskQueueService.GetPrioritizedTasksAsync(workgroupId: ViewBag.UserWorkgroupId, take: 1).ConfigureAwait(false);
@@ -554,184 +525,184 @@
         <!-- Right Column - Message Inbox -->
         <div class="col-lg-4">
             <div class="message-inbox-container">
-<div class="inbox-header">
-    <h3>
-        <i class="fas fa-inbox me-2"></i>Message Inbox
-        @{
-            var unreadCount = 0;
-            
-            // Count unread issues
-            if (ViewData["InboxIssues"] != null)
-            {
-                unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
-            }
-            
-            // Count pending urgent PE requests
-            if (ViewData["PendingUrgentRequests"] != null)
-            {
-                unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
-            }
-            
-            // Count pending urgent task requests
-            if (ViewData["PendingTaskRequests"] != null)
-            {
-                unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
-            }
-            
-            if (unreadCount > 0)
-            {
-                <span class="badge bg-danger rounded-pill ms-2">@unreadCount Unread</span>
-            }
-        }
-    </h3>
+                <div class="inbox-header">
+                    <h3>
+                        <i class="fas fa-inbox me-2"></i>Message Inbox
+                        @{
+                            var unreadCount = 0;
+                            
+                            // Count unread issues
+                            if (ViewData["InboxIssues"] != null)
+                            {
+                                unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
+                            }
+                            
+                            // Count pending urgent PE requests
+                            if (ViewData["PendingUrgentRequests"] != null)
+                            {
+                                unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
+                            }
+                            
+                            // Count pending urgent task requests
+                            if (ViewData["PendingTaskRequests"] != null)
+                            {
+                                unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
+                            }
+                            
+                            if (unreadCount > 0)
+                            {
+                                <span class="badge bg-danger rounded-pill ms-2">@unreadCount Unread</span>
+                            }
+                        }
+                    </h3>
 
-                <!-- Message search bar -->
-                <div class="inbox-search-container mt-3">
-                    <div class="input-group">
-                        <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
-                        <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
-                            <i class="fas fa-search"></i>
-                        </button>
+                                <!-- Message search bar -->
+                                <div class="inbox-search-container mt-3">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
+                                        <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Add this section after the inbox-search-container -->
+                                <div class="inbox-filters mt-3">
+                                    <div class="btn-group w-100" role="group" aria-label="Message filters">
+                                        <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
+                                        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
+                                        <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
+                                    </div>
+                                </div>
+
+                                <div class="messages-container mt-3">
+                                    @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
+                                    {<!-- Urgent Request Confirmation Messages -->
+                                    @if (ViewData["PendingUrgentRequests"] != null)
+                                    {
+                                        foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
+                                        {
+                                            <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
+                                                <div class="message-indicator"></div>
+                                                <div class="message-content">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <h6 class="message-sender">Urgent Request: @request.PeNumber</h6>
+                                                        <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
+                                                    </div>
+                                                    <div class="message-subject">
+                                                        <span class="badge bg-danger me-1">Action Required</span>
+                                                        Confirm Urgent Status
+                                                    </div>
+                                                    <div class="message-preview">
+                                                        Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    
+                                    <!-- Task Urgent Requests -->
+                                    @if (ViewData["PendingTaskRequests"] != null)
+                                    {
+                                        foreach (var task in (IEnumerable<PETask>)ViewData["PendingTaskRequests"])
+                                        {
+                                            <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
+                                                <div class="message-indicator"></div>
+                                                <div class="message-content">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
+                                                        <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
+                                                    </div>
+                                                    <div class="message-subject">
+                                                        <span class="badge bg-warning text-dark me-1">Task</span>
+                                                        @task.Task Needs Priority
+                                                    </div>
+                                                    <div class="message-preview">
+                                                        @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                }
+                                    
+                                    <!-- Issue Messages -->
+                    @if (ViewData["InboxIssues"] != null)
+                        {
+                            foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
+                        {
+                        
+                                        
+                                            <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
+                                                data-message-id="issue-@issue.CreatedAt.Ticks"
+                                                data-issue-id="@issue.Id"
+                                                data-pe-id="@issue.PlannedEventId"
+                                                data-sender="@issue.SenderName"
+                                                data-sender-id="@issue.SenderId"
+                                                data-issue-text="@issue.IssueText"
+                                                data-attachment="@issue.AttachmentPath"
+                                                data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
+                                                data-is-read="@issue.IsRead.ToString().ToLower()"
+                                                data-is-reply="@issue.IsReply.ToString().ToLower()"
+                                                data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
+                                                data-original-issue-id="@issue.OriginalIssueId"
+                                                @if (issue.IsResolutionRequest)
+                                                {
+                                                    <text>
+                                                    data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
+                                                    data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                                    onclick="showResolutionConfirm(this)"
+                                                    </text>
+                                                }
+                                                else
+                                                {
+                                                    <text>onclick="showIssueDetails(this)"</text>
+                                                }>
+                                                <div class="message-indicator"></div>
+                                                <div class="message-content">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <h6 class="message-sender">
+                                                            @if (issue.IsResolutionRequest)
+                                                            {
+                                                                <span class="badge bg-success me-1">Resolution</span>
+                                                            }
+                                                            From @issue.SenderName 
+                                                        </h6>
+                                                        <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                                    </div>
+                                                    <div class="message-subject">
+                                                        @if (issue.IsResolutionRequest)
+                                                        {
+                                                            <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                                        }
+                                                        else if (issue.IsReply)
+                                                        {
+                                                            <span class="badge bg-info text-dark me-1">Reply</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-danger text-white me-1">Issue</span>
+                                                        }
+                                                        @issue.IssueText
+                                                    </div>
+                                                    <div class="message-preview">
+                                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                                        {
+                                                            <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>No attachment</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }           
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-<!-- Add this section after the inbox-search-container -->
-<div class="inbox-filters mt-3">
-    <div class="btn-group w-100" role="group" aria-label="Message filters">
-        <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
-        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
-        <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
-    </div>
-</div>
-
-                <div class="messages-container mt-3">
-                    @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
-                    {<!-- Urgent Request Confirmation Messages -->
-                    @if (ViewData["PendingUrgentRequests"] != null)
-                    {
-                        foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
-                        {
-                            <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
-                                <div class="message-indicator"></div>
-                                <div class="message-content">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="message-sender">Urgent Request: @request.PeNumber</h6>
-                                        <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
-                                    </div>
-                                    <div class="message-subject">
-                                        <span class="badge bg-danger me-1">Action Required</span>
-                                        Confirm Urgent Status
-                                    </div>
-                                    <div class="message-preview">
-                                        Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }
-                    
-                    <!-- Task Urgent Requests -->
-                    @if (ViewData["PendingTaskRequests"] != null)
-                    {
-                        foreach (var task in (IEnumerable<PETask>)ViewData["PendingTaskRequests"])
-                        {
-                            <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
-                                <div class="message-indicator"></div>
-                                <div class="message-content">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
-                                        <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
-                                    </div>
-                                    <div class="message-subject">
-                                        <span class="badge bg-warning text-dark me-1">Task</span>
-                                        @task.Task Needs Priority
-                                    </div>
-                                    <div class="message-preview">
-                                        @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }
-                }
-                    
-                    <!-- Issue Messages -->
-     @if (ViewData["InboxIssues"] != null)
-        {
-              foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
-        {
-           
-                        
-                            <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
-                                 data-message-id="issue-@issue.CreatedAt.Ticks"
-                                 data-issue-id="@issue.Id"
-                                 data-pe-id="@issue.PlannedEventId"
-                                 data-sender="@issue.SenderName"
-                                 data-sender-id="@issue.SenderId"
-                                 data-issue-text="@issue.IssueText"
-                                 data-attachment="@issue.AttachmentPath"
-                                 data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
-                                 data-is-read="@issue.IsRead.ToString().ToLower()"
-                                 data-is-reply="@issue.IsReply.ToString().ToLower()"
-                                 data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
-                                 data-original-issue-id="@issue.OriginalIssueId"
-                                 @if (issue.IsResolutionRequest)
-                                 {
-                                     <text>
-                                     data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
-                                     data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
-                                     onclick="showResolutionConfirm(this)"
-                                     </text>
-                                 }
-                                 else
-                                 {
-                                     <text>onclick="showIssueDetails(this)"</text>
-                                 }>
-                                <div class="message-indicator"></div>
-                                <div class="message-content">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="message-sender">
-                                            @if (issue.IsResolutionRequest)
-                                            {
-                                                <span class="badge bg-success me-1">Resolution</span>
-                                            }
-                                            From @issue.SenderName 
-                                        </h6>
-                                        <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
-                                    </div>
-                                    <div class="message-subject">
-                                        @if (issue.IsResolutionRequest)
-                                        {
-                                            <span class="badge bg-success text-white me-1">Issue Fixed</span>
-                                        }
-                                        else if (issue.IsReply)
-                                        {
-                                            <span class="badge bg-info text-dark me-1">Reply</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger text-white me-1">Issue</span>
-                                        }
-                                        @issue.IssueText
-                                    </div>
-                                    <div class="message-preview">
-                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
-                                        {
-                                            <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
-                                        }
-                                        else
-                                        {
-                                            <span>No attachment</span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }           
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">

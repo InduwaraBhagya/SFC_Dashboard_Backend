@@ -15,6 +15,38 @@
         </a>
     </div>
 
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="searchForm" class="row g-3" method="get">
+                <div class="col-md-3">
+                    <label for="searchPeNumber" class="form-label">PE Number</label>
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber"
+                        value="@ViewData["SearchPeNumber"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchCustomer" class="form-label">Customer</label>
+                    <input type="text" class="form-control" id="searchCustomer" name="customer"
+                        value="@ViewData["SearchCustomer"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchReference" class="form-label">Request Reference</label>
+                    <input type="text" class="form-control" id="searchReference" name="reference"
+                        value="@ViewData["SearchReference"]">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <a href="@Url.Action("OLAViolateRecords")" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -24,50 +56,46 @@
     }
 
     <div class="card mb-4">
-        <div class="card-header bg-primary text-dark">
+        <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>OLA Violation Records</h5>
-                <span class="badge bg-dark">@Model.Count() Records</span>
+                <span class="badge bg-light text-dark">@Model.Count() Records</span>
             </div>
         </div>
         <div class="card-body">
-            @if (Model.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>PE Number</th>
+                            <th>Customer</th>
+                            <th>Request Reference</th>
+                            <th>Current Task</th>
+                            <th>Workgroup</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
                             <tr>
-                                <th>PE Number</th>
-                                <th>Customer</th>
-                                <th>Current Task</th>
-                                <th>Service Type</th>
-                                <th>Status</th>
-                                <th>Workgroup</th>
-                                <th>Actions</th>
+                                <td>@item.PeNumber</td>
+                                <td>@item.Customer</td>
+                                <td>@item.RequestReferenceNo</td>
+                                <td>@item.TaskName</td>
+                                <td>@item.TaskWg</td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id" asp-route-returnUrl="@Url.Action("OLAViolateRecords")" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View Details
+                                    </a>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model)
-                            {
-                                <tr>
-                                    <td>@item.PeNumber</td>
-                                    <td>@item.Customer</td>
-                                    <td>@item.TaskName</td>
-                                    <td>@item.ServiceType</td>
-                                    <td>@item.PEStatus</td>
-                                    <td>@item.TaskWg</td>
-                                    <td>
-                                        <a asp-action="Details" asp-route-id="@item.Id" asp-route-returnUrl="@Url.Action("OLAViolateRecords")" class="btn btn-primary btn-sm">
-                                            <i class="bi bi-eye"></i> View Details
-                                        </a>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
             {
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-2"></i> No OLA violations found.
@@ -80,7 +108,65 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Any necessary JavaScript can be added here
+            // Add search functionality
+            const searchForm = document.getElementById('searchForm');
+            const searchInputs = searchForm.querySelectorAll('input');
+            const tableBody = document.querySelector('table tbody');
+            const noRecordsAlert = document.querySelector('.alert-info');
+
+            function filterTable() {
+                const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+                const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+                const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+
+                let visibleRows = 0;
+                const rows = tableBody.getElementsByTagName('tr');
+
+                Array.from(rows).forEach(row => {
+                    const cells = row.getElementsByTagName('td');
+                    const matchPeNumber = cells[0].textContent.trim().toLowerCase().includes(peNumber);
+                    const matchCustomer = cells[1].textContent.trim().toLowerCase().includes(customer);
+                    const matchReference = cells[2].textContent.trim().toLowerCase().includes(reference);
+
+                    if (matchPeNumber && matchCustomer && matchReference) {
+                        row.style.display = '';
+                        visibleRows++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Update record count
+                document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+                // Show/hide no records message
+                if (noRecordsAlert && visibleRows === 0) {
+                    if (noRecordsAlert.style.display !== 'block') {
+                        const newAlert = document.createElement('div');
+                        newAlert.className = 'alert alert-info mt-3';
+                        newAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i> No matching OLA violations found.';
+                        tableBody.parentElement.appendChild(newAlert);
+                    }
+                } else {
+                    const existingAlerts = document.querySelectorAll('.card-body .alert-info');
+                    existingAlerts.forEach(alert => {
+                        if (alert !== noRecordsAlert) {
+                            alert.remove();
+                        }
+                    });
+                }
+            }
+
+            // Add real-time search
+            searchInputs.forEach(input => {
+                input.addEventListener('input', filterTable);
+            });
+
+            // Prevent form submission (using real-time filter instead)
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                filterTable();
+            });
         });
     </script>
 }

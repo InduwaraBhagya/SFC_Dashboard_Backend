@@ -72,10 +72,10 @@
                         <tr>
                             <th>#</th>
                             <th>PE Number</th>
+                            <th>Request Reference</th>
                             <th>Customer</th>
-                            <th>Service Type</th>
-                            <th>Required Date</th>
-                            <th>Days Overdue</th>
+                            <th>Current Task</th>
+                            <th>Workgroup</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -87,14 +87,10 @@
                             <tr>
                                 <td>@(rowNumber++)</td>
                                 <td>@item.PeNumber</td>
+                                <td>@item.RequestReferenceNo</td>
                                 <td>@item.Customer</td>
-                                <td>@item.ServiceType</td>
-                                <td>@item.ServiceRequiredDate?.ToString("yyyy-MM-dd")</td>
-                                <td>
-                                    <span class="badge bg-danger">
-                                        @violationDetails.MaxDaysOverdue days
-                                    </span>
-                                </td>
+                                <td>@item.TaskName</td>
+                                <td>@item.TaskWg</td>
                                 <td>
                                     <a asp-action="Details" asp-route-id="@item.Id" 
                                        class="btn btn-primary btn-sm">
@@ -122,52 +118,75 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Add search functionality
-            const searchForm = document.getElementById('searchForm');
-            const searchInputs = searchForm.querySelectorAll('input');
-            const tableBody = document.querySelector('table tbody');
-            const noRecordsAlert = document.querySelector('.alert-info');
+        // Add search functionality
+        const searchForm = document.getElementById('searchForm');
+        const searchInputs = searchForm.querySelectorAll('input');
+        const tableBody = document.querySelector('table tbody');
+        const noRecordsAlert = document.querySelector('.alert-info');
 
-            function filterTable() {
-                const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
-                const reference = document.getElementById('searchReference').value.trim().toLowerCase();
-                const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+        function filterTable() {
+            const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+            const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+            const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
 
-                let visibleRows = 0;
-                const rows = tableBody.getElementsByTagName('tr');
+            let visibleRows = 0;
+            const rows = tableBody.getElementsByTagName('tr');
 
-                Array.from(rows).forEach(row => {
-                    const cells = row.getElementsByTagName('td');
-                    const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
-                    const matchCustomer = cells[2].textContent.trim().toLowerCase().includes(customer);
+            Array.from(rows).forEach(row => {
+                const cells = row.getElementsByTagName('td');
+                const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                const matchCustomer = cells[2].textContent.trim().toLowerCase().includes(customer);
+                const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
 
-                    if (matchPeNumber && matchCustomer) {
-                        row.style.display = '';
-                        visibleRows++;
-                    } else {
-                        row.style.display = 'none';
+                if (matchPeNumber && matchCustomer && matchReference) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update record count
+            document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+            // Show/hide no records message
+            if (noRecordsAlert) {
+                if (visibleRows === 0) {
+                    noRecordsAlert.style.display = 'block';
+                    
+                    // If no custom alert exists yet, create one
+                    if (!document.querySelector('.custom-no-results-alert')) {
+                        const customAlert = document.createElement('div');
+                        customAlert.className = 'alert alert-info custom-no-results-alert mt-3';
+                        customAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i> No matching OLA violation records found.';
+                        
+                        // Only append if records actually exist but are filtered out
+                        if (rows.length > 0) {
+                            tableBody.parentElement.appendChild(customAlert);
+                        }
                     }
-                });
-
-                // Update record count
-                document.querySelector('.badge').textContent = visibleRows + ' Records';
-
-                // Show/hide no records message
-                if (noRecordsAlert) {
-                    noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
+                } else {
+                    noRecordsAlert.style.display = 'none';
+                    
+                    // Remove any custom alerts
+                    const customAlert = document.querySelector('.custom-no-results-alert');
+                    if (customAlert) {
+                        customAlert.remove();
+                    }
                 }
             }
+        }
 
-            // Add real-time search
-            searchInputs.forEach(input => {
-                input.addEventListener('input', filterTable);
-            });
-
-            // Prevent form submission (using real-time filter instead)
-            searchForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                filterTable();
-            });
+        // Add real-time search
+        searchInputs.forEach(input => {
+            input.addEventListener('input', filterTable);
         });
+
+        // Prevent form submission (using real-time filter instead)
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            filterTable();
+        });
+    });
     </script>
 }
