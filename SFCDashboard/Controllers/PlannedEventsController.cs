@@ -833,9 +833,20 @@ namespace SFCDashboard.Controllers
     })
     .ToListAsync();
 
+
+
             ViewBag.PEReportedIssues = issues;
 
             ViewBag.ReturnUrl = returnUrl;
+
+        var escalations = await _context.Escalations
+        .Include(e => e.PETask)
+        .Include(e => e.IgnoredBy)
+        .Where(e => e.PETask.PENumber == plannedEvent.PeNumber)
+        .ToListAsync();
+
+ViewBag.Escalations = escalations;
+ViewBag.ReturnUrl = returnUrl;
             return View(plannedEvent);
         }
 

@@ -1,4 +1,4 @@
-@model IEnumerable<SFCDashboard.Models.Escalation>
+@model IEnumerable<SFCDashboard.Models.EscalationViewModel>
 
 @{
     ViewData["Title"] = "Escalations";
@@ -156,7 +156,7 @@
                                                 <td>@item.TaskId</td>
                                                 <td>@item.Title</td>
                                                 <td>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                                                <td>@item.IgnoredById</td>
+                                                <td>@item.ResolvedByName</td>
                                                 <td>
                                                     <div class="d-flex gap-2">
                                                         <a href="@Url.Action("Details", new { id = item.Id })" class="btn btn-primary btn-sm">
