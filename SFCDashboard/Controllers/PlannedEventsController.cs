@@ -11,9 +11,9 @@ namespace SFCDashboard.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PlannedEventsController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly TaskQueueingService _taskQueueService;
+        private readonly ITaskQueueService _taskQueueService;
 
-        public PlannedEventsController(ApplicationDbContext context, ILogger<PlannedEventsController> logger, IWebHostEnvironment webHostEnvironment, TaskQueueingService taskQueueService)
+        public PlannedEventsController(ApplicationDbContext context, ILogger<PlannedEventsController> logger, IWebHostEnvironment webHostEnvironment, ITaskQueueService taskQueueService)
         {
             _context = context;
             _logger = logger;
@@ -50,18 +50,18 @@ namespace SFCDashboard.Controllers
                 .ThenInclude(uwg => uwg.WorkGroup)
                 .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
-                if (await IsUserInSalesWorkgroup())
-    {
-        return RedirectToAction(nameof(SalesView), new
-        {
-            searchType,
-            peNumber,
-            customer,
-            jobReference,
-            soNumber,
-            pageIndex
-        });
-    }
+            if (await IsUserInSalesWorkgroup())
+            {
+                return RedirectToAction(nameof(SalesView), new
+                {
+                    searchType,
+                    peNumber,
+                    customer,
+                    jobReference,
+                    soNumber,
+                    pageIndex
+                });
+            }
 
             // Check if user belongs to NET-PROJ-ACC-CABLE workgroup
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
@@ -239,11 +239,15 @@ namespace SFCDashboard.Controllers
             var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
             ViewBag.UserWorkgroupId = userWorkgroupId;
 
+            // Pre-load next task instead of loading it directly in the view
             var nextTaskList = await _taskQueueService.GetPrioritizedTasksAsync(
                 workgroupId: userWorkgroupId,
                 take: 1);
+            
+            ViewBag.NextTask = nextTaskList;
+            ViewBag.HasNextTask = nextTaskList != null && nextTaskList.Any();
 
-            ViewBag.NextTask = nextTaskList.Count > 0 ? nextTaskList[0] : null;
+
             // Pending urgent requests (same as before)
             var pendingUrgentRequests = await _context.PlannedEvents
                 .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
@@ -265,7 +269,7 @@ namespace SFCDashboard.Controllers
             // In PlannedEventsController.cs, in the Index action
             var inboxIssues = await _context.PEIssues
                 .Where(i => i.ReceiverId == currentUserId
-                    && !i.IsHiddenFromInbox) 
+                    && !i.IsHiddenFromInbox)
                 .OrderByDescending(i => i.CreatedAt)
                 .Take(10)
                 .Select(i => new PEIssueViewModel
@@ -330,7 +334,7 @@ namespace SFCDashboard.Controllers
             }
 
             ViewBag.InboxIssues = inboxIssues;
-        ViewData["InboxIssues"] = inboxIssues;
+            ViewData["InboxIssues"] = inboxIssues;
 
             // Create a lookup dictionary for resolutions
             if (inboxIssues != null && inboxIssues.Any())
@@ -462,7 +466,7 @@ namespace SFCDashboard.Controllers
                 .FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
 
             return user?.UserWorkGroups
-                ?.Any(uwg => uwg.WorkGroup.Name.Contains("SALES", StringComparison.OrdinalIgnoreCase)) 
+                ?.Any(uwg => uwg.WorkGroup.Name.Contains("SALES", StringComparison.OrdinalIgnoreCase))
                 ?? false;
         }
 
@@ -499,22 +503,22 @@ namespace SFCDashboard.Controllers
 
             if (!canViewAll)
             {
-                baseQuery = baseQuery.Where(p => salesWorkgroups.Any(wg => 
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                baseQuery = baseQuery.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
                     (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
                 ));
             }
 
             // Calculate dashboard counts using the same logic as specific views
             ViewData["UrgentCount"] = await baseQuery
-                .Where(p => 
-                    p.PEStatus == "urgent" && 
+                .Where(p =>
+                    p.PEStatus == "urgent" &&
                     !p.IsHold &&
                     !violatingPENumbers.Contains(p.PeNumber))
                 .CountAsync();
 
             ViewData["InProgressCount"] = await baseQuery
-                .Where(p => 
+                .Where(p =>
                     (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
                     !p.IsHold &&
                     !violatingPENumbers.Contains(p.PeNumber))
@@ -614,10 +618,10 @@ namespace SFCDashboard.Controllers
             !string.IsNullOrEmpty(customer) ||
             !string.IsNullOrEmpty(jobReference) ||
             !string.IsNullOrEmpty(soNumber));
-            
-        var query = baseQuery;
 
-        if (isSearchPerformed)
+            var query = baseQuery;
+
+            if (isSearchPerformed)
             {
                 switch (searchType.ToLower())
                 {
@@ -1258,7 +1262,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> UrgentRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-            
+
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
             var currentUser = await _context.Users
@@ -1373,7 +1377,7 @@ namespace SFCDashboard.Controllers
             _logger.LogInformation("Retrieved {count} pending urgent PE requests", pendingRequests.Count);
             return View(pendingRequests);
         }
-        
+
         // POST: PlannedEvents/ProcessUrgentRequest
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -1865,7 +1869,7 @@ namespace SFCDashboard.Controllers
             ViewData["CanViewAll"] = canViewAll;
             ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
             return View(records);
-    
+
         }
 
 
@@ -1951,8 +1955,8 @@ namespace SFCDashboard.Controllers
 
             if (!canViewAll)
             {
-                query = query.Where(p => salesWorkgroups.Any(wg => 
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) || 
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
                     (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
                 ));
             }
@@ -2614,6 +2618,30 @@ namespace SFCDashboard.Controllers
                 _logger.LogError(ex, "Error removing urgent status from PE {id}", id);
                 TempData["ErrorMessage"] = "An error occurred while updating the record status.";
                 return RedirectToAction(nameof(UrgentRecords));
+            }
+        }
+
+        // Add this method to your PlannedEventsController
+        [HttpGet]
+        public async Task<IActionResult> RefreshNextTask()
+        {
+            try
+            {
+                var workgroupId = ViewBag.UserWorkgroupId;
+                var nextTask = await _taskQueueService.GetPrioritizedTasksAsync(workgroupId: workgroupId, take: 1);
+                var hasNextTask = nextTask != null && nextTask.Any();
+
+                if (!hasNextTask)
+                {
+                    return PartialView("_NextTaskEmpty");
+                }
+
+                return PartialView("_NextTaskItem", nextTask[0]);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing next task");
+                return Json(new { success = false, message = "Error refreshing task queue." });
             }
         }
     }

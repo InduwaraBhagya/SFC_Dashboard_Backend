@@ -18,8 +18,6 @@
     </div>
 }
 
-@{var selectedName = ViewData[""] as string;}
-
 <div class="container-fluid mt-4">
     <div class="row">
         <!-- Left Column - Main Content -->
@@ -669,17 +667,6 @@
                         <i class="fas fa-question-circle me-2"></i>
                         <strong>Resolution Request:</strong> Has this issue been resolved?
                     </div>
-                    <form id="confirmResolutionFormModal1" method="post" asp-controller="Issues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
-                        <!-- No hidden isConfirmed field here, it's added dynamically -->
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-outline-danger me-2" id="rejectResolutionBtn">
-                                <i class="fas fa-times me-2"></i>No, Still an Issue
-                            </button>
-                            <button type="button" class="btn btn-success" id="confirmResolutionBtn">
-                                <i class="fas fa-check me-2"></i>Yes, Issue Fixed
-                            </button>
-                        </div>
-                    </form>
                 </div>
             </div>
             <div class="modal-footer">

@@ -603,7 +603,3 @@ function markIssueAsRead(issueId) {
     });
     updateUnreadCount();
 }
-
-function getCurrentUserId() {
-    return document.getElementById('currentUserId') ? document.getElementById('currentUserId').value : null;
-}

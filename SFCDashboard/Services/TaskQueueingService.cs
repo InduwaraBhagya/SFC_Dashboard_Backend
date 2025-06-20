@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SFCDashboard.Services
 {
-    public class TaskQueueingService
+    public class TaskQueueingService : ITaskQueueService
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<TaskQueueingService> _logger;

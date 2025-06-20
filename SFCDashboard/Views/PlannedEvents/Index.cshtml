@@ -1,5 +1,6 @@
 ﻿@using System.Linq
 @using SFCDashboard.Models
+@using SFCDashboard.Services
 @model PaginatedList<SFCDashboard.Models.PlannedEvent>
 
 @{
@@ -21,10 +22,64 @@
 @{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
 
 <div class="container-fluid mt-4">
-@inject SFCDashboard.Services.TaskQueueingService TaskQueueService
+    @if (ViewData["CanViewAll"] as bool? == true)
+{
+    <div class="workgroup-filter mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel-fill me-2"></i> Filter by Workgroup
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" asp-action="Index" id="workgroupFilterForm">
+                    <input type="hidden" name="searchType" value="@ViewData["SearchType"]" />
+                    <input type="hidden" name="peNumber" value="@ViewData["PENumberFilter"]" />
+                    <input type="hidden" name="customer" value="@ViewData["CustomerFilter"]" />
+                    <input type="hidden" name="jobReference" value="@ViewData["JobReferenceFilter"]" />
+                    <input type="hidden" name="soNumber" value="@ViewData["SONumberFilter"]" />
+                    <input type="hidden" name="pageIndex" value="1" />
+
+                    <div class="row g-3 align-items-center">
+                        <div class="col">
+                            <select id="workgroupFilter" name="workgroupIds" class="form-select workgroup-select" data-placeholder="Select Workgroup">
+                                <option value="">All Workgroups</option>
+                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                {
+                                    foreach (var workgroup in workgroups)
+                                    {
+                                        bool isSelected = ViewData["SelectedWorkgroupIds"] is List<int> selectedIds && 
+                                                         selectedIds.Contains(workgroup.Id);
+                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                            @if (ViewData["SelectedWorkgroupIds"] is List<int> ids && ids.Any())
+                            {
+                                <a href="@Url.Action("Index", new { searchType = ViewData["SearchType"], 
+                                                                   peNumber = ViewData["PENumberFilter"],
+                                                                   customer = ViewData["CustomerFilter"],
+                                                                   jobReference = ViewData["JobReferenceFilter"],
+                                                                   soNumber = ViewData["SONumberFilter"] })" 
+                                   class="btn btn-outline-secondary ms-2">
+                                    <i class="bi bi-x-circle me-1"></i> Clear Filter
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 @{
-    var nextTask = await TaskQueueService.GetPrioritizedTasksAsync(workgroupId: ViewBag.UserWorkgroupId, take: 1).ConfigureAwait(false);
-    var hasNextTask = nextTask != null && System.Linq.Enumerable.Any(nextTask);
+    var nextTask = ViewBag.NextTask as List<TaskQueueItem>;
+    var hasNextTask = ViewBag.HasNextTask;
 }
 
 @{
@@ -124,17 +179,17 @@
                         </div>
 
                         <div class="col-md-6">
-    <div class="form-group">
-        <label for="indexSearchInput" class="form-label" id="indexSearchLabel">PE Number:</label>
-        <input type="text" class="form-control" id="indexSearchInput" name="peNumber" placeholder="Enter PE Number"
-            value="@(
-                ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
-                ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
-                ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
-                ViewData["PENumberFilter"]
-            )" />
-    </div>
-</div>
+                            <div class="form-group">
+                                <label for="indexSearchInput" class="form-label" id="indexSearchLabel">PE Number:</label>
+                                <input type="text" class="form-control" id="indexSearchInput" name="peNumber" placeholder="Enter PE Number"
+                                    value="@(
+                                        ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
+                                        ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
+                                        ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
+                                        ViewData["PENumberFilter"]
+                                    )" />
+                            </div>
+                        </div>
 
                         <div class="col-md-3">
                             <button type="submit" class="btn btn-primary btn-ripple w-100">Search</button>
@@ -779,17 +834,6 @@
                         <i class="fas fa-question-circle me-2"></i>
                         <strong>Resolution Request:</strong> Has this issue been resolved?
                     </div>
-<form id="confirmResolutionFormModal1" method="post" asp-controller="Issues" asp-action="ConfirmResolution">    <input type="hidden" id="resolutionId" name="resolutionId" />
-    <!-- No hidden isConfirmed field here, it's added dynamically -->
-    <div class="d-flex justify-content-end">
-        <button type="button" class="btn btn-outline-danger me-2" id="rejectResolutionBtn">
-            <i class="fas fa-times me-2"></i>No, Still an Issue
-        </button>
-        <button type="button" class="btn btn-success" id="confirmResolutionBtn">
-            <i class="fas fa-check me-2"></i>Yes, Issue Fixed
-        </button>
-    </div>
-</form>
                 </div>
             </div>
             <div class="modal-footer">
@@ -835,24 +879,24 @@
                 </div>
             </div>
             <div class="modal-footer">
-    <form id="confirmResolutionForm" method="post" asp-controller="Issues" asp-action="ConfirmResolution">
-        @Html.AntiForgeryToken()
+                <form id="confirmResolutionForm" method="post" asp-controller="Issues" asp-action="ConfirmResolution">
+                    @Html.AntiForgeryToken()
 
-        <input type="hidden" id="directResolutionId" name="resolutionId" />
-        <input type="hidden" id="directIsConfirmed" name="isConfirmed" value="false" />
-        
-        <a id="viewPEDetailsLink" href="#" class="btn btn-info me-auto" target="_blank">
-            <i class="fas fa-external-link-alt me-2"></i>View PE Details
-        </a>
-        
-        <button type="button" class="btn btn-outline-danger" onclick="submitResolutionForm(false)">
-            <i class="fas fa-times me-2"></i>No, Still an Issue
-        </button>
-        <button type="button" class="btn btn-success" onclick="submitResolutionForm(true)">
-            <i class="fas fa-check me-2"></i>Yes, Issue Fixed
-        </button>
-    </form>
-</div>
+                    <input type="hidden" id="directResolutionId" name="resolutionId" />
+                    <input type="hidden" id="directIsConfirmed" name="isConfirmed" value="false" />
+                    
+                    <a id="viewPEDetailsLink" href="#" class="btn btn-info me-auto" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                    </a>
+                    
+                    <button type="button" class="btn btn-outline-danger" onclick="submitResolutionForm(false)">
+                        <i class="fas fa-times me-2"></i>No, Still an Issue
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="submitResolutionForm(true)">
+                        <i class="fas fa-check me-2"></i>Yes, Issue Fixed
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -865,26 +909,26 @@
                 <h5 class="modal-title" id="issueReplyModalLabel">Reply to Issue</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-<form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
-    <div class="modal-body">
-        <input type="hidden" id="replyIssueId" name="issueId" />
-        <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
-        <input type="hidden" id="replyReceiverId" name="receiverId" />
-        
-        <div class="mb-3">
-            <label for="replyText" class="form-label">Reply</label>
-            <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
-        </div>
-        <div class="mb-3">
-            <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
-            <input type="file" class="form-control" id="replyAttachment" name="attachment" />
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary">Send Reply</button>
-    </div>
-</form>
+                <form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
+                    <div class="modal-body">
+                        <input type="hidden" id="replyIssueId" name="issueId" />
+                        <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
+                        <input type="hidden" id="replyReceiverId" name="receiverId" />
+                        
+                        <div class="mb-3">
+                            <label for="replyText" class="form-label">Reply</label>
+                            <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
+                            <input type="file" class="form-control" id="replyAttachment" name="attachment" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Send Reply</button>
+                    </div>
+                </form>
         </div>
     </div>
 </div>
