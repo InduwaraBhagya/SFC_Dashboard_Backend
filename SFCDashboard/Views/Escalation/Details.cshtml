@@ -1,54 +1,68 @@
-@model SFCDashboard.Models.Escalation
-
+@using SFCDashboard.Models
+@model EscalationViewModel
 @{
     ViewData["Title"] = "Escalation Details";
 }
 
-<div class="container">
-    <div class="card">
-        <div class="card-header bg-danger text-white">
-            <h4>Escalation Details</h4>
+<div class="container-fluid my-4">
+    <div class="card shadow border-0">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Escalation Details</h5>
         </div>
         <div class="card-body">
-            <h5 class="card-title">@Model.Title</h5>
-            <p class="card-text">@Model.Message</p>
-            
             <div class="row">
-                <div class="col-md-6">
-                    <dl class="row">
-                        <dt class="col-sm-4">Task ID:</dt>
-                        <dd class="col-sm-8">@Model.TaskId</dd>
-                        
-                        <dt class="col-sm-4">Created At:</dt>
-                        <dd class="col-sm-8">@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</dd>
-                    </dl>
+                <div class="col-md-8">
+                    <h4>@Model.Title</h4>
+                    <!-- Display task name prominently -->
+                    <h5 class="text-muted">Task: @Model.TaskName</h5>
+                    <div class="mb-3">
+                        @if (Model.IsResolved)
+                        {
+                            <span class="badge bg-success">Resolved</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Active</span>
+                        }
+                        <span class="badge bg-info">@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</span>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <dl class="row">
-                        <dt class="col-sm-4">Recipient ID:</dt>
-                        <dd class="col-sm-8">@Model.RecipientId</dd>
-                        
-                        <dt class="col-sm-4">Status:</dt>
-                        <dd class="col-sm-8">
-                            @if (Model.IsResolved)
-                            {
-                                <span class="badge bg-secondary">Resolved</span>
-                            }
-                            else if (Model.IsRead)
-                            {
-                                <span class="badge bg-info">Read</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-danger">Pending</span>
-                            }
-                        </dd>
-                    </dl>
+                <div class="col-md-4 text-md-end">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
                 </div>
             </div>
-            
-            <hr/>
-            
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Message</h6>
+                </div>
+                <div class="card-body">
+                    <p>@Model.Message</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Task Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-4">Task Name</dt>
+                                <dd class="col-sm-8">@Model.TaskName</dd>
+
+                                <dt class="col-sm-4">PE Number</dt>
+                                <dd class="col-sm-8">@Model.PENumber</dd>
+                                
+                                @if (Model.TaskStatus != null)
+                                {
+                                    <dt class="col-sm-4">Status</dt>
+                                    <dd class="col-sm-8">@Model.TaskStatus</dd>
+                                }
+                                
+
+                            </dl>
             <div class="mt-4">
 @if (ViewData["PlannedEventId"] != null)
 {
@@ -64,23 +78,53 @@ else
     <button class="btn btn-secondary btn-sm" disabled>
         <i class="bi bi-eye-slash"></i> PE Not Found
     </button>
-}              @if (!Model.IsResolved)
-                {
-                    <button type="button" class="btn btn-warning ml-2" data-bs-toggle="modal" data-bs-target="#ignoreModal">
-                        Resolve Escalation
-                    </button>
-                }
+} 
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Recipient Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-4">Name</dt>
+                                <dd class="col-sm-8">@Model.RecipientName</dd>
+
+                                <dt class="col-sm-4">Role</dt>
+                                <dd class="col-sm-8">@Model.RecipientRole</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            @if (!Model.IsResolved)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#resolveModal">
+                            <i class="bi bi-check-circle"></i> Resolve Escalation
+                        </button>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>
 
 <!-- Resolve Modal -->
-<div class="modal fade" id="ignoreModal" tabindex="-1" aria-labelledby="ignoreModalLabel" aria-hidden="true">
+<div class="modal fade" id="resolveModal" tabindex="-1" aria-labelledby="resolveModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="ignoreModalLabel">Resolve Escalation</h5>
+                <h5 class="modal-title" id="resolveModalLabel">Resolve Escalation</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form asp-action="Resolve" asp-route-id="@Model.Id" method="post">
@@ -92,7 +136,7 @@ else
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning">Confirm Resolution</button>
+                    <button type="submit" class="btn btn-success">Confirm Resolution</button>
                 </div>
             </form>
         </div>

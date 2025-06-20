@@ -74,12 +74,20 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var escalation = await _context.Escalations
-                .Include(e => e.PETask) // Assuming you have navigation property
+                .Include(e => e.PETask)
+                .Include(e => e.IgnoredBy)
                 .FirstOrDefaultAsync(e => e.Id == id);
                 
             if (escalation == null)
             {
                 return NotFound();
+            }
+            
+            // Mark as read when viewed
+            if (!escalation.IsRead)
+            {
+                escalation.IsRead = true;
+                await _context.SaveChangesAsync();
             }
             
             // Get the planned event ID
@@ -92,10 +100,45 @@ namespace SFCDashboard.Controllers
                 plannedEventId = plannedEvent?.Id;
             }
             
-            // Pass the ID to the view
+            // Get recipient information if available
+            string recipientName = "Unknown";
+            string recipientRole = "Unknown";
+            
+            if (escalation.RecipientId.HasValue)
+            {
+                var recipient = await _context.Users
+                    .Include(u => u.UserRole)
+                    .FirstOrDefaultAsync(u => u.Id == escalation.RecipientId.Value);
+                
+                if (recipient != null)
+                {
+                    recipientName = recipient.Name;
+                    recipientRole = recipient.UserRole?.Name ?? "Unknown Role";
+                }
+            }
+            
+            // Create the view model from the entity
+            var viewModel = new EscalationViewModel
+            {
+                Id = escalation.Id,
+                Title = escalation.Title,
+                Message = escalation.Message,
+                CreatedAt = escalation.CreatedAt,
+                IsRead = escalation.IsRead,
+                IsResolved = escalation.IsResolved,
+                RecipientId = escalation.RecipientId,
+                TaskId = escalation.TaskId,
+                TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Make sure this is set
+                PENumber = escalation.PETask?.PENumber ?? "Unknown",
+                RecipientName = recipientName,
+                RecipientRole = recipientRole,
+                // Include any other task-related properties you want to display
+                TaskStatus = escalation.PETask?.TaskStatus,
+            };
+            
             ViewData["PlannedEventId"] = plannedEventId;
             
-            return View(escalation);
+            return View(viewModel); // Pass the view model instead of the entity
         }
         
         [HttpPost]
@@ -173,7 +216,6 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Index", "Home");
                 
                 // Get user's role ID and workgroup names
-                int userRoleId = currentUser.UserRoleId ?? 0;
                 var userWorkgroups = currentUser.UserWorkGroups
                     .Select(uwg => uwg.WorkGroup.Name)
                     .ToList();
@@ -186,7 +228,7 @@ namespace SFCDashboard.Controllers
                 // 2. The user has the same role as the recipient AND is in the same workgroup as the escalated task
                 var escalations = await _context.Escalations
                     .Include(e => e.PETask)
-                    .Where(e => e.RecipientId == userRoleId && 
+                    .Where(e => e.RecipientId == userId && 
                             userWorkgroups.Contains(e.PETask.TaskWorkGroup))
                     .OrderByDescending(e => e.CreatedAt)
                     .ToListAsync();
