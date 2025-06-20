@@ -472,6 +472,14 @@ namespace SFCDashboard.Controllers
         {
             var currentUserId = await GetCurrentUserIdAsync();
 
+            var currentUser = await _context.Users
+            .Include(u => u.UserRole)
+            .ThenInclude(r => r.RolePermissions)
+            .ThenInclude(rp => rp.Permission)
+            .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            ViewData["CanAcceptUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanAcceptUrgentRequests") == true;
+
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any())

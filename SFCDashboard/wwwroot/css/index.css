@@ -930,6 +930,11 @@
 }
 
 /* Dark mode styles */
+
+[data-theme="dark"] .text-dark {
+    color: #f8f9fa !important;
+}
+
 [data-theme="dark"] .form-check-input[type="radio"] {
     border-color: #6c757d;
     background-color: transparent;
