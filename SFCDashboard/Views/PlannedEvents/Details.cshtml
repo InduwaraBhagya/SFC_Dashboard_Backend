@@ -791,7 +791,6 @@
                     <thead>
                         <tr>
                             <th>Task</th>
-                            <th>Violation Type</th>
                             <th>Resolved By</th>
                             <th>Resolved Date</th>
                             <th>Resolution Reason</th>
@@ -799,35 +798,30 @@
                     </thead>
                     <tbody>
                         @foreach (var escalation in Model.Escalations.Where(e => e.IsResolved).OrderByDescending(e => e.IgnoredAt))
-                        {
-                            <tr>
-                                <td>
-                                    <a href="@Url.Action("Details", "PETask", new { id = escalation.TaskId })">
-                                        @(escalation.PETask?.Task ?? "Unknown Task")
-                                    </a>
-                                </td>
-                                <td>
-                                    <span class="badge bg-danger">OLA Violation</span>
-                                </td>
-                                <td>
-                                    @(escalation.IgnoredBy?.Name ?? "Unknown")
-                                </td>
-                                <td>
-                                    @(escalation.IgnoredAt?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrWhiteSpace(escalation.IgnoreReason))
-                                    {
-                                        <span>@escalation.IgnoreReason</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">No reason provided</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
+    {
+        <tr>
+            <td>
+                @(escalation.PETask?.Task ?? "Unknown Task")
+            </td>
+            <td>
+                @(escalation.IgnoredBy?.Name ?? "Unknown")
+            </td>
+            <td>
+                @(escalation.IgnoredAt?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")
+            </td>
+            <td>
+                @if (!string.IsNullOrWhiteSpace(escalation.IgnoreReason))
+                {
+                    <span>@escalation.IgnoreReason</span>
+                }
+                else
+                {
+                    <span>N/A</span>
+                }
+            </td>
+        </tr>
+    }
+</tbody>
                 </table>
             </div>
         }

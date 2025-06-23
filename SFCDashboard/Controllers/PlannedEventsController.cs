@@ -243,7 +243,7 @@ namespace SFCDashboard.Controllers
             var nextTaskList = await _taskQueueService.GetPrioritizedTasksAsync(
                 workgroupId: userWorkgroupId,
                 take: 1);
-            
+
             ViewBag.NextTask = nextTaskList;
             ViewBag.HasNextTask = nextTaskList != null && nextTaskList.Any();
 
@@ -852,14 +852,17 @@ namespace SFCDashboard.Controllers
 
             ViewBag.ReturnUrl = returnUrl;
 
-        var escalations = await _context.Escalations
-        .Include(e => e.PETask)
-        .Include(e => e.IgnoredBy)
-        .Where(e => e.PETask.PENumber == plannedEvent.PeNumber)
-        .ToListAsync();
 
-ViewBag.Escalations = escalations;
-ViewBag.ReturnUrl = returnUrl;
+            var peTaskIds = peTasks.Select(t => t.Id).ToList();
+
+            var escalations = await _context.Escalations
+                .Include(e => e.PETask)
+                .Include(e => e.IgnoredBy)
+                .Where(e => peTaskIds.Contains(e.TaskId) && e.IsResolved)
+                .ToListAsync();
+
+            plannedEvent.Escalations = escalations;
+            ViewBag.ReturnUrl = returnUrl;
             return View(plannedEvent);
         }
 
