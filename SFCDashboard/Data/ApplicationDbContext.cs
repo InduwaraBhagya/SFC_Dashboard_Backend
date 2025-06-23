@@ -34,6 +34,8 @@ namespace SFCDashboard.Data
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectPEMapping> ProjectPEMappings { get; set; }
         public DbSet<Escalation> Escalations { get; set; }
+        public DbSet<SurveyTaskActivity> SurveyTaskActivities { get; set; } // <-- Added DbSet for SurveyTaskActivity
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
              base.OnModelCreating(modelBuilder);
