@@ -403,13 +403,24 @@ var workGroup = await _context.WorkGroups
                 
                 if (!escalationExists && recipientId > 0)
                 {
+                    // Get task name and recipient information
+                    string taskName = task.Task ?? "Unknown Task";
+                    
+                    // Get recipient name and role
+                    var recipient = await _context.Users
+                        .Include(u => u.UserRole)
+                        .FirstOrDefaultAsync(u => u.Id == recipientId);
+                    
+                    string recipientName = recipient?.Name ?? "Unknown";
+                    string recipientRole = recipient?.UserRole?.Name ?? "Unknown Role";
+                    
                     // Create the escalation
                     var escalation = new Escalation
                     {
                         TaskId = task.Id,
                         RecipientId = recipientId,
-                        Title = $"Task {task.PENumber} violating SLA",
-                        Message = $"Task {task.PENumber} has been violating SLA for {Math.Floor(violationDuration.TotalDays)} days and {violationDuration.Hours} hours",
+                        Title = $"Task {taskName} ({task.PENumber}) violating SLA",
+                        Message = $"Task {taskName} ({task.PENumber}) has been violating SLA for {Math.Floor(violationDuration.TotalDays)} days and {violationDuration.Hours} hours. Assigned to {recipientName} ({recipientRole}).",
                         CreatedAt = DateTime.UtcNow,
                         IsRead = false,
                         IsResolved = false
@@ -418,8 +429,8 @@ var workGroup = await _context.WorkGroups
                     _context.Escalations.Add(escalation);
                     await _context.SaveChangesAsync();
                     
-                    _logger.LogInformation("Created escalation for task {TaskId} to recipient {RecipientId} after {ViolationDays} days violation", 
-                        task.Id, recipientId, Math.Floor(violationDuration.TotalDays));
+                    _logger.LogInformation("Created escalation for task {TaskName} ({TaskId}) to recipient {RecipientName} ({RecipientRole}) after {ViolationDays} days violation", 
+                        taskName, task.Id, recipientName, recipientRole, Math.Floor(violationDuration.TotalDays));
                 }
             }
         }

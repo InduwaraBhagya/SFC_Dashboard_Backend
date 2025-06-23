@@ -89,7 +89,8 @@ namespace SFCDashboard.Controllers
                 ReceiverId = model.ReceiverId,
                 IssueText = model.IssueText,
                 CreatedAt = DateTime.Now,
-                IsRead = false
+                IsRead = false,
+                IsReminder= false
             };
 
             if (model.Attachment != null && model.Attachment.Length > 0)
@@ -238,6 +239,7 @@ namespace SFCDashboard.Controllers
                 CreatedAt = DateTime.Now,
                 IsRead = false,
                 IsReply = true,
+                IsReminder= false,
                 OriginalIssueId = issueId                   // Link to the original issue
             };
 
@@ -490,6 +492,7 @@ namespace SFCDashboard.Controllers
                     CreatedAt = DateTime.Now,
                     IsRead = false,
                     IsReply = true,
+                    IsReminder = false,
                     OriginalIssueId = issueId
                 };
 
@@ -565,6 +568,7 @@ namespace SFCDashboard.Controllers
                     IsRead = false,
                     IsReply = true,
                     OriginalIssueId = issueId,
+                    IsReminder = false,
                     IsResolutionRequest = true
                 };
 
@@ -702,6 +706,7 @@ namespace SFCDashboard.Controllers
                         CreatedAt = DateTime.Now,
                         IsRead = false,
                         IsReply = true,
+                        IsReminder= false,
                         OriginalIssueId = issue.Id
                     };
 

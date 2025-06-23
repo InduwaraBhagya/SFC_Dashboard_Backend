@@ -36,5 +36,7 @@ namespace SFCDashboard.Models
         public bool IsResolved { get; set; }
         public bool IsResolutionRequest { get; set; }
         public bool IsHiddenFromInbox { get; set; } = false;
+        public bool IsReminder { get; set; }
+
     }
 }

@@ -74,12 +74,20 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var escalation = await _context.Escalations
-                .Include(e => e.PETask) // Assuming you have navigation property
+                .Include(e => e.PETask)
+                .Include(e => e.IgnoredBy)
                 .FirstOrDefaultAsync(e => e.Id == id);
                 
             if (escalation == null)
             {
                 return NotFound();
+            }
+            
+            // Mark as read when viewed
+            if (!escalation.IsRead)
+            {
+                escalation.IsRead = true;
+                await _context.SaveChangesAsync();
             }
             
             // Get the planned event ID
@@ -92,10 +100,53 @@ namespace SFCDashboard.Controllers
                 plannedEventId = plannedEvent?.Id;
             }
             
-            // Pass the ID to the view
+            // Get recipient information if available
+            string recipientName = "Unknown";
+            string recipientRole = "Unknown";
+            
+            if (escalation.RecipientId.HasValue)
+            {
+                var recipient = await _context.Users
+                    .Include(u => u.UserRole)
+                    .FirstOrDefaultAsync(u => u.Id == escalation.RecipientId.Value);
+                
+                if (recipient != null)
+                {
+                    recipientName = recipient.Name;
+                    recipientRole = recipient.UserRole?.Name ?? "Unknown Role";
+                }
+            }
+                string resolvedByName = "Not resolved";
+    if (escalation.IgnoredById.HasValue)
+    {
+        var resolver = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == escalation.IgnoredById.Value);
+        resolvedByName = resolver?.Name ?? "Unknown User";
+    }
+            // Create the view model from the entity
+            var viewModel = new EscalationViewModel
+            {
+                Id = escalation.Id,
+                Title = escalation.Title,
+                Message = escalation.Message,
+                CreatedAt = escalation.CreatedAt,
+                IsRead = escalation.IsRead,
+                IsResolved = escalation.IsResolved,
+                RecipientId = escalation.RecipientId,
+                TaskId = escalation.TaskId,
+                TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Make sure this is set
+                PENumber = escalation.PETask?.PENumber ?? "Unknown",
+                RecipientName = recipientName,
+                RecipientRole = recipientRole,
+                // Include any other task-related properties you want to display
+                TaskStatus = escalation.PETask?.TaskStatus,
+                ResolvedByName = resolvedByName,  // Add this property to show name instead of ID
+
+            };
+            
             ViewData["PlannedEventId"] = plannedEventId;
             
-            return View(escalation);
+            return View(viewModel); // Pass the view model instead of the entity
         }
         
         [HttpPost]
@@ -173,26 +224,62 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Index", "Home");
                 
                 // Get user's role ID and workgroup names
-                int userRoleId = currentUser.UserRoleId ?? 0;
                 var userWorkgroups = currentUser.UserWorkGroups
                     .Select(uwg => uwg.WorkGroup.Name)
                     .ToList();
                     
 
                 
-                // Get escalations where:
-                // 1. This user is the direct recipient (RecipientId = userId)
-                // OR
-                // 2. The user has the same role as the recipient AND is in the same workgroup as the escalated task
+                // Get escalations where this user is the recipient
                 var escalations = await _context.Escalations
                     .Include(e => e.PETask)
-                    .Where(e => e.RecipientId == userRoleId && 
-                            userWorkgroups.Contains(e.PETask.TaskWorkGroup))
+                    .Include(e => e.IgnoredBy)
+                    .Where(e => e.RecipientId == userId)
                     .OrderByDescending(e => e.CreatedAt)
                     .ToListAsync();
                 
+                // Manually retrieve recipient information
+                var userIds = escalations.Where(e => e.RecipientId.HasValue).Select(e => e.RecipientId.Value).Distinct().ToList();
                 
-                return View(escalations);
+                // Fetch users data and create a lookup dictionary
+                var users = await _context.Users
+                    .Include(u => u.UserRole)
+                    .Where(u => userIds.Contains(u.Id))
+                    .ToDictionaryAsync(u => u.Id, u => u);
+                
+                // Map to view models
+                var viewModels = escalations.Select(e => 
+                {
+                    // Get recipient information if available
+                    string recipientName = "Unknown";
+                    string recipientRole = "Unknown Role";
+                    if (e.RecipientId.HasValue && users.TryGetValue(e.RecipientId.Value, out var recipient))
+                    {
+                        recipientName = recipient.Name;
+                        recipientRole = recipient.UserRole?.Name ?? "Unknown Role";
+                    }
+                    
+                    return new EscalationViewModel
+                    {
+                        Id = e.Id,
+                        Title = e.Title,
+                        Message = e.Message,
+                        CreatedAt = e.CreatedAt,
+                        IsRead = e.IsRead,
+                        IsResolved = e.IsResolved,
+                        TaskId = e.TaskId,
+                        TaskName = e.PETask?.Task ?? "Unknown Task",
+                        PENumber = e.PETask?.PENumber ?? "Unknown",
+                        TaskStatus = e.PETask?.TaskStatus,
+                        RecipientId = e.RecipientId,
+                        RecipientName = recipientName,
+                        RecipientRole = recipientRole,
+                        ResolvedByName = e.IgnoredBy?.Name ?? "Not Resolved"
+                    };
+                }).ToList();
+
+                
+                return View(viewModels);
             }
             catch (Exception ex)
             {
@@ -277,6 +364,7 @@ namespace SFCDashboard.Controllers
                         CreatedAt = DateTime.Now,
                         IsRead = false,
                         IsReply = true,
+                        IsReminder = false,
                         OriginalIssueId = issue.Id
                     };
 
@@ -320,17 +408,17 @@ namespace SFCDashboard.Controllers
                 escalation.IgnoredById = userId;
 
                 // Update the task's OLA violation status if it exists
-                var task = await _context.PETasks.FindAsync(escalation.TaskId);
-                if (task != null)
-                {
-                    // Make sure the IsOLAViolate property exists using reflection
-                    var property = typeof(PETask).GetProperty("IsOLAViolate");
-                    if (property != null)
-                    {
-                        property.SetValue(task, false);
-                        _context.Update(task);
-                    }
-                }
+                // var task = await _context.PETasks.FindAsync(escalation.TaskId);
+                // if (task != null)
+                // {
+                //      Make sure the IsOLAViolate property exists using reflection
+                //     var property = typeof(PETask).GetProperty("IsOLAViolate");
+                //     if (property != null)
+                //     {
+                //         property.SetValue(task, false);
+                //         _context.Update(task);
+                //     }
+                // }
 
                 await _context.SaveChangesAsync();
 
