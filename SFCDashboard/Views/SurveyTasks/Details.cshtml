@@ -1,0 +1,145 @@
+@model SFCDashboard.Models.SurveyTaskViewModel
+@{
+    ViewData["Title"] = "Survey Fiber Route Details";
+}
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-gradient text-white" style="background-color: #4361ee;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-map fs-4 me-2"></i>
+                    <h5 class="mb-0">Survey Fiber Route Details</h5>
+                </div>
+                <a href="javascript:history.back()" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <dl class="row">
+                            <dt class="col-sm-4">PE Number:</dt>
+                            <dd class="col-sm-8">@Model.Task.PlannedEvent.PeNumber</dd>
+                            <dt class="col-sm-4">Contractor Name:</dt>
+                            <dd class="col-sm-8">@Model.Task.PlannedEvent.ContractorName</dd>
+                            <dt class="col-sm-4">Objective:</dt>
+                            <dd class="col-sm-8">@Model.Task.PlannedEvent.PeObjective</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <dl class="row">
+                            <dt class="col-sm-4">PE Title:</dt>
+                            <dd class="col-sm-8">@Model.Task.PlannedEvent.PeTitle</dd>
+                            <dt class="col-sm-4">Rtom Description:</dt>
+                            <dd class="col-sm-8">@Model.Task.PlannedEvent.RtomDescription</dd>
+                            <dt class="col-sm-4">Region:</dt>
+                            <dd class="col-sm-8">@Model.Task.PlannedEvent.Region</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Activity History</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Attachment</th>
+                                    <th>User</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Activities.Any())
+                                {
+                                    foreach (var activity in Model.Activities)
+                                    {
+                                        <tr>
+                                            <td>@activity.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                                            <td>@activity.Description</td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(activity.FileName) && !string.IsNullOrEmpty(activity.FilePath))
+                                                {
+                                                    <a href="@Url.Action("DownloadFile", "SurveyTasks", new { id = activity.Id })" class="btn btn-sm btn-primary">
+                                                        <i class="bi bi-download"></i> Download
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>@activity.User.Name</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">
+                                            <i class="bi bi-info-circle me-2"></i>No activities recorded yet
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Add New Activity</h5>
+                </div>
+                <div class="card-body">
+<form method="post" action="/SurveyTasks/AddActivity" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" name="TaskId" value="@Model.NewActivity.TaskId" />
+    
+    <div class="mb-3">
+        <label for="Description" class="form-label">Description</label>
+        <textarea name="Description" id="Description" class="form-control" rows="3" required></textarea>
+    </div>
+    
+    <div class="mb-3">
+        <label for="File" class="form-label">
+            Attachment <span class="text-muted">(Optional)</span>
+        </label>
+        <input id="File" name="File" class="form-control" type="file" />
+        <small class="form-text text-muted">
+            <i class="bi bi-info-circle"></i> You can optionally upload documents or images related to this activity.
+        </small>
+    </div>
+    
+    <div class="d-grid">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Activity
+        </button>
+    </div>
+</form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

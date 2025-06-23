@@ -467,6 +467,14 @@
                                     : "-")
                             </td>
                             <td>
+                                <!-- For a specific task with ID -->
+                                @if (task.Task?.Trim().ToUpper() == "SURVEY FIBER ROUTE")
+                                {
+                                    <button type="button" class="btn btn-primary" onclick="location.href='@Url.Action("Details", "SurveyTasks", new { id = task.Id })'">
+                                        <i class="fas fa-info-circle"></i> View Details
+                                    </button>
+                                }
+
                                 @if (task.UrgentRequested && !task.IsUrgent)
                                         {
                                             <span class="badge bg-warning text-dark">

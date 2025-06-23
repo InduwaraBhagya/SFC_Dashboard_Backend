@@ -87,4 +87,16 @@ app.MapControllerRoute(
 app.MapRazorPages()
    .WithStaticAssets();
 
+// This ensures the upload directory exists when the application starts
+app.Use(async (context, next) =>
+{
+    var uploadsDirectory = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", "surveys");
+    if (!Directory.Exists(uploadsDirectory))
+    {
+        Directory.CreateDirectory(uploadsDirectory);
+    }
+    
+    await next();
+});
+
 app.Run();
