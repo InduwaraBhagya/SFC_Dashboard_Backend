@@ -1,10 +1,10 @@
-﻿@using System.Linq
+@using System.Linq
 @using SFCDashboard.Models
 @using SFCDashboard.Services
 @model PaginatedList<SFCDashboard.Models.PlannedEvent>
 
 @{
-    ViewData["Title"] = "PE Records";
+    ViewData["Title"] = "Multiple Workgroups View";
     bool isSearchPerformed = !string.IsNullOrEmpty(ViewData["PENumberFilter"]?.ToString()) ||
                              !string.IsNullOrEmpty(ViewData["CustomerFilter"]?.ToString()) ||
                              !string.IsNullOrEmpty(ViewData["JobReferenceFilter"]?.ToString()) ||
@@ -19,141 +19,76 @@
     </div>
 }
 
-@{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
-
 <div class="container-fluid mt-4">
-    @if (ViewData["CanViewAll"] as bool? == true)
-    {
-        <div class="workgroup-filter mb-4">
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">
-                        <i class="bi bi-funnel-fill me-2"></i> Filter by Workgroup
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="get" asp-action="Index" id="workgroupFilterForm">
-                        <div class="row g-3 align-items-center">
-                            <div class="col">
-                                <select id="workgroupFilter" name="workgroupId" class="form-select workgroup-select" data-placeholder="Select Workgroup">
-                                    <option value="">All Workgroups</option>
-                                    @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                    {
-                                        foreach (var workgroup in workgroups)
-                                        {
-                                            bool isSelected = ViewData["SelectedWorkgroupId"] != null && 
-                                                            (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
-                                            <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                        }
-                                    }
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-outline-primary">
-                                    <i class="bi bi-funnel me-1"></i> Apply Filter
-                                </button>
-                                @if (ViewData["SelectedWorkgroupId"] != null)
+    <!-- Multiple Workgroups Filter Section -->
+    <div class="workgroup-filter mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel-fill me-2"></i> Filter by Workgroups
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" asp-action="MultiWorkgroupView" id="workgroupFilterForm">
+                    <div class="row g-3 align-items-center">
+                        <div class="col">
+                            <label for="workgroupsFilter" class="form-label">Select Workgroups:</label>
+                            <select id="workgroupsFilter" name="workgroupIds" class="form-select workgroup-select" data-placeholder="Select Workgroups" multiple>
+                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
                                 {
-                                    <a href="@Url.Action("Index")" 
-                                    class="btn btn-outline-secondary ms-2">
-                                        <i class="bi bi-x-circle me-1"></i> Clear Filter
-                                    </a>
+                                    foreach (var workgroup in workgroups)
+                                    {
+                                        bool isSelected = ViewData["SelectedWorkgroupIds"] is List<int> selectedIds && 
+                                                         selectedIds.Contains(workgroup.Id);
+                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                    }
                                 }
-                            </div>
+                            </select>
+                            <div class="form-text">You can select multiple workgroups</div>
                         </div>
-                    </form>
-                </div>
+                        <div class="col-auto d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                            @if (ViewData["SelectedWorkgroupIds"] is List<int> ids && ids.Any())
+                            {
+                                <a href="@Url.Action("MultiWorkgroupView", new { searchType = ViewData["SearchType"], 
+                                                               peNumber = ViewData["PENumberFilter"],
+                                                               customer = ViewData["CustomerFilter"],
+                                                               jobReference = ViewData["JobReferenceFilter"],
+                                                               soNumber = ViewData["SONumberFilter"] })" 
+                                   class="btn btn-outline-secondary ms-2">
+                                    <i class="bi bi-x-circle me-1"></i> Clear Filter
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
+    </div>
+
+    <!-- Selected Workgroups Badge -->
+    @if (ViewData["FilteredWorkgroups"] != null)
+    {
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Showing PE Records For:</strong> @ViewData["FilteredWorkgroups"]
+        </div>
     }
-@{
-    var nextTask = ViewBag.NextTask as List<TaskQueueItem>;
-    var hasNextTask = ViewBag.HasNextTask;
-}
 
-@{
-    bool shouldShowNextTask = 
-        (ViewData["CanViewAll"] as bool? != true) && 
-        ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count <= 1);
-}
-
-@if (shouldShowNextTask)
-{
-<!-- Next Task Card -->
-<div class="card border-primary mb-4 shadow-sm">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="bi bi-arrow-right-circle-fill me-2"></i> Next Task
-        </h5>
-        <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-sm btn-light">
-            <i class="bi bi-list-task me-1"></i> View All Tasks
-        </a>
-    </div>
-    
-    <div class="card-body">
-        @if (hasNextTask)
-        {
-                var task = nextTask[0];
-            <div class="d-flex align-items-center">
-                <div class="flex-shrink-0">
-                    @{
-                        string badgeClass = task.PriorityLevel switch
-                        {
-                            "URGENT P0" => "bg-danger fw-bold",
-                            "URGENT P1" => "bg-danger",
-                            "URGENT P2" => "bg-danger",
-                            "URGENT" => "bg-danger",
-                            "OLA VIOLATION" => "bg-warning text-dark",
-                            "APPROACHING DEADLINE" => "bg-info text-dark",
-                            _ => "bg-secondary"
-                        };
-                    }
-                    <span class="badge @badgeClass p-3">
-                        <i class="bi bi-lightning-charge-fill"></i>
-                    </span>
-                </div>
-                <div class="flex-grow-1 ms-3">
-                    <h5 class="card-title mb-1">@task.Task.Task</h5>
-                    <p class="card-text mb-1 text-muted">
-                        <small>
-                            <i class="bi bi-file-earmark-text me-1"></i> PE: @task.Task.PENumber 
-                            <i class="bi bi-person ms-2 me-1"></i> @task.Task.PlannedEvent?.Customer
-                        </small>
-                    </p>
-                    <p class="mb-0">
-                        @{
-                            string daysClass = task.IsOverdue ? "text-danger fw-bold" : 
-                                (task.DaysUntilDue <= 2) ? "text-warning fw-bold" : "text-success";
-                        }
-                        <span class="@daysClass">
-                            <i class="bi bi-calendar-check me-1"></i>
-                            @task.DueStatus
-                        </span>
-                    </p>
-                </div>
-                <div class="flex-shrink-0 ms-3">
-                    <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" 
-                       class="btn btn-primary">
-                        <i class="bi bi-arrow-right"></i> Next assigned PE
-                    </a>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="text-center py-4">
-                <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
-                <p class="mt-3 mb-0">No pending tasks in your queue!</p>
-            </div>
-        }
-    </div>
-</div>
-}
     <div class="row">
-        <!-- Left Column - Existing Content -->
+        <!-- Left Column - Content -->
         <div class="col-lg-8">
             <div class="search-section mb-4">
-                <form method="get" asp-action="Index">
+                <form method="get" asp-action="MultiWorkgroupView">
+                    @if (ViewData["SelectedWorkgroupIds"] is List<int> selectedWorkgroupIds && selectedWorkgroupIds.Any())
+                    {
+                        foreach (var id in selectedWorkgroupIds)
+                        {
+                            <input type="hidden" name="workgroupIds" value="@id" />
+                        }
+                    }
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
                             <div class="form-group">
@@ -224,6 +159,14 @@
                                         </dl>
                                     </div>
                                 </div>
+
+                                <!-- Workgroup Badge -->
+                                @if (!string.IsNullOrEmpty(item.TaskWg))
+                                {
+                                    <div class="mb-2">
+                                        <span class="badge bg-secondary">Workgroup: @item.TaskWg</span>
+                                    </div>
+                                }
 
                                 <div class="collapse" id="collapse-@item.PeNumber">
                                     <hr class="details-divider" />
@@ -451,20 +394,50 @@
                 <!-- Pagination Controls -->
                 <nav aria-label="Page navigation">
                     <ul class="pagination justify-content-center">
+                        @{
+                            var routeValues = new Dictionary<string, object>
+                            {
+                                { "pageIndex", 1 },
+                                { "searchType", ViewData["SearchType"] },
+                                { "peNumber", ViewData["PENumberFilter"] },
+                                { "customer", ViewData["CustomerFilter"] },
+                                { "jobReference", ViewData["JobReferenceFilter"] },
+                                { "soNumber", ViewData["SONumberFilter"] }
+                            };
+                            
+                            // Add workgroup IDs to route values
+                            if (ViewData["SelectedWorkgroupIds"] is List<int> wgIds && wgIds.Any())
+                            {
+                                routeValues["workgroupIds"] = wgIds;
+                            }
+                        }
+                        
                         <li class="page-item @(Model.PageIndex == 1 ? "disabled" : "")">
-                            <a class="page-link" href="?pageIndex=1&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">First</a>
+                            <a class="page-link" href="@Url.Action("MultiWorkgroupView", routeValues)">First</a>
                         </li>
+                        
+                        @{
+                            routeValues["pageIndex"] = Model.PageIndex - 1;
+                        }
                         <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                            <a class="page-link" href="?pageIndex=@(Model.PageIndex - 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Previous</a>
+                            <a class="page-link" href="@Url.Action("MultiWorkgroupView", routeValues)">Previous</a>
                         </li>
                         <li class="page-item disabled">
                             <span class="page-link">@Model.PageIndex</span>
                         </li>
+                        
+                        @{
+                            routeValues["pageIndex"] = Model.PageIndex + 1;
+                        }
                         <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                            <a class="page-link" href="?pageIndex=@(Model.PageIndex + 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Next</a>
+                            <a class="page-link" href="@Url.Action("MultiWorkgroupView", routeValues)">Next</a>
                         </li>
+                        
+                        @{
+                            routeValues["pageIndex"] = Model.TotalPages;
+                        }
                         <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : "")">
-                            <a class="page-link" href="?pageIndex=@Model.TotalPages&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Last</a>
+                            <a class="page-link" href="@Url.Action("MultiWorkgroupView", routeValues)">Last</a>
                         </li>
                     </ul>
                 </nav>
@@ -472,21 +445,13 @@
 
             <div class="row mb-4">
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card urgent-card">
+                    <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card urgent-card">
                         <div class="card-content">
                             <h4>Urgent Records</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-danger" style="font-size: 1.2rem;">
                                     @ViewData["UrgentCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
-                                {
-                                    <div class="mt-1 filter-badge">
-                                        <span class="badge bg-danger text-white">
-                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
-                                        </span>
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -495,21 +460,13 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card inprogress-card">
+                    <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card inprogress-card">
                         <div class="card-content">
                             <h4>Regular Records</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-success" style="font-size: 1.2rem;">
                                     @ViewData["InProgressCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
-                                {
-                                    <div class="mt-1 filter-badge">
-                                        <span class="badge bg-success text-white">
-                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
-                                        </span>
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -518,21 +475,13 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card ola-card">
+                    <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card ola-card">
                         <div class="card-content">
                             <h4>OLA Violate Records</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-dark" style="font-size: 1.2rem;">
                                     @ViewData["OLAViolateCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
-                                {
-                                    <div class="mt-1 filter-badge">
-                                        <span class="badge bg-dark text-white">
-                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
-                                        </span>
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -541,21 +490,13 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("HoldRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card hold-card">
+                    <a href="@Url.Action("HoldRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card hold-card">
                         <div class="card-content">
                             <h4>Hold Records</h4>
                             <div class="mt-2">
                                 <span class="badge bg-light text-warning" style="font-size: 1.2rem;">
                                     @(ViewData["HoldCount"] != null ? ViewData["HoldCount"] : 0) Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
-                                {
-                                    <div class="mt-1 filter-badge">
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="bi bi-funnel-fill"></i> @ViewData["SelectedWorkgroupName"]
-                                        </span>
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div class="img-container">
@@ -600,153 +541,153 @@
                         }
                     </h3>
 
-                                <!-- Message search bar -->
-                                <div class="inbox-search-container mt-3">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
-                                        <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Add this section after the inbox-search-container -->
-                                <div class="inbox-filters mt-3">
-                                    <div class="btn-group w-100" role="group" aria-label="Message filters">
-                                        <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
-                                        <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
-                                        <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
-                                    </div>
-                                </div>
-
-                                <div class="messages-container mt-3">
-                                    @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
-                                    {<!-- Urgent Request Confirmation Messages -->
-                                    @if (ViewData["PendingUrgentRequests"] != null)
-                                    {
-                                        foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
-                                        {
-                                            <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
-                                                <div class="message-indicator"></div>
-                                                <div class="message-content">
-                                                    <div class="d-flex justify-content-between align-items-start">
-                                                        <h6 class="message-sender">Urgent Request: @request.PeNumber</h6>
-                                                        <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
-                                                    </div>
-                                                    <div class="message-subject">
-                                                        <span class="badge bg-danger me-1">Action Required</span>
-                                                        Confirm Urgent Status
-                                                    </div>
-                                                    <div class="message-preview">
-                                                        Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                    
-                                    <!-- Task Urgent Requests -->
-                                    @if (ViewData["PendingTaskRequests"] != null)
-                                    {
-                                        foreach (var task in (IEnumerable<PETask>)ViewData["PendingTaskRequests"])
-                                        {
-                                            <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
-                                                <div class="message-indicator"></div>
-                                                <div class="message-content">
-                                                    <div class="d-flex justify-content-between align-items-start">
-                                                        <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
-                                                        <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
-                                                    </div>
-                                                    <div class="message-subject">
-                                                        <span class="badge bg-warning text-dark me-1">Task</span>
-                                                        @task.Task Needs Priority
-                                                    </div>
-                                                    <div class="message-preview">
-                                                        @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                }
-                                    
-                                    <!-- Issue Messages -->
-                    @if (ViewData["InboxIssues"] != null)
-                        {
-                            foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
-                        {
-                        
-                                        
-                                            <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
-                                                data-message-id="issue-@issue.CreatedAt.Ticks"
-                                                data-issue-id="@issue.Id"
-                                                data-pe-id="@issue.PlannedEventId"
-                                                data-sender="@issue.SenderName"
-                                                data-sender-id="@issue.SenderId"
-                                                data-issue-text="@issue.IssueText"
-                                                data-attachment="@issue.AttachmentPath"
-                                                data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
-                                                data-is-read="@issue.IsRead.ToString().ToLower()"
-                                                data-is-reply="@issue.IsReply.ToString().ToLower()"
-                                                data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
-                                                data-original-issue-id="@issue.OriginalIssueId"
-                                                @if (issue.IsResolutionRequest)
-                                                {
-                                                    <text>
-                                                    data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
-                                                    data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
-                                                    onclick="showResolutionConfirm(this)"
-                                                    </text>
-                                                }
-                                                else
-                                                {
-                                                    <text>onclick="showIssueDetails(this)"</text>
-                                                }>
-                                                <div class="message-indicator"></div>
-                                                <div class="message-content">
-                                                    <div class="d-flex justify-content-between align-items-start">
-                                                        <h6 class="message-sender">
-                                                            @if (issue.IsResolutionRequest)
-                                                            {
-                                                                <span class="badge bg-success me-1">Resolution</span>
-                                                            }
-                                                            From @issue.SenderName 
-                                                        </h6>
-                                                        <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
-                                                    </div>
-                                                    <div class="message-subject">
-                                                        @if (issue.IsResolutionRequest)
-                                                        {
-                                                            <span class="badge bg-success text-white me-1">Issue Fixed</span>
-                                                        }
-                                                        else if (issue.IsReply)
-                                                        {
-                                                            <span class="badge bg-info text-dark me-1">Reply</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-danger text-white me-1">Issue</span>
-                                                        }
-                                                        @issue.IssueText
-                                                    </div>
-                                                    <div class="message-preview">
-                                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
-                                                        {
-                                                            <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span>No attachment</span>
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    }           
-                            </div>
+                    <!-- Message search bar -->
+                    <div class="inbox-search-container mt-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
+                            <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
+                                <i class="fas fa-search"></i>
+                            </button>
                         </div>
                     </div>
+
+                    <!-- Add this section after the inbox-search-container -->
+                    <div class="inbox-filters mt-3">
+                        <div class="btn-group w-100" role="group" aria-label="Message filters">
+                            <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
+                            <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
+                            <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
+                        </div>
+                    </div>
+
+                    <div class="messages-container mt-3">
+                        @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
+                        {<!-- Urgent Request Confirmation Messages -->
+                            @if (ViewData["PendingUrgentRequests"] != null)
+                            {
+                                foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
+                                {
+                                    <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
+                                        <div class="message-indicator"></div>
+                                        <div class="message-content">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <h6 class="message-sender">Urgent Request: @request.PeNumber</h6>
+                                                <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
+                                            </div>
+                                            <div class="message-subject">
+                                                <span class="badge bg-danger me-1">Action Required</span>
+                                                Confirm Urgent Status
+                                            </div>
+                                            <div class="message-preview">
+                                                Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            
+                            <!-- Task Urgent Requests -->
+                            @if (ViewData["PendingTaskRequests"] != null)
+                            {
+                                foreach (var task in (IEnumerable<PETask>)ViewData["PendingTaskRequests"])
+                                {
+                                    <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
+                                        <div class="message-indicator"></div>
+                                        <div class="message-content">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
+                                                <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
+                                            </div>
+                                            <div class="message-subject">
+                                                <span class="badge bg-warning text-dark me-1">Task</span>
+                                                @task.Task Needs Priority
+                                            </div>
+                                            <div class="message-preview">
+                                                @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                            
+                        <!-- Issue Messages -->
+                        @if (ViewData["InboxIssues"] != null)
+                        {
+                            foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
+                            {
+                                <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
+                                    data-message-id="issue-@issue.CreatedAt.Ticks"
+                                    data-issue-id="@issue.Id"
+                                    data-pe-id="@issue.PlannedEventId"
+                                    data-sender="@issue.SenderName"
+                                    data-sender-id="@issue.SenderId"
+                                    data-issue-text="@issue.IssueText"
+                                    data-attachment="@issue.AttachmentPath"
+                                    data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
+                                    data-is-read="@issue.IsRead.ToString().ToLower()"
+                                    data-is-reply="@issue.IsReply.ToString().ToLower()"
+                                    data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
+                                    data-original-issue-id="@issue.OriginalIssueId"
+                                    @if (issue.IsResolutionRequest)
+                                    {
+                                        <text>
+                                        data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
+                                        data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                        onclick="showResolutionConfirm(this)"
+                                        </text>
+                                    }
+                                    else
+                                    {
+                                        <text>onclick="showIssueDetails(this)"</text>
+                                    }>
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender">
+                                                @if (issue.IsResolutionRequest)
+                                                {
+                                                    <span class="badge bg-success me-1">Resolution</span>
+                                                }
+                                                From @issue.SenderName 
+                                            </h6>
+                                            <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            @if (issue.IsResolutionRequest)
+                                            {
+                                                <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                            }
+                                            else if (issue.IsReply)
+                                            {
+                                                <span class="badge bg-info text-dark me-1">Reply</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger text-white me-1">Issue</span>
+                                            }
+                                            @issue.IssueText
+                                        </div>
+                                        <div class="message-preview">
+                                            @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                            {
+                                                <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
+                                            }
+                                            else
+                                            {
+                                                <span>No attachment</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }           
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
@@ -754,48 +695,95 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script>
-        $(document).ready(function () {
-            // Enable search for workgroup filter
-            $('#workgroupFilter').select2({
-                placeholder: "Select Workgroup",
+        $(document).ready(function() {
+            // Initialize Select2 for workgroup filter with multiple selection
+            $('#workgroupsFilter').select2({
+                placeholder: "Select workgroups",
                 allowClear: true,
                 width: '100%'
             });
-
-            // Load saved workgroup from localStorage if there's no selected workgroup in the current request
-            var currentSelectedWorkgroup = @(ViewData["SelectedWorkgroupId"] != null ? ViewData["SelectedWorkgroupId"].ToString() : "null");
-            if (!currentSelectedWorkgroup) {
-                var savedWorkgroupId = localStorage.getItem('selectedWorkgroupId');
-                if (savedWorkgroupId) {
-                    $('#workgroupFilter').val(savedWorkgroupId).trigger('change');
-                    // Optionally auto-submit the form to apply the filter immediately
-                    // $('#workgroupFilterForm').submit();
-                }
-            } else {
-                // Save current selection to localStorage
-                localStorage.setItem('selectedWorkgroupId', currentSelectedWorkgroup);
-            }
             
-            // Save workgroup selection when form is submitted
-            $('#workgroupFilterForm').on('submit', function() {
-                var selectedWorkgroupId = $('#workgroupFilter').val();
-                if (selectedWorkgroupId) {
-                    localStorage.setItem('selectedWorkgroupId', selectedWorkgroupId);
+            // Initialize search field behavior
+            toggleSearchFields();
+            
+            // Add message filtering logic
+            $('.inbox-filters button').click(function() {
+                $('.inbox-filters button').removeClass('active');
+                $(this).addClass('active');
+                
+                var filter = $(this).data('filter');
+                
+                if (filter === 'unread') {
+                    $('.message-item.unread').show();
+                    $('.message-item:not(.unread)').hide();
+                } else if (filter === 'read') {
+                    $('.message-item:not(.unread)').show();
+                    $('.message-item.unread').hide();
                 } else {
-                    // If "All Workgroups" is selected, remove the stored value
-                    localStorage.removeItem('selectedWorkgroupId');
+                    $('.message-item').show();
                 }
             });
             
-            // Add handler for the clear filter button
-            $('a[href="@Url.Action("Index")"]').on('click', function() {
-                localStorage.removeItem('selectedWorkgroupId');
+            // Search inbox messages
+            $('#inbox-search-button').click(function() {
+                var searchText = $('.inbox-search').val().toLowerCase();
+                
+                if (searchText === '') {
+                    // If search is cleared, reapply the current filter
+                    $('.inbox-filters button.active').click();
+                    return;
+                }
+                
+                $('.message-item').each(function() {
+                    var messageText = $(this).text().toLowerCase();
+                    if (messageText.indexOf(searchText) > -1) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
+            
+            // Also search on Enter key
+            $('.inbox-search').keypress(function(e) {
+                if (e.which === 13) {
+                    $('#inbox-search-button').click();
+                    return false;
+                }
             });
         });
+        
+        function toggleSearchFields() {
+            var searchType = $('#searchType').val();
+            var inputField = $('#indexSearchInput');
+            var label = $('#indexSearchLabel');
+            
+            switch (searchType) {
+                case 'customer':
+                    label.text('Customer Name:');
+                    inputField.attr('name', 'customer');
+                    inputField.attr('placeholder', 'Enter customer name');
+                    break;
+                case 'jobReference':
+                    label.text('Job Reference:');
+                    inputField.attr('name', 'jobReference');
+                    inputField.attr('placeholder', 'Enter job reference');
+                    break;
+                case 'soNumber':
+                    label.text('SO Number:');
+                    inputField.attr('name', 'soNumber');
+                    inputField.attr('placeholder', 'Enter SO number');
+                    break;
+                default:
+                    label.text('PE Number:');
+                    inputField.attr('name', 'peNumber');
+                    inputField.attr('placeholder', 'Enter PE number');
+                    break;
+            }
+        }
     </script>
     <script src="~/js/index.js"></script>
 }
-
 
 @* Simplify the modal with just Accept/Reject buttons *@
 <div class="modal fade" id="urgentRequestModal" tabindex="-1" aria-labelledby="urgentRequestModalLabel" aria-hidden="true">
@@ -997,7 +985,6 @@
         </div>
     </div>
 </div>
-
 
 @functions {
     private string GetResolutionDetails(int issueId)
