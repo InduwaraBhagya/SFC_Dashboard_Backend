@@ -50,5 +50,7 @@ namespace SFCDashboard.Models
         public List<SurveyTaskActivity> Activities { get; set; }
         
         public SurveyTaskActivityViewModel NewActivity { get; set; }
+        
+        public List<BOQ> BOQItems { get; set; } = new List<BOQ>();
     }
 }

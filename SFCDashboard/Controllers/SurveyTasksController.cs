@@ -29,13 +29,8 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: SurveyTasks/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int id)
         {
-            if (id == null)
-            {
-                return Content("ID is null");
-            }
-
             // First check if the task exists at all
             var taskExists = await _context.PETasks.AnyAsync(t => t.Id == id);
             if (!taskExists)
@@ -66,6 +61,17 @@ namespace SFCDashboard.Controllers
                 .OrderByDescending(a => a.CreatedAt)
                 .ToListAsync();
 
+            // Get BOQ items for this task
+            var boqItems = await _context.BOQs
+                .Include(b => b.Category)
+                .Include(b => b.SubCategory)
+                .Include(b => b.UDName)
+                .Include(b => b.CreatedBy)
+                .Where(b => b.TaskId == id)
+                .OrderBy(b => b.CategoryId)
+                .ThenBy(b => b.SubCategoryId)
+                .ToListAsync();
+
             // Check for null values in the activities collection and fix them
             foreach (var activity in activities)
             {
@@ -81,11 +87,21 @@ namespace SFCDashboard.Controllers
                 activity.FilePath = activity.FilePath ?? string.Empty;
             }
 
+            // Check if BOQ has been submitted before
+            var boqSubmission = await _context.SurveyTaskActivities
+                .Where(a => a.PETaskId == id && a.Description.Contains("Submitted BOQ with total amount"))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+                
+            ViewBag.BOQSubmitted = boqSubmission != null;
+            ViewBag.BOQSubmissionDate = boqSubmission?.CreatedAt;
+
             var viewModel = new SurveyTaskViewModel
             {
                 Task = task,
                 Activities = activities,
-                NewActivity = new SurveyTaskActivityViewModel { TaskId = task.Id }
+                NewActivity = new SurveyTaskActivityViewModel { TaskId = task.Id },
+                BOQItems = boqItems
             };
 
             return View(viewModel);
@@ -217,6 +233,76 @@ namespace SFCDashboard.Controllers
             // Return the file
             var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
             return File(fileBytes, "application/octet-stream", activity.FileName);
+        }
+
+        // POST: BOQ/SubmitBoqTotal
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitBoqTotal(int taskId, decimal totalAmount)
+        {
+            try
+            {
+                _logger.LogInformation($"SubmitBoqTotal called for TaskId: {taskId}, Total: {totalAmount}");
+                
+                // Verify that the task exists
+                var task = await _context.PETasks
+                    .FirstOrDefaultAsync(t => t.Id == taskId);
+                    
+                if (task == null)
+                {
+                    _logger.LogWarning($"Task not found for ID: {taskId}");
+                    return Json(new { success = false, message = "Task not found" });
+                }
+                
+                // Get the current user
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    _logger.LogWarning("User not authenticated or not found");
+                    return Json(new { success = false, message = "User not authenticated or not found" });
+                }
+                
+                // Verify that there are actually BOQ items for this task
+                var boqCount = await _context.BOQs.CountAsync(b => b.TaskId == taskId);
+                if (boqCount == 0)
+                {
+                    _logger.LogWarning($"No BOQ items found for TaskId: {taskId}");
+                    return Json(new { success = false, message = "No BOQ items found for this task" });
+                }
+                
+                // Recalculate the total amount to verify it matches what was sent
+                var calculatedTotal = await _context.BOQs
+                    .Where(b => b.TaskId == taskId)
+                    .SumAsync(b => b.Amount);
+                    
+                if (Math.Abs(calculatedTotal - totalAmount) > 0.01m)
+                {
+                    _logger.LogWarning($"Total amount mismatch: Sent={totalAmount}, Calculated={calculatedTotal}");
+                    return Json(new { success = false, message = "Total amount mismatch. Please refresh the page and try again." });
+                }
+                
+                // Create activity record for the BOQ submission
+                var activity = new SurveyTaskActivity
+                {
+                    PETaskId = taskId,
+                    Description = $"Submitted BOQ with total amount of {totalAmount:N2}",
+                    FilePath = "",
+                    FileName = "",
+                    SystemUserId = currentUser.Id,
+                    CreatedAt = DateTime.Now
+                };
+                
+                _context.SurveyTaskActivities.Add(activity);
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation($"BOQ submission successful for TaskId: {taskId}");
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error submitting BOQ total for TaskId: {taskId}");
+                return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
+            }
         }
 
         private async Task<SystemUser> GetCurrentUserAsync()

@@ -4,6 +4,7 @@
 }
 
 <div class="container-fluid mt-4">
+    @Html.AntiForgeryToken()
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-gradient text-white" style="background-color: #4361ee;">
             <div class="d-flex align-items-center justify-content-between">
@@ -138,8 +139,472 @@
             </div>
         </div>
     </div>
+
+    <!-- Replace the existing BOQ header section with this -->
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Bill of Quantities (BOQ)</h5>
+            <button type="button" class="btn btn-primary btn-sm" id="toggleBoqForm">
+                <i class="bi bi-plus-circle me-1"></i>Add BOQ Item
+            </button>
+        </div>
+        
+        <!-- Add this new inline form section -->
+        <div class="card-body p-3 bg-light border-bottom" id="boqFormSection" style="display: none;">
+            <form id="inlineBoqForm" method="post" action="javascript:void(0);">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="TaskId" name="TaskId" value="@Model.Task.Id" />
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="CategoryId" class="form-label">Category</label>
+                        <select class="form-select" id="CategoryId" name="CategoryId" required>
+                            <option value="">-- Select Category --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="SubCategoryId" class="form-label">Sub-Category</label>
+                        <select class="form-select" id="SubCategoryId" name="SubCategoryId" required disabled>
+                            <option value="">-- Select Sub-Category --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="UDNameId" class="form-label">UD Name</label>
+                        <select class="form-select" id="UDNameId" name="UDNameId" required disabled>
+                            <option value="">-- Select UD Name --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="Quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="Quantity" name="Quantity" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="Unit" class="form-label">Unit</label>
+                        <input type="text" class="form-control" id="Unit" name="Unit" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="UnitPrice" class="form-label">Unit Price</label>
+                        <input type="number" class="form-control" id="UnitPrice" name="UnitPrice" step="0.01" min="0.01" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="AdjustedUnitPrice" class="form-label">Adjusted Unit Price</label>
+                        <input type="number" class="form-control" id="AdjustedUnitPrice" name="AdjustedUnitPrice" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="Amount" class="form-label">Amount</label>
+                        <input type="number" class="form-control" id="Amount" name="Amount" readonly>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-secondary me-2" id="cancelBoq">Cancel</button>
+                            <button type="submit" class="btn btn-success" id="saveBoq">Save BOQ Item</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="boqTable">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Sub-Category</th>
+                            <th>UD Name</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                            <th>Unit Price</th>
+                            <th>Adjusted Unit Price</th>
+                            <th>Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.BOQItems != null && Model.BOQItems.Any())
+                        {
+                            foreach (var item in Model.BOQItems)
+                            {
+                                <tr data-id="@item.Id">
+                                    <td>@item.Category.Category</td>
+                                    <td>@item.SubCategory.SubCategory</td>
+                                    <td>@item.UDName.Name</td>
+                                    <td>@item.Quantity.ToString("N2")</td>
+                                    <td>@item.Unit</td>
+                                    <td>@item.UnitPrice.ToString("N2")</td>
+                                    <td>@item.AdjustedUnitPrice.ToString("N2")</td>
+                                    <td>@item.Amount.ToString("N2")</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Edit", "BOQ", new { id = item.Id })" class="btn btn-info">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-danger delete-boq" data-id="@item.Id">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <i class="bi bi-info-circle me-2"></i>No BOQ items added yet
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <!-- Modify the existing tfoot section -->
+                    @if (Model.BOQItems != null && Model.BOQItems.Any())
+                    {
+                        <tfoot>
+                            <tr class="fw-bold bg-light">
+                                <td colspan="7" class="text-end">Total Amount:</td>
+                                <td id="totalAmountCell">@Model.BOQItems.Sum(x => x.Amount).ToString("N2")</td>
+                                <td>
+                                    <button type="button" id="submitBoqTotalBtn" class="btn btn-success btn-sm" 
+                                            data-task-id="@Model.Task.Id" 
+                                            data-total-amount="@Model.BOQItems.Sum(x => x.Amount)">
+                                        <i class="bi bi-check2-circle me-1"></i>Submit BOQ
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    }
+                    else
+                    {
+                        <tfoot style="display: none;">
+                            <tr class="fw-bold bg-light">
+                                <td colspan="7" class="text-end">Total Amount:</td>
+                                <td id="totalAmountCell">0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+<script>
+    $(document).ready(function () {
+        // Load categories when page loads
+        loadCategories();
+        
+        // Toggle BOQ form
+        $('#toggleBoqForm').on('click', function() {
+            $('#boqFormSection').slideToggle();
+        });
+        
+        // Cancel BOQ form
+        $('#cancelBoq').on('click', function() {
+            $('#boqFormSection').slideUp();
+            resetBoqForm();
+        });
+        
+        // Handle category change
+        $('#CategoryId').on('change', function() {
+            var categoryId = $(this).val();
+            if (categoryId) {
+                $('#SubCategoryId').prop('disabled', false);
+                $('#SubCategoryId').empty().append('<option value="">-- Select Sub-Category --</option>');
+                $('#UDNameId').prop('disabled', true).empty().append('<option value="">-- Select UD Name --</option>');
+                $('#Unit').val('');
+                $('#UnitPrice').val('');
+                
+                // Load sub-categories
+                $.ajax({
+                    url: '@Url.Action("GetSubCategories", "BOQ")',
+                    type: 'GET',
+                    data: { categoryId: categoryId },
+                    success: function(data) {
+                        $.each(data, function(i, item) {
+                            $('#SubCategoryId').append($('<option>', {
+                                value: item.id,
+                                text: item.name
+                            }));
+                        });
+                    }
+                });
+            } else {
+                $('#SubCategoryId').prop('disabled', true).empty().append('<option value="">-- Select Sub-Category --</option>');
+                $('#UDNameId').prop('disabled', true).empty().append('<option value="">-- Select UD Name --</option>');
+                $('#Unit').val('');
+                $('#UnitPrice').val('');
+            }
+            calculateAmount();
+        });
+        
+        // Handle sub-category change
+        // Handle sub-category change
+$('#SubCategoryId').on('change', function() {
+    var categoryId = $('#CategoryId').val();
+    var subCategoryId = $(this).val();
+    
+    if (subCategoryId) {
+        $('#UDNameId').prop('disabled', false);
+        $('#UDNameId').empty().append('<option value="">-- Select UD Name --</option>');
+        $('#Unit').val('');
+        $('#UnitPrice').val('');
+        
+        // Load UD names filtered by BOTH category and subcategory
+        $.ajax({
+            url: '@Url.Action("GetUDNames", "BOQ")',
+            type: 'GET',
+            data: { categoryId: categoryId, subCategoryId: subCategoryId },
+            success: function(data) {
+                $.each(data, function(i, item) {
+                    $('#UDNameId').append($('<option>', {
+                        value: item.id,
+                        text: item.name,
+                        'data-unit': item.unit,
+                        'data-price': item.unitPrice
+                    }));
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading UD Names:", error);
+                alert("Failed to load UD Names. Please try again.");
+            }
+        });
+    } else {
+        $('#UDNameId').prop('disabled', true).empty().append('<option value="">-- Select UD Name --</option>');
+        $('#Unit').val('');
+        $('#UnitPrice').val('');
+    }
+    calculateAmount();
+});
+        // Handle UD Name change - autofill unit and price
+        $('#UDNameId').on('change', function() {
+            var selected = $(this).find(':selected');
+            var unit = selected.data('unit');
+            var price = selected.data('price');
+            
+            $('#Unit').val(unit || '');
+            $('#UnitPrice').val(price || '');
+            
+            calculateAmount();
+        });
+        
+        // Calculate adjusted price and amount when quantity changes
+        $('#Quantity').on('input', function() {
+            calculateAmount();
+        });
+        
+        // Add BOQ item
+        $('#inlineBoqForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Log the form values before sending
+            console.log("Form values:", {
+                TaskId: $('#TaskId').val(),
+                CategoryId: $('#CategoryId').val(),
+                SubCategoryId: $('#SubCategoryId').val(),
+                UDNameId: $('#UDNameId').val(),
+                Unit: $('#Unit').val(),
+                UnitPrice: $('#UnitPrice').val()
+            });
+            
+            // Validate required fields
+            if (!$('#CategoryId').val() || !$('#SubCategoryId').val() || !$('#UDNameId').val() || !$('#Quantity').val()) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Format values properly
+            var quantity = parseFloat($('#Quantity').val()) || 0;
+            var unitPrice = parseFloat($('#UnitPrice').val()) || 0;
+            var adjustedUnitPrice = parseFloat($('#AdjustedUnitPrice').val()) || 0;
+            var amount = parseFloat($('#Amount').val()) || 0;
+            
+            console.log("Submitting BOQ with values:", {
+                TaskId: $('#TaskId').val(),
+                CategoryId: $('#CategoryId').val(),
+                SubCategoryId: $('#SubCategoryId').val(),
+                UDNameId: $('#UDNameId').val(),
+                Quantity: quantity,
+                Unit: $('#Unit').val(),
+                UnitPrice: unitPrice,
+                AdjustedUnitPrice: adjustedUnitPrice,
+                Amount: amount
+            });
+            
+            var formData = {
+                TaskId: $('#TaskId').val(),
+                CategoryId: $('#CategoryId').val(),
+                SubCategoryId: $('#SubCategoryId').val(),
+                UDNameId: $('#UDNameId').val(),
+                Quantity: quantity,
+                Unit: $('#Unit').val(),
+                UnitPrice: unitPrice,
+                AdjustedUnitPrice: adjustedUnitPrice,
+                Amount: amount,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
+            };
+            
+            $.ajax({
+                url: '@Url.Action("Create", "BOQ")',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    console.log("Server response:", response);
+                    if (response.success) {
+                        // Reload the page to show the new item
+                        location.reload();
+                    } else {
+                        alert('Error adding BOQ item: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX Error:", xhr.responseText);
+                    alert('An error occurred while adding the BOQ item. See console for details.');
+                }
+            });
+        });
+        
+        // Handle BOQ deletion (existing code)
+        $('.delete-boq').on('click', function () {
+            var id = $(this).data('id');
+            if (confirm('Are you sure you want to delete this BOQ item?')) {
+                $.ajax({
+                    url: '@Url.Action("Delete", "BOQ")/' + id,
+                    type: 'POST',
+                    data: { 
+                        id: id,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (result) {
+                        if (result.success) {
+                            // Remove the row from the table
+                            $('tr[data-id="' + id + '"]').fadeOut(function () {
+                                $(this).remove();
+                                // Check if there are any rows left
+                                if ($('#boqTable tbody tr').length === 0) {
+                                    $('#boqTable tbody').append('<tr><td colspan="9" class="text-center py-4"><i class="bi bi-info-circle me-2"></i>No BOQ items added yet</td></tr>');
+                                    $('#boqTable tfoot').hide();
+                                } else {
+                                    // Recalculate total
+                                    updateTotalAmount();
+                                }
+                            });
+                        } else {
+                            alert('Error deleting BOQ item: ' + result.message);
+                        }
+                    },
+                    error: function () {
+                        alert('An error occurred while deleting the BOQ item.');
+                    }
+                });
+            }
+        });
+        
+        // Handle BOQ total submission
+        $('#submitBoqTotalBtn').on('click', function() {
+    var taskId = $(this).data('task-id');
+    var totalAmount = $(this).data('total-amount');
+    
+    // Only proceed if there are BOQ items
+    if (parseFloat(totalAmount) <= 0) {
+        alert('Cannot submit BOQ with no items or zero total amount.');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to submit this BOQ with a total of ' + 
+                parseFloat(totalAmount).toLocaleString('en-US', {
+                    style: 'currency',
+                    currency: 'LKR'
+                }) + '?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '@Url.Action("SubmitBoqTotal", "SurveyTasks")',
+        type: 'POST',
+        data: { 
+            taskId: taskId,
+            totalAmount: totalAmount,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            if (result.success) {
+                alert('BOQ has been successfully submitted.');
+                location.reload();
+            } else {
+                alert('Error submitting BOQ: ' + result.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("AJAX Error:", error);
+            console.log("Response:", xhr.responseText);
+            alert('An error occurred while submitting the BOQ. See console for details.');
+        }
+    });
+});
+        
+        // Helper functions
+        function loadCategories() {
+            $.ajax({
+                url: '@Url.Action("GetCategories", "BOQ")',
+                type: 'GET',
+                success: function(data) {
+                    $.each(data, function(i, item) {
+                        $('#CategoryId').append($('<option>', {
+                            value: item.id,
+                            text: item.category
+                        }));
+                    });
+                }
+            });
+        }
+        
+        function calculateAmount() {
+            var quantity = parseFloat($('#Quantity').val()) || 0;
+            var unitPrice = parseFloat($('#UnitPrice').val()) || 0;
+            
+            // Get RTOM weight from server or use default
+            var rtomWeight = @Json.Serialize(ViewBag.RTOMWeight ?? 1.0);
+            
+            var adjustedUnitPrice = unitPrice * rtomWeight;
+            var amount = adjustedUnitPrice * quantity;
+            
+            $('#AdjustedUnitPrice').val(adjustedUnitPrice.toFixed(2));
+            $('#Amount').val(amount.toFixed(2));
+        }
+        
+        function resetBoqForm() {
+            $('#CategoryId').val('');
+            $('#SubCategoryId').val('').prop('disabled', true);
+            $('#UDNameId').val('').prop('disabled', true);
+            $('#Quantity').val('');
+            $('#Unit').val('');
+            $('#UnitPrice').val('');
+            $('#AdjustedUnitPrice').val('');
+            $('#Amount').val('');
+        }
+        
+        function updateTotalAmount() {
+            var total = 0;
+            $('#boqTable tbody tr').each(function () {
+                var amount = parseFloat($(this).find('td:eq(7)').text().replace(/,/g, ''));
+                if (!isNaN(amount)) {
+                    total += amount;
+                }
+            });
+            
+            $('#totalAmountCell').text(total.toLocaleString('en-US', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            }));
+            
+            // Show footer if hidden
+            if (total > 0 && $('#boqTable tfoot').is(':hidden')) {
+                $('#boqTable tfoot').show();
+            }
+        }
+    });
+</script>
 }
