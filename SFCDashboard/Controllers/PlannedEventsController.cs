@@ -112,13 +112,17 @@ namespace SFCDashboard.Controllers
             // Get current user's workgroup info
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
+            // Keep track of user's assigned workgroup(s) separately from the filter selection
+            ViewData["UserAssignedWorkgroupIds"] = userWorkgroupIds;
+            ViewData["UserAssignedWorkgroupNames"] = userWorkgroupNames;
+            
             ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _context.WorkGroups
                 .Where(w => canViewAll || userWorkgroupIds.Contains(w.Id))
                 .OrderBy(w => w.Name)
                 .ToListAsync();
 
-            // Keep track of selected workgroup
+            // Keep track of selected filter workgroup (separate from user's assigned workgroup)
             ViewData["SelectedWorkgroupId"] = workgroupId;
 
             // Base query
@@ -126,7 +130,7 @@ namespace SFCDashboard.Controllers
 
             if (canViewAll)
             {
-                // If user has ViewAll and selected a workgroup, filter by it
+                // If user has ViewAll and selected a workgroup filter, filter by it
                 if (workgroupId.HasValue)
                 {
                     var selectedWorkgroup = await _context.WorkGroups
@@ -151,7 +155,7 @@ namespace SFCDashboard.Controllers
                             query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(selectedWorkgroup));
                         }
 
-                        ViewData["FilteredWorkgroups"] = selectedWorkgroup;
+                        ViewData["FilteredWorkgroup"] = selectedWorkgroup;
                         ViewData["SelectedWorkgroupId"] = workgroupId;
                         ViewData["SelectedWorkgroupName"] = selectedWorkgroup;
                     }
@@ -179,21 +183,22 @@ namespace SFCDashboard.Controllers
                         query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(selectedWorkgroup));
                     }
 
-                    ViewData["FilteredWorkgroups"] = selectedWorkgroup;
+                    ViewData["FilteredWorkgroup"] = selectedWorkgroup;
                     ViewData["SelectedWorkgroupId"] = userWorkgroupIds.FirstOrDefault();
                     ViewData["SelectedWorkgroupName"] = selectedWorkgroup;
                 }
             }
 
             // Calculate dashboard counts based on current workgroup context
-            var effectiveWorkgroupIds = canViewAll && workgroupId.HasValue
-                ? new List<int> { workgroupId.Value }
+            var effectiveWorkgroupIds = canViewAll 
+                ? (workgroupId.HasValue ? new List<int> { workgroupId.Value } : null)  
                 : userWorkgroupIds;
 
             ViewData["UrgentCount"] = await GetUrgentCount(effectiveWorkgroupIds);
             ViewData["InProgressCount"] = await GetInProgressCount(effectiveWorkgroupIds);
             ViewData["OLAViolateCount"] = await GetOLAViolateCount(effectiveWorkgroupIds);
             ViewData["HoldCount"] = await GetHoldCount(effectiveWorkgroupIds);
+
 
             ViewData["SearchType"] = searchType ?? "peNumber";
             ViewData["PENumberFilter"] = peNumber;
@@ -1321,25 +1326,15 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
-            workgroupId = workgroupId ?? userWorkgroupIds.FirstOrDefault();
-
             var currentUser = await _context.Users
-                   .Include(u => u.UserRole)
-                   .ThenInclude(r => r.RolePermissions)
-                   .ThenInclude(rp => rp.Permission)
-                   .Include(u => u.UserWorkGroups)
-                   .ThenInclude(uwg => uwg.WorkGroup)
-                   .FirstOrDefaultAsync(u => u.Id == currentUserId);
-
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
+                    .Include(u => u.UserRole)
+                    .ThenInclude(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+                    .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                    .FirstOrDefaultAsync(u => u.Id == currentUserId);
             try
             {
-                var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-                ViewData["Workgroups"] = workgroups;
-                ViewData["SelectedWorkgroupId"] = workgroupId;
-                ViewData["CanViewAll"] = canViewAll;
-
                 // Get PE numbers with OLA violation
                 var violatingPENumbers = await _context.PETasks
                     .Where(t => t.IsOLAViolate)
@@ -1347,40 +1342,31 @@ namespace SFCDashboard.Controllers
                     .Distinct()
                     .ToListAsync();
 
-                // Get the PE records with at least one OLA-violated task
-                var query = _context.PlannedEvents
-                    .Where(p => violatingPENumbers.Contains(p.PeNumber));
+                bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-                // --- UPDATED WORKGROUP FILTERING ---
+                // Base query for OLA violating records
+                var query = _context.PlannedEvents
+                    .Where(p => violatingPENumbers.Contains(p.PeNumber))
+                    .AsNoTracking();
+
                 if (canViewAll)
                 {
-                    // If workgroupId is provided, filter by that workgroup
-                    // if (workgroupId.HasValue)
-                    // {
-                    //     var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
-                    //     if (workgroup != null)
-                    //     {
-                    //         if (hasDrawFiberAccess)
-                    //         {
-                    //             query = query.Where(p => p.TaskWg != null && (
-                    //                 p.TaskWg.Contains(workgroup.Name) ||
-                    //                 (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                    //             ));
-                    //         }
-                    //         else
-                    //         {
-                    //             query = query.Where(p => p.TaskWg != null &&
-                    //                 p.TaskWg.Contains(workgroup.Name));
-                    //         }
+                    // If admin, filter by selected workgroup if provided
+                    if (workgroupId.HasValue)
+                    {
+                        var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+                        if (workgroup != null)
+                        {
+                            query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
 
-                    //         ViewData["FilteredWorkgroup"] = workgroup.Name;
-                    //         ViewData["SelectedWorkgroupId"] = workgroupId;
-                    //     }
-                    // }
+                            ViewData["FilteredWorkgroup"] = workgroup.Name;
+                            ViewData["SelectedWorkgroupId"] = workgroupId;
+                        }
+                    }
                 }
                 else
                 {
-                    // Non-ViewAll users: Filter by their assigned workgroups
+                    // Regular user: show all records for ALL their workgroups
                     if (userWorkgroupNames.Any())
                     {
                         if (hasDrawFiberAccess)
@@ -1399,7 +1385,12 @@ namespace SFCDashboard.Controllers
                         ViewData["SelectedWorkgroupId"] = workgroupId;
                     }
                 }
-                var olaViolateRecords = await query.OrderBy(p => p.PeNumber).ToListAsync();
+
+                // Set ViewData
+                ViewData["CanViewAll"] = canViewAll;
+                ViewData["SelectedWorkgroupId"] = workgroupId;
+
+                var records = await query.OrderBy(p => p.PeNumber).ToListAsync();
 
                 // For details, get all violating tasks for these PEs
                 var violatingTasks = await _context.PETasks
@@ -1430,16 +1421,16 @@ namespace SFCDashboard.Controllers
 
                 ViewBag.ViolationDetails = violationDetails;
 
-                _logger.LogInformation("Retrieved {count} OLA violated records", olaViolateRecords.Count);
-                return View(olaViolateRecords);
+                _logger.LogInformation("Retrieved {count} OLA violated records", records.Count);
+                return View(records);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in OLAViolateRecords");
-                TempData["ErrorMessage"] = "An error occurred while loading records.";
+                _logger.LogError(ex, "Error loading OLA violate records");
                 return View(new List<PlannedEvent>());
             }
         }
+
         public async Task<IActionResult> HoldRecords(string peNumber, string reference, string customer, int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
@@ -2274,7 +2265,6 @@ namespace SFCDashboard.Controllers
         private async Task<int> GetUrgentCount(List<int> workgroupIds)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-
             _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
@@ -2303,23 +2293,16 @@ namespace SFCDashboard.Controllers
                            p.IsHold == false &&
                            !violatingPENumbers.Contains(p.PeNumber));
 
-            // If user has ViewAll, no workgroup filtering needed
-            if (canViewAll)
+            // If user has ViewAll and no specific workgroup selected, show ALL records
+            if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
             {
                 var countAll = await query.CountAsync();
                 _logger.LogInformation("Urgent count (ViewAll): {count}", countAll);
                 return countAll;
             }
 
-            // For non-ViewAll users, get their workgroups
-            if (workgroupIds == null || !workgroupIds.Any())
-            {
-                workgroupIds = currentUser?.UserWorkGroups?
-                    .Select(uwg => uwg.WorkGroupId)
-                    .ToList() ?? new List<int>();
-            }
-
-            if (workgroupIds.Any())
+            // If user has ViewAll and selected specific workgroup(s), filter by those workgroup(s)
+            if (canViewAll && workgroupIds != null && workgroupIds.Any())
             {
                 var workgroupNames = await _context.WorkGroups
                     .Where(w => workgroupIds.Contains(w.Id))
@@ -2330,7 +2313,6 @@ namespace SFCDashboard.Controllers
                 {
                     if (hasDrawFiberAccess)
                     {
-                        // Include both workgroup matches and Draw Fiber tasks
                         query = query.Where(p =>
                             p.TaskWg != null && (
                                 workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
@@ -2340,7 +2322,48 @@ namespace SFCDashboard.Controllers
                     }
                     else
                     {
-                        // Only include workgroup matches
+                        query = query.Where(p =>
+                            p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        );
+                    }
+                }
+
+                var countFiltered = await query.CountAsync();
+                _logger.LogInformation("Urgent count (ViewAll + filter): {count} for workgroups: {workgroups}",
+                    countFiltered, string.Join(", ", workgroupIds));
+                return countFiltered;
+            }
+
+            // For regular users (non-ViewAll), get their workgroups if not provided
+            if (!canViewAll && (workgroupIds == null || !workgroupIds.Any()))
+            {
+                workgroupIds = currentUser?.UserWorkGroups?
+                    .Select(uwg => uwg.WorkGroupId)
+                    .ToList() ?? new List<int>();
+            }
+
+            // For regular users, filter by their workgroups
+            if (!canViewAll && workgroupIds.Any())
+            {
+                var workgroupNames = await _context.WorkGroups
+                    .Where(w => workgroupIds.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                if (workgroupNames.Any())
+                {
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
                         query = query.Where(p =>
                             p.TaskWg != null &&
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
@@ -2355,6 +2378,7 @@ namespace SFCDashboard.Controllers
 
             return count;
         }
+
 
 
         private async Task<int> GetOLAViolateCount(List<int> workgroupIds)
@@ -2476,7 +2500,6 @@ namespace SFCDashboard.Controllers
         private async Task<int> GetHoldCount(List<int> workgroupIds)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-
             _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
                 workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
 
@@ -2492,29 +2515,19 @@ namespace SFCDashboard.Controllers
             bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-            _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
-                workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
-
             // Use IsHold flag 
             var query = _context.PlannedEvents.Where(p => p.IsHold == true);
 
-            // If user has ViewAll, show count of all records
-            if (canViewAll)
+            // If user has ViewAll and no specific workgroup selected, show ALL records
+            if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
             {
                 var countAll = await query.CountAsync();
                 _logger.LogInformation("Hold count (ViewAll): {count}", countAll);
                 return countAll;
             }
 
-            // For non-ViewAll users, get their workgroups
-            if (workgroupIds == null || !workgroupIds.Any())
-            {
-                workgroupIds = currentUser?.UserWorkGroups?
-                    .Select(uwg => uwg.WorkGroupId)
-                    .ToList() ?? new List<int>();
-            }
-
-            if (workgroupIds.Any())
+            // If user has ViewAll and selected specific workgroup(s), filter by those workgroup(s)
+            if (canViewAll && workgroupIds != null && workgroupIds.Any())
             {
                 var workgroupNames = await _context.WorkGroups
                     .Where(w => workgroupIds.Contains(w.Id))
@@ -2525,7 +2538,6 @@ namespace SFCDashboard.Controllers
                 {
                     if (hasDrawFiberAccess)
                     {
-                        // Include both workgroup matches and Draw Fiber tasks
                         query = query.Where(p =>
                             p.TaskWg != null && (
                                 workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
@@ -2535,7 +2547,48 @@ namespace SFCDashboard.Controllers
                     }
                     else
                     {
-                        // Only include workgroup matches
+                        query = query.Where(p =>
+                            p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        );
+                    }
+                }
+
+                var countFiltered = await query.CountAsync();
+                _logger.LogInformation("Hold count (ViewAll + filter): {count} for workgroups: {workgroups}",
+                    countFiltered, string.Join(", ", workgroupIds));
+                return countFiltered;
+            }
+
+            // For regular users (non-ViewAll), get their workgroups if not provided
+            if (!canViewAll && (workgroupIds == null || !workgroupIds.Any()))
+            {
+                workgroupIds = currentUser?.UserWorkGroups?
+                    .Select(uwg => uwg.WorkGroupId)
+                    .ToList() ?? new List<int>();
+            }
+
+            // For regular users, filter by their workgroups
+            if (!canViewAll && workgroupIds.Any())
+            {
+                var workgroupNames = await _context.WorkGroups
+                    .Where(w => workgroupIds.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                if (workgroupNames.Any())
+                {
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
                         query = query.Where(p =>
                             p.TaskWg != null &&
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
@@ -2550,8 +2603,6 @@ namespace SFCDashboard.Controllers
 
             return count;
         }
-
-
 
 
         private async Task<int> GetInProgressCount(List<int> workgroupIds)
@@ -2585,22 +2636,16 @@ namespace SFCDashboard.Controllers
                     !violatingPENumbers.Contains(p.PeNumber)
                 );
 
-            // If user has ViewAll, show count of all records (ignore workgroupIds)
-            if (canViewAll)
+            // If user has ViewAll and no specific workgroup selected, show ALL records
+            if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
             {
                 var countAll = await query.CountAsync();
                 _logger.LogInformation("In-progress count (ViewAll): {count}", countAll);
                 return countAll;
             }
 
-            // Otherwise, restrict by workgroupIds
-            if (workgroupIds == null || !workgroupIds.Any())
-            {
-                // Restrict to user's assigned workgroups if not ViewAll
-                workgroupIds = currentUser?.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
-            }
-
-            if (workgroupIds.Any())
+            // If user has ViewAll and selected specific workgroup(s), filter by those workgroup(s)
+            if (canViewAll && workgroupIds != null && workgroupIds.Any())
             {
                 var workgroupNames = await _context.WorkGroups
                     .Where(w => workgroupIds.Contains(w.Id))
@@ -2611,25 +2656,72 @@ namespace SFCDashboard.Controllers
                 {
                     if (hasDrawFiberAccess)
                     {
-                        query = query.Where(p => p.TaskWg != null &&
-                            (workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
-                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
                         );
                     }
                     else
                     {
-                        query = query.Where(p => p.TaskWg != null &&
-                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                        query = query.Where(p =>
+                            p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        );
+                    }
+                }
+
+                var countFiltered = await query.CountAsync();
+                _logger.LogInformation("In-progress count (ViewAll + filter): {count} for workgroups: {workgroups}",
+                    countFiltered, string.Join(", ", workgroupIds));
+                return countFiltered;
+            }
+
+            // For regular users (non-ViewAll), get their workgroups if not provided
+            if (!canViewAll && (workgroupIds == null || !workgroupIds.Any()))
+            {
+                workgroupIds = currentUser?.UserWorkGroups?
+                    .Select(uwg => uwg.WorkGroupId)
+                    .ToList() ?? new List<int>();
+            }
+
+            // For regular users, filter by their workgroups
+            if (!canViewAll && workgroupIds.Any())
+            {
+                var workgroupNames = await _context.WorkGroups
+                    .Where(w => workgroupIds.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                if (workgroupNames.Any())
+                {
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        );
                     }
                 }
             }
 
             var count = await query.CountAsync();
-            _logger.LogInformation("In-progress count: {count} for workgroup: {workgroupId}",
-                count, workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
+            _logger.LogInformation("In-progress count: {count} for workgroups: {workgroups}",
+                count, string.Join(", ", workgroupIds));
 
             return count;
         }
+
 
 
         // Helper to extract date from PE number

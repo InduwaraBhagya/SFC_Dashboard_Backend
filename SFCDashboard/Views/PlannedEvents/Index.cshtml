@@ -52,13 +52,10 @@
                                 <button type="submit" class="btn btn-outline-primary">
                                     <i class="bi bi-funnel me-1"></i> Apply Filter
                                 </button>
-                                @if (ViewData["SelectedWorkgroupId"] != null)
-                                {
                                     <a href="@Url.Action("Index")" 
                                     class="btn btn-outline-secondary ms-2">
                                         <i class="bi bi-x-circle me-1"></i> Clear Filter
                                     </a>
-                                }
                             </div>
                         </div>
                     </form>
@@ -479,7 +476,7 @@
                                 <span class="badge bg-light text-danger" style="font-size: 1.2rem;">
                                     @ViewData["UrgentCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                @if (ViewData["CanViewAll"] as bool? == true && ViewData["SelectedWorkgroupName"] != null)
                                 {
                                     <div class="mt-1 filter-badge">
                                         <span class="badge bg-danger text-white">
@@ -502,7 +499,7 @@
                                 <span class="badge bg-light text-success" style="font-size: 1.2rem;">
                                     @ViewData["InProgressCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                @if (ViewData["CanViewAll"] as bool? == true && ViewData["SelectedWorkgroupName"] != null)
                                 {
                                     <div class="mt-1 filter-badge">
                                         <span class="badge bg-success text-white">
@@ -525,7 +522,7 @@
                                 <span class="badge bg-light text-dark" style="font-size: 1.2rem;">
                                     @ViewData["OLAViolateCount"] Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                @if (ViewData["CanViewAll"] as bool? == true && ViewData["SelectedWorkgroupName"] != null)
                                 {
                                     <div class="mt-1 filter-badge">
                                         <span class="badge bg-dark text-white">
@@ -548,7 +545,7 @@
                                 <span class="badge bg-light text-warning" style="font-size: 1.2rem;">
                                     @(ViewData["HoldCount"] != null ? ViewData["HoldCount"] : 0) Tasks
                                 </span>
-                                @if (ViewData["SelectedWorkgroupName"] != null)
+                                @if (ViewData["CanViewAll"] as bool? == true && ViewData["SelectedWorkgroupName"] != null)
                                 {
                                     <div class="mt-1 filter-badge">
                                         <span class="badge bg-warning text-dark">
@@ -760,36 +757,6 @@
                 placeholder: "Select Workgroup",
                 allowClear: true,
                 width: '100%'
-            });
-
-            // Load saved workgroup from localStorage if there's no selected workgroup in the current request
-            var currentSelectedWorkgroup = @(ViewData["SelectedWorkgroupId"] != null ? ViewData["SelectedWorkgroupId"].ToString() : "null");
-            if (!currentSelectedWorkgroup) {
-                var savedWorkgroupId = localStorage.getItem('selectedWorkgroupId');
-                if (savedWorkgroupId) {
-                    $('#workgroupFilter').val(savedWorkgroupId).trigger('change');
-                    // Optionally auto-submit the form to apply the filter immediately
-                    // $('#workgroupFilterForm').submit();
-                }
-            } else {
-                // Save current selection to localStorage
-                localStorage.setItem('selectedWorkgroupId', currentSelectedWorkgroup);
-            }
-            
-            // Save workgroup selection when form is submitted
-            $('#workgroupFilterForm').on('submit', function() {
-                var selectedWorkgroupId = $('#workgroupFilter').val();
-                if (selectedWorkgroupId) {
-                    localStorage.setItem('selectedWorkgroupId', selectedWorkgroupId);
-                } else {
-                    // If "All Workgroups" is selected, remove the stored value
-                    localStorage.removeItem('selectedWorkgroupId');
-                }
-            });
-            
-            // Add handler for the clear filter button
-            $('a[href="@Url.Action("Index")"]').on('click', function() {
-                localStorage.removeItem('selectedWorkgroupId');
             });
         });
     </script>
