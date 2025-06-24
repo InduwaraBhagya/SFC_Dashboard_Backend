@@ -19,18 +19,18 @@
             <form id="searchForm" class="row g-3" method="get">
                 <div class="col-md-3">
                     <label for="searchPeNumber" class="form-label">PE Number</label>
-                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber" 
-                           value="@ViewData["SearchPeNumber"]">
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber"
+                        value="@ViewData["SearchPeNumber"]">
                 </div>
                 <div class="col-md-3">
                     <label for="searchReference" class="form-label">Request Reference</label>
-                    <input type="text" class="form-control" id="searchReference" name="reference" 
-                           value="@ViewData["SearchReference"]">
+                    <input type="text" class="form-control" id="searchReference" name="reference"
+                        value="@ViewData["SearchReference"]">
                 </div>
                 <div class="col-md-3">
                     <label for="searchCustomer" class="form-label">Customer</label>
-                    <input type="text" class="form-control" id="searchCustomer" name="customer" 
-                           value="@ViewData["SearchCustomer"]">
+                    <input type="text" class="form-control" id="searchCustomer" name="customer"
+                        value="@ViewData["SearchCustomer"]">
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <div class="btn-group w-100">
@@ -54,7 +54,7 @@
         </div>
     }
 
-    
+
     <div class="card">
         <div class="card-header bg-warning text-dark">
             <div class="d-flex justify-content-between align-items-center">
@@ -78,7 +78,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @{int rowNumber = 1;}
+                        @{
+                            int rowNumber = 1;
+                        }
                         @foreach (var item in Model)
                         {
                             <tr>
@@ -108,7 +110,8 @@
                                     }
                                 </td>
                                 <td>
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary btn-sm">
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                        asp-route-returnUrl="@Url.Action("HoldRecords")" class="btn btn-primary btn-sm">
                                         <i class="bi bi-eye"></i> View Details
                                     </a>
                                 </td>
@@ -131,8 +134,8 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/urgentRecords.js"></script>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('DOM loaded, setting up modal handlers');
 
             // Ensure Bootstrap is loaded
@@ -142,52 +145,52 @@
                 console.error('Bootstrap is not loaded!');
             }
             // Add search functionality
-        const searchForm = document.getElementById('searchForm');
-        const searchInputs = searchForm.querySelectorAll('input');
-        const tableBody = document.querySelector('table tbody');
-        const noRecordsAlert = document.querySelector('.alert-info');
+            const searchForm = document.getElementById('searchForm');
+            const searchInputs = searchForm.querySelectorAll('input');
+            const tableBody = document.querySelector('table tbody');
+            const noRecordsAlert = document.querySelector('.alert-info');
 
-        function filterTable() {
-            const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
-            const reference = document.getElementById('searchReference').value.trim().toLowerCase();
-            const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+            function filterTable() {
+                const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+                const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+                const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
 
-            let visibleRows = 0;
-            const rows = tableBody.getElementsByTagName('tr');
+                let visibleRows = 0;
+                const rows = tableBody.getElementsByTagName('tr');
 
-            Array.from(rows).forEach(row => {
-                const cells = row.getElementsByTagName('td');
-                const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
-                const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
-                const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
+                Array.from(rows).forEach(row => {
+                    const cells = row.getElementsByTagName('td');
+                    const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                    const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
+                    const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
 
-                if (matchPeNumber && matchReference && matchCustomer) {
-                    row.style.display = '';
-                    visibleRows++;
-                } else {
-                    row.style.display = 'none';
+                    if (matchPeNumber && matchReference && matchCustomer) {
+                        row.style.display = '';
+                        visibleRows++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Update record count
+                document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+                // Show/hide no records message
+                if (noRecordsAlert) {
+                    noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
                 }
+            }
+
+            // Add real-time search
+            searchInputs.forEach(input => {
+                input.addEventListener('input', filterTable);
             });
 
-            // Update record count
-            document.querySelector('.badge').textContent = visibleRows + ' Records';
-
-            // Show/hide no records message
-            if (noRecordsAlert) {
-                noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
-            }
-        }
-
-        // Add real-time search
-        searchInputs.forEach(input => {
-            input.addEventListener('input', filterTable);
+            // Prevent form submission (using real-time filter instead)
+            searchForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                filterTable();
+            });
         });
-
-        // Prevent form submission (using real-time filter instead)
-        searchForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            filterTable();
-        });
-        });
-</script>
+    </script>
 }

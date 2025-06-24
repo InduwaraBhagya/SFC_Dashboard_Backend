@@ -320,6 +320,12 @@ function showUrgentRequestModal(type, id) {
                     Failed to load request details. Please try again.
                 </div>`;
         });
+
+         if (type === 'pe') {
+        document.getElementById('urgentRequestViewDetailsBtn').href = '/PlannedEvents/Details/' + id;
+    } else {
+        document.getElementById('urgentRequestViewDetailsBtn').href = '/PETasks/Details/' + id;
+    }
 }
 
 function showIssueDetails(element) {

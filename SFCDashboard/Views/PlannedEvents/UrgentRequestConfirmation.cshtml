@@ -31,10 +31,11 @@
                         {
                             <dt class="col-sm-3">Requested Reason:</dt>
                             <dd class="col-sm-9 text-danger">
-                                @(Model.Priority.Contains("Opening Ceremony") ? "Opening Ceremony - Priority 1" : 
-                                  Model.Priority.Contains("Critical Customer") ? "Critical Customer - Priority 2" : "Unspecified")
-                            </dd>
-                        }
+                                @(Model.Priority.Contains("Opening Ceremony") ? "Opening Ceremony - Priority 1" :
+                                                            Model.Priority.Contains("Critical Customer") ? "Critical Customer - Priority 2" :
+                                                            "Unspecified")
+                        </dd>
+                                                }
                     </dl>
                 </div>
             </div>
@@ -46,7 +47,7 @@
                 <div class="card-body">
                     <form asp-controller="PlannedEvents" asp-action="ProcessUrgentRequest" method="post">
                         <input type="hidden" name="id" value="@Model.Id" />
-                        
+
                         <!-- Extract the original reason from the Priority field -->
                         @{
                             string extractedReason = ""; // Default
@@ -62,14 +63,19 @@
 
                         <div class="form-group mb-4">
                             <div class="alert alert-warning">
-                                <strong>Please review the urgent request and decide whether to approve or reject it.</strong>
+                                <strong>Please review the urgent request and decide whether to approve or reject
+                                    it.</strong>
                             </div>
 
                             <div class="d-flex justify-content-around mt-4">
-                                <button type="submit" name="urgentReason" value="@extractedReason" class="btn btn-success btn-lg">
+                                <a href="@Url.Action("Details", "PlannedEvents", new { id = Model.Id, returnUrl = Url.Action("UrgentRequestsList") })"
+                                    class="btn btn-info" target="_blank">
+                                    <i class="bi bi-eye"></i> View Detail
+                                </a>
+                                <button type="submit" name="urgentReason" value="@extractedReason"
+                                    class="btn btn-success btn-lg">
                                     <i class="bi bi-check-circle-fill me-2"></i> Approve
                                 </button>
-                                
                                 <button type="submit" name="urgentReason" value="Reject" class="btn btn-danger btn-lg">
                                     <i class="bi bi-x-circle-fill me-2"></i> Reject
                                 </button>

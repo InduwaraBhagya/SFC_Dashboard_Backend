@@ -58,16 +58,16 @@ namespace SFCDashboard.Controllers
             task.IsUrgent = true;
             task.UrgentMarkedDate = DateTime.Now; // Store the current date and time
             task.UrgentRequested = false;
-            
+
             // Check if the PE has a priority set, and use it for the task
             if (task.PlannedEvent != null && !string.IsNullOrWhiteSpace(task.PlannedEvent.Priority))
             {
                 // Use the PE's priority for the task
                 task.Priority = task.PlannedEvent.Priority;
-                _logger.LogInformation("Task {taskId} inherited priority from PE: {priority}", 
+                _logger.LogInformation("Task {taskId} inherited priority from PE: {priority}",
                     id, task.Priority);
             }
-            else 
+            else
             {
                 // If no PE priority exists, use the default urgent marking
                 task.Priority = (task.Priority ?? "") + " [URGENT]";
@@ -163,7 +163,7 @@ namespace SFCDashboard.Controllers
 
             // Always set UrgentRequested to false after processing
             task.UrgentRequested = false;
-    
+
             _context.Update(task);
 
             // Update the PlannedEvent if needed
@@ -222,6 +222,20 @@ namespace SFCDashboard.Controllers
 
             _logger.LogInformation("Retrieved {count} tasks with OLA violations", violatingTasks.Count);
             return View(violatingTasks);
+        }
+
+        public DateTime GetEffectiveOLADeadline(DateTime taskStart, int olaDays, List<(DateTime HoldStart, DateTime HoldEnd)> holds)
+        {
+            // Sum all hold durations
+            TimeSpan totalHold = TimeSpan.Zero;
+            foreach (var hold in holds)
+            {
+                // If HoldEnd is not set (still on hold), use DateTime.Now
+                var end = hold.HoldEnd == DateTime.MinValue ? DateTime.Now : hold.HoldEnd;
+                totalHold += (end - hold.HoldStart);
+            }
+            // Effective deadline = start + OLA + total hold
+            return taskStart.AddDays(olaDays).Add(totalHold);
         }
 
         [HttpPost]
@@ -346,7 +360,7 @@ namespace SFCDashboard.Controllers
                 // Update task's estimated time
                 task.EstimatedTime = estimatedTime;
                 task.TaskCompleteDate = estimatedTime;
-                
+
                 // If this is an OLA violated task and we're setting a future date, clear the violation flag
                 if (task.IsOLAViolate && estimatedTime.Date >= DateTime.Today)
                 {
@@ -383,7 +397,7 @@ namespace SFCDashboard.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-                
+
                 return Ok(new { success = true, message = "Estimated time updated successfully" });
             }
             catch (Exception ex)
@@ -453,7 +467,7 @@ namespace SFCDashboard.Controllers
             return Json(history);
         }
 
-       
-        
+
+
     }
 }
