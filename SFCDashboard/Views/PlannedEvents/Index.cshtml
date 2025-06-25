@@ -25,40 +25,68 @@
     @if (ViewData["CanViewAll"] as bool? == true)
     {
         <div class="workgroup-filter mb-4">
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">
-                        <i class="bi bi-funnel-fill me-2"></i> Filter by Workgroup
-                    </h5>
+            <div class="card shadow border-0 rounded-3">
+                <div class="card-header bg-gradient d-flex align-items-center">
+                    <i class="bi bi-funnel-fill me-2"></i>
+                    <span class="fw-semibold">Filter Records</span>
+                    <div class="ms-auto">
+                        <button class="btn btn-sm btn-link text-decoration-none p-0 filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="true">
+                            <i class="bi bi-chevron-up"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="get" asp-action="Index" id="workgroupFilterForm">
-                        <div class="row g-3 align-items-center">
-                            <div class="col">
-                                <select id="workgroupFilter" name="workgroupId" class="form-select workgroup-select" data-placeholder="Select Workgroup">
-                                    <option value="">All Workgroups</option>
-                                    @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                    {
-                                        foreach (var workgroup in workgroups)
-                                        {
-                                            bool isSelected = ViewData["SelectedWorkgroupId"] != null && 
-                                                            (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
-                                            <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                        }
-                                    }
-                                </select>
+                <div class="collapse show" id="filterContent">
+                    <div class="card-body bg-light bg-opacity-50">
+                        <form method="get" asp-action="Index" id="workgroupFilterForm">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-lg-7 col-md-6">
+                                    <label for="workgroupFilter" class="form-label mb-1 d-flex align-items-center">
+                                        <i class="bi bi-people-fill me-2"></i> Select Workgroup
+                                    </label>
+                                    <div class="input-group align-content-center">
+                                        <span class="input-group-text bg-transparent border-end-0">
+                                            <i class="bi bi-search text-muted"></i>
+                                        </span>
+                                        <select id="workgroupFilter" name="workgroupId" class="form-select border-start-0 ps-0 workgroup-select" data-placeholder="Select Workgroup">
+                                            <option value="">All Workgroups</option>
+                                            @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                            {
+                                                foreach (var workgroup in workgroups)
+                                                {
+                                                    bool isSelected = ViewData["SelectedWorkgroupId"] != null && 
+                                                                    (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
+                                                    <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-lg-5 col-md-6 d-flex align-items-end justify-content-end">
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary btn-with-icon">
+                                            <i class="bi bi-funnel me-2"></i> Apply Filter
+                                        </button>
+                                        <a href="@Url.Action("Index")" 
+                                        class="btn btn-outline-secondary btn-with-icon">
+                                            <i class="bi bi-x-circle me-2"></i> Clear
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-outline-primary">
-                                    <i class="bi bi-funnel me-1"></i> Apply Filter
-                                </button>
-                                    <a href="@Url.Action("Index")" 
-                                    class="btn btn-outline-secondary ms-2">
-                                        <i class="bi bi-x-circle me-1"></i> Clear Filter
-                                    </a>
-                            </div>
-                        </div>
-                    </form>
+                            @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
+                            {
+                                <div class="mt-3">
+                                    <div class="filter-active-badge d-inline-flex align-items-center rounded-pill py-2 px-3">
+                                        <i class="bi bi-funnel-fill me-2 text-primary"></i>
+                                        <span>Currently filtering by: <strong>@ViewData["SelectedWorkgroupName"]</strong></span>
+                                        <a href="@Url.Action("Index")" class="ms-3 text-decoration-none filter-clear">
+                                            <i class="bi bi-x-circle"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -601,9 +629,9 @@
                                 <div class="inbox-search-container mt-3">
                                     <div class="input-group">
                                         <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
-                                        <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
+                                        @* <button class="btn btn-outline-primary" type="button" id="inbox-search-button">
                                             <i class="fas fa-search"></i>
-                                        </button>
+                                        </button> *@
                                     </div>
                                 </div>
 
@@ -752,9 +780,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script>
         $(document).ready(function () {
+            $('.filter-toggle-btn').on('click', function() {
+                $(this).find('i').toggleClass('bi-chevron-up bi-chevron-down');
+            });
+
             // Enable search for workgroup filter
             $('#workgroupFilter').select2({
-                placeholder: "Select Workgroup",
                 allowClear: true,
                 width: '100%'
             });

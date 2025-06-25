@@ -1431,7 +1431,7 @@ namespace SFCDashboard.Controllers
             }
         }
 
-        public async Task<IActionResult> HoldRecords(string peNumber, string reference, string customer, int? workgroupId)
+        public async Task<IActionResult> HoldRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
             // Get current user's workgroup info
@@ -1447,82 +1447,79 @@ namespace SFCDashboard.Controllers
 
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-            // Start with base query that explicitly filters for IsHold = true
-            var query = _context.PlannedEvents.Where(p => p.IsHold == true);
-
-            // Apply workgroup filtering
-            if (canViewAll)
+            try
             {
-                if (workgroupId.HasValue)
+                // Start with base query that explicitly filters for IsHold = true
+                var query = _context.PlannedEvents.Where(p => p.IsHold == true).AsNoTracking();
+
+                // Apply workgroup filtering
+                if (canViewAll)
                 {
-                    if (hasDrawFiberAccess)
+                    // If admin, filter by selected workgroup if provided
+                    if (workgroupId.HasValue)
                     {
-                        query = query.Where(p =>
-                            p.TaskWg != null && p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"
-                        );
+                        var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+                        if (workgroup != null)
+                        {
+                            if (hasDrawFiberAccess)
+                            {
+                                query = query.Where(p =>
+                                    p.TaskWg != null && (
+                                    p.TaskWg.Contains(workgroup.Name) ||
+                                    (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                                    )
+                                );
+                            }
+                            else
+                            {
+                                query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
+                            }
+
+                            ViewData["FilteredWorkgroup"] = workgroup.Name;
+                            ViewData["SelectedWorkgroupId"] = workgroupId;
+                        }
                     }
-                    else
-                    {
-                        query = query.Where(p => p.TaskWg != null &&
-                            userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
-                    }
-                    ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                    ViewData["SelectedWorkgroupId"] = workgroupId;
                 }
-            }
-            else
-            {
-                if (userWorkgroupNames.Any())
+                else
                 {
-                    if (hasDrawFiberAccess)
+                    // Regular user: show all records for ALL their workgroups
+                    if (userWorkgroupNames.Any())
                     {
-                        query = query.Where(p => p.TaskWg != null &&
-                           (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
-                           || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
-                       );
+                        if (hasDrawFiberAccess)
+                        {
+                            query = query.Where(p => p.TaskWg != null &&
+                                (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                                || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
+                            );
+                        }
+                        else
+                        {
+                            query = query.Where(p => p.TaskWg != null &&
+                                userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                        }
+                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
+                        ViewData["SelectedWorkgroupId"] = workgroupId;
                     }
-                    else
-                    {
-                        query = query.Where(p => p.TaskWg != null &&
-                            userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
-                    }
-                    ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                    ViewData["SelectedWorkgroupId"] = workgroupId;
                 }
+
+                // Set ViewData
+                ViewData["CanViewAll"] = canViewAll;
+                ViewData["SelectedWorkgroupId"] = workgroupId;
+
+                var records = await query.ToListAsync();
+                return View(records);
             }
-            // Apply search filters
-            if (!string.IsNullOrEmpty(peNumber))
+            catch (Exception ex)
             {
-                query = query.Where(p => p.PeNumber.Contains(peNumber));
-                ViewData["SearchPeNumber"] = peNumber;
+                _logger.LogError(ex, "Error loading hold records");
+                return View(new List<PlannedEvent>());
             }
-
-            if (!string.IsNullOrEmpty(reference))
-            {
-                query = query.Where(p => p.RequestReferenceNo != null &&
-                                       p.RequestReferenceNo.Contains(reference));
-                ViewData["SearchReference"] = reference;
-            }
-
-            if (!string.IsNullOrEmpty(customer))
-            {
-                query = query.Where(p => p.Customer != null &&
-                                       p.Customer.Contains(customer));
-                ViewData["SearchCustomer"] = customer;
-            }
-
-            // Add logging to diagnose issues
-            var holdRecords = await query.ToListAsync();
-            _logger.LogInformation($"Found {holdRecords.Count} hold records");
-
-            return View(holdRecords);
         }
 
 
         public async Task<IActionResult> UrgentRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
             var currentUser = await _context.Users
@@ -1544,22 +1541,48 @@ namespace SFCDashboard.Controllers
                     .Distinct()
                     .ToListAsync();
 
-                // Load workgroups for the dropdown
-                var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-                ViewData["Workgroups"] = workgroups;
-                ViewData["SelectedWorkgroupId"] = workgroupId;
-
+                // Base query for urgent records, excluding OLA violate and Hold records
                 var query = _context.PlannedEvents
-                    .Where(p => p.PEStatus == "urgent" && p.IsHold == false && !violatingPENumbers.Contains(p.PeNumber));
+                    .Where(p => p.PEStatus == "urgent" && p.IsHold == false && !violatingPENumbers.Contains(p.PeNumber))
+                    .AsNoTracking();
 
                 if (canViewAll)
                 {
+                    // If admin, filter by selected workgroup if provided
                     if (workgroupId.HasValue)
+                    {
+                        var workgroup = await _context.WorkGroups.FindAsync(workgroupId);
+                        if (workgroup != null)
+                        {
+                            if (hasDrawFiberAccess)
+                            {
+                                query = query.Where(p =>
+                                    p.TaskWg != null && (
+                                    p.TaskWg.Contains(workgroup.Name) ||
+                                    (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                                    )
+                                );
+                            }
+                            else
+                            {
+                                query = query.Where(p => p.TaskWg != null && p.TaskWg.Contains(workgroup.Name));
+                            }
+
+                            ViewData["FilteredWorkgroup"] = workgroup.Name;
+                            ViewData["SelectedWorkgroupId"] = workgroupId;
+                        }
+                    }
+                }
+                else
+                {
+                    // Regular user: show all records for ALL their workgroups
+                    if (userWorkgroupNames.Any())
                     {
                         if (hasDrawFiberAccess)
                         {
-                            query = query.Where(p =>
-                                p.TaskWg != null && p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"
+                            query = query.Where(p => p.TaskWg != null &&
+                                (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                                || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
                             );
                         }
                         else
@@ -1569,45 +1592,23 @@ namespace SFCDashboard.Controllers
                         }
                         ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
                         ViewData["SelectedWorkgroupId"] = workgroupId;
-
-                    }
-                }
-                else
-                {
-                    if (userWorkgroupNames.Any())
-                    {
-                        if (hasDrawFiberAccess)
-                        {
-                            query = query.Where(p => p.TaskWg != null &&
-                               (userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
-                               || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber"))
-                           );
-                        }
-                        else
-                        {
-                            query = query.Where(p => p.TaskWg != null &&
-                                userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
-                        }
-                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                        ViewData["SelectedWorkgroupId"] = workgroupId;
                     }
                 }
 
+                // Set ViewData
+                ViewData["CanViewAll"] = canViewAll;
+                ViewData["SelectedWorkgroupId"] = workgroupId;
 
-                var urgentRecords = await query.ToListAsync();
-
-                _logger.LogInformation("Total URGENT records found: {Count} (Workgroup filter: {workgroup})",
-                    urgentRecords.Count, workgroupId.HasValue ? workgroupId.Value.ToString() : "None");
-
-                return View(urgentRecords);
+                var records = await query.ToListAsync();
+                return View(records);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading urgent records with workgroup filter {workgroupId}", workgroupId);
-                TempData["ErrorMessage"] = "An error occurred while loading records.";
+                _logger.LogError(ex, "Error loading urgent records");
                 return View(new List<PlannedEvent>());
             }
         }
+
         // GET: PlannedEvents/UrgentRequestConfirmation/5
         public async Task<IActionResult> UrgentRequestConfirmation(int? id)
         {
