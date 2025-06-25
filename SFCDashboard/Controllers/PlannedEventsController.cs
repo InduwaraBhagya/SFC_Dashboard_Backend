@@ -794,6 +794,17 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
+            // Find the engineer by LEA code
+            string engineerName = null;
+            if (!string.IsNullOrEmpty(plannedEvent.Lea))
+            {
+                engineerName = await _context.AreaNetworkEngineers
+                    .Where(e => e.Area == plannedEvent.Lea)
+                    .Select(e => e.EngineerName)
+                    .FirstOrDefaultAsync();
+            }
+            ViewBag.NetworkEngineer = engineerName ?? "Not Assigned";
+
             // Check if current task is "Draw Fiber"
             bool isCurrentTaskDrawFiber = plannedEvent.TaskName?.Trim().ToLower() == "draw fiber";
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);

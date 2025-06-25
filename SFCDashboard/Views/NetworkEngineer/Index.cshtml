@@ -1,0 +1,41 @@
+@model IEnumerable<AreaNetworkEngineer>
+@{
+    ViewData["Title"] = "Network Engineer Area Mapping";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Network Engineer Area Mapping</h3>
+        <div>
+            <a asp-action="ImportExcel" class="btn btn-outline-primary me-2">
+                <i class="fas fa-file-excel"></i> Import from Excel
+            </a>
+            <a asp-action="Create" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add New Mapping
+            </a>
+        </div>
+    </div>
+    <table class="table table-bordered table-striped">
+        <thead class="table-light">
+            <tr>
+                <th>Area</th>
+                <th>Engineer Name</th>
+                <th style="width:120px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Area</td>
+                <td>@item.EngineerName</td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-info">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

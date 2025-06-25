@@ -38,21 +38,21 @@ namespace SFCDashboard.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-             base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<UserWorkGroup>()
-            .HasKey(uwg => new { uwg.SystemUserId, uwg.WorkGroupId });
+            modelBuilder.Entity<UserWorkGroup>()
+                .HasKey(uwg => new { uwg.SystemUserId, uwg.WorkGroupId });
 
-        modelBuilder.Entity<UserWorkGroup>()
-            .HasOne(uwg => uwg.SystemUser)
-            .WithMany(u => u.UserWorkGroups)
-            .HasForeignKey(uwg => uwg.SystemUserId);
+            modelBuilder.Entity<UserWorkGroup>()
+                .HasOne(uwg => uwg.SystemUser)
+                .WithMany(u => u.UserWorkGroups)
+                .HasForeignKey(uwg => uwg.SystemUserId);
 
-        modelBuilder.Entity<UserWorkGroup>()
-            .HasOne(uwg => uwg.WorkGroup)
-            .WithMany(wg => wg.UserWorkGroups)
-            .HasForeignKey(uwg => uwg.WorkGroupId);
-            
+            modelBuilder.Entity<UserWorkGroup>()
+                .HasOne(uwg => uwg.WorkGroup)
+                .WithMany(wg => wg.UserWorkGroups)
+                .HasForeignKey(uwg => uwg.WorkGroupId);
+
             // Configure relationships that need special handling
             modelBuilder.Entity<TaskExtensionRequest>()
                 .HasOne(t => t.RequestedBy)
@@ -96,7 +96,7 @@ namespace SFCDashboard.Data
                 .HasOne(e => e.PETask)
                 .WithMany()
                 .HasForeignKey(e => e.TaskId);
-            
+
             // Make sure System.Threading.Tasks.Task is not registered as an entity
             modelBuilder.Ignore<System.Threading.Tasks.Task>();
         }
@@ -104,6 +104,7 @@ namespace SFCDashboard.Data
         public DbSet<UrgentReason> UrgentReasons { get; set; }
         public DbSet<SubTaskList> SubTaskLists { get; set; }
         public DbSet<UserWorkGroup> UserWorkGroups { get; set; }
+        public DbSet<AreaNetworkEngineer> AreaNetworkEngineers { get; set; }
     }
 
 }
