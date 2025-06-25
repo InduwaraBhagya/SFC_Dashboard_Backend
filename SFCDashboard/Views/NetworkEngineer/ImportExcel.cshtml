@@ -16,7 +16,8 @@
                     <form method="post" enctype="multipart/form-data" asp-action="ImportExcel">
                         <div class="mb-3">
                             <label for="excelFile" class="form-label">Select Excel File (.xlsx)</label>
-                            <input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx" required />
+                            <input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx"
+                                required />
                         </div>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-upload me-2"></i>Upload and Import
@@ -26,11 +27,13 @@
             </div>
 
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Network Engineer Area Mapping</h5>
+                    <input type="text" id="engineerSearch" class="form-control form-control-sm w-auto"
+                        placeholder="Search Area or Engineer..." style="min-width:220px;" />
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-bordered table-striped mb-0">
+                    <table class="table table-bordered table-striped mb-0" id="engineerTable">
                         <thead class="table-light">
                             <tr>
                                 <th>Area (LEA)</th>
@@ -39,34 +42,35 @@
                             </tr>
                         </thead>
                         <tbody>
-                        @if (Model != null && Model.Any())
-                        {
-                            foreach (var item in Model)
+                            @if (Model != null && Model.Any())
+                            {
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <form asp-action="Edit" method="post">
+                                            <input type="hidden" name="Id" value="@item.Id" />
+                                            <td>
+                                                <input name="Area" class="form-control" value="@item.Area" required />
+                                            </td>
+                                            <td>
+                                                <input name="EngineerName" class="form-control" value="@item.EngineerName"
+                                                    required />
+                                            </td>
+                                            <td>
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-save"></i> Save
+                                                </button>
+                                            </td>
+                                        </form>
+                                    </tr>
+                                }
+                            }
+                            else
                             {
                                 <tr>
-                                    <form asp-action="Edit" method="post">
-                                        <input type="hidden" name="Id" value="@item.Id" />
-                                        <td>
-                                            <input name="Area" class="form-control" value="@item.Area" required />
-                                        </td>
-                                        <td>
-                                            <input name="EngineerName" class="form-control" value="@item.EngineerName" required />
-                                        </td>
-                                        <td>
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-save"></i> Save
-                                            </button>
-                                        </td>
-                                    </form>
+                                    <td colspan="3" class="text-center text-muted">No mappings found.</td>
                                 </tr>
                             }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="3" class="text-center text-muted">No mappings found.</td>
-                            </tr>
-                        }
                         </tbody>
                     </table>
                 </div>
@@ -74,3 +78,21 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.getElementById('engineerSearch').addEventListener('input', function () {
+            var search = this.value.toLowerCase();
+            var rows = document.querySelectorAll('#engineerTable tbody tr');
+            rows.forEach(function (row) {
+                var area = row.querySelector('input[name="Area"]')?.value.toLowerCase() || '';
+                var engineer = row.querySelector('input[name="EngineerName"]')?.value.toLowerCase() || '';
+                if (area.includes(search) || engineer.includes(search)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    </script>
+}
