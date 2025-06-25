@@ -144,9 +144,14 @@
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Bill of Quantities (BOQ)</h5>
-            <button type="button" class="btn btn-primary btn-sm" id="toggleBoqForm">
-                <i class="bi bi-plus-circle me-1"></i>Add BOQ Item
-            </button>
+            <div>
+                <a href="@Url.Action("Index", "UDManager")" class="btn btn-info btn-sm me-2">
+                    <i class="bi bi-database-fill-gear me-1"></i>Manage UD Items
+                </a>
+                <button type="button" class="btn btn-primary btn-sm" id="toggleBoqForm">
+                    <i class="bi bi-plus-circle me-1"></i>Add BOQ Item
+                </button>
+            </div>
         </div>
         
         <!-- Add this new inline form section -->
