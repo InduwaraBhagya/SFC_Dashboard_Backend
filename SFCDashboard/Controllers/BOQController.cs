@@ -255,7 +255,7 @@ namespace SFCDashboard.Controllers
 
                 // _context.SurveyTaskActivities.Add(activity);
                 
-                // await _context.SaveChangesAsync();
+                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation($"BOQ created successfully for TaskId: {model.TaskId}");
                 return Json(new { success = true });
@@ -390,7 +390,9 @@ namespace SFCDashboard.Controllers
                     PETaskId = boq.TaskId,
                     Description = $"Updated BOQ item #{boq.Id}",
                     SystemUserId = currentUser.Id,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    FilePath = "",
+                    FileName =""
                 };
 
                 _context.SurveyTaskActivities.Add(activity);
@@ -439,7 +441,9 @@ namespace SFCDashboard.Controllers
                 PETaskId = taskId,
                 Description = $"Deleted BOQ item #{id}",
                 SystemUserId = currentUser.Id,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                FilePath = "",
+                FileName = ""
             };
 
             _context.SurveyTaskActivities.Add(activity);
@@ -447,6 +451,160 @@ namespace SFCDashboard.Controllers
             await _context.SaveChangesAsync();
             
             return Json(new { success = true });
+        }
+
+        // GET: BOQ/GetBOQDetails/5
+        [HttpGet]
+        public async Task<IActionResult> GetBOQDetails(int id)
+        {
+            try
+            {
+                _logger.LogInformation($"GetBOQDetails called for BOQ ID: {id}");
+                
+                // Find the BOQ entry with all related data
+                var boq = await _context.BOQs
+                    .Include(b => b.Category)
+                    .Include(b => b.SubCategory)
+                    .Include(b => b.UDName)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (boq == null)
+                {
+                    _logger.LogWarning($"BOQ with ID {id} not found");
+                    return NotFound();
+                }
+
+                // Create a response object with all required data
+                var result = new
+                {
+                    id = boq.Id,
+                    taskId = boq.TaskId,
+                    categoryId = boq.CategoryId,
+                    subCategoryId = boq.SubCategoryId,
+                    udNameId = boq.UDNameId,
+                    quantity = boq.Quantity,
+                    unit = boq.Unit,
+                    unitPrice = boq.UnitPrice,
+                    adjustedUnitPrice = boq.AdjustedUnitPrice,
+                    amount = boq.Amount,
+                    categoryName = boq.Category?.Category,
+                    subCategoryName = boq.SubCategory?.SubCategory,
+                    udNameValue = boq.UDName?.Name
+                };
+
+                _logger.LogInformation($"BOQ details retrieved successfully for ID: {id}");
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting BOQ details for ID: {id}");
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // POST: BOQ/EditInline
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditInline([FromForm] BOQViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation($"EditInline received for BOQ ID: {model.Id}");
+                
+                // Find the existing BOQ item
+                var boq = await _context.BOQs
+                    .Include(b => b.Task)
+                    .Include(b => b.Task.PlannedEvent)
+                    .FirstOrDefaultAsync(b => b.Id == model.Id);
+
+                if (boq == null)
+                {
+                    _logger.LogWarning($"BOQ item with ID {model.Id} not found");
+                    return Json(new { success = false, message = "BOQ item not found." });
+                }
+
+                // Validate inputs
+                if (model.UDNameId <= 0)
+                {
+                    return Json(new { success = false, message = "UD Name selection is required." });
+                }
+                
+                if (model.CategoryId <= 0)
+                {
+                    return Json(new { success = false, message = "Category selection is required." });
+                }
+                
+                if (model.SubCategoryId <= 0)
+                {
+                    return Json(new { success = false, message = "Sub-Category selection is required." });
+                }
+
+                if (model.Quantity <= 0)
+                {
+                    return Json(new { success = false, message = "Quantity must be greater than zero." });
+                }
+
+                // Get the UDName to ensure we have valid unit and price
+                var udName = await _context.UDNames.FindAsync(model.UDNameId);
+                if (udName == null)
+                {
+                    return Json(new { success = false, message = "Selected UD Name not found." });
+                }
+                
+                // Get the weight for the RTOM with null safety
+                var rtom = boq.Task.PlannedEvent?.Rtom ?? "DEFAULT";
+                var weight = await _context.RTOMWeights
+                    .FirstOrDefaultAsync(w => w.RTOM == rtom);
+
+                decimal weightValue = weight?.Weight ?? 1.0m;
+                
+                // Calculate with null-safety
+                decimal unitPrice = udName.UnitPrice;
+                decimal quantity = model.Quantity;
+                decimal adjustedUnitPrice = unitPrice * weightValue;
+                decimal amount = adjustedUnitPrice * quantity;
+                
+                // Get the current user
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    _logger.LogWarning("User not authenticated or not found");
+                    return Json(new { success = false, message = "User not authenticated or not found." });
+                }
+
+                // Update the BOQ entity
+                boq.CategoryId = model.CategoryId;
+                boq.SubCategoryId = model.SubCategoryId;
+                boq.UDNameId = model.UDNameId;
+                boq.Quantity = quantity;
+                boq.Unit = udName.Unit ?? "each";
+                boq.UnitPrice = unitPrice;
+                boq.AdjustedUnitPrice = adjustedUnitPrice;
+                boq.Amount = amount;
+
+                // Add activity to SurveyTaskActivities
+                var activity = new SurveyTaskActivity
+                {
+                    PETaskId = boq.TaskId,
+                    Description = $"Updated BOQ item #{boq.Id}",
+                    SystemUserId = currentUser.Id,
+                    CreatedAt = DateTime.Now,
+                    FilePath = "",
+                    FileName =""
+                };
+
+                _context.SurveyTaskActivities.Add(activity);
+                
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation($"BOQ item #{boq.Id} updated successfully");
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating BOQ item: {ex.Message}");
+                return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
+            }
         }
 
         private bool BOQExists(int id)
