@@ -1,0 +1,250 @@
+@using SFCDashboard.Models
+@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "Contractor Projects";
+    var contractorName = ViewData["ContractorName"] as string ?? "Unknown";
+}
+
+<div class="container-fluid mt-4">
+    <div class="contractor-header d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-building text-primary me-3"></i><span class="contractor-name">@contractorName</span> Projects
+        </h1>
+        <a href="@Url.Action("Index")" class="btn btn-outline-primary no-print">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="contractor-card contractor-search mb-4 no-print">
+        <div class="card-body">
+            <form id="searchForm" class="row g-3" method="get">
+                <div class="col-md-3">
+                    <label for="searchPeNumber" class="form-label">PE Number</label>
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber"
+                        value="@ViewData["SearchPeNumber"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchReference" class="form-label">Job Reference</label>
+                    <input type="text" class="form-control" id="searchReference" name="reference"
+                        value="@ViewData["SearchReference"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchCustomer" class="form-label">Customer</label>
+                    <input type="text" class="form-control" id="searchCustomer" name="customer"
+                        value="@ViewData["SearchCustomer"]">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <a href="@Url.Action("ContractorRecords", new { contractorName = contractorName })" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="contractor-card">
+        <div class="contractor-card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Your Projects</h5>
+                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="contractor-table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 12%;">PE Number</th>
+                            <th style="width: 18%;">RTOM Description</th>
+                            <th style="width: 15%;">Job Reference</th>
+                            <th style="width: 15%;">Customer</th>
+                            <th style="width: 10%;">Customer Type</th>
+                            <th style="width: 15%;" class="no-print">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int rowNumber = 1;
+                        }
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@(rowNumber++)</td>
+                                <td>@Html.DisplayFor(modelItem => item.PeNumber)</td>
+                                <td>@Html.DisplayFor(modelItem => item.RtomDescription)</td>
+                                <td>@Html.DisplayFor(modelItem => item.JobReference)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Customer)</td>
+                                <td>@Html.DisplayFor(modelItem => item.CusType)</td>
+                                <td class="no-print">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="location.href='@Url.Action("Details", new { peNumber = item.PeNumber, contractorName = ViewData["ContractorName"] })'">
+                                            <i class="bi bi-eye"></i> PE Details
+                                        </button>
+                                        <button type="button" class="btn btn-primary btn-sm" data-pe-number="@item.PeNumber" onclick="location.href='@Url.Action("Details", "SurveyTasks", new { peNumber = item.PeNumber })'">
+                                            <i class="bi bi-clipboard-check"></i> View BOQ Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="no-records mt-3">
+                    <i class="bi bi-info-circle me-2"></i> No projects found for your company. If you believe this is incorrect, please verify your contractor name matches exactly with the records in the system.
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end mt-3 mb-4 no-print">
+        <button type="button" class="btn btn-outline-primary" id="exportBtn">
+            <i class="bi bi-file-earmark-excel"></i> Export to Excel
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add search functionality
+            const searchForm = document.getElementById('searchForm');
+            const searchInputs = searchForm.querySelectorAll('input');
+            const tableBody = document.querySelector('table tbody');
+            const noRecordsAlert = document.querySelector('.no-records');
+
+            function filterTable() {
+                const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+                const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+                const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+
+                let visibleRows = 0;
+                const rows = tableBody.getElementsByTagName('tr');
+
+                Array.from(rows).forEach(row => {
+                    const cells = row.getElementsByTagName('td');
+                    const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                    const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
+                    const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
+
+                    if (matchPeNumber && matchReference && matchCustomer) {
+                        row.style.display = '';
+                        visibleRows++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Update record count
+                document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+                // Show/hide no records message
+                if (noRecordsAlert) {
+                    noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
+                }
+            }
+
+            // Add real-time search
+            searchInputs.forEach(input => {
+                input.addEventListener('input', filterTable);
+            });
+
+            // Prevent form submission (using real-time filter instead)
+            searchForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                filterTable();
+            });
+
+            // Handle export to Excel
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                // Basic table to Excel export
+                let tableData = [];
+                const headers = [];
+                const table = document.querySelector('.contractor-table');
+                
+                // Get headers
+                table.querySelectorAll('thead th').forEach(th => {
+                    if (!th.classList.contains('no-print')) {
+                        headers.push(th.textContent.trim());
+                    }
+                });
+                
+                tableData.push(headers);
+                
+                // Get visible rows
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    if (row.style.display !== 'none') {
+                        const rowData = [];
+                        row.querySelectorAll('td').forEach(cell => {
+                            if (!cell.classList.contains('no-print')) {
+                                rowData.push(cell.textContent.trim());
+                            }
+                        });
+                        tableData.push(rowData);
+                    }
+                });
+                
+                // Convert to CSV
+                const csvContent = tableData.map(row => row.join(',')).join('\n');
+                
+                // Download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'contractor-projects.csv');
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            // Check for survey tasks and update button states
+            function checkSurveyTasks() {
+                const surveyButtons = document.querySelectorAll('button[data-pe-number]');
+                
+                surveyButtons.forEach(async (button) => {
+                    const peNumber = button.getAttribute('data-pe-number');
+                    
+                    try {
+                        const response = await fetch(`@Url.Action("HasSurveyTasks", "ContractorView")?peNumber=${encodeURIComponent(peNumber)}`);
+                        const result = await response.json();
+                        
+                        if (!result.hasSurveyTasks) {
+                            button.disabled = true;
+                            button.title = 'No survey tasks available for this PE';
+                            button.innerHTML = '<i class="bi bi-clipboard-x"></i> No Survey Tasks';
+                            button.classList.remove('btn-primary');
+                            button.classList.add('btn-secondary');
+                        }
+                    } catch (error) {
+                        console.log('Error checking survey tasks:', error);
+                    }
+                });
+            }
+
+            // Check survey tasks after page load
+            setTimeout(checkSurveyTasks, 100);
+        });
+    </script>
+    <link rel="stylesheet" href="~/css/contractor.css" />
+}

@@ -1,0 +1,337 @@
+/* Contractor view styling */
+.contractor-header {
+    background-color: #f0f4f8;
+    border-left: 5px solid #0078d4;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.25rem;
+}
+
+.contractor-name {
+    color: #0078d4;
+    font-weight: 600;
+}
+
+.contractor-card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 1.5rem;
+}
+
+.contractor-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.contractor-card-header {
+    background-color: #0078d4;
+    color: white;
+    border-radius: 8px 8px 0 0;
+    padding: 0.75rem 1.25rem;
+}
+
+.contractor-search {
+    background-color: #f9f9f9;
+    padding: 1.25rem;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.contractor-search .form-label {
+    font-weight: 500;
+    color: #505050;
+}
+
+.contractor-search .btn-primary {
+    background-color: #0078d4;
+    border-color: #0078d4;
+}
+
+.contractor-search .btn-primary:hover {
+    background-color: #006cc1;
+    border-color: #006cc1;
+}
+
+/* Table styling */
+.contractor-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.contractor-table thead th {
+    background-color: #f0f4f8;
+    color: #333;
+    font-weight: 600;
+    border-bottom: 2px solid #0078d4;
+}
+
+.contractor-table tbody tr:nth-child(odd) {
+    background-color: #f9fafc;
+}
+
+.contractor-table tbody tr:hover {
+    background-color: #eef5fc;
+}
+
+/* Status badges */
+.badge-urgent {
+    background-color: #d13438;
+    color: white;
+}
+
+.badge-hold {
+    background-color: #ffb900;
+    color: #333;
+}
+
+.badge-ongoing {
+    background-color: #0078d4;
+    color: white;
+}
+
+/* Details button */
+.btn-details {
+    background-color: #0078d4;
+    color: white;
+    border-radius: 4px;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btn-details:hover {
+    background-color: #006cc1;
+    transform: translateY(-2px);
+}
+
+.btn-details i {
+    margin-right: 5px;
+}
+
+/* No records message */
+.no-records {
+    background-color: #e5f1fb;
+    border-left: 4px solid #0078d4;
+    padding: 1rem;
+    color: #333;
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .contractor-search .btn-group {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .contractor-search .btn {
+        flex: 1;
+    }
+}
+
+/* Animate alerts */
+.alert-success {
+    animation: fadeIn 0.5s, fadeOut 0.5s 5s forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); display: none; }
+}
+
+/* Project details section */
+.project-details-section {
+    background-color: #f9fafc;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.project-info-row {
+    display: flex;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0.75rem 0;
+}
+
+.project-info-row:last-child {
+    border-bottom: none;
+}
+
+.project-info-label {
+    flex: 0 0 30%;
+    font-weight: 600;
+    color: #505050;
+}
+
+.project-info-value {
+    flex: 0 0 70%;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none;
+    }
+    
+    .container-fluid {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .contractor-table th, 
+    .contractor-table td {
+        padding: 0.5rem;
+    }
+}
+
+/* Dark mode styles */
+[data-theme="dark"] .contractor-header {
+    background-color: #2d2d30;
+    border-left: 5px solid #0078d4;
+}
+
+[data-theme="dark"] .contractor-name {
+    color: #3a96dd;
+}
+
+[data-theme="dark"] .contractor-card {
+    background-color: #252526;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .contractor-card-header {
+    background-color: #0078d4;
+}
+
+[data-theme="dark"] .contractor-search {
+    background-color: #333333;
+    border-color: #444444;
+}
+
+[data-theme="dark"] .contractor-search .form-label {
+    color: #d0d0d0;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background-color: #3c3c3c;
+    border-color: #555555;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background-color: #3c3c3c;
+    border-color: #0078d4;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .contractor-table {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .contractor-table thead th {
+    background-color: #333333;
+    color: #e0e0e0;
+    border-bottom: 2px solid #0078d4;
+}
+
+[data-theme="dark"] .contractor-table tbody tr:nth-child(odd) {
+    background-color: #2d2d30;
+}
+
+[data-theme="dark"] .contractor-table tbody tr:nth-child(even) {
+    background-color: #252526;
+}
+
+[data-theme="dark"] .contractor-table tbody tr:hover {
+    background-color: #3e3e42;
+}
+
+[data-theme="dark"] .no-records {
+    background-color: #333333;
+    border-left: 4px solid #0078d4;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .project-details-section {
+    background-color: #2d2d30;
+}
+
+[data-theme="dark"] .project-info-row {
+    border-bottom: 1px solid #444444;
+}
+
+[data-theme="dark"] .project-info-label {
+    color: #cccccc;
+}
+
+[data-theme="dark"] .btn-outline-primary {
+    color: #3a96dd;
+    border-color: #3a96dd;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+    background-color: #3a96dd;
+    color: #252526;
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+    color: #cccccc;
+    border-color: #666666;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+    background-color: #666666;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .badge {
+    border: 1px solid transparent;
+}
+
+/* Make status badges more visible in dark mode */
+[data-theme="dark"] .badge-urgent {
+    background-color: #d13438;
+    color: white;
+}
+
+[data-theme="dark"] .badge-hold {
+    background-color: #ffb900;
+    color: #333;
+}
+
+[data-theme="dark"] .badge-ongoing {
+    background-color: #0078d4;
+    color: white;
+}
+
+/* Card body in dark mode */
+[data-theme="dark"] .card-body {
+    background-color: #252526;
+    color: #e0e0e0;
+}
+
+/* Text colors in dark mode */
+[data-theme="dark"] .text-muted {
+    color: #a0a0a0 !important;
+}
+
+[data-theme="dark"] .text-primary {
+    color: #3a96dd !important;
+}
+
+[data-theme="dark"] .text-dark {
+    color: #e0e0e0 !important;
+}
