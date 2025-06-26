@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
@@ -13,78 +14,214 @@ namespace SFCDashboard.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UDManagerController> _logger;
 
-        public UDManagerController(
-            ApplicationDbContext context,
-            ILogger<UDManagerController> logger)
+        public UDManagerController(ApplicationDbContext context, ILogger<UDManagerController> logger)
         {
             _context = context;
             _logger = logger;
         }
 
         // GET: UDManager
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string searchTerm = null)
         {
-            var viewModel = new UDManagerViewModel
+            var viewModel = new UDManagerViewModel();
+            
+            // Load categories
+            viewModel.Categories = await _context.UDCategories.ToListAsync();
+            
+            // Load subcategories
+            viewModel.SubCategories = await _context.UDSubCategories
+                .Include(s => s.Category)
+                .ToListAsync();
+            
+            // Load UD names with search filter
+            var query = _context.UDNames
+                .Include(u => u.Category)
+                .Include(u => u.SubCategory)
+                .AsQueryable();
+                
+            if (!string.IsNullOrEmpty(searchTerm))
             {
-                Categories = await _context.UDCategories.ToListAsync(),
-                SubCategories = await _context.UDSubCategories
-                    .Include(s => s.Category)
-                    .ToListAsync(),
-                UDNames = await _context.UDNames
-                    .Include(u => u.Category)
-                    .Include(u => u.SubCategory)
-                    .ToListAsync()
-            };
-
+                searchTerm = searchTerm.ToLower();
+                query = query.Where(u => 
+                    u.Name.ToLower().Contains(searchTerm) ||
+                    u.Category.Category.ToLower().Contains(searchTerm) ||
+                    u.SubCategory.SubCategory.ToLower().Contains(searchTerm));
+            }
+            
+            viewModel.UDNames = await query.ToListAsync();
+            
+            ViewBag.SearchTerm = searchTerm;
+            
             return View(viewModel);
         }
-        
+
         // POST: UDManager/AddCategory
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddCategory([Bind("Category")] UDCategory category)
+        public async Task<IActionResult> AddCategory(UDCategory newCategory)
         {
-            if (ModelState.IsValid)
+            if (!string.IsNullOrEmpty(newCategory.Category))
             {
-                _context.UDCategories.Add(category);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation($"New UD Category added: {category.Category}");
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.UDCategories.Add(newCategory);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Category '{newCategory.Category}' added successfully");
+                    TempData["SuccessMessage"] = $"Category '{newCategory.Category}' added successfully";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error adding category");
+                    ModelState.AddModelError("", "Unable to add category. " + ex.Message);
+                }
             }
-            return RedirectToAction(nameof(Index));
+            else
+            {
+                ModelState.AddModelError("NewCategory.Category", "Category name is required");
+            }
+            
+            // If we got this far, something failed, redisplay form
+            // Create a new view model to render the Index view with
+            var viewModel = new UDManagerViewModel
+            {
+                Categories = await _context.UDCategories.ToListAsync(),
+                SubCategories = await _context.UDSubCategories.Include(s => s.Category).ToListAsync(),
+                UDNames = await _context.UDNames
+                    .Include(u => u.Category)
+                    .Include(u => u.SubCategory)
+                    .ToListAsync(),
+                NewCategory = newCategory
+            };
+            
+            return View("Index", viewModel);
         }
 
         // POST: UDManager/AddSubCategory
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddSubCategory([Bind("CategoryId,SubCategory")] UDSubCategory subCategory)
+        public async Task<IActionResult> AddSubCategory(UDSubCategory newSubCategory)
         {
-            if (ModelState.IsValid)
+            if (newSubCategory.CategoryId > 0 && !string.IsNullOrEmpty(newSubCategory.SubCategory))
             {
-                _context.UDSubCategories.Add(subCategory);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation($"New UD SubCategory added: {subCategory.SubCategory}");
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.UDSubCategories.Add(newSubCategory);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"SubCategory '{newSubCategory.SubCategory}' added successfully");
+                    TempData["SuccessMessage"] = $"SubCategory '{newSubCategory.SubCategory}' added successfully";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error adding subcategory");
+                    ModelState.AddModelError("", "Unable to add subcategory. " + ex.Message);
+                }
             }
-            return RedirectToAction(nameof(Index));
+            else
+            {
+                if (newSubCategory.CategoryId <= 0)
+                    ModelState.AddModelError("NewSubCategory.CategoryId", "Please select a category");
+                
+                if (string.IsNullOrEmpty(newSubCategory.SubCategory))
+                    ModelState.AddModelError("NewSubCategory.SubCategory", "Sub-category name is required");
+            }
+            
+            // If we got this far, something failed, redisplay form
+            var viewModel = new UDManagerViewModel
+            {
+                Categories = await _context.UDCategories.ToListAsync(),
+                SubCategories = await _context.UDSubCategories.Include(s => s.Category).ToListAsync(),
+                UDNames = await _context.UDNames
+                    .Include(u => u.Category)
+                    .Include(u => u.SubCategory)
+                    .ToListAsync(),
+                NewSubCategory = newSubCategory
+            };
+            
+            return View("Index", viewModel);
         }
 
         // POST: UDManager/AddUDName
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddUDName([Bind("CategoryId,SubCategoryId,Name,Unit,UnitPrice")] UDName udName)
+        public async Task<IActionResult> AddUDName(UDName newUDName)
         {
-            if (ModelState.IsValid)
+            if (newUDName.CategoryId > 0 && newUDName.SubCategoryId > 0 && 
+                !string.IsNullOrEmpty(newUDName.Name) && !string.IsNullOrEmpty(newUDName.Unit))
             {
-                _context.UDNames.Add(udName);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation($"New UDName added: {udName.Name}");
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.UDNames.Add(newUDName);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"UD Name '{newUDName.Name}' added successfully");
+                    TempData["SuccessMessage"] = $"UD Name '{newUDName.Name}' added successfully";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error adding UD name");
+                    ModelState.AddModelError("", "Unable to add UD name. " + ex.Message);
+                }
             }
-            return RedirectToAction(nameof(Index));
+            else
+            {
+                if (newUDName.CategoryId <= 0)
+                    ModelState.AddModelError("NewUDName.CategoryId", "Please select a category");
+                
+                if (newUDName.SubCategoryId <= 0)
+                    ModelState.AddModelError("NewUDName.SubCategoryId", "Please select a sub-category");
+                
+                if (string.IsNullOrEmpty(newUDName.Name))
+                    ModelState.AddModelError("NewUDName.Name", "UD name is required");
+                
+                if (string.IsNullOrEmpty(newUDName.Unit))
+                    ModelState.AddModelError("NewUDName.Unit", "Unit is required");
+            }
+            
+            // If we got this far, something failed, redisplay form
+            var viewModel = new UDManagerViewModel
+            {
+                Categories = await _context.UDCategories.ToListAsync(),
+                SubCategories = await _context.UDSubCategories.Include(s => s.Category).ToListAsync(),
+                UDNames = await _context.UDNames
+                    .Include(u => u.Category)
+                    .Include(u => u.SubCategory)
+                    .ToListAsync(),
+                NewUDName = newUDName
+            };
+            
+            return View("Index", viewModel);
         }
 
-        // GET: UDManager/GetSubCategories
+        // POST: UDManager/ToggleStatus/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleStatus(int id)
+        {
+            var udName = await _context.UDNames.FindAsync(id);
+            if (udName == null)
+            {
+                return NotFound();
+            }
+
+            udName.IsActive = !udName.IsActive;
+            
+            try
+            {
+                _context.Update(udName);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"UD Name ID {id} status changed to {(udName.IsActive ? "Active" : "Inactive")}");
+                return Json(new { success = true, isActive = udName.IsActive });
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogError(ex, "Error toggling UD name status");
+                return Json(new { success = false, message = "Failed to update status." });
+            }
+        }
+        
+        // GET: UDManager/GetSubCategories/5
         [HttpGet]
         public async Task<IActionResult> GetSubCategories(int categoryId)
         {
@@ -94,220 +231,6 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
                 
             return Json(subCategories);
-        }
-
-        // DELETE: UDManager/DeleteCategory/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteCategory(int id)
-        {
-            var category = await _context.UDCategories.FindAsync(id);
-            if (category == null)
-            {
-                return Json(new { success = false, message = "Category not found." });
-            }
-
-            // Check if the category is in use
-            bool hasSubCategories = await _context.UDSubCategories.AnyAsync(s => s.CategoryId == id);
-            bool hasUDNames = await _context.UDNames.AnyAsync(u => u.CategoryId == id);
-            bool hasBoqItems = await _context.BOQs.AnyAsync(b => b.CategoryId == id);
-
-            if (hasSubCategories || hasUDNames || hasBoqItems)
-            {
-                return Json(new { 
-                    success = false, 
-                    message = "Cannot delete this category because it is being used by subcategories, UD names, or BOQ items." 
-                });
-            }
-
-            _context.UDCategories.Remove(category);
-            await _context.SaveChangesAsync();
-            
-            return Json(new { success = true });
-        }
-
-        // DELETE: UDManager/DeleteSubCategory/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteSubCategory(int id)
-        {
-            var subCategory = await _context.UDSubCategories.FindAsync(id);
-            if (subCategory == null)
-            {
-                return Json(new { success = false, message = "SubCategory not found." });
-            }
-
-            // Check if the subcategory is in use
-            bool hasUDNames = await _context.UDNames.AnyAsync(u => u.SubCategoryId == id);
-            bool hasBoqItems = await _context.BOQs.AnyAsync(b => b.SubCategoryId == id);
-
-            if (hasUDNames || hasBoqItems)
-            {
-                return Json(new { 
-                    success = false, 
-                    message = "Cannot delete this subcategory because it is being used by UD names or BOQ items." 
-                });
-            }
-
-            _context.UDSubCategories.Remove(subCategory);
-            await _context.SaveChangesAsync();
-            
-            return Json(new { success = true });
-        }
-
-        // DELETE: UDManager/DeleteUDName/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteUDName(int id)
-        {
-            var udName = await _context.UDNames.FindAsync(id);
-            if (udName == null)
-            {
-                return Json(new { success = false, message = "UD Name not found." });
-            }
-
-            // Check if the UD name is in use
-            bool hasBoqItems = await _context.BOQs.AnyAsync(b => b.UDNameId == id);
-
-            if (hasBoqItems)
-            {
-                return Json(new { 
-                    success = false, 
-                    message = "Cannot delete this UD name because it is being used by BOQ items." 
-                });
-            }
-
-            _context.UDNames.Remove(udName);
-            await _context.SaveChangesAsync();
-            
-            return Json(new { success = true });
-        }
-
-        // POST: UDManager/EditCategory
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditCategory([Bind("Id,Category")] UDCategory category)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var existingCategory = await _context.UDCategories.FindAsync(category.Id);
-                    if (existingCategory == null)
-                    {
-                        return Json(new { success = false, message = "Category not found." });
-                    }
-                    
-                    existingCategory.Category = category.Category;
-                    await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"Category {category.Id} updated successfully");
-                    return Json(new { success = true });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error updating category {category.Id}");
-                    return Json(new { success = false, message = ex.Message });
-                }
-            }
-            return Json(new { success = false, message = "Invalid data submitted." });
-        }
-
-        // POST: UDManager/EditSubCategory
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditSubCategory([Bind("Id,CategoryId,SubCategory")] UDSubCategory subCategory)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var existingSubCategory = await _context.UDSubCategories.FindAsync(subCategory.Id);
-                    if (existingSubCategory == null)
-                    {
-                        return Json(new { success = false, message = "Sub-category not found." });
-                    }
-                    
-                    existingSubCategory.CategoryId = subCategory.CategoryId;
-                    existingSubCategory.SubCategory = subCategory.SubCategory;
-                    await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"SubCategory {subCategory.Id} updated successfully");
-                    return Json(new { success = true });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error updating subcategory {subCategory.Id}");
-                    return Json(new { success = false, message = ex.Message });
-                }
-            }
-            return Json(new { success = false, message = "Invalid data submitted." });
-        }
-
-        // POST: UDManager/EditUDName
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditUDName([Bind("Id,CategoryId,SubCategoryId,Name,Unit,UnitPrice")] UDName udName)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var existingUDName = await _context.UDNames.FindAsync(udName.Id);
-                    if (existingUDName == null)
-                    {
-                        return Json(new { success = false, message = "UD Name not found." });
-                    }
-                    
-                    // Preserve the IsActive status
-                    bool isActive = existingUDName.IsActive;
-                    
-                    // Update the properties
-                    existingUDName.CategoryId = udName.CategoryId;
-                    existingUDName.SubCategoryId = udName.SubCategoryId;
-                    existingUDName.Name = udName.Name;
-                    existingUDName.Unit = udName.Unit;
-                    existingUDName.UnitPrice = udName.UnitPrice;
-                    existingUDName.IsActive = isActive; // Keep the original active state
-                    
-                    await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"UDName {udName.Id} updated successfully");
-                    return Json(new { success = true });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error updating UDName {udName.Id}");
-                    return Json(new { success = false, message = ex.Message });
-                }
-            }
-            return Json(new { success = false, message = "Invalid data submitted." });
-        }
-
-        // POST: UDManager/ToggleUDNameActive
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleUDNameActive(int id, bool isActive)
-        {
-            try
-            {
-                var udName = await _context.UDNames.FindAsync(id);
-                if (udName == null)
-                {
-                    return Json(new { success = false, message = "UD Name not found." });
-                }
-
-                udName.IsActive = isActive;
-                await _context.SaveChangesAsync();
-                
-                _logger.LogInformation($"UD Name {id} active state changed to {isActive}");
-                return Json(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error toggling UD Name {id} active state");
-                return Json(new { success = false, message = ex.Message });
-            }
         }
     }
 }
