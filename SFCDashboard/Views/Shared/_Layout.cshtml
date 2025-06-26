@@ -687,50 +687,48 @@
                         </li>
                         @if (isAdmin)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="WorkGroups" asp-action="Index">
-                                    <i class="bi bi-people-fill me-1"></i> Add WorkGroup
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-gear-fill me-1"></i> Admin Menu
                                 </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="SystemUsers" asp-action="Index">
-                                    <i class="bi bi-person-plus-fill me-1"></i> Add User
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="UserRoles" asp-action="Index">
-                                    <i class="bi bi-person-badge-fill me-1"></i> Add Role
-                                </a>
-                            </li>
-                            @*<li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="PETaskLists" asp-action="Index">
-                                    <i class="bi bi-list-task me-1"></i> Add Task
-                                </a>
-                            </li>*@
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="ImportExcel">
-                                    <i class="bi bi-file-earmark-arrow-up-fill me-1"></i> Import Excel
-                                </a>
-                            </li>
-                            @*li class="nav-item">
-                                <a class="nav-link" asp-controller="Permissions" asp-action="Index">
-                                    <i class="bi bi-shield-check me-1"></i> Manage Permissions
-                                </a>
-                            </li>*@
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Project" asp-action="Index">
-                                    <i class="bi bi-folder-fill me-1"></i> Projects
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Escalation" asp-action="Index">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Escalations
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="ContractorView" asp-action="ContractorRecords">
-                                    <i class="bi bi-building me-1"></i> Contractor View
-                                </a>
+                                <ul class="dropdown-menu modern-dropdown" aria-labelledby="adminMenuDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-controller="WorkGroups" asp-action="Index">
+                                            <i class="bi bi-people-fill me-2"></i> <span>Add WorkGroup</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-controller="SystemUsers" asp-action="Index">
+                                            <i class="bi bi-person-plus-fill me-2"></i> <span>Add User</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-controller="UserRoles" asp-action="Index">
+                                            <i class="bi bi-person-badge-fill me-2"></i> <span>Add Role</span>
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-controller="PERecords" asp-action="ImportExcel">
+                                            <i class="bi bi-file-earmark-arrow-up-fill me-2"></i> <span>Import Excel</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Project" asp-action="Index">
+                                            <i class="bi bi-folder-fill me-2"></i> <span>Projects</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Escalation" asp-action="Index">
+                                            <i class="bi bi-exclamation-triangle-fill me-2"></i> <span>Escalations</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-controller="ContractorView" asp-action="ContractorRecords">
+                                            <i class="bi bi-building me-2"></i> <span>Contractor View</span>
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         }
 

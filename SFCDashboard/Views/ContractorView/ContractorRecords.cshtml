@@ -8,8 +8,9 @@
 
 <div class="container-fluid mt-4">
     <div class="contractor-header d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-5">
-            <i class="bi bi-building text-primary me-3"></i><span class="contractor-name">@contractorName</span> Projects
+        <h1 class="display-5 d-flex align-items-center">
+            <i class="bi bi-building icon-white icon-lg me-3"></i>
+            <span class="contractor-name">@contractorName </span>Projects
         </h1>
         <a href="@Url.Action("Index")" class="btn btn-outline-primary no-print">
             <i class="bi bi-arrow-left"></i> Back to Dashboard
@@ -108,8 +109,12 @@
 
             @if (!Model.Any())
             {
-                <div class="no-records mt-3">
-                    <i class="bi bi-info-circle me-2"></i> No projects found for your company. If you believe this is incorrect, please verify your contractor name matches exactly with the records in the system.
+                <div class="no-records text-center py-5">
+                    <div class="empty-state">
+                        <i class="bi bi-folder-x display-1 text-muted mb-3"></i>
+                        <h5 class="text-muted mb-2">No Projects Found</h5>
+                        <p class="text-muted mb-0">No projects found for your company. If you believe this is incorrect, please verify your contractor name matches exactly with the records in the system.</p>
+                    </div>
                 </div>
             }
         </div>
@@ -131,6 +136,21 @@
             const tableBody = document.querySelector('table tbody');
             const noRecordsAlert = document.querySelector('.no-records');
 
+            // Add entrance animations to table rows
+            function addEntranceAnimations() {
+                const rows = tableBody.querySelectorAll('tr');
+                rows.forEach((row, index) => {
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateY(20px)';
+                    row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    
+                    setTimeout(() => {
+                        row.style.opacity = '1';
+                        row.style.transform = 'translateY(0)';
+                    }, index * 50);
+                });
+            }
+
             function filterTable() {
                 const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
                 const reference = document.getElementById('searchReference').value.trim().toLowerCase();
@@ -139,7 +159,7 @@
                 let visibleRows = 0;
                 const rows = tableBody.getElementsByTagName('tr');
 
-                Array.from(rows).forEach(row => {
+                Array.from(rows).forEach((row, index) => {
                     const cells = row.getElementsByTagName('td');
                     const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
                     const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
@@ -147,14 +167,24 @@
 
                     if (matchPeNumber && matchReference && matchCustomer) {
                         row.style.display = '';
+                        // Add staggered animation for filtered results
+                        setTimeout(() => {
+                            row.style.opacity = '1';
+                            row.style.transform = 'translateY(0)';
+                        }, visibleRows * 30);
                         visibleRows++;
                     } else {
                         row.style.display = 'none';
                     }
                 });
 
-                // Update record count
-                document.querySelector('.badge').textContent = visibleRows + ' Records';
+                // Update record count with animation
+                const badge = document.querySelector('.badge');
+                badge.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    badge.textContent = visibleRows + ' Records';
+                    badge.style.transform = 'scale(1)';
+                }, 150);
 
                 // Show/hide no records message
                 if (noRecordsAlert) {
@@ -162,9 +192,13 @@
                 }
             }
 
-            // Add real-time search
+            // Enhanced search with debouncing
+            let searchTimeout;
             searchInputs.forEach(input => {
-                input.addEventListener('input', filterTable);
+                input.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(filterTable, 300);
+                });
             });
 
             // Prevent form submission (using real-time filter instead)
@@ -173,8 +207,29 @@
                 filterTable();
             });
 
-            // Handle export to Excel
+            // Enhanced button interactions
+            const actionButtons = document.querySelectorAll('.btn-group .btn');
+            actionButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Add loading state
+                    const icon = this.querySelector('i');
+                    const originalClass = icon.className;
+                    icon.className = 'bi bi-arrow-clockwise spinning';
+                    
+                    // Reset after navigation (will be interrupted by page change)
+                    setTimeout(() => {
+                        icon.className = originalClass;
+                    }, 2000);
+                });
+            });
+
+            // Handle export to Excel with enhanced UX
             document.getElementById('exportBtn').addEventListener('click', function() {
+                // Add loading state
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="bi bi-arrow-clockwise spinning me-2"></i>Exporting...';
+                this.disabled = true;
+
                 // Basic table to Excel export
                 let tableData = [];
                 const headers = [];
@@ -211,11 +266,17 @@
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.setAttribute('href', url);
-                link.setAttribute('download', 'contractor-projects.csv');
+                link.setAttribute('download', `contractor-projects-${new Date().toISOString().split('T')[0]}.csv`);
                 link.style.display = 'none';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+
+                // Reset button state
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }, 1000);
             });
 
             // Check for survey tasks and update button states
@@ -242,9 +303,178 @@
                 });
             }
 
-            // Check survey tasks after page load
+            // Add keyboard navigation for table rows
+            let currentRowIndex = -1;
+            const tableRows = tableBody.querySelectorAll('tr');
+
+            document.addEventListener('keydown', function(e) {
+                if (tableRows.length === 0) return;
+
+                switch(e.key) {
+                    case 'ArrowDown':
+                        if (e.altKey) { // Alt + Arrow Down for table navigation
+                            e.preventDefault();
+                            currentRowIndex = Math.min(currentRowIndex + 1, tableRows.length - 1);
+                            updateRowFocus();
+                        }
+                        break;
+                    case 'ArrowUp':
+                        if (e.altKey) { // Alt + Arrow Up for table navigation
+                            e.preventDefault();
+                            currentRowIndex = Math.max(currentRowIndex - 1, 0);
+                            updateRowFocus();
+                        }
+                        break;
+                    case 'Enter':
+                        if (currentRowIndex >= 0 && e.altKey) {
+                            e.preventDefault();
+                            const firstButton = tableRows[currentRowIndex].querySelector('.btn');
+                            if (firstButton) firstButton.click();
+                        }
+                        break;
+                    case 'Escape':
+                        currentRowIndex = -1;
+                        updateRowFocus();
+                        break;
+                }
+            });
+
+            function updateRowFocus() {
+                // Remove previous focus
+                tableRows.forEach(row => row.classList.remove('table-row-focused'));
+                
+                // Add focus to current row
+                if (currentRowIndex >= 0) {
+                    tableRows[currentRowIndex].classList.add('table-row-focused');
+                    tableRows[currentRowIndex].scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'nearest' 
+                    });
+                }
+            }
+
+            // Initialize
+            addEntranceAnimations();
             setTimeout(checkSurveyTasks, 100);
         });
     </script>
+    <style>
+        /* Enhanced table and interaction styles */
+        .table-row-focused {
+            background-color: var(--light) !important;
+            border-left: 3px solid var(--primary) !important;
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+        }
+        
+        [data-theme="dark"] .table-row-focused {
+            background-color: rgba(51, 65, 85, 0.8) !important;
+            border-left-color: var(--primary) !important;
+        }
+
+        .spinning {
+            animation: spin 1s linear infinite;
+        }
+        
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Enhanced badge animation */
+        .badge {
+            transition: transform 0.2s ease;
+        }
+
+        /* Enhanced button hover effects */
+        .btn-group .btn {
+            transition: all 0.2s ease;
+        }
+
+        .btn-group .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Enhanced search form */
+        .contractor-search .form-control:focus {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Enhanced export button */
+        #exportBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Table row animations */
+        .contractor-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .contractor-table tbody tr:hover {
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Enhanced empty state */
+        .empty-state {
+            padding: 3rem 2rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .empty-state i {
+            opacity: 0.6;
+            animation: pulse 2s infinite;
+        }
+
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Accessibility and reduced motion */
+        @@media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+            
+            .contractor-table tbody tr:hover {
+                transform: none !important;
+            }
+            
+            .btn-group .btn:hover {
+                transform: none !important;
+            }
+        }
+
+        /* Enhanced responsive design */
+        @@media (max-width: 768px) {
+            .contractor-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .contractor-search .form-control:focus {
+                transform: none;
+            }
+            
+            .btn-group .btn:hover {
+                transform: none;
+            }
+        }
+    </style>
     <link rel="stylesheet" href="~/css/contractor.css" />
 }

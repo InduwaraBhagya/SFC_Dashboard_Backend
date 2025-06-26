@@ -1,166 +1,241 @@
-/* Contractor view styling */
+/* Modern Minimalist Contractor Styles */
+:root {
+    --primary: #667eea;
+    --primary-dark: #5a67d8;
+    --secondary: #6b7280;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --light: #f8fafc;
+    --dark: #1e293b;
+    --border: #e5e7eb;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --transition: all 0.2s ease;
+}
+
+/* Header */
 .contractor-header {
-    background-color: #f0f4f8;
-    border-left: 5px solid #0078d4;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    color: white;
+}
+
+.contractor-header h1 {
+    margin: 0;
+    font-weight: 700;
 }
 
 .contractor-name {
-    color: #0078d4;
-    font-weight: 600;
+    color: white;
+    font-weight: 700;
 }
 
+/* Header Icons and Navigation */
+.contractor-header .bi-building {
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: var(--transition);
+}
+
+.contractor-header .btn-outline-primary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    transition: var(--transition);
+}
+
+.contractor-header .btn-outline-primary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.contractor-header .btn-outline-primary i {
+    margin-right: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Cards */
 .contractor-card {
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
     margin-bottom: 1.5rem;
+    transition: var(--transition);
 }
 
 .contractor-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .contractor-card-header {
-    background-color: #0078d4;
+    background: var(--primary);
     color: white;
-    border-radius: 8px 8px 0 0;
-    padding: 0.75rem 1.25rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    font-weight: 600;
 }
 
+/* Search */
 .contractor-search {
-    background-color: #f9f9f9;
-    padding: 1.25rem;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
 }
 
 .contractor-search .form-label {
-    font-weight: 500;
-    color: #505050;
+    font-weight: 600;
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
 }
 
-.contractor-search .btn-primary {
-    background-color: #0078d4;
-    border-color: #0078d4;
+.contractor-search .form-control {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 0.625rem;
+    transition: var(--transition);
 }
 
-.contractor-search .btn-primary:hover {
-    background-color: #006cc1;
-    border-color: #006cc1;
+.contractor-search .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
 
-/* Table styling */
+/* Buttons */
+.btn-primary {
+    background: var(--primary);
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--secondary);
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 600;
+}
+
+.btn-outline-primary {
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    border-radius: var(--radius);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-outline-secondary {
+    border: 1px solid var(--border);
+    color: var(--secondary);
+    border-radius: var(--radius);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.btn-outline-secondary:hover {
+    background: var(--light);
+    border-color: var(--secondary);
+}
+
+/* Table */
 .contractor-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+    background: white;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
 }
 
 .contractor-table thead th {
-    background-color: #f0f4f8;
-    color: #333;
+    background: var(--light);
+    color: var(--secondary);
     font-weight: 600;
-    border-bottom: 2px solid #0078d4;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
 }
 
-.contractor-table tbody tr:nth-child(odd) {
-    background-color: #f9fafc;
+.contractor-table tbody td {
+    padding: 0.75rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.875rem;
 }
 
 .contractor-table tbody tr:hover {
-    background-color: #eef5fc;
+    background: var(--light);
 }
 
-/* Status badges */
+/* Badges */
 .badge-urgent {
-    background-color: #d13438;
+    background: var(--danger);
     color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 .badge-hold {
-    background-color: #ffb900;
-    color: #333;
+    background: var(--warning);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 .badge-ongoing {
-    background-color: #0078d4;
+    background: var(--success);
     color: white;
-}
-
-/* Details button */
-.btn-details {
-    background-color: #0078d4;
-    color: white;
+    padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    border: none;
-    transition: all 0.2s;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
-.btn-details:hover {
-    background-color: #006cc1;
-    transform: translateY(-2px);
-}
-
-.btn-details i {
-    margin-right: 5px;
-}
-
-/* No records message */
-.no-records {
-    background-color: #e5f1fb;
-    border-left: 4px solid #0078d4;
-    padding: 1rem;
-    color: #333;
-    border-radius: 4px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .table-responsive {
-        overflow-x: auto;
-    }
-    
-    .contractor-search .btn-group {
-        width: 100%;
-        margin-top: 1rem;
-    }
-    
-    .contractor-search .btn {
-        flex: 1;
-    }
-}
-
-/* Animate alerts */
-.alert-success {
-    animation: fadeIn 0.5s, fadeOut 0.5s 5s forwards;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-20px); display: none; }
-}
-
-/* Project details section */
+/* Project Details */
 .project-details-section {
-    background-color: #f9fafc;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    background: var(--light);
+    border-radius: var(--radius);
+    padding: 1rem;
+    border: 1px solid var(--border);
 }
 
 .project-info-row {
     display: flex;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 0.75rem 0;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
 }
 
 .project-info-row:last-child {
@@ -170,11 +245,353 @@
 .project-info-label {
     flex: 0 0 30%;
     font-weight: 600;
-    color: #505050;
+    color: var(--secondary);
+    font-size: 0.875rem;
 }
 
 .project-info-value {
-    flex: 0 0 70%;
+    flex: 1;
+    color: var(--dark);
+    font-size: 0.875rem;
+}
+
+/* Stat Cards */
+.stat-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.stat-card-header {
+    background: var(--primary);
+    color: white;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    font-weight: 600;
+}
+
+/* Enhanced Dark Theme Support for Details Page */
+
+/* Stat Cards Enhanced Dark Theme */
+[data-theme="dark"] .stat-card {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid rgba(148, 163, 184, 0.1) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .stat-card:hover {
+    background: rgba(51, 65, 85, 0.8) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .location-card {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid rgba(148, 163, 184, 0.1) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .location-card:hover {
+    background: rgba(51, 65, 85, 0.8) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .location-header {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .location-address p {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .stat-content h3 {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .stat-content p {
+    color: #94a3b8 !important;
+}
+
+/* Status Colors for Dark Theme */
+[data-theme="dark"] .status-urgent {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .status-hold {
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .status-ongoing {
+    color: #34d399 !important;
+}
+
+/* Enhanced Badge Support */
+[data-theme="dark"] .badge.bg-light {
+    background: rgba(51, 65, 85, 0.8) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* Project Information Dark Theme */
+[data-theme="dark"] .project-details-section {
+    background: rgba(30, 41, 59, 0.5);
+}
+
+[data-theme="dark"] .project-info-row {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+[data-theme="dark"] .project-info-label {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .project-info-value {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .project-info-value strong {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .project-info-value code {
+    background: rgba(51, 65, 85, 0.8) !important;
+    color: #94a3b8 !important;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* Enhanced Interactive Elements */
+.stat-card-clickable {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card-clickable::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.6s ease;
+    z-index: 1;
+}
+
+.stat-card-clickable:hover::before {
+    left: 100%;
+}
+
+[data-theme="dark"] .stat-card-clickable::before {
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.1), transparent);
+}
+
+/* Enhanced Accessibility */
+.stat-card[tabindex="0"]:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+[data-theme="dark"] .stat-card[tabindex="0"]:focus {
+    outline-color: #94a3b8;
+}
+
+/* Toast Notifications Dark Theme */
+[data-theme="dark"] .toast-notification {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    color: #f9fafb !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Enhanced Button Group Dark Theme */
+[data-theme="dark"] .btn-group-modern .btn-outline-secondary {
+    border-color: rgba(148, 163, 184, 0.3);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .btn-group-modern .btn-outline-secondary:hover {
+    background: rgba(51, 65, 85, 0.5);
+    border-color: #94a3b8;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-group-modern .btn-outline-success {
+    border-color: rgba(52, 211, 153, 0.3);
+    color: #34d399;
+}
+
+[data-theme="dark"] .btn-group-modern .btn-outline-success:hover {
+    background: rgba(52, 211, 153, 0.1);
+    border-color: #34d399;
+    color: #6ee7b7;
+}
+
+/* Performance Optimizations */
+.stat-card {
+    will-change: transform, box-shadow;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .stat-card {
+        transition: none !important;
+    }
+    
+    .stat-card:hover {
+        transform: none !important;
+    }
+    
+    .stat-card::before {
+        display: none !important;
+    }
+    
+    .stat-card-animate {
+        animation: none !important;
+    }
+}
+
+/* Enhanced responsive design */
+@media (max-width: 992px) {
+    .contractor-header {
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .contractor-header .btn-outline-primary {
+        margin-top: 0.75rem;
+        width: 100%;
+        padding: 0.5rem 1rem;
+    }
+    
+    .contractor-search {
+        padding: 1rem;
+    }
+    
+    .contractor-search .btn-group {
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+    
+    .contractor-search .btn {
+        width: 100%;
+        margin: 0;
+    }
+}
+
+@media (max-width: 576px) {
+    .contractor-table {
+        font-size: 0.8rem;
+    }
+    
+    .contractor-table thead th,
+    .contractor-table tbody td {
+        padding: 0.5rem 0.375rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        margin: 1px 0;
+        border-radius: 6px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Loading state for dynamic content */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
+
+[data-theme="dark"] .loading-shimmer {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Modern scrollbar */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #667eea 100%);
+}
+
+[data-theme="dark"] .table-responsive::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+[data-theme="dark"] .table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+}
+
+/* Enhanced focus states for accessibility */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Modern icon styling */
+.bi {
+    vertical-align: -0.125em;
+}
+
+.contractor-header .bi {
+    font-size: 1.25em;
+}
+
+/* Smooth page transitions */
+.container-fluid {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Print styles */
@@ -195,143 +612,684 @@
     }
 }
 
-/* Dark mode styles */
+/* Modern dark mode styles */
 [data-theme="dark"] .contractor-header {
-    background-color: #2d2d30;
-    border-left: 5px solid #0078d4;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: none;
 }
 
+[data-theme="dark"] .contractor-header h1,
 [data-theme="dark"] .contractor-name {
-    color: #3a96dd;
+    color: #f1f5f9;
 }
 
 [data-theme="dark"] .contractor-card {
-    background-color: #252526;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .contractor-card-header {
-    background-color: #0078d4;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
 }
 
 [data-theme="dark"] .contractor-search {
-    background-color: #333333;
-    border-color: #444444;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .contractor-search .form-label {
-    color: #d0d0d0;
+    color: #cbd5e1;
 }
 
 [data-theme="dark"] .form-control,
 [data-theme="dark"] .form-select {
-    background-color: #3c3c3c;
-    border-color: #555555;
-    color: #e0e0e0;
+    background: rgba(51, 65, 85, 0.8);
+    border: 2px solid rgba(148, 163, 184, 0.2);
+    color: #f1f5f9;
+    backdrop-filter: blur(10px);
 }
 
 [data-theme="dark"] .form-control:focus,
 [data-theme="dark"] .form-select:focus {
-    background-color: #3c3c3c;
-    border-color: #0078d4;
-    color: #e0e0e0;
+    background: rgba(51, 65, 85, 0.95);
+    border-color: #667eea;
+    color: #f1f5f9;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
 
 [data-theme="dark"] .contractor-table {
-    color: #e0e0e0;
+    color: #f1f5f9;
+    background: rgba(30, 41, 59, 0.95);
 }
 
 [data-theme="dark"] .contractor-table thead th {
-    background-color: #333333;
-    color: #e0e0e0;
-    border-bottom: 2px solid #0078d4;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #cbd5e1;
+    border-bottom: 2px solid rgba(148, 163, 184, 0.2);
 }
 
 [data-theme="dark"] .contractor-table tbody tr:nth-child(odd) {
-    background-color: #2d2d30;
+    background: rgba(51, 65, 85, 0.3);
 }
 
 [data-theme="dark"] .contractor-table tbody tr:nth-child(even) {
-    background-color: #252526;
+    background: rgba(30, 41, 59, 0.5);
 }
 
 [data-theme="dark"] .contractor-table tbody tr:hover {
-    background-color: #3e3e42;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
 }
 
 [data-theme="dark"] .no-records {
-    background-color: #333333;
-    border-left: 4px solid #0078d4;
-    color: #e0e0e0;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.8) 100%);
+    border-left: 4px solid #3b82f6;
+    color: #cbd5e1;
 }
 
 [data-theme="dark"] .project-details-section {
-    background-color: #2d2d30;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.8) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 [data-theme="dark"] .project-info-row {
-    border-bottom: 1px solid #444444;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+[data-theme="dark"] .project-info-row:hover {
+    background: rgba(102, 126, 234, 0.05);
 }
 
 [data-theme="dark"] .project-info-label {
-    color: #cccccc;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .project-info-value {
+    color: #94a3b8;
 }
 
 [data-theme="dark"] .btn-outline-primary {
-    color: #3a96dd;
-    border-color: #3a96dd;
+    color: #667eea;
+    border-color: #667eea;
+    background: rgba(30, 41, 59, 0.5);
 }
 
 [data-theme="dark"] .btn-outline-primary:hover {
-    background-color: #3a96dd;
-    color: #252526;
+    background: #667eea;
+    color: #1e293b;
 }
 
 [data-theme="dark"] .btn-outline-secondary {
-    color: #cccccc;
-    border-color: #666666;
+    color: #94a3b8;
+    border-color: rgba(148, 163, 184, 0.3);
+    background: rgba(30, 41, 59, 0.5);
 }
 
 [data-theme="dark"] .btn-outline-secondary:hover {
-    background-color: #666666;
-    color: #e0e0e0;
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
 }
 
-[data-theme="dark"] .badge {
-    border: 1px solid transparent;
-}
-
-/* Make status badges more visible in dark mode */
-[data-theme="dark"] .badge-urgent {
-    background-color: #d13438;
-    color: white;
-}
-
-[data-theme="dark"] .badge-hold {
-    background-color: #ffb900;
-    color: #333;
-}
-
-[data-theme="dark"] .badge-ongoing {
-    background-color: #0078d4;
-    color: white;
-}
-
-/* Card body in dark mode */
 [data-theme="dark"] .card-body {
-    background-color: #252526;
-    color: #e0e0e0;
+    background: rgba(30, 41, 59, 0.6);
+    color: #f1f5f9;
 }
 
-/* Text colors in dark mode */
+/* Enhanced text colors for dark mode */
 [data-theme="dark"] .text-muted {
-    color: #a0a0a0 !important;
+    color: #94a3b8 !important;
 }
 
 [data-theme="dark"] .text-primary {
-    color: #3a96dd !important;
+    color: #667eea !important;
 }
 
 [data-theme="dark"] .text-dark {
-    color: #e0e0e0 !important;
+    color: #f1f5f9 !important;
+}
+
+/* Modern project details section - Compact */
+.project-details-section {
+    background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.project-info-row {
+    display: flex;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.75rem 0;
+    transition: all 0.2s ease;
+}
+
+.project-info-row:hover {
+    background: rgba(102, 126, 234, 0.02);
+    border-radius: 6px;
+    margin: 0 -0.375rem;
+    padding: 0.75rem 0.375rem;
+}
+
+.project-info-row:last-child {
+    border-bottom: none;
+}
+
+.project-info-label {
+    flex: 0 0 30%;
+    font-weight: 700;
+    color: #374151;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.project-info-value {
+    flex: 0 0 70%;
+    color: #6b7280;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+/* Modern Details Page Styles */
+
+/* Stat Cards */
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.stat-content h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #374151;
+    line-height: 1.2;
+}
+
+.stat-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Location Cards */
+.location-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 10px;
+    padding: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.location-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.location-address p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.location-address .btn {
+    font-size: 0.8rem;
+    padding: 0.375rem 0.75rem;
+}
+
+/* Modern Button Group */
+.btn-group-modern {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn-group-modern .btn {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.btn-group-modern .btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Breadcrumb Styling */
+.breadcrumb-item a {
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-item a:hover {
+    color: white !important;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Enhanced Project Info Rows */
+.project-info-row .project-info-label i {
+    color: #667eea;
+    width: 16px;
+}
+
+.project-info-row code {
+    font-size: 0.8rem;
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* Icon Utilities */
+.icon-primary {
+    color: var(--primary);
+}
+
+.icon-white {
+    color: white;
+}
+
+.icon-muted {
+    color: var(--secondary);
+}
+
+.icon-lg {
+    font-size: 1.25rem;
+}
+
+.icon-xl {
+    font-size: 1.5rem;
+}
+
+/* Enhanced Button Icons */
+.btn i {
+    transition: var(--transition);
+}
+
+.btn:hover i {
+    transform: scale(1.1);
+}
+
+.btn-outline-primary i,
+.btn-primary i {
+    vertical-align: middle;
+}
+
+/* Search Form Icon Enhancements */
+.contractor-search .btn i {
+    margin-right: 0.375rem;
+    font-size: 0.875rem;
+}
+
+.contractor-search .btn-primary i {
+    color: white;
+}
+
+.contractor-search .btn-secondary i {
+    color: white;
+}
+
+/* Table Action Buttons */
+.contractor-table .btn-sm i {
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+}
+
+/* Responsive Icon Adjustments */
+@media (max-width: 768px) {
+    .contractor-header .bi-building {
+        font-size: 1.125rem;
+        margin-right: 0.5rem;
+    }
+    
+    .contractor-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .contractor-header .btn-outline-primary {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .contractor-header .bi-building {
+        font-size: 1rem;
+        margin-right: 0.375rem;
+    }
+    
+    .contractor-header h1 {
+        font-size: 1.25rem;
+    }
+    
+    .contractor-header .btn-outline-primary i {
+        margin-right: 0.25rem;
+    }
+}
+
+/* Contractor List Styles */
+.contractor-list-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.contractor-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+}
+
+.contractor-list-item:hover {
+    background: var(--light);
+    border-color: var(--primary);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+    color: inherit;
+}
+
+.contractor-item-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.contractor-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.contractor-details h6 {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.25rem;
+}
+
+.contractor-details small {
+    color: var(--secondary);
+    font-size: 0.8rem;
+}
+
+.contractor-chevron {
+    color: var(--secondary);
+    font-size: 1.125rem;
+    transition: var(--transition);
+}
+
+.contractor-list-item:hover .contractor-chevron {
+    color: var(--primary);
+    transform: translateX(4px);
+}
+
+/* Empty State */
+.empty-state {
+    padding: 2rem;
+}
+
+.empty-state i {
+    opacity: 0.5;
+}
+
+.empty-state h5 {
+    font-weight: 600;
+}
+
+/* Dark Theme for Contractor List */
+[data-theme="dark"] .contractor-list-item {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(148, 163, 184, 0.1);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .contractor-list-item:hover {
+    background: rgba(51, 65, 85, 0.8);
+    border-color: rgba(102, 126, 234, 0.5);
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .contractor-details h6 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .contractor-details small {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .contractor-chevron {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .contractor-list-item:hover .contractor-chevron {
+    color: var(--primary);
+}
+
+[data-theme="dark"] .empty-state h5,
+[data-theme="dark"] .empty-state p {
+    color: #94a3b8;
+}
+
+/* Responsive Contractor List */
+@media (max-width: 768px) {
+    .contractor-list-item {
+        padding: 0.875rem 1rem;
+    }
+    
+    .contractor-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 0.875rem;
+    }
+    
+    .contractor-item-content {
+        gap: 0.75rem;
+    }
+    
+    .contractor-details h6 {
+        font-size: 0.95rem;
+    }
+    
+    .contractor-details small {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .contractor-list-item {
+        padding: 0.75rem;
+    }
+    
+    .contractor-list-item:hover {
+        transform: translateX(2px);
+    }
+    
+    .contractor-list-item:hover .contractor-chevron {
+        transform: translateX(2px);
+    }
+    
+    .contractor-header .btn-outline-primary {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Loading state for dynamic content */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
+
+[data-theme="dark"] .loading-shimmer {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Modern scrollbar */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #667eea 100%);
+}
+
+[data-theme="dark"] .table-responsive::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+[data-theme="dark"] .table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+}
+
+/* Enhanced focus states for accessibility */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Modern icon styling */
+.bi {
+    vertical-align: -0.125em;
+}
+
+.contractor-header .bi {
+    font-size: 1.25em;
+}
+
+/* Smooth page transitions */
+.container-fluid {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none;
+    }
+    
+    .container-fluid {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .contractor-table th, 
+    .contractor-table td {
+        padding: 0.5rem;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .contractor-header {
+        background: #000 !important;
+        color: #fff !important;
+        border: 2px solid #fff !important;
+    }
+    
+    .contractor-card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn-outline-primary {
+        border-width: 2px !important;
+    }
+}
+
+/* Reduced motion preference support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+    
+    .contractor-card:hover {
+        transform: none !important;
+    }
+    
+    .btn:hover {
+        transform: none !important;
+    }
 }
