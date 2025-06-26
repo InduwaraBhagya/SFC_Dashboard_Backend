@@ -12,6 +12,7 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
+    [Route("SurveyTasks")]
     public class SurveyTasksController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -28,27 +29,25 @@ namespace SFCDashboard.Controllers
             _logger = logger;
         }
 
-        // GET: SurveyTasks/Details/5
-        public async Task<IActionResult> Details(int id)
+        // GET: SurveyTasks/Details/{peNumber}
+        [HttpGet("Details/{peNumber}")]
+        public async Task<IActionResult> Details(string peNumber)
         {
-            // First check if the task exists at all
-            var taskExists = await _context.PETasks.AnyAsync(t => t.Id == id);
-            if (!taskExists)
+            if (string.IsNullOrEmpty(peNumber))
             {
-                return Content($"Task with ID {id} does not exist in database");
+                return BadRequest("PE Number is required");
             }
 
-            // Then check if it matches the filter condition
-            var taskMatchesFilter = await _context.PETasks.AnyAsync(t => t.Id == id && t.Task == "SURVEY FIBER ROUTE");
-            if (!taskMatchesFilter)
+            // First check if the task exists at all
+            var taskExists = await _context.PETasks.AnyAsync(t => t.PENumber == peNumber);
+            if (!taskExists)
             {
-                var actualTask = await _context.PETasks.FirstOrDefaultAsync(t => t.Id == id);
-                return Content($"Task with ID {id} exists but Task value is '{actualTask?.Task ?? "null"}' instead of 'SURVEY FIBER ROUTE'");
+                return Content($"Task with PE Number {peNumber} does not exist in database");
             }
 
             var task = await _context.PETasks
                 .Include(t => t.PlannedEvent)
-                .FirstOrDefaultAsync(t => t.Id == id && t.Task == "SURVEY FIBER ROUTE");
+                .FirstOrDefaultAsync(t => t.PENumber == peNumber && t.Task == "SURVEY FIBER ROUTE");
 
             if (task == null)
             {
@@ -57,7 +56,7 @@ namespace SFCDashboard.Controllers
 
             var activities = await _context.SurveyTaskActivities
                 .Include(a => a.User)
-                .Where(a => a.PETaskId == id)
+                .Where(a => a.PETaskId == task.Id)
                 .OrderByDescending(a => a.CreatedAt)
                 .ToListAsync();
 
@@ -67,7 +66,7 @@ namespace SFCDashboard.Controllers
                 .Include(b => b.SubCategory)
                 .Include(b => b.UDName)
                 .Include(b => b.CreatedBy)
-                .Where(b => b.TaskId == id)
+                .Where(b => b.TaskId == task.Id)
                 .OrderBy(b => b.CategoryId)
                 .ThenBy(b => b.SubCategoryId)
                 .ToListAsync();
@@ -89,7 +88,7 @@ namespace SFCDashboard.Controllers
 
             // Check if BOQ has been submitted before
             var boqSubmission = await _context.SurveyTaskActivities
-                .Where(a => a.PETaskId == id && a.Description.Contains("Submitted BOQ with total amount"))
+                .Where(a => a.PETaskId == task.Id && a.Description.Contains("Submitted BOQ with total amount"))
                 .OrderByDescending(a => a.CreatedAt)
                 .FirstOrDefaultAsync();
                 
@@ -125,7 +124,7 @@ namespace SFCDashboard.Controllers
             {
                 Task = task,
                 Activities = activities,
-                NewActivity = new SurveyTaskActivityViewModel { TaskId = task.Id },
+                NewActivity = new SurveyTaskActivityViewModel { TaskId = task.Id, PENumber = task.PENumber },
                 BOQItems = boqItems
             };
 
@@ -133,7 +132,7 @@ namespace SFCDashboard.Controllers
         }
 
         // POST: SurveyTasks/AddActivity
-        [HttpPost]
+        [HttpPost("AddActivity")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddActivity(SurveyTaskActivityViewModel model)
         {
@@ -175,7 +174,7 @@ namespace SFCDashboard.Controllers
             if (currentUser == null)
             {
                 ModelState.AddModelError("", "User not authenticated or not found.");
-                return RedirectToAction(nameof(Details), new { id = model.TaskId });
+                return RedirectToAction(nameof(Details), new { peNumber = model.PENumber });
             }
 
             // Create the activity entity with non-null values
@@ -219,7 +218,7 @@ namespace SFCDashboard.Controllers
                 {
                     _logger.LogError(ex, "Error uploading file for survey task activity");
                     ModelState.AddModelError("", "Error uploading file. Please try again.");
-                    return RedirectToAction(nameof(Details), new { id = model.TaskId });
+                    return RedirectToAction(nameof(Details), new { peNumber = model.PENumber });
                 }
             }
 
@@ -228,10 +227,11 @@ namespace SFCDashboard.Controllers
             await _context.SaveChangesAsync();
 
             // Redirect back to the details page to show the newly added activity
-            return RedirectToAction(nameof(Details), new { id = model.TaskId });
+            return RedirectToAction(nameof(Details), new { peNumber = model.PENumber });
         }
 
-        // GET: SurveyTasks/DownloadFile/5
+        // GET: SurveyTasks/DownloadFile/{id}
+        [HttpGet("DownloadFile/{id:int}")]
         public async Task<IActionResult> DownloadFile(int? id)
         {
             if (id == null)
@@ -260,10 +260,10 @@ namespace SFCDashboard.Controllers
             return File(fileBytes, "application/octet-stream", activity.FileName);
         }
 
-        // POST: BOQ/SubmitBoqTotal
-        [HttpPost]
+        // POST: SurveyTasks/SubmitBoqTotal
+        [HttpPost("SubmitBoqTotal")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SubmitBoqTotal(int taskId, decimal totalAmount)
+        public async Task<IActionResult> SubmitBoqTotal(int taskId, string peNumber, decimal totalAmount)
         {
             try
             {
@@ -330,8 +330,78 @@ namespace SFCDashboard.Controllers
             }
         }
 
-        // GET: BOQ/GetBOQDetails/5
-        [HttpGet]
+        // POST: SurveyTasks/SubmitBoqTotalByPE
+        [HttpPost("SubmitBoqTotalByPE")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitBoqTotalByPE(string peNumber, decimal totalAmount)
+        {
+            try
+            {
+                _logger.LogInformation($"SubmitBoqTotalByPE called for PE Number: {peNumber}, Total: {totalAmount}");
+                
+                // Find the task by PE number
+                var task = await _context.PETasks
+                    .FirstOrDefaultAsync(t => t.PENumber == peNumber && t.Task == "SURVEY FIBER ROUTE");
+                    
+                if (task == null)
+                {
+                    _logger.LogWarning($"Task not found for PE Number: {peNumber}");
+                    return Json(new { success = false, message = "Task not found" });
+                }
+                
+                // Get the current user
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    _logger.LogWarning("User not authenticated or not found");
+                    return Json(new { success = false, message = "User not authenticated or not found" });
+                }
+                
+                // Verify that there are actually BOQ items for this task
+                var boqCount = await _context.BOQs.CountAsync(b => b.TaskId == task.Id);
+                if (boqCount == 0)
+                {
+                    _logger.LogWarning($"No BOQ items found for PE Number: {peNumber}");
+                    return Json(new { success = false, message = "No BOQ items found for this task" });
+                }
+                
+                // Recalculate the total amount to verify it matches what was sent
+                var calculatedTotal = await _context.BOQs
+                    .Where(b => b.TaskId == task.Id)
+                    .SumAsync(b => b.Amount);
+                    
+                if (Math.Abs(calculatedTotal - totalAmount) > 0.01m)
+                {
+                    _logger.LogWarning($"Total amount mismatch: Sent={totalAmount}, Calculated={calculatedTotal}");
+                    return Json(new { success = false, message = "Total amount mismatch. Please refresh the page and try again." });
+                }
+                
+                // Create activity record for the BOQ submission
+                var activity = new SurveyTaskActivity
+                {
+                    PETaskId = task.Id,
+                    Description = $"Submitted BOQ with total amount of {totalAmount:N2}",
+                    FilePath = "",
+                    FileName = "",
+                    SystemUserId = currentUser.Id,
+                    CreatedAt = DateTime.Now
+                };
+                
+                _context.SurveyTaskActivities.Add(activity);
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation($"BOQ submission successful for PE Number: {peNumber}");
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error submitting BOQ total for PE Number: {peNumber}");
+                return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
+            }
+        }
+
+        // GET: SurveyTasks/GetBOQDetails/{id}
+        [HttpGet("GetBOQDetails/{id:int}")]
         public async Task<IActionResult> GetBOQDetails(int id)
         {
             try
@@ -373,8 +443,56 @@ namespace SFCDashboard.Controllers
             }
         }
 
-        // POST: BOQ/EditInline
-        [HttpPost]
+        // GET: SurveyTasks/GetBOQDetailsByPE/{peNumber}
+        [HttpGet("GetBOQDetailsByPE/{peNumber}")]
+        public async Task<IActionResult> GetBOQDetailsByPE(string peNumber)
+        {
+            try
+            {
+                // First find the task by PE number
+                var task = await _context.PETasks
+                    .FirstOrDefaultAsync(t => t.PENumber == peNumber && t.Task == "SURVEY FIBER ROUTE");
+
+                if (task == null)
+                {
+                    return NotFound();
+                }
+
+                // Get BOQ items for this task
+                var boqItems = await _context.BOQs
+                    .Include(b => b.Category)
+                    .Include(b => b.SubCategory)
+                    .Include(b => b.UDName)
+                    .Where(b => b.TaskId == task.Id)
+                    .Select(boq => new
+                    {
+                        id = boq.Id,
+                        taskId = boq.TaskId,
+                        categoryId = boq.CategoryId,
+                        subCategoryId = boq.SubCategoryId,
+                        udNameId = boq.UDNameId,
+                        quantity = boq.Quantity,
+                        unit = boq.Unit,
+                        unitPrice = boq.UnitPrice,
+                        adjustedUnitPrice = boq.AdjustedUnitPrice,
+                        amount = boq.Amount,
+                        categoryName = boq.Category!.Category,
+                        subCategoryName = boq.SubCategory!.SubCategory,
+                        udNameValue = boq.UDName!.Name
+                    })
+                    .ToListAsync();
+
+                return Json(boqItems);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting BOQ details for PE number: {peNumber}");
+                return Json(null);
+            }
+        }
+
+        // POST: SurveyTasks/EditInline
+        [HttpPost("EditInline")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditInline([FromForm] BOQViewModel model)
         {
@@ -461,7 +579,101 @@ namespace SFCDashboard.Controllers
             }
         }
 
-        private async Task<SystemUser> GetCurrentUserAsync()
+        // POST: SurveyTasks/EditInlineByPE
+        [HttpPost("EditInlineByPE")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditInlineByPE([FromForm] BOQViewModel model, string peNumber)
+        {
+            try
+            {
+                _logger.LogInformation($"EditInlineByPE received for BOQ ID: {model.Id}, PE Number: {peNumber}");
+                
+                // Find the BOQ entry
+                var boq = await _context.BOQs
+                    .Include(b => b.Task)
+                    .Include(b => b.Task.PlannedEvent)
+                    .FirstOrDefaultAsync(b => b.Id == model.Id);
+
+                if (boq == null)
+                {
+                    return Json(new { success = false, message = "BOQ item not found." });
+                }
+
+                // Verify that the BOQ belongs to the correct PE
+                if (boq.Task.PENumber != peNumber)
+                {
+                    return Json(new { success = false, message = "BOQ item does not belong to the specified PE." });
+                }
+
+                // Validate inputs
+                if (model.UDNameId <= 0 || model.CategoryId <= 0 || model.SubCategoryId <= 0 || model.Quantity <= 0)
+                {
+                    return Json(new { success = false, message = "Please fill in all required fields." });
+                }
+
+                // Get the UDName for unit and price info
+                var udName = await _context.UDNames.FindAsync(model.UDNameId);
+                if (udName == null)
+                {
+                    return Json(new { success = false, message = "Selected UD Name not found." });
+                }
+                
+                // Get the weight for the RTOM
+                var rtom = boq.Task.PlannedEvent?.Rtom ?? "DEFAULT";
+                var weight = await _context.RTOMWeights
+                    .FirstOrDefaultAsync(w => w.RTOM == rtom);
+
+                decimal weightValue = weight?.Weight ?? 1.0m;
+                
+                // Calculate with null-safety
+                decimal unitPrice = udName.UnitPrice;
+                decimal quantity = model.Quantity;
+                decimal adjustedUnitPrice = unitPrice * weightValue;
+                decimal amount = adjustedUnitPrice * quantity;
+                
+                // Get the current user
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    return Json(new { success = false, message = "User not authenticated or not found." });
+                }
+
+                // Update the BOQ entity
+                boq.CategoryId = model.CategoryId;
+                boq.SubCategoryId = model.SubCategoryId;
+                boq.UDNameId = model.UDNameId;
+                boq.Quantity = quantity;
+                boq.Unit = udName.Unit ?? "each";
+                boq.UnitPrice = unitPrice;
+                boq.AdjustedUnitPrice = adjustedUnitPrice;
+                boq.Amount = amount;
+
+                // Add activity to SurveyTaskActivities
+                var activity = new SurveyTaskActivity
+                {
+                    PETaskId = boq.TaskId,
+                    Description = $"Updated BOQ item #{boq.Id}",
+                    SystemUserId = currentUser.Id,
+                    CreatedAt = DateTime.Now,
+                    FilePath = "",
+                    FileName = ""
+                };
+
+                _context.SurveyTaskActivities.Add(activity);
+                
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation($"BOQ item #{boq.Id} updated successfully for PE Number: {peNumber}");
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating BOQ item ID: {model.Id} for PE Number: {peNumber}");
+                return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
+            }
+        }
+
+        private async Task<SystemUser?> GetCurrentUserAsync()
         {
             if (!User.Identity?.IsAuthenticated == true)
             {

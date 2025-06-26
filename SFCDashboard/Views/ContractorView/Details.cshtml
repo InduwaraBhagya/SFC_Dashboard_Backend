@@ -1,0 +1,92 @@
+@model SFCDashboard.Models.PlannedEvent
+
+@{
+    ViewData["Title"] = "Project Details";
+    var contractorName = ViewBag.ContractorName;
+    var tasks = ViewBag.PETasks as List<SFCDashboard.Models.PETask>;
+}
+
+<div class="container-fluid mt-4">
+    <div class="contractor-header d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-clipboard-data text-primary me-3"></i>Project Details
+        </h1>
+        <a href="@ViewBag.ReturnUrl" class="btn btn-outline-primary no-print">
+            <i class="bi bi-arrow-left"></i> Back to Projects
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="contractor-card mb-4">
+                <div class="contractor-card-header">
+                    <h5 class="mb-0">PE #@Model.PeNumber Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="project-details-section">
+                        <div class="project-info-row">
+                            <div class="project-info-label">PE Number:</div>
+                            <div class="project-info-value">@Model.PeNumber</div>
+                        </div>
+                        <div class="project-info-row">
+                            <div class="project-info-label">RTOM Description:</div>
+                            <div class="project-info-value">@Model.RtomDescription</div>
+                        </div>
+                        <div class="project-info-row">
+                            <div class="project-info-label">Job Reference:</div>
+                            <div class="project-info-value">@Model.JobReference</div>
+                        </div>
+                        <div class="project-info-row">
+                            <div class="project-info-label">Customer:</div>
+                            <div class="project-info-value">@Model.Customer</div>
+                        </div>
+                        <div class="project-info-row">
+                            <div class="project-info-label">Customer Type:</div>
+                            <div class="project-info-value">@Model.CusType</div>
+                        </div>
+                        <div class="project-info-row">
+                            <div class="project-info-label">Status:</div>
+                            <div class="project-info-value">
+                                @if (Model.PEStatus?.ToLower() == "urgent")
+                                {
+                                    <span class="badge badge-urgent">URGENT</span>
+                                }
+                                else if (Model.IsHold == true)
+                                {
+                                    <span class="badge badge-hold">ON HOLD</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-ongoing">ONGOING</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="contractor-card mb-4">
+                <div class="contractor-card-header">
+                    <h5 class="mb-0">Locations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="project-details-section">
+                        <div class="project-info-row">
+                            <div class="project-info-label">Location A:</div>
+                            <div class="project-info-value">@Model.LocationAAddress</div>
+                        </div>
+                        <div class="project-info-row">
+                            <div class="project-info-label">Location B:</div>
+                            <div class="project-info-value">@Model.LocationBAddress</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/css/contractor.css" />
+}

@@ -14,20 +14,20 @@ namespace SFCDashboard.Models
         public int PETaskId { get; set; }
 
         [ForeignKey("PETaskId")]
-        public PETask PETask { get; set; }
+        public PETask? PETask { get; set; }
 
         [Required]
-        public string Description { get; set; }
+        public required string Description { get; set; }
 
-        public string FilePath { get; set; }
+        public required string FilePath { get; set; }
 
-        public string FileName { get; set; }
+        public required string FileName { get; set; }
 
         [Required]
         public int SystemUserId { get; set; }
 
         [ForeignKey("SystemUserId")]
-        public SystemUser User { get; set; }
+        public SystemUser? User { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -37,19 +37,21 @@ namespace SFCDashboard.Models
     {
         public int TaskId { get; set; }
         
-        [Required(ErrorMessage = "Please enter a description")]
-        public string Description { get; set; }
+        public string PENumber { get; set; } = string.Empty;
         
-        public IFormFile File { get; set; }
+        [Required(ErrorMessage = "Please enter a description")]
+        public string Description { get; set; } = string.Empty;
+        
+        public IFormFile? File { get; set; }
     }
 
     public class SurveyTaskViewModel
     {
-        public PETask Task { get; set; }
+        public required PETask Task { get; set; }
         
-        public List<SurveyTaskActivity> Activities { get; set; }
+        public required List<SurveyTaskActivity> Activities { get; set; }
         
-        public SurveyTaskActivityViewModel NewActivity { get; set; }
+        public required SurveyTaskActivityViewModel NewActivity { get; set; }
         
         public List<BOQ> BOQItems { get; set; } = new List<BOQ>();
     }
