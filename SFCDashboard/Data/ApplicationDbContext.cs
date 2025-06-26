@@ -36,6 +36,12 @@ namespace SFCDashboard.Data
         public DbSet<Escalation> Escalations { get; set; }
         public DbSet<SurveyTaskActivity> SurveyTaskActivities { get; set; } // <-- Added DbSet for SurveyTaskActivity
 
+        public DbSet<UDCategory> UDCategories { get; set; }
+        public DbSet<UDSubCategory> UDSubCategories { get; set; }
+        public DbSet<UDName> UDNames { get; set; }
+        public DbSet<RTOMWeight> RTOMWeights { get; set; }
+        public DbSet<BOQ> BOQs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

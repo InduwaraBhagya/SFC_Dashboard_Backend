@@ -1,0 +1,196 @@
+@model SFCDashboard.Models.BOQViewModel
+@{
+    ViewData["Title"] = "Edit BOQ Item";
+}
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">Edit BOQ Item</h5>
+                <a href="@Url.Action("Details", "SurveyTasks", new { id = ViewBag.TaskId })" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Survey Task
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="TaskId" />
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="CategoryId" class="control-label">UD Category</label>
+                            <select asp-for="CategoryId" class="form-control" id="categorySelect" required>
+                                <option value="">-- Select Category --</option>
+                                @foreach (var category in ViewBag.Categories)
+                                {
+                                    <option value="@category.Id" selected="@(category.Id == Model.CategoryId)">@category.Category</option>
+                                }
+                            </select>
+                            <span asp-validation-for="CategoryId" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="SubCategoryId" class="control-label">UD Sub-Category</label>
+                            <select asp-for="SubCategoryId" class="form-control" id="subCategorySelect" required>
+                                <option value="">-- Select Sub-Category --</option>
+                                @foreach (var subCategory in ViewBag.SubCategories)
+                                {
+                                    <option value="@subCategory.Id" selected="@(subCategory.Id == Model.SubCategoryId)">@subCategory.SubCategory</option>
+                                }
+                            </select>
+                            <span asp-validation-for="SubCategoryId" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="UDNameId" class="control-label">UD Name</label>
+                            <select asp-for="UDNameId" class="form-control" id="udNameSelect" required>
+                                <option value="">-- Select UD Name --</option>
+                                @foreach (var udName in ViewBag.UDNames)
+                                {
+                                    <option value="@udName.Id" selected="@(udName.Id == Model.UDNameId)">@udName.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="UDNameId" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="Quantity" class="control-label">Quantity</label>
+                            <input asp-for="Quantity" class="form-control" type="number" step="0.01" min="0.01" required />
+                            <span asp-validation-for="Quantity" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="Unit" class="control-label">Unit</label>
+                            <input asp-for="Unit" class="form-control" required />
+                            <span asp-validation-for="Unit" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label asp-for="UnitPrice" class="control-label">Unit Price</label>
+                            <input asp-for="UnitPrice" class="form-control" type="number" step="0.01" min="0.01" required id="unitPrice" />
+                            <span asp-validation-for="UnitPrice" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="control-label">RTOM</label>
+                            <input class="form-control" value="@ViewBag.RTOM" readonly />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="AdjustedUnitPrice" class="control-label">Adjusted Unit Price (Calculated)</label>
+                            <input asp-for="AdjustedUnitPrice" class="form-control" readonly id="adjustedUnitPrice" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label asp-for="Amount" class="control-label">Amount (Calculated)</label>
+                            <input asp-for="Amount" class="form-control" readonly id="amount" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Update BOQ Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function () {
+            // Handle category change
+            $('#categorySelect').change(function () {
+                var categoryId = $(this).val();
+                if (categoryId) {
+                    // Load sub-categories
+                    $('#subCategorySelect').empty().append('<option value="">-- Select Sub-Category --</option>');
+                    $('#udNameSelect').empty().append('<option value="">-- Select UD Name --</option>');
+                    
+                    // AJAX call to fetch sub-categories
+                    $.ajax({
+                        url: '@Url.Action("GetSubCategories", "BOQ")/' + categoryId,
+                        type: 'GET',
+                        success: function (data) {
+                            $.each(data, function (i, item) {
+                                $('#subCategorySelect').append($('<option>', {
+                                    value: item.id,
+                                    text: item.name
+                                }));
+                            });
+                        }
+                    });
+                } else {
+                    $('#subCategorySelect').empty().append('<option value="">-- Select Sub-Category --</option>');
+                    $('#udNameSelect').empty().append('<option value="">-- Select UD Name --</option>');
+                }
+            });
+            
+            // Handle sub-category change
+            $('#subCategorySelect').change(function () {
+                var categoryId = $('#categorySelect').val();
+                var subCategoryId = $(this).val();
+                if (subCategoryId) {
+                    // Load UD names
+                    $('#udNameSelect').empty().append('<option value="">-- Select UD Name --</option>');
+                    
+                    // AJAX call to fetch UD names
+                    $.ajax({
+                        url: '@Url.Action("GetUDNames", "BOQ")',
+                        type: 'GET',
+                        data: { categoryId: categoryId, subCategoryId: subCategoryId },
+                        success: function (data) {
+                            $.each(data, function (i, item) {
+                                $('#udNameSelect').append($('<option>', {
+                                    value: item.id,
+                                    text: item.name
+                                }));
+                            });
+                        }
+                    });
+                } else {
+                    $('#udNameSelect').empty().append('<option value="">-- Select UD Name --</option>');
+                }
+            });
+            
+            // Calculate adjusted price and amount
+            function calculatePrices() {
+                var unitPrice = parseFloat($('#unitPrice').val()) || 0;
+                var quantity = parseFloat($('#Quantity').val()) || 0;
+                
+                // In a real implementation, you'd fetch this from the server based on RTOM
+                var weight = 1.2;
+                
+                var adjustedUnitPrice = unitPrice * weight;
+                var amount = adjustedUnitPrice * quantity;
+                
+                $('#adjustedUnitPrice').val(adjustedUnitPrice.toFixed(2));
+                $('#amount').val(amount.toFixed(2));
+            }
+            
+            // Recalculate when unit price or quantity changes
+            $('#unitPrice, #Quantity').on('input', calculatePrices);
+        });
+    </script>
+}

@@ -205,10 +205,14 @@
     <div class="card mb-4">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h2 class="mb-0">PE Record Details</h2>
-            <div>
-                <a href="@(ViewBag.ReturnUrl ?? Url.Action("InProgressRecords"))" class="btn btn-sm btn-light">
+            <div>                
+                <button type="button" class="btn btn-primary" onclick="location.href='@Url.Action("Details", "SurveyTasks", new { peNumber = Model.PeNumber })'">
+                    <i class="fas fa-info-circle"></i> View BOQ Details
+                </button>                                    
+        
+                <button type="button" class="btn btn-sm btn-light" onclick="javascript:history.back()">
                     <i class="bi bi-arrow-left"></i> Back to List
-                </a>
+                </button>
             </div>
         </div>
         <div class="card-body">
@@ -263,7 +267,7 @@
                                             "pending" => "badge bg-secondary",
                                             _ => "badge bg-secondary"
                                         };
-                                        displayStatus = Model.PEStatus?.ToLower() == "ongoing" ? "Regular" : Model.PEStatus;
+                                        displayStatus = Model.PEStatus?.ToLower() == "ongoing" ? "Regular" : (Model.PEStatus ?? "Unknown");
                                     }
                                 }
                                 <span class="@statusClass">@displayStatus</span>
@@ -353,7 +357,7 @@
                             <strong>Estimated Time for "Draw Fiber":</strong>
                             @foreach (var t in drawFiberTasksWithEstimate)
                             {
-                                <span class="badge bg-primary mx-1">@t.EstimatedTime.Value.ToString("yyyy-MM-dd")</span>
+                                <span class="badge bg-primary mx-1">@(t.EstimatedTime?.ToString("yyyy-MM-dd") ?? "N/A")</span>
                                 <button type="button" 
                                         class="btn btn-sm btn-primary ms-2"
                                         onclick="showEstimationHistory(@t.Id)"
@@ -455,8 +459,8 @@
                                     }
                                 }
                                 <span class="@(task.IsOLAViolate ? "badge bg-danger" : taskStatusClass)">
-    @(task.IsOLAViolate ? "ONGOING" : task.TaskStatus)
-</span>
+                                    @(task.IsOLAViolate ? "ONGOING" : task.TaskStatus)
+                                </span>
                             </td>
                             <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
                             <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
@@ -470,37 +474,29 @@
                                     ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd")
                                     : "-")
                             </td>
-                            <td>
-                                <!-- For a specific task with ID -->
-                                @if (task.Task?.Trim().ToUpper() == "SURVEY FIBER ROUTE")
-                                {
-                                    <button type="button" class="btn btn-primary" onclick="location.href='@Url.Action("Details", "SurveyTasks", new { id = task.Id })'">
-                                        <i class="fas fa-info-circle"></i> View Details
-                                    </button>
-                                }
-
-                                @if (task.UrgentRequested && !task.IsUrgent)
-                                        {
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="bi bi-hourglass-split"></i> Awaiting Approval
-                                            </span>
-                                        }
-                                        else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
-                                        {
-                                            @if (ViewData["CanMakeTasksUrgent"] as bool? == true)
-                                            {
-                                                <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post" 
-                                                      onsubmit="return confirmUrgent(event, '@task.Task')">
-                                                    <input type="hidden" name="id" value="@task.Id" />
-                                                    <button type="submit" class="btn btn-warning btn-sm w-100">
-                                                        <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
-                                                    </button>
-                                                </form>
-                                            }
-                                        }
-                                    </td>
-                                </tr>
+                            @if (ViewData["CanMakeTasksUrgent"] as bool? == true)
+                            {
+                                <td>
+                                    @if (task.UrgentRequested && !task.IsUrgent)
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-hourglass-split"></i> Awaiting Approval
+                                        </span>
+                                    }
+                                    else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
+                                    {
+                                        <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post" 
+                                              onsubmit="return confirmUrgent(event, '@task.Task')">
+                                            <input type="hidden" name="id" value="@task.Id" />
+                                            <button type="submit" class="btn btn-warning btn-sm w-100">
+                                                <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
                             }
+                        </tr>
+                    }
                         </tbody>
                     </table>
                 </div>
