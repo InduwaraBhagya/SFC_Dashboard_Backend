@@ -50,9 +50,11 @@ namespace SFCDashboard.Controllers
             try
             {
                 _logger.LogInformation($"GetUDNames called with categoryId: {categoryId}, subCategoryId: {subCategoryId}");
-        
+
                 var udNames = await _context.UDNames
-                    .Where(u => u.CategoryId == categoryId && u.SubCategoryId == subCategoryId)
+                    .Where(u => u.CategoryId == categoryId && 
+                                u.SubCategoryId == subCategoryId && 
+                                u.IsActive) // Only get active UD Names
                     .Select(u => new { 
                         id = u.Id, 
                         name = u.Name,
@@ -60,9 +62,9 @@ namespace SFCDashboard.Controllers
                         unitPrice = u.UnitPrice 
                     })
                     .ToListAsync();
-        
-                _logger.LogInformation($"Found {udNames.Count} UD names for categoryId: {categoryId}, subCategoryId: {subCategoryId}");
-        
+
+                _logger.LogInformation($"Found {udNames.Count} active UD names for categoryId: {categoryId}, subCategoryId: {subCategoryId}");
+
                 return Json(udNames);
             }
             catch (Exception ex)
