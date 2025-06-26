@@ -1543,6 +1543,10 @@ namespace SFCDashboard.Controllers
             }
             plannedEvent.PECreatedDate = DateTime.Now; // Set the current date/time
 
+            var currentUser = await _context.Users.FirstOrDefaultAsync(u => u.ServiceId == User.Identity.Name);
+            plannedEvent.UrgentRequestedById = currentUser?.Id; // Add this property to your model/table if not present
+            plannedEvent.UrgentRequestedByName = currentUser?.Name; // Or just store the name if you prefer
+
             // Update PE status and priority based on the selected reason
             switch (urgentReason)
             {
