@@ -32,8 +32,9 @@
         <div class="col-md-4">
             <!-- Categories Management -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-folder me-2"></i>Categories</h5>
+                    <small class="badge bg-light text-dark">@Model.Categories.Count items</small>
                 </div>
                 <div class="card-body">
                     <form asp-action="AddCategory" method="post" class="mb-4">
@@ -50,9 +51,10 @@
                         </div>
                     </form>
                     
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead class="table-light">
+                    <!-- Add scrollable container for categories -->
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
                                 <tr>
                                     <th>ID</th>
                                     <th>Category Name</th>
@@ -66,6 +68,14 @@
                                         <td>@category.Category</td>
                                     </tr>
                                 }
+                                @if (!Model.Categories.Any())
+                                {
+                                    <tr>
+                                        <td colspan="2" class="text-center py-3 text-muted">
+                                            <i class="bi bi-info-circle me-2"></i>No categories found
+                                        </td>
+                                    </tr>
+                                }
                             </tbody>
                         </table>
                     </div>
@@ -74,8 +84,9 @@
             
             <!-- Sub-Categories Management -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Sub-Categories</h5>
+                    <small class="badge bg-light text-dark">@Model.SubCategories.Count items</small>
                 </div>
                 <div class="card-body">
                     <form asp-action="AddSubCategory" method="post" class="mb-4">
@@ -103,9 +114,10 @@
                         </div>
                     </form>
                     
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead class="table-light">
+                    <!-- Add scrollable container for subcategories -->
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
                                 <tr>
                                     <th>ID</th>
                                     <th>Sub-Category</th>
@@ -121,6 +133,14 @@
                                         <td>@subCategory.Category.Category</td>
                                     </tr>
                                 }
+                                @if (!Model.SubCategories.Any())
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-center py-3 text-muted">
+                                            <i class="bi bi-info-circle me-2"></i>No sub-categories found
+                                        </td>
+                                    </tr>
+                                }
                             </tbody>
                         </table>
                     </div>
@@ -133,7 +153,10 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-success text-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-tags me-2"></i>UD Names</h5>
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0 me-3"><i class="bi bi-tags me-2"></i>UD Names</h5>
+                            <small class="badge bg-light text-dark">@Model.UDNames.Count items</small>
+                        </div>
                         <div>
                             <form asp-action="Index" method="get" class="d-flex">
                                 <div class="input-group">
@@ -197,9 +220,10 @@
                         </div>
                     </form>
                     
-                    <div class="table-responsive">
-                        <table class="table table-hover" id="udNamesTable">
-                            <thead class="table-light">
+                    <!-- Add scrollable container for UD names -->
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-hover mb-0" id="udNamesTable">
+                            <thead class="table-light sticky-top">
                                 <tr>
                                     <th>Name</th>
                                     <th>Category</th>
@@ -667,6 +691,141 @@
 
                 form.addClass('was-validated');
             });
+            
+            // Add scroll to top buttons for each scrollable section
+            $('.table-responsive').each(function() {
+                var container = $(this);
+                var scrollToTopBtn = $('<button class="btn btn-sm btn-outline-secondary scroll-to-top-btn" style="position: absolute; right: 10px; bottom: 10px; display: none; z-index: 20;"><i class="bi bi-arrow-up"></i></button>');
+                
+                container.parent().css('position', 'relative').append(scrollToTopBtn);
+                
+                // Show/hide scroll to top button
+                container.on('scroll', function() {
+                    if (container.scrollTop() > 100) {
+                        scrollToTopBtn.fadeIn();
+                    } else {
+                        scrollToTopBtn.fadeOut();
+                    }
+                });
+                
+                // Scroll to top functionality
+                scrollToTopBtn.on('click', function() {
+                    container.animate({scrollTop: 0}, 300);
+                });
+            });
+            
+            // Add keyboard navigation for scrollable tables
+            $('.table-responsive').on('keydown', function(e) {
+                var container = $(this);
+                var scrollAmount = 50;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        if (e.ctrlKey) {
+                            e.preventDefault();
+                            container.scrollTop(container.scrollTop() - scrollAmount);
+                        }
+                        break;
+                    case 'ArrowDown':
+                        if (e.ctrlKey) {
+                            e.preventDefault();
+                            container.scrollTop(container.scrollTop() + scrollAmount);
+                        }
+                        break;
+                    case 'Home':
+                        if (e.ctrlKey) {
+                            e.preventDefault();
+                            container.scrollTop(0);
+                        }
+                        break;
+                    case 'End':
+                        if (e.ctrlKey) {
+                            e.preventDefault();
+                            container.scrollTop(container[0].scrollHeight);
+                        }
+                        break;
+                }
+            });
+            
+            // Add smooth scrolling when jumping to specific items
+            function scrollToItem(tableId, itemId) {
+                var table = $('#' + tableId);
+                var row = table.find('tr[data-id="' + itemId + '"]');
+                
+                if (row.length) {
+                    var container = table.closest('.table-responsive');
+                    var rowTop = row.position().top;
+                    var containerHeight = container.height();
+                    var scrollTop = container.scrollTop();
+                    
+                    // Calculate target scroll position to center the row
+                    var targetScroll = scrollTop + rowTop - (containerHeight / 2);
+                    
+                    container.animate({
+                        scrollTop: targetScroll
+                    }, 500);
+                    
+                    // Highlight the row briefly
+                    row.addClass('table-warning');
+                    setTimeout(function() {
+                        row.removeClass('table-warning');
+                    }, 2000);
+                }
+            }
+            
+            // Your existing JavaScript code goes here...
         });
     </script>
+}
+
+@section Styles {
+    <style>
+        /* Custom scrollbar styling */
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Ensure sticky headers work properly */
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        /* Add some visual indication when scrolling */
+        .table-responsive {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+        
+        /* Smooth scrolling */
+        .table-responsive {
+            scroll-behavior: smooth;
+        }
+        
+        /* Row hover effect even in scrollable container */
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.075);
+        }
+        
+        /* Better spacing for action buttons */
+        .btn-group-sm > .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    </style>
 }
