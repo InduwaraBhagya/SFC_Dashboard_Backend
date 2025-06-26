@@ -232,5 +232,94 @@ namespace SFCDashboard.Controllers
                 
             return Json(subCategories);
         }
+
+        // Add this new method to get UD name details for editing
+        [HttpGet]
+        public async Task<IActionResult> GetUDNameDetails(int id)
+        {
+            var udName = await _context.UDNames
+                .Include(u => u.Category)
+                .Include(u => u.SubCategory)
+                .FirstOrDefaultAsync(u => u.Id == id);
+            
+            if (udName == null)
+            {
+                return NotFound();
+            }
+            
+            var result = new {
+                id = udName.Id,
+                categoryId = udName.CategoryId,
+                subCategoryId = udName.SubCategoryId,
+                name = udName.Name,
+                unit = udName.Unit,
+                unitPrice = udName.UnitPrice,
+                isActive = udName.IsActive
+            };
+            
+            return Json(result);
+        }
+
+        // Add this new method to update UD name
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateUDName(UDName updateModel)
+        {
+            if (updateModel.Id <= 0)
+            {
+                return BadRequest("Invalid ID");
+            }
+            
+            var udName = await _context.UDNames.FindAsync(updateModel.Id);
+            
+            if (udName == null)
+            {
+                return NotFound();
+            }
+            
+            if (updateModel.CategoryId > 0 && updateModel.SubCategoryId > 0 && 
+                !string.IsNullOrEmpty(updateModel.Name) && !string.IsNullOrEmpty(updateModel.Unit))
+            {
+                try
+                {
+                    // Update properties
+                    udName.CategoryId = updateModel.CategoryId;
+                    udName.SubCategoryId = updateModel.SubCategoryId;
+                    udName.Name = updateModel.Name;
+                    udName.Unit = updateModel.Unit;
+                    udName.UnitPrice = updateModel.UnitPrice;
+                    udName.IsActive = updateModel.IsActive;
+                    
+                    _context.Update(udName);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"UD Name '{udName.Name}' updated successfully");
+                    
+                    return Json(new { success = true, message = $"UD Name '{udName.Name}' updated successfully" });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error updating UD name");
+                    return Json(new { success = false, message = "Unable to update UD name. " + ex.Message });
+                }
+            }
+            else
+            {
+                var errors = new List<string>();
+                
+                if (updateModel.CategoryId <= 0)
+                    errors.Add("Please select a category");
+                
+                if (updateModel.SubCategoryId <= 0)
+                    errors.Add("Please select a sub-category");
+                
+                if (string.IsNullOrEmpty(updateModel.Name))
+                    errors.Add("UD name is required");
+                
+                if (string.IsNullOrEmpty(updateModel.Unit))
+                    errors.Add("Unit is required");
+                
+                return Json(new { success = false, message = "Validation failed", errors = errors });
+            }
+        }
     }
 }
