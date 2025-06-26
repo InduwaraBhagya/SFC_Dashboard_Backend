@@ -15,15 +15,16 @@
                     @if (TempData["Message"] != null)
                     {
                         <div class="alert @(TempData["Message"].ToString().StartsWith("Error") ? "alert-danger" : "alert-success") 
-                             alert-dismissible fade show" role="alert">
-                            <i class="@(TempData["Message"].ToString().StartsWith("Error") ? "fas fa-exclamation-circle" : "fas fa-check-circle") me-2"></i>
+                                 alert-dismissible fade show" role="alert">
+                            <i
+                                class="@(TempData["Message"].ToString().StartsWith("Error") ? "fas fa-exclamation-circle" : "fas fa-check-circle") me-2"></i>
                             @TempData["Message"]
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     }
 
-                    <form method="post" enctype="multipart/form-data" asp-action="ImportExcel" 
-                          class="needs-validation" novalidate>
+                    <form method="post" enctype="multipart/form-data" asp-action="ImportExcel" class="needs-validation"
+                        novalidate>
                         <div class="upload-container mb-4 p-4 border-2 border-dashed rounded-3 text-center">
                             <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                             <div class="mb-3">
@@ -31,8 +32,8 @@
                                     <span class="h5 mb-2 d-block">Drop your Excel file here or click to browse</span>
                                     <span class="text-muted small">Supported format: .xlsx</span>
                                 </label>
-                                <input type="file" class="form-control d-none" id="excelFile" 
-                                       name="excelFile" accept=".xlsx" required />
+                                <input type="file" class="form-control d-none" id="excelFile" name="excelFile"
+                                    accept=".xlsx" required />
                             </div>
                             <div id="selected-file" class="text-muted mt-2"></div>
                         </div>
@@ -57,17 +58,19 @@
                                 <i class="fas fa-exclamation-triangle fa-lg me-3 mt-1"></i>
                                 <div>
                                     <h6 class="alert-heading mb-1">Warning</h6>
-                                    <p class="mb-0 small">Uploading a new Excel file will replace ALL existing records in the database.</p>
+                                    <p class="mb-0 small">Uploading a new Excel file will replace ALL existing records
+                                        in the database.</p>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary px-4 py-2" id="uploadBtn" disabled>
                                 <i class="fas fa-upload me-2"></i>Upload and Import
                             </button>
-                            <a asp-action="Index" class="btn btn-outline-secondary px-4 py-2">
-                                <i class="fas fa-arrow-left me-2"></i>Back to List
+                            <a asp-controller="PlannedEvents" asp-action="Index"
+                                class="btn btn-outline-secondary px-4 py-2">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
                             </a>
                         </div>
                     </form>
@@ -82,17 +85,17 @@
         .border-dashed {
             border-style: dashed !important;
         }
-        
+
         .upload-container {
             transition: all 0.3s ease;
             cursor: pointer;
         }
-        
+
         .upload-container:hover {
             background-color: rgba(var(--bs-primary-rgb), 0.05);
             border-color: var(--bs-primary) !important;
         }
-        
+
         .dragging {
             background-color: rgba(var(--bs-primary-rgb), 0.1);
             border-color: var(--bs-primary) !important;
@@ -102,7 +105,7 @@
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const uploadContainer = document.querySelector('.upload-container');
             const fileInput = document.getElementById('excelFile');
             const selectedFile = document.getElementById('selected-file');
@@ -110,12 +113,12 @@
 
             uploadContainer.addEventListener('click', () => fileInput.click());
 
-            fileInput.addEventListener('change', function() {
+            fileInput.addEventListener('change', function () {
                 if (this.files.length > 0) {
                     selectedFile.innerHTML = `
-                        <div class="alert alert-success p-2 mb-0">
-                            <i class="fas fa-file-excel me-2"></i>${this.files[0].name}
-                        </div>`;
+                            <div class="alert alert-success p-2 mb-0">
+                                <i class="fas fa-file-excel me-2"></i>${this.files[0].name}
+                            </div>`;
                     uploadBtn.disabled = false;
                 }
             });
@@ -141,22 +144,22 @@
                 });
             });
 
-            uploadContainer.addEventListener('drop', function(e) {
+            uploadContainer.addEventListener('drop', function (e) {
                 const dt = e.dataTransfer;
                 const files = dt.files;
 
                 if (files.length > 0 && files[0].name.endsWith('.xlsx')) {
                     fileInput.files = files;
                     selectedFile.innerHTML = `
-                        <div class="alert alert-success p-2 mb-0">
-                            <i class="fas fa-file-excel me-2"></i>${files[0].name}
-                        </div>`;
+                            <div class="alert alert-success p-2 mb-0">
+                                <i class="fas fa-file-excel me-2"></i>${files[0].name}
+                            </div>`;
                     uploadBtn.disabled = false;
                 } else {
                     selectedFile.innerHTML = `
-                        <div class="alert alert-danger p-2 mb-0">
-                            <i class="fas fa-exclamation-circle me-2"></i>Please select a valid Excel file (.xlsx)
-                        </div>`;
+                            <div class="alert alert-danger p-2 mb-0">
+                                <i class="fas fa-exclamation-circle me-2"></i>Please select a valid Excel file (.xlsx)
+                            </div>`;
                     uploadBtn.disabled = true;
                 }
             });
