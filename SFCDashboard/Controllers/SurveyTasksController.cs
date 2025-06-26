@@ -96,6 +96,31 @@ namespace SFCDashboard.Controllers
             ViewBag.BOQSubmitted = boqSubmission != null;
             ViewBag.BOQSubmissionDate = boqSubmission?.CreatedAt;
 
+            // Get the region from the task and find matching RTOM weight
+            string region = task.PlannedEvent.Region?.Trim();
+            if (!string.IsNullOrEmpty(region))
+            {
+                var rtomWeight = await _context.RTOMWeights
+                    .FirstOrDefaultAsync(r => r.RTOM.ToLower() == region.ToLower());
+                    
+                if (rtomWeight != null)
+                {
+                    ViewBag.RTOMWeight = rtomWeight.Weight;
+                    ViewBag.RTOMName = rtomWeight.RTOM;
+                }
+                else
+                {
+                    // Default to 1.0 if no matching RTOM weight is found
+                    ViewBag.RTOMWeight = 1.0m;
+                    ViewBag.RTOMName = "Default";
+                }
+            }
+            else
+            {
+                ViewBag.RTOMWeight = 1.0m;
+                ViewBag.RTOMName = "Default";
+            }
+            
             var viewModel = new SurveyTaskViewModel
             {
                 Task = task,
