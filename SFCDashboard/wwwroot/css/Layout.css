@@ -542,3 +542,100 @@ header {
 .dropdown.show .dropdown-menu {
   z-index: 9999 !important;
 }
+
+/* Modal z-index fixes */
+.modal {
+  z-index: 10000 !important;
+}
+
+.modal-backdrop {
+  display: none !important;
+}
+
+.modal-backdrop.show {
+  display: none !important;
+}
+
+.modal-backdrop.fade {
+  display: none !important;
+}
+
+/* Replace backdrop with modal background */
+.modal {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+.modal.show {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Ensure modal closes when clicking outside */
+.modal-dialog {
+  pointer-events: none;
+}
+
+.modal-content {
+  pointer-events: auto;
+}
+
+.modal-header,
+.modal-body,
+.modal-footer {
+  z-index: 10003 !important;
+  position: relative;
+}
+
+.modal-footer .btn,
+.modal-body .btn,
+.modal-header .btn {
+  z-index: 10004 !important;
+  position: relative;
+  pointer-events: auto !important;
+}
+
+/* Ensure modal buttons are clickable */
+.modal .btn {
+  z-index: 10005 !important;
+  position: relative !important;
+  pointer-events: auto !important;
+}
+
+/* Additional modal interaction fixes */
+.modal-content * {
+  pointer-events: auto !important;
+}
+
+.modal-backdrop.show {
+  z-index: 9998 !important;
+}
+
+/* Form elements in modals */
+.modal .form-control,
+.modal .form-select,
+.modal .form-check-input,
+.modal input,
+.modal select,
+.modal textarea,
+.modal button {
+  z-index: 10005 !important;
+  position: relative;
+  pointer-events: auto !important;
+}
+
+/* Links and interactive elements in modals */
+.modal a,
+.modal .dropdown-toggle,
+.modal .nav-link {
+  z-index: 10005 !important;
+  position: relative;
+  pointer-events: auto !important;
+}
+
+/* Dark mode modal fixes */
+[data-theme="dark"] .modal-content {
+  z-index: 10002 !important;
+}
+
+[data-theme="dark"] .modal-backdrop {
+  z-index: 9998 !important;
+}
