@@ -1,6 +1,219 @@
 ﻿/* Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
 for details on configuring this project to bundle and minify static web assets. */
 
+/* Modern Navbar Styles */
+.navbar {
+  background: linear-gradient(135deg, #091238 40%, #007633 100%) !important;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.75rem 0;
+  min-height: 70px;
+  position: relative;
+  z-index: 1030;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #ffffff !important;
+  transition: all 0.3s ease;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-brand:hover {
+  transform: translateY(-1px);
+  color: #f8f9fa !important;
+}
+
+.navbar-brand .logo-img {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover .logo-img {
+  transform: scale(1.05);
+}
+
+.navbar-nav .nav-link {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500;
+  padding: 0.75rem 1rem !important;
+  margin: 0 0.25rem;
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.navbar-nav .nav-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.navbar-nav .nav-link:hover::before {
+  left: 100%;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-nav .nav-link.active {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-nav .nav-link i {
+  margin-right: 0.5rem;
+  font-size: 1.1em;
+  transition: transform 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover i {
+  transform: scale(1.1);
+}
+
+/* Search form styling */
+.navbar .input-group {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.navbar .form-select,
+.navbar .form-control {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  color: #495057 !important;
+  font-weight: 500;
+}
+
+.navbar .form-select:focus,
+.navbar .form-control:focus {
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+}
+
+.navbar .btn-primary {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.navbar .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+}
+
+/* Dark mode toggle improvements */
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 30px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 2px;
+  bottom: 2px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+input:checked + .slider:before {
+  transform: translateX(30px);
+  background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
+}
+
+/* Navbar toggler improvements */
+.navbar-toggler {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.navbar-toggler:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-toggler-icon {
+  filter: brightness(0) invert(1);
+}
+
+/* Responsive improvements */
+@media (max-width: 991.98px) {
+  .navbar {
+    padding: 0.5rem 0;
+  }
+  
+  .navbar-nav {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin-top: 1rem;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+  }
+  
+  .navbar-nav .nav-link {
+    margin: 0.25rem 0;
+  }
+}
+
 a.navbar-brand {
   white-space: normal;
   text-align: center;
@@ -13,14 +226,28 @@ a {
 
 .btn-primary {
   color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
 .nav-pills .nav-link.active, .nav-pills .show > .nav-link {
   color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
 }
 
 .border-top {
@@ -45,4 +272,273 @@ button.accept-policy {
   width: 100%;
   white-space: nowrap;
   line-height: 60px;
+}
+
+/* Additional modern enhancements */
+.card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.25);
+}
+
+/* Modern form controls */
+.form-control, .form-select {
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+  background-color: #ffffff;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Modern table styling */
+.table {
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.table thead th {
+  background: #3a4a9c;
+  color: rgba(255, 255, 255, 0.929);
+  font-weight: 600;
+  border: none;
+  padding: 1rem;
+}
+
+/* Modern alert styling */
+.alert {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* Loading animations */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.loading-shimmer {
+  animation: shimmer 1.2s ease-in-out infinite;
+  background: linear-gradient(to right, #eff1f3 4%, #e2e2e2 25%, #eff1f3 36%);
+  background-size: 1000px 100%;
+}
+
+/* Modern dropdown menu styling */
+.modern-dropdown {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.2);
+  padding: 0.75rem 0;
+  margin-top: 0.5rem;
+  min-width: 280px;
+  max-width: 320px;
+  width: auto;
+  animation: dropdownFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9999 !important;
+  position: absolute !important;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.modern-dropdown .dropdown-item {
+  padding: 0.75rem 1.5rem;
+  color: #495057;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
+  margin: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 1rem);
+  box-sizing: border-box;
+}
+
+.modern-dropdown .dropdown-item:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.modern-dropdown .dropdown-item i {
+  font-size: 1.1em;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+}
+
+.modern-dropdown .dropdown-item:hover i {
+  transform: scale(1.1);
+}
+
+.modern-dropdown .dropdown-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modern-dropdown .dropdown-divider {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin: 0.75rem 1rem;
+}
+
+/* Admin dropdown toggle styling */
+.navbar-nav .dropdown-toggle::after {
+  margin-left: 0.5rem;
+  border-top: 0.3em solid;
+  border-right: 0.3em solid transparent;
+  border-left: 0.3em solid transparent;
+  transition: transform 0.3s ease;
+}
+
+.navbar-nav .dropdown.show .dropdown-toggle::after {
+  transform: rotate(180deg);
+}
+
+/* Dark mode dropdown styles */
+[data-theme="dark"] .modern-dropdown {
+  background: rgba(45, 45, 45, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .modern-dropdown .dropdown-item {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .modern-dropdown .dropdown-item:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+[data-theme="dark"] .modern-dropdown .dropdown-divider {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Animation for dropdown */
+@keyframes dropdownFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive dropdown improvements */
+@media (max-width: 991.98px) {
+  .modern-dropdown {
+    position: static;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 12px;
+    margin: 0.5rem 0;
+    box-shadow: none;
+    backdrop-filter: blur(10px);
+    min-width: 100%;
+    max-width: 100%;
+    white-space: normal;
+  }
+  
+  [data-theme="dark"] .modern-dropdown {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .modern-dropdown .dropdown-item {
+    margin: 0.25rem 0.5rem;
+    white-space: normal;
+    padding: 0.75rem 1rem;
+  }
+  
+  .modern-dropdown .dropdown-item:hover {
+    transform: translateX(2px);
+  }
+}
+
+/* Dropdown positioning and z-index fixes */
+.navbar .dropdown {
+  position: relative;
+  z-index: 1040;
+}
+
+.navbar .dropdown-menu {
+  z-index: 9999 !important;
+  position: absolute !important;
+}
+
+/* Ensure dropdown is always on top */
+.dropdown-menu.show {
+  z-index: 9999 !important;
+  position: absolute !important;
+}
+
+/* Container and content z-index management */
+.container {
+  position: relative;
+  z-index: 1;
+}
+
+main[role="main"] {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure all page content stays below navbar dropdowns */
+header {
+  position: relative;
+  z-index: 1030;
+}
+
+/* Bootstrap dropdown override for better z-index handling */
+.dropdown-menu {
+  z-index: 9999 !important;
+}
+
+.dropdown.show .dropdown-menu {
+  z-index: 9999 !important;
 }
