@@ -25,7 +25,7 @@ namespace SFCDashboard.Services
             _context = context;
             _logger = logger;
             _cache = cache;
-        }
+        }        public async Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int take = 20, int? year = null)
 
         public async Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int take = 20)
         {
@@ -40,14 +40,14 @@ namespace SFCDashboard.Services
                     .Include(t => t.PlannedEvent)
                     .AsNoTracking() // Don't track entities since we're just reading
                     .Where(t => t.TaskStatus != "COMPLETED" && 
-                               (t.PlannedEvent == null || t.PlannedEvent.IsHold == false));
-        
-                // Filter PEs directly in the database query
-                query = query.Where(t => t.PlannedEvent == null || 
-                                       (t.PlannedEvent.PeNumber != null && 
-                                        t.PlannedEvent.PeNumber.StartsWith("PE") &&
+                               (t.PlannedEvent == null || t.PlannedEvent.IsHold == false));                // Apply year filter based on PE number if specified
+                if (year.HasValue)
+                {
+                    query = query.Where(t => t.PlannedEvent != null && 
+                                           !string.IsNullOrEmpty(t.PlannedEvent.PeNumber) &&
                                         t.PlannedEvent.PeNumber.Length >= 6 &&
-                                        EF.Functions.Like(t.PlannedEvent.PeNumber, "PE2[0-9][2-9][0-9]%")));
+                                           t.PlannedEvent.PeNumber.Substring(2, 4) == year.Value.ToString());
+                }
         
                 // Apply workgroup filter if specified
                 if (workgroupId.HasValue)
@@ -299,6 +299,90 @@ namespace SFCDashboard.Services
                 return "Due tomorrow";
             else
                 return $"Due in {daysUntilDue} days";
+        }
+
+        /// <summary>
+        /// Extracts the year from a PE number string (e.g., "PE2023120507554" -> 2023)
+        /// </summary>
+        /// <param name="peNumber">The PE number string</param>
+        /// <returns>The year if extraction is successful, null otherwise</returns>
+        private static int? ExtractYearFromPeNumber(string peNumber)
+        {
+            if (string.IsNullOrEmpty(peNumber) || peNumber.Length < 6)
+                return null;
+
+            var yearStr = peNumber.Substring(2, 4);
+            return int.TryParse(yearStr, out var year) ? year : null;
+        }        public async Task<List<int>> GetAvailableYearsAsync()
+        {
+            try
+            {                var peNumbers = await _context.PlannedEvents
+                    .AsNoTracking()
+                    .Where(pe => !string.IsNullOrEmpty(pe.PeNumber) && pe.PeNumber.Length >= 6)
+                    .Select(pe => pe.PeNumber!)
+                    .Distinct()
+                    .ToListAsync();
+                  var validYears = peNumbers
+                    .Where(peNumber => !string.IsNullOrEmpty(peNumber))
+                    .Select(peNumber => ExtractYearFromPeNumber(peNumber))
+                    .Where(year => year.HasValue)
+                    .Select(year => year!.Value)
+                    .Distinct()
+                    .OrderByDescending(year => year)
+                    .ToList();
+                
+                return validYears.Any() ? validYears : new List<int> { DateTime.Now.Year };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available years from PE numbers");
+                return new List<int> { DateTime.Now.Year };
+            }
+        }public async Task<Dictionary<int, int>> GetTaskCountByYearAsync(int? workgroupId = null)
+        {
+            try
+            {
+                var query = _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .AsNoTracking()
+                    .Where(t => t.TaskStatus != "COMPLETED" && 
+                               (t.PlannedEvent == null || t.PlannedEvent.IsHold == false) &&
+                               t.PlannedEvent != null && 
+                               !string.IsNullOrEmpty(t.PlannedEvent.PeNumber) &&
+                               t.PlannedEvent.PeNumber.Length >= 6);
+
+                // Apply workgroup filter if specified
+                if (workgroupId.HasValue)
+                {
+                    var workgroup = await GetWorkgroupAsync(workgroupId.Value);
+                    if (workgroup != null)
+                    {
+                        query = query.Where(t => t.TaskWorkGroup != null && 
+                                               t.TaskWorkGroup.Contains(workgroup.Name));
+                    }
+                }                var tasksWithPeNumbers = await query
+                    .Select(t => new { 
+                        Task = t, 
+                        PeNumber = t.PlannedEvent != null ? t.PlannedEvent.PeNumber : null
+                    })
+                    .ToListAsync();
+
+                var yearCounts = tasksWithPeNumbers
+                    .Where(t => !string.IsNullOrEmpty(t.PeNumber))
+                    .Select(t => new { Task = t.Task, Year = ExtractYearFromPeNumber(t.PeNumber!) })
+                    .Where(t => t.Year.HasValue)
+                    .GroupBy(t => t.Year!.Value)
+                    .ToDictionary(g => g.Key, g => g.Count())
+                    .OrderByDescending(kvp => kvp.Key)
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+                return yearCounts;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting task count by year from PE numbers");
+                return new Dictionary<int, int>();
+            }
         }
     }
 

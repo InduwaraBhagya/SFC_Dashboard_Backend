@@ -78,16 +78,23 @@
                                 </option>
                             }
                         </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label for="take" class="form-label">Task Count</label>
-                        <select id="take" name="take" class="form-select">
-                            <option value="10">10</option>
-                            <option value="20" selected>20</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
+                    </div>                    <div class="col-md-3">
+                        <label for="year" class="form-label">Filter by Year</label>
+                        <select id="year" name="year" class="form-select">
+                            <option value="">All Years</option>
+                            @if (ViewData["AvailableYears"] != null)
+                            {
+                                @foreach (var year in (IEnumerable<int>)ViewData["AvailableYears"])
+                                {
+                                    var taskCountsByYear = ViewData["TaskCountsByYear"] as Dictionary<int, int>;
+                                    var taskCount = taskCountsByYear?.GetValueOrDefault(year, 0) ?? 0;
+                                    <option value="@year" 
+                                        selected="@(ViewData["SelectedYear"]?.ToString() == year.ToString())">
+                                        @year (@taskCount tasks)
+                                    </option>
+                                }
+                            }
+                        </select>                    </div>
                     <div class="col-md-6">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-filter"></i> Apply Filter
@@ -95,6 +102,47 @@
                         <a asp-action="TaskQueue" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle"></i> Clear
                         </a>
+                        @if (ViewData["SelectedYear"] != null)
+                        {
+                            <span class="badge bg-info ms-2">Year: @ViewData["SelectedYear"]</span>
+                        }
+                    </div>
+                </form>
+            </div>        </div>
+    }
+    else
+    {
+        <!-- Year Filter for users who can't switch workgroups -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form asp-action="TaskQueue" method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">                        <label for="year" class="form-label">Filter by Year</label>
+                        <select id="year" name="year" class="form-select">
+                            <option value="">All Years</option>
+                            @if (ViewData["AvailableYears"] != null)
+                            {
+                                @foreach (var year in (IEnumerable<int>)ViewData["AvailableYears"])
+                                {
+                                    var taskCountsByYear = ViewData["TaskCountsByYear"] as Dictionary<int, int>;
+                                    var taskCount = taskCountsByYear?.GetValueOrDefault(year, 0) ?? 0;
+                                    <option value="@year" 
+                                        selected="@(ViewData["SelectedYear"]?.ToString() == year.ToString())">
+                                        @year (@taskCount tasks)
+                                    </option>
+                                }
+                            }
+                        </select>                    </div>
+                    <div class="col-md-8">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter"></i> Apply Filter
+                        </button>
+                        <a asp-action="TaskQueue" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                        @if (ViewData["SelectedYear"] != null)
+                        {
+                            <span class="badge bg-info ms-2">Year: @ViewData["SelectedYear"]</span>
+                        }
                     </div>
                 </form>
             </div>
@@ -254,4 +302,48 @@
         }
     </script>
     
+}
+
+@section Styles {
+    <style>
+        .service-required-date {
+            font-weight: 600;
+            color: #0d6efd;
+        }
+        
+        .service-status {
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+        
+        .service-overdue {
+            background-color: #f8d7da;
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
+        
+        .service-due-today {
+            background-color: #fff3cd;
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
+        
+        .service-upcoming {
+            background-color: #d1ecf1;
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
+        
+        /* Responsive table improvements */
+        @@media (max-width: 768px) {
+            .table th, .table td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.85rem;
+            }
+            
+            .badge {
+                font-size: 0.65rem;
+            }
+        }
+    </style>
 }
