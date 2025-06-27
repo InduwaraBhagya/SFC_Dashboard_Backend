@@ -649,49 +649,22 @@ footer .container {
 
 /* Notification styles */
 .notification-btn {
-    background: none;
+    background: transparent;
     border: none;
-    padding: 0.375rem;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.3s ease;
 }
 
 .notification-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .notification-badge {
-    transform: translate(-50%, -50%) !important;
     font-size: 0.65rem;
     padding: 0.25rem 0.4rem;
-}
-
-.notification-menu {
-    padding: 0;
-    border: none;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-[data-theme="dark"] .notification-menu {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-}
-
-[data-theme="dark"] .dropdown-header {
-    border-color: var(--border-color) !important;
-    color: var(--text-color);
-}
-
-[data-theme="dark"] .notification-item {
-    background-color: var(--card-bg) !important;
-    border-color: var(--border-color) !important;
-}
-
-[data-theme="dark"] .notification-item:hover {
-    background-color: var(--hover-bg) !important;
-}
-
-[data-theme="dark"] .notification-content {
-    color: var(--text-color) !important;
 }
 
 .notification-item {
@@ -700,13 +673,51 @@ footer .container {
 }
 
 .notification-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .notification-item.unread {
     background-color: rgba(13, 110, 253, 0.05);
     border-left: 3px solid #0d6efd;
+}
+
+.notification-title {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.notification-content {
+    font-size: 0.85rem;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+/* Compact notification bell styles */
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: transparent !important;
+}
+
+.reminder-item.unread {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+    border-left: 3px solid #0d6efd !important;
+}
+
+.reminder-item.read {
+    opacity: 0.7;
+}
+
+.reminder-item:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Modal styling */
+#reminderDetailsModal .modal-header {
+    border-bottom: 2px solid #ffc107;
+}
+
+#reminderDetailsModal .badge {
+    font-size: 0.75em;
 }
 
 /* Responsive improvements */
