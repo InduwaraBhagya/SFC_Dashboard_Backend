@@ -18,6 +18,8 @@
     : null;
 
     var isAdmin = currentUser?.UserRole?.HasPermission("Admin") == true;
+    var isHomePage = ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && 
+                     ViewContext.RouteData.Values["action"]?.ToString() == "Index";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -53,177 +55,184 @@
 </head>
 
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="Home"
-                    asp-action="Index">
-                    <img src="~/images/logo.png" alt="SFCDashboard" height="40" class="logo-img" />
-                </a>
+    @if (!isHomePage)
+    {
+        <header>
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="Home" asp-action="Index">
+                        <img src="~/images/logo.png" alt="SFCDashboard" height="40" class="logo-img" />
+                    </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="PlannedEvents" asp-action="Index">
-                                <i class="bi bi-speedometer2"></i> Dashboard
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="PlannedEvents" asp-action="Index">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
                             </a>
-                        </li>
-                        @if (isAdmin)
-                        {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="adminMenuDropdown" role="button"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-gear-fill me-1"></i> Admin Menu
-                                </a>
-                                <ul class="dropdown-menu modern-dropdown" aria-labelledby="adminMenuDropdown">
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-controller="WorkGroups" asp-action="Index">
-                                            <i class="bi bi-people-fill me-2"></i> <span>Add WorkGroup</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-controller="SystemUsers"
-                                            asp-action="Index">
-                                            <i class="bi bi-person-plus-fill me-2"></i> <span>Add User</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-controller="UserRoles" asp-action="Index">
-                                            <i class="bi bi-person-badge-fill me-2"></i> <span>Add Role</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-controller="PERecords"
-                                            asp-action="ImportExcel">
-                                            <i class="bi bi-file-earmark-arrow-up-fill me-2"></i> <span>Import Excel</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-controller="Project" asp-action="Index">
-                                            <i class="bi bi-folder-fill me-2"></i> <span>Projects</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-controller="Escalation" asp-action="Index">
-                                            <i class="bi bi-exclamation-triangle-fill me-2"></i> <span>Escalations</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-controller="ContractorView"
-                                            asp-action="ContractorRecords">
-                                            <i class="bi bi-building me-2"></i> <span>Contractor View</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-controller="NetworkEngineer"
-                                            asp-action="ImportExcel">
-                                            <i class="bi bi-person-lines-fill me-2"></i> <span>Network Engineers</span>
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
-                        }
+                            @if (isAdmin)
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="adminMenuDropdown" role="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear-fill me-1"></i> Admin Menu
+                                    </a>
+                                    <ul class="dropdown-menu modern-dropdown" aria-labelledby="adminMenuDropdown">
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="WorkGroups" asp-action="Index">
+                                                <i class="bi bi-people-fill me-2"></i> <span>Add WorkGroup</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="SystemUsers"
+                                                asp-action="Index">
+                                                <i class="bi bi-person-plus-fill me-2"></i> <span>Add User</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="UserRoles" asp-action="Index">
+                                                <i class="bi bi-person-badge-fill me-2"></i> <span>Add Role</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="PERecords"
+                                                asp-action="ImportExcel">
+                                                <i class="bi bi-file-earmark-arrow-up-fill me-2"></i> <span>Import Excel</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Project" asp-action="Index">
+                                                <i class="bi bi-folder-fill me-2"></i> <span>Projects</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Escalation" asp-action="Index">
+                                                <i class="bi bi-exclamation-triangle-fill me-2"></i> <span>Escalations</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="ContractorView"
+                                                asp-action="ContractorRecords">
+                                                <i class="bi bi-building me-2"></i> <span>Contractor View</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="NetworkEngineer"
+                                                asp-action="ImportExcel">
+                                                <i class="bi bi-person-lines-fill me-2"></i> <span>Network Engineers</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            }
 
-                    </ul>
-                    
-                    <form class="d-flex align-items-center me-3" method="get" asp-controller="PlannedEvents"
-                        asp-action="GlobalSearch" role="search" style="min-width:320px;">
-                        <div class="input-group">
-                            <select class="form-select" name="searchType" id="navbarSearchType"
-                                style="max-width: 140px;">
-                                <option value="peNumber" selected>PE Number</option>
-                                <option value="customer">Customer</option>
-                                <option value="jobReference">Job Reference</option>
-                                <option value="soNumber">SO Number</option>
-                            </select>
-                            <input class="form-control" type="search" name="peNumber" id="navbarSearchInput"
-                                placeholder="Search PE Number" aria-label="Search" />
-                            <button class="btn btn-primary" type="submit">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Dark Mode Toggle Button -->
-                    <div class="theme-switch-wrapper me-3">
-                        <label class="theme-switch" for="darkModeToggle">
-                            <input type="checkbox" id="darkModeToggle" />
-                            <div class="slider round">
-                                <i class="bi bi-moon-fill moon-icon"></i>
-                                <i class="bi bi-sun-fill sun-icon"></i>
+                        </ul>
+                        
+                        <form class="d-flex align-items-center me-3" method="get" asp-controller="PlannedEvents"
+                            asp-action="GlobalSearch" role="search" style="min-width:320px;">
+                            <div class="input-group">
+                                <select class="form-select" name="searchType" id="navbarSearchType"
+                                    style="max-width: 140px;">
+                                    <option value="peNumber" selected>PE Number</option>
+                                    <option value="customer">Customer</option>
+                                    <option value="jobReference">Job Reference</option>
+                                    <option value="soNumber">SO Number</option>
+                                </select>
+                                <input class="form-control" type="search" name="peNumber" id="navbarSearchInput"
+                                    placeholder="Search PE Number" aria-label="Search" />
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="bi bi-search"></i>
+                                </button>
                             </div>
-                        </label>
-                    </div>
+                        </form>
 
-                    <!-- Compact Reminders Notification Bell -->
-                    <div class="dropdown me-3">
-                        <button class="btn btn-outline-light position-relative" type="button" id="reminderDropdown"
-                            data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem;">
-                            <i class="bi bi-bell" style="font-size: 1.2rem;"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown" 
-                             style="width: 350px; max-height: 400px; overflow-y: auto;">
-                            <div class="dropdown-header bg-primary text-white p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">
-                                        <i class="bi bi-bell me-2"></i>Reminders
-                                    </h6>
-                                    <div>
-                                        <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead" title="Mark all as read">
-                                            <i class="bi bi-check-all"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                        </button>
+                        <!-- Dark Mode Toggle Button -->
+                        <div class="theme-switch-wrapper me-3">
+                            <label class="theme-switch" for="darkModeToggle">
+                                <input type="checkbox" id="darkModeToggle" />
+                                <div class="slider round">
+                                    <i class="bi bi-moon-fill moon-icon"></i>
+                                    <i class="bi bi-sun-fill sun-icon"></i>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Compact Reminders Notification Bell -->
+                        <div class="dropdown me-3">
+                            <button class="btn btn-outline-light position-relative" type="button" id="reminderDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem;">
+                                <i class="bi bi-bell" style="font-size: 1.2rem;"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                    id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown" 
+                                 style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <div class="dropdown-header bg-primary text-white p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-bell me-2"></i>Reminders
+                                        </h6>
+                                        <div>
+                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead" title="Mark all as read">
+                                                <i class="bi bi-check-all"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100 mt-2">
+                                        <button type="button" class="btn btn-outline-light active" data-filter="unread">Unread</button>
+                                        <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
                                     </div>
                                 </div>
-                                <div class="btn-group btn-group-sm w-100 mt-2">
-                                    <button type="button" class="btn btn-outline-light active" data-filter="unread">Unread</button>
-                                    <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
+                                <div id="reminderNotificationList" class="notification-list">
+                                    <!-- Reminders will be loaded here -->
                                 </div>
                             </div>
-                            <div id="reminderNotificationList" class="notification-list">
-                                <!-- Reminders will be loaded here -->
-                            </div>
                         </div>
+
+                        <span class="nav-link text-white" style="pointer-events:none;">
+                            @currentUser.Name
+                        </span>
+
+                        <partial name="_LoginPartial" />
                     </div>
-
-                    <span class="nav-link text-white" style="pointer-events:none;">
-                        @currentUser.Name
-                    </span>
-
-                    <partial name="_LoginPartial" />
                 </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container mt-4">
+            </nav>
+        </header>
+    }
+    
+    <div class="@(isHomePage ? "" : "container mt-4")">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
-    <footer class="bg-dark text-white mt-4">
-        <div class="container py-3">
-            <div class="row align-items-center">
-                <div class="col-md-6 d-flex align-items-center">
-                    <img src="~/images/logoRmv.png" alt="Footer Logo" height="30" class="me-2" />
-                    <p class="mb-0">&copy; 2025 - SFCDashboard</p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <a class="text-white" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    
+    @if (!isHomePage)
+    {
+        <footer class="bg-dark text-white mt-4">
+            <div class="container py-3">
+                <div class="row align-items-center">
+                    <div class="col-md-6 d-flex align-items-center">
+                        <img src="~/images/logoRmv.png" alt="Footer Logo" height="30" class="me-2" />
+                        <p class="mb-0">&copy; 2025 - SFCDashboard</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <a class="text-white" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </footer>
+        </footer>
+    }
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
