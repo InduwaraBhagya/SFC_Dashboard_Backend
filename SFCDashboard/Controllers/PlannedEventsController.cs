@@ -1668,6 +1668,7 @@ namespace SFCDashboard.Controllers
                 .OrderBy(w => w.Name)
                 .ToListAsync();
             ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
+            ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
 
             try
             {
@@ -1680,8 +1681,8 @@ namespace SFCDashboard.Controllers
 
                 // Base query for in-progress records
                 var query = _context.PlannedEvents
-                    .Where(p => (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") && 
-                               p.IsHold == false && 
+                    .Where(p => (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                               p.IsHold == false &&
                                !violatingPENumbers.Contains(p.PeNumber))
                     .AsNoTracking();
 
@@ -1695,7 +1696,7 @@ namespace SFCDashboard.Controllers
                 if (selectedWorkgroupNames.Any())
                 {
                     // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
                         name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
 
                     if (filterHasDrawFiberAccess)
