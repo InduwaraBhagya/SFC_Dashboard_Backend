@@ -1639,6 +1639,486 @@ namespace SFCDashboard.Controllers
             return View(pendingRequests);
         }
 
+        // GET: PlannedEvents/MultiWorkgroupInProgressView
+        public async Task<IActionResult> MultiWorkgroupInProgressView(List<int> workgroupIds, string searchType, 
+            string peNumber, string customer, string jobReference, string soNumber)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+
+            // Security check - if user has ViewAll or only one workgroup, redirect back to regular view
+            if (canViewAll || userWorkgroupIds.Count <= 1)
+            {
+                return RedirectToAction(nameof(InProgressRecords), new { workgroupId = workgroupIds?.FirstOrDefault() });
+            }
+
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                .ThenInclude(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+                .Include(u => u.UserWorkGroups)
+                .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+
+            ViewData["CanViewAll"] = canViewAll;
+            ViewData["UserWorkGroups"] = await _context.WorkGroups
+                .Where(w => userWorkgroupIds.Contains(w.Id))
+                .OrderBy(w => w.Name)
+                .ToListAsync();
+            ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
+
+            try
+            {
+                // Get PE numbers with OLA violation to exclude
+                var violatingPENumbers = await _context.PETasks
+                    .Where(t => t.IsOLAViolate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
+
+                // Base query for in-progress records
+                var query = _context.PlannedEvents
+                    .Where(p => (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") && 
+                               p.IsHold == false && 
+                               !violatingPENumbers.Contains(p.PeNumber))
+                    .AsNoTracking();
+
+                // Filter by selected workgroups or all user's workgroups if none selected
+                var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
+                var selectedWorkgroupNames = await _context.WorkGroups
+                    .Where(w => selectedWorkgroupIds.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                if (selectedWorkgroupNames.Any())
+                {
+                    // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                        name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                    if (filterHasDrawFiberAccess)
+                    {
+                        query = query.Where(p => p.TaskWg != null && (
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                            (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        ));
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+
+                    ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames);
+                }
+
+                // Apply search filters
+                ViewData["SearchType"] = searchType ?? "peNumber";
+                ViewData["PENumberFilter"] = peNumber?.Trim();
+                ViewData["CustomerFilter"] = customer?.Trim();
+                ViewData["JobReferenceFilter"] = jobReference?.Trim();
+                ViewData["SONumberFilter"] = soNumber?.Trim();
+
+                if (!string.IsNullOrEmpty(searchType))
+                {
+                    switch (searchType.ToLower())
+                    {
+                        case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
+                            query = query.Where(p => p.Customer != null && EF.Functions.Like(p.Customer, $"%{customer.Trim()}%"));
+                            break;
+                        case "jobreference" when !string.IsNullOrEmpty(jobReference?.Trim()):
+                            query = query.Where(p => p.JobReference != null && EF.Functions.Like(p.JobReference, $"%{jobReference.Trim()}%"));
+                            break;
+                        case "sonumber" when !string.IsNullOrEmpty(soNumber?.Trim()):
+                            query = query.Where(p => p.SoNumber != null && EF.Functions.Like(p.SoNumber, $"%{soNumber.Trim()}%"));
+                            break;
+                        default:
+                            if (!string.IsNullOrEmpty(peNumber?.Trim()))
+                                query = query.Where(p => p.PeNumber != null && EF.Functions.Like(p.PeNumber, $"%{peNumber.Trim()}%"));
+                            break;
+                    }
+                }
+
+                query = query.OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber);
+
+                // Get all records without pagination for table-based view
+                var allRecords = await query.ToListAsync();
+
+                return View(allRecords);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading multi-workgroup in-progress records");
+                return View(new List<PlannedEvent>());
+            }
+        }
+
+        // GET: PlannedEvents/MultiWorkgroupHoldView
+        public async Task<IActionResult> MultiWorkgroupHoldView(List<int> workgroupIds, string searchType, 
+            string peNumber, string customer, string jobReference, string soNumber)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+
+            // Security check - if user has ViewAll or only one workgroup, redirect back to regular view
+            if (canViewAll || userWorkgroupIds.Count <= 1)
+            {
+                return RedirectToAction(nameof(HoldRecords), new { workgroupId = workgroupIds?.FirstOrDefault() });
+            }
+
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                .ThenInclude(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+                .Include(u => u.UserWorkGroups)
+                .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+
+            ViewData["CanViewAll"] = canViewAll;
+            ViewData["UserWorkGroups"] = await _context.WorkGroups
+                .Where(w => userWorkgroupIds.Contains(w.Id))
+                .OrderBy(w => w.Name)
+                .ToListAsync();
+            ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
+
+            try
+            {
+                // Base query for hold records
+                var query = _context.PlannedEvents
+                    .Where(p => p.IsHold == true)
+                    .AsNoTracking();
+
+                // Filter by selected workgroups or all user's workgroups if none selected
+                var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
+                var selectedWorkgroupNames = await _context.WorkGroups
+                    .Where(w => selectedWorkgroupIds.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                if (selectedWorkgroupNames.Any())
+                {
+                    // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                        name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                    if (filterHasDrawFiberAccess)
+                    {
+                        query = query.Where(p => p.TaskWg != null && (
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                            (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        ));
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+
+                    ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames);
+                }
+
+                // Apply search filters
+                ViewData["SearchType"] = searchType ?? "peNumber";
+                ViewData["PENumberFilter"] = peNumber?.Trim();
+                ViewData["CustomerFilter"] = customer?.Trim();
+                ViewData["JobReferenceFilter"] = jobReference?.Trim();
+                ViewData["SONumberFilter"] = soNumber?.Trim();
+
+                if (!string.IsNullOrEmpty(searchType))
+                {
+                    switch (searchType.ToLower())
+                    {
+                        case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
+                            query = query.Where(p => p.Customer != null && EF.Functions.Like(p.Customer, $"%{customer.Trim()}%"));
+                            break;
+                        case "jobreference" when !string.IsNullOrEmpty(jobReference?.Trim()):
+                            query = query.Where(p => p.JobReference != null && EF.Functions.Like(p.JobReference, $"%{jobReference.Trim()}%"));
+                            break;
+                        case "sonumber" when !string.IsNullOrEmpty(soNumber?.Trim()):
+                            query = query.Where(p => p.SoNumber != null && EF.Functions.Like(p.SoNumber, $"%{soNumber.Trim()}%"));
+                            break;
+                        default:
+                            if (!string.IsNullOrEmpty(peNumber?.Trim()))
+                                query = query.Where(p => p.PeNumber != null && EF.Functions.Like(p.PeNumber, $"%{peNumber.Trim()}%"));
+                            break;
+                    }
+                }
+
+                query = query.OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber);
+
+                // Get all records without pagination for table-based view
+                var allRecords = await query.ToListAsync();
+
+                return View(allRecords);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading multi-workgroup hold records");
+                return View(new List<PlannedEvent>());
+            }
+        }
+
+        // GET: PlannedEvents/MultiWorkgroupUrgentView
+        public async Task<IActionResult> MultiWorkgroupUrgentView(List<int> workgroupIds, string searchType, 
+            string peNumber, string customer, string jobReference, string soNumber)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+
+            // Security check - if user has ViewAll or only one workgroup, redirect back to regular view
+            if (canViewAll || userWorkgroupIds.Count <= 1)
+            {
+                return RedirectToAction(nameof(UrgentRecords), new { workgroupId = workgroupIds?.FirstOrDefault() });
+            }
+
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                .ThenInclude(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+                .Include(u => u.UserWorkGroups)
+                .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+
+            ViewData["CanViewAll"] = canViewAll;
+            ViewData["UserWorkGroups"] = await _context.WorkGroups
+                .Where(w => userWorkgroupIds.Contains(w.Id))
+                .OrderBy(w => w.Name)
+                .ToListAsync();
+            ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
+
+            try
+            {
+                // Get PE numbers with OLA violation to exclude
+                var violatingPENumbers = await _context.PETasks
+                    .Where(t => t.IsOLAViolate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
+
+                // Base query for urgent records
+                var query = _context.PlannedEvents
+                    .Where(p => p.PEStatus == "urgent" && 
+                               p.IsHold == false && 
+                               !violatingPENumbers.Contains(p.PeNumber))
+                    .AsNoTracking();
+
+                // Filter by selected workgroups or all user's workgroups if none selected
+                var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
+                var selectedWorkgroupNames = await _context.WorkGroups
+                    .Where(w => selectedWorkgroupIds.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                if (selectedWorkgroupNames.Any())
+                {
+                    // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                        name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                    if (filterHasDrawFiberAccess)
+                    {
+                        query = query.Where(p => p.TaskWg != null && (
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                            (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        ));
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+
+                    ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames);
+                }
+
+                // Apply search filters
+                ViewData["SearchType"] = searchType ?? "peNumber";
+                ViewData["PENumberFilter"] = peNumber?.Trim();
+                ViewData["CustomerFilter"] = customer?.Trim();
+                ViewData["JobReferenceFilter"] = jobReference?.Trim();
+                ViewData["SONumberFilter"] = soNumber?.Trim();
+
+                if (!string.IsNullOrEmpty(searchType))
+                {
+                    switch (searchType.ToLower())
+                    {
+                        case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
+                            query = query.Where(p => p.Customer != null && EF.Functions.Like(p.Customer, $"%{customer.Trim()}%"));
+                            break;
+                        case "jobreference" when !string.IsNullOrEmpty(jobReference?.Trim()):
+                            query = query.Where(p => p.JobReference != null && EF.Functions.Like(p.JobReference, $"%{jobReference.Trim()}%"));
+                            break;
+                        case "sonumber" when !string.IsNullOrEmpty(soNumber?.Trim()):
+                            query = query.Where(p => p.SoNumber != null && EF.Functions.Like(p.SoNumber, $"%{soNumber.Trim()}%"));
+                            break;
+                        default:
+                            if (!string.IsNullOrEmpty(peNumber?.Trim()))
+                                query = query.Where(p => p.PeNumber != null && EF.Functions.Like(p.PeNumber, $"%{peNumber.Trim()}%"));
+                            break;
+                    }
+                }
+
+                query = query.OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber);
+
+                // Get all records without pagination for table-based view
+                var allRecords = await query.ToListAsync();
+
+                return View(allRecords);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading multi-workgroup urgent records");
+                return View(new List<PlannedEvent>());
+            }
+        }
+
+        // GET: PlannedEvents/MultiWorkgroupOLAViolateView
+        public async Task<IActionResult> MultiWorkgroupOLAViolateView(List<int> workgroupIds, string searchType, 
+            string peNumber, string customer, string jobReference, string soNumber)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+
+            // Security check - if user has ViewAll or only one workgroup, redirect back to regular view
+            if (canViewAll || userWorkgroupIds.Count <= 1)
+            {
+                return RedirectToAction(nameof(OLAViolateRecords), new { workgroupId = workgroupIds?.FirstOrDefault() });
+            }
+
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                .ThenInclude(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+                .Include(u => u.UserWorkGroups)
+                .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+
+            ViewData["CanViewAll"] = canViewAll;
+            ViewData["UserWorkGroups"] = await _context.WorkGroups
+                .Where(w => userWorkgroupIds.Contains(w.Id))
+                .OrderBy(w => w.Name)
+                .ToListAsync();
+            ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
+
+            try
+            {
+                // Get PE numbers with OLA violation
+                var violatingPENumbers = await _context.PETasks
+                    .Where(t => t.IsOLAViolate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
+
+                // Base query for OLA violate records
+                var query = _context.PlannedEvents
+                    .Where(p => violatingPENumbers.Contains(p.PeNumber))
+                    .AsNoTracking();
+
+                // Filter by selected workgroups or all user's workgroups if none selected
+                var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
+                var selectedWorkgroupNames = await _context.WorkGroups
+                    .Where(w => selectedWorkgroupIds.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                if (selectedWorkgroupNames.Any())
+                {
+                    // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                        name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                    if (filterHasDrawFiberAccess)
+                    {
+                        query = query.Where(p => p.TaskWg != null && (
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                            (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        ));
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+
+                    ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames);
+                }
+
+                // Apply search filters
+                ViewData["SearchType"] = searchType ?? "peNumber";
+                ViewData["PENumberFilter"] = peNumber?.Trim();
+                ViewData["CustomerFilter"] = customer?.Trim();
+                ViewData["JobReferenceFilter"] = jobReference?.Trim();
+                ViewData["SONumberFilter"] = soNumber?.Trim();
+
+                if (!string.IsNullOrEmpty(searchType))
+                {
+                    switch (searchType.ToLower())
+                    {
+                        case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
+                            query = query.Where(p => p.Customer != null && EF.Functions.Like(p.Customer, $"%{customer.Trim()}%"));
+                            break;
+                        case "jobreference" when !string.IsNullOrEmpty(jobReference?.Trim()):
+                            query = query.Where(p => p.JobReference != null && EF.Functions.Like(p.JobReference, $"%{jobReference.Trim()}%"));
+                            break;
+                        case "sonumber" when !string.IsNullOrEmpty(soNumber?.Trim()):
+                            query = query.Where(p => p.SoNumber != null && EF.Functions.Like(p.SoNumber, $"%{soNumber.Trim()}%"));
+                            break;
+                        default:
+                            if (!string.IsNullOrEmpty(peNumber?.Trim()))
+                                query = query.Where(p => p.PeNumber != null && EF.Functions.Like(p.PeNumber, $"%{peNumber.Trim()}%"));
+                            break;
+                    }
+                }
+
+                query = query.OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber);
+
+                // Get all records without pagination for table-based view
+                var allRecords = await query.ToListAsync();
+
+                // Calculate violation details for display
+                var peNumbers = allRecords.Select(pe => pe.PeNumber).ToList();
+                var violatingTasks = await _context.PETasks
+                    .Where(t => t.IsOLAViolate && peNumbers.Contains(t.PENumber))
+                    .ToListAsync();
+
+                var currentDate = DateTime.Now.Date;
+                var violationDetails = violatingTasks
+                    .GroupBy(t => t.PENumber)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => new Dictionary<string, object>
+                        {
+                            ["TasksCount"] = g.Count(),
+                            ["MaxDaysOverdue"] = g.Max(t =>
+                                t.EstimatedTime.HasValue
+                                    ? (currentDate - t.EstimatedTime.Value).Days
+                                    : (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays))
+                                        ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays)).Days
+                                        : 0
+                            ),
+                            ["OldestViolation"] = DateTime.MinValue  // Simplified for now
+                        }
+                    );
+
+                ViewBag.ViolationDetails = violationDetails;
+
+                return View(allRecords);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading multi-workgroup OLA violate records");
+                return View(new List<PlannedEvent>());
+            }
+        }
+
         // POST: PlannedEvents/ProcessUrgentRequest
         [HttpPost]
         [ValidateAntiForgeryToken]

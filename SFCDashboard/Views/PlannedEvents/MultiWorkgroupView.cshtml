@@ -445,7 +445,7 @@
 
             <div class="row mb-4">
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card urgent-card">
+                    <a href="@Url.Action("MultiWorkgroupUrgentView", new { workgroupIds = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card urgent-card">
                         <div class="card-content">
                             <h4>Urgent Records</h4>
                             <div class="mt-2">
@@ -460,7 +460,7 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card inprogress-card">
+                    <a href="@Url.Action("MultiWorkgroupInProgressView", new { workgroupIds = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card inprogress-card">
                         <div class="card-content">
                             <h4>Regular Records</h4>
                             <div class="mt-2">
@@ -475,7 +475,7 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card ola-card">
+                    <a href="@Url.Action("MultiWorkgroupOLAViolateView", new { workgroupIds = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card ola-card">
                         <div class="card-content">
                             <h4>OLA Violate Records</h4>
                             <div class="mt-2">
@@ -490,7 +490,7 @@
                     </a>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <a href="@Url.Action("HoldRecords", new { workgroupId = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card hold-card">
+                    <a href="@Url.Action("MultiWorkgroupHoldView", new { workgroupIds = ViewData["SelectedWorkgroupIds"] })" class="dashboard-card hold-card">
                         <div class="card-content">
                             <h4>Hold Records</h4>
                             <div class="mt-2">
