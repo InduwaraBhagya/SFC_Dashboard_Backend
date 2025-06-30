@@ -268,9 +268,8 @@ namespace SFCDashboard.Controllers
             // In your inbox action methods
             // In PlannedEventsController.cs, in the Index action
             var inboxIssues = await _context.PEIssues
-                .Where(i => i.ReceiverId == currentUserId
-                    && !i.IsHiddenFromInbox)
-                .OrderByDescending(i => i.CreatedAt)
+                .Where(i => i.ReceiverId == currentUserId && !i.IsReminder) // Add this condition
+    .OrderByDescending(i => i.CreatedAt)
                 .Take(10)
                 .Select(i => new PEIssueViewModel
                 {
@@ -723,7 +722,7 @@ namespace SFCDashboard.Controllers
         {
             var userId = await GetCurrentUserIdAsync();
             var query = _context.PEIssues
-                .Where(i => i.ReceiverId == userId && i.SenderId == 1);
+                .Where(i => i.ReceiverId == userId && i.IsReminder == true); // Only get reminders
 
             if (!showAll)
             {
@@ -750,7 +749,7 @@ namespace SFCDashboard.Controllers
         {
             var userId = await GetCurrentUserIdAsync();
             var count = await _context.PEIssues
-                .CountAsync(i => i.ReceiverId == userId && i.SenderId == 1 && !i.IsRead);
+                .CountAsync(i => i.ReceiverId == userId && i.IsReminder == true && !i.IsRead); // Only count unread reminders
 
             return Json(new { count });
         }
@@ -760,7 +759,7 @@ namespace SFCDashboard.Controllers
         {
             var userId = await GetCurrentUserIdAsync();
             var unreadReminders = await _context.PEIssues
-                .Where(i => i.ReceiverId == userId && i.SenderId == 1 && !i.IsRead)
+                .Where(i => i.ReceiverId == userId && i.IsReminder == true && !i.IsRead) // Only get unread reminders
                 .ToListAsync();
 
             foreach (var reminder in unreadReminders)
@@ -1518,7 +1517,24 @@ namespace SFCDashboard.Controllers
 
             return RedirectToAction("Details", new { id = plannedEvent.Id });
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkReminderAsRead([FromBody] MarkReminderRequest request)
+        {
+            var reminder = await _context.PEIssues.FindAsync(request.Id);
+            if (reminder != null && reminder.IsReminder == true) // Ensure it's actually a reminder
+            {
+                reminder.IsRead = true;
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            return Json(new { success = false });
+        }
 
+        public class MarkReminderRequest
+        {
+            public int Id { get; set; }
+        }
         [HttpGet]
         public async Task<IActionResult> RequestUrgent(int id)
         {
