@@ -26,14 +26,14 @@ namespace SFCDashboard.Controllers
             try
             {
                 _logger.LogInformation($"GetSubCategories called with categoryId: {categoryId}");
-                
+
                 var subCategories = await _context.UDSubCategories
                     .Where(s => s.CategoryId == categoryId)
                     .Select(s => new { id = s.Id, name = s.SubCategory })
                     .ToListAsync();
-                
+
                 _logger.LogInformation($"Found {subCategories.Count} sub-categories");
-                
+
                 return Json(subCategories);
             }
             catch (Exception ex)
@@ -52,14 +52,15 @@ namespace SFCDashboard.Controllers
                 _logger.LogInformation($"GetUDNames called with categoryId: {categoryId}, subCategoryId: {subCategoryId}");
 
                 var udNames = await _context.UDNames
-                    .Where(u => u.CategoryId == categoryId && 
-                                u.SubCategoryId == subCategoryId && 
+                    .Where(u => u.CategoryId == categoryId &&
+                                u.SubCategoryId == subCategoryId &&
                                 u.IsActive) // Only get active UD Names
-                    .Select(u => new { 
-                        id = u.Id, 
+                    .Select(u => new
+                    {
+                        id = u.Id,
                         name = u.Name,
                         unit = u.Unit,
-                        unitPrice = u.UnitPrice 
+                        unitPrice = u.UnitPrice
                     })
                     .ToListAsync();
 
@@ -81,13 +82,13 @@ namespace SFCDashboard.Controllers
             try
             {
                 _logger.LogInformation("GetCategories called");
-                
+
                 var categories = await _context.UDCategories
                     .Select(c => new { id = c.Id, category = c.Category })
                     .ToListAsync();
-                
+
                 _logger.LogInformation($"Found {categories.Count} categories");
-                
+
                 return Json(categories);
             }
             catch (Exception ex)
@@ -122,27 +123,27 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([FromForm] BOQViewModel model)
         {
-            try 
+            try
             {
                 _logger.LogInformation($"Create POST received with TaskId: {model.TaskId}");
-                
+
                 // Log all form values for debugging
                 _logger.LogInformation($"Received values: TaskId={model.TaskId}, " +
                     $"CategoryId={model.CategoryId}, SubCategoryId={model.SubCategoryId}, " +
-                    $"UDNameId={model.UDNameId}, Quantity={model.Quantity}, " + 
+                    $"UDNameId={model.UDNameId}, Quantity={model.Quantity}, " +
                     $"Unit={model.Unit ?? "null"}, UnitPrice={model.UnitPrice}");
 
                 // Clear any existing ModelState errors for these fields
                 ModelState.Remove("UDNameValue");
                 ModelState.Remove("CategoryName");
                 ModelState.Remove("SubCategoryName");
-                
+
                 if (!ModelState.IsValid)
                 {
                     var errors = string.Join(" | ", ModelState.Values
                         .SelectMany(v => v.Errors)
                         .Select(e => e.ErrorMessage));
-                        
+
                     _logger.LogWarning($"Model validation failed: {errors}");
                     return Json(new { success = false, message = $"Invalid data: {errors}" });
                 }
@@ -152,12 +153,12 @@ namespace SFCDashboard.Controllers
                 {
                     return Json(new { success = false, message = "UD Name selection is required." });
                 }
-                
+
                 if (model.CategoryId <= 0)
                 {
                     return Json(new { success = false, message = "Category selection is required." });
                 }
-                
+
                 if (model.SubCategoryId <= 0)
                 {
                     return Json(new { success = false, message = "Sub-Category selection is required." });
@@ -168,25 +169,25 @@ namespace SFCDashboard.Controllers
                 {
                     return Json(new { success = false, message = "Quantity must be greater than zero." });
                 }
-                
+
                 if (string.IsNullOrEmpty(model.Unit))
                 {
                     return Json(new { success = false, message = "Unit is required." });
                 }
-                
+
                 // Get the UDName to ensure we have a valid unit price
                 var udName = await _context.UDNames.FindAsync(model.UDNameId);
                 if (udName == null)
                 {
                     return Json(new { success = false, message = "Selected UD Name not found." });
                 }
-                
+
                 // Use the UDName's unit and price if model values are missing or zero
                 if (string.IsNullOrEmpty(model.Unit))
                 {
                     model.Unit = udName.Unit ?? "each";
                 }
-                
+
                 if (model.UnitPrice <= 0)
                 {
                     model.UnitPrice = udName.UnitPrice > 0 ? udName.UnitPrice : 0.01m;
@@ -215,17 +216,17 @@ namespace SFCDashboard.Controllers
                     .FirstOrDefaultAsync(w => w.RTOM == rtom);
 
                 decimal weightValue = weight?.Weight ?? 1.0m;
-                
+
                 // Calculate with null-safety
                 decimal unitPrice = model.UnitPrice;
                 decimal quantity = model.Quantity;
                 decimal adjustedUnitPrice = unitPrice * weightValue;
                 decimal amount = adjustedUnitPrice * quantity;
-                
+
                 _logger.LogInformation($"Calculated values: UnitPrice={unitPrice}, " +
                     $"Weight={weightValue}, AdjustedPrice={adjustedUnitPrice}, " +
                     $"Quantity={quantity}, Amount={amount}");
-                
+
                 // Create the BOQ entity
                 var boq = new BOQ
                 {
@@ -236,14 +237,14 @@ namespace SFCDashboard.Controllers
                     Quantity = quantity,
                     Unit = model.Unit,
                     UnitPrice = unitPrice,
-                    AdjustedUnitPrice = adjustedUnitPrice, 
+                    AdjustedUnitPrice = adjustedUnitPrice,
                     Amount = amount,
                     CreatedAt = DateTime.Now,
                     CreatedByUserId = currentUser.Id
                 };
 
                 _context.BOQs.Add(boq);
-                
+
                 // Add activity to SurveyTaskActivities
                 // var activity = new SurveyTaskActivity
                 // {
@@ -256,8 +257,24 @@ namespace SFCDashboard.Controllers
                 // };
 
                 // _context.SurveyTaskActivities.Add(activity);
-                
-                 await _context.SaveChangesAsync();
+
+                await _context.SaveChangesAsync();
+
+                // Create contractor notification for BOQ changes
+                var peTask = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(t => t.Id == model.TaskId);
+
+                if (peTask?.PlannedEvent?.ContractorName != null)
+                {
+                    await CreateContractorNotification(
+                        peTask.PlannedEvent.ContractorName,
+                        peTask.PENumber,
+                        $"BOQ item added - {udName.Name}",
+                        "BOQ_ACTIVITY",
+                        peTask.Id
+                    );
+                }
 
                 _logger.LogInformation($"BOQ created successfully for TaskId: {model.TaskId}");
                 return Json(new { success = true });
@@ -385,7 +402,7 @@ namespace SFCDashboard.Controllers
             try
             {
                 _context.Update(boq);
-                
+
                 // Add activity to SurveyTaskActivities
                 var activity = new SurveyTaskActivity
                 {
@@ -394,11 +411,11 @@ namespace SFCDashboard.Controllers
                     SystemUserId = currentUser.Id,
                     CreatedAt = DateTime.Now,
                     FilePath = "",
-                    FileName =""
+                    FileName = ""
                 };
 
                 _context.SurveyTaskActivities.Add(activity);
-                
+
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -436,7 +453,7 @@ namespace SFCDashboard.Controllers
 
             int taskId = boq.TaskId;
             _context.BOQs.Remove(boq);
-            
+
             // Add activity to SurveyTaskActivities
             var activity = new SurveyTaskActivity
             {
@@ -449,9 +466,9 @@ namespace SFCDashboard.Controllers
             };
 
             _context.SurveyTaskActivities.Add(activity);
-            
+
             await _context.SaveChangesAsync();
-            
+
             return Json(new { success = true });
         }
 
@@ -462,7 +479,7 @@ namespace SFCDashboard.Controllers
             try
             {
                 _logger.LogInformation($"GetBOQDetails called for BOQ ID: {id}");
-                
+
                 // Find the BOQ entry with all related data
                 var boq = await _context.BOQs
                     .Include(b => b.Category)
@@ -512,7 +529,7 @@ namespace SFCDashboard.Controllers
             try
             {
                 _logger.LogInformation($"EditInline received for BOQ ID: {model.Id}");
-                
+
                 // Find the existing BOQ item
                 var boq = await _context.BOQs
                     .Include(b => b.Task)
@@ -530,12 +547,12 @@ namespace SFCDashboard.Controllers
                 {
                     return Json(new { success = false, message = "UD Name selection is required." });
                 }
-                
+
                 if (model.CategoryId <= 0)
                 {
                     return Json(new { success = false, message = "Category selection is required." });
                 }
-                
+
                 if (model.SubCategoryId <= 0)
                 {
                     return Json(new { success = false, message = "Sub-Category selection is required." });
@@ -552,20 +569,20 @@ namespace SFCDashboard.Controllers
                 {
                     return Json(new { success = false, message = "Selected UD Name not found." });
                 }
-                
+
                 // Get the weight for the RTOM with null safety
                 var rtom = boq.Task.PlannedEvent?.Rtom ?? "DEFAULT";
                 var weight = await _context.RTOMWeights
                     .FirstOrDefaultAsync(w => w.RTOM == rtom);
 
                 decimal weightValue = weight?.Weight ?? 1.0m;
-                
+
                 // Calculate with null-safety
                 decimal unitPrice = udName.UnitPrice;
                 decimal quantity = model.Quantity;
                 decimal adjustedUnitPrice = unitPrice * weightValue;
                 decimal amount = adjustedUnitPrice * quantity;
-                
+
                 // Get the current user
                 var currentUser = await GetCurrentUserAsync();
                 if (currentUser == null)
@@ -592,13 +609,13 @@ namespace SFCDashboard.Controllers
                     SystemUserId = currentUser.Id,
                     CreatedAt = DateTime.Now,
                     FilePath = "",
-                    FileName =""
+                    FileName = ""
                 };
 
                 _context.SurveyTaskActivities.Add(activity);
-                
+
                 await _context.SaveChangesAsync();
-                
+
                 _logger.LogInformation($"BOQ item #{boq.Id} updated successfully");
                 return Json(new { success = true });
             }
@@ -613,7 +630,7 @@ namespace SFCDashboard.Controllers
         {
             return _context.BOQs.Any(e => e.Id == id);
         }
-        
+
         private async Task<SystemUser> GetCurrentUserAsync()
         {
             var userName = User.Identity.Name;
@@ -636,6 +653,24 @@ namespace SFCDashboard.Controllers
                 return email.Split('@').FirstOrDefault();
             }
             return email;
+        }
+
+        // Helper method (add this to BOQController)
+        private async Task CreateContractorNotification(string contractorName, string peNumber, string message, string type, int? taskId = null)
+        {
+            var notification = new ContractorNotification
+            {
+                ContractorName = contractorName,
+                PENumber = peNumber,
+                Message = message,
+                NotificationType = type,
+                RelatedTaskId = taskId,
+                CreatedAt = DateTime.Now,
+                IsRead = false
+            };
+
+            _context.ContractorNotifications.Add(notification);
+            await _context.SaveChangesAsync();
         }
     }
 }

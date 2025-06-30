@@ -38,16 +38,16 @@ namespace SFCDashboard.Controllers
                         pe.PEStatus != null &&
                         pe.PEStatus.ToLower() == "urgent")
                 .CountAsync();
-                
+
             var onHoldCount = await _context.PlannedEvents
                 .Where(pe => pe.ContractorName == contractorName &&
                         pe.IsHold == true)
                 .CountAsync();
-                
+
             var totalCount = await _context.PlannedEvents
                 .Where(pe => pe.ContractorName == contractorName)
                 .CountAsync();
-                
+
             var ongoingCount = totalCount - urgentCount - onHoldCount;
 
             // Get most recent projects (top 5)
@@ -58,13 +58,13 @@ namespace SFCDashboard.Controllers
                 .ToListAsync();
 
             _logger.LogInformation($"Loading dashboard for contractor {contractorName}");
-            
+
             ViewData["ContractorName"] = contractorName;
             ViewData["UrgentCount"] = urgentCount;
             ViewData["OnHoldCount"] = onHoldCount;
             ViewData["OngoingCount"] = ongoingCount;
             ViewData["TotalCount"] = totalCount;
-            
+
             return View(recentProjects);
         }
 
@@ -77,7 +77,7 @@ namespace SFCDashboard.Controllers
                 .Distinct()
                 .OrderBy(c => c)
                 .ToListAsync();
-                
+
             return View(contractors);
         }
 
@@ -96,33 +96,33 @@ namespace SFCDashboard.Controllers
 
             // Get all PlannedEvents filtered by contractor name
             var query = _context.PlannedEvents.AsQueryable();
-            
+
             // Apply ContractorName filter - using exact match instead of Contains
             query = query.Where(pe => pe.ContractorName == contractorName);
-            
+
             // Apply additional filters if provided
             if (!string.IsNullOrEmpty(peNumber))
             {
                 query = query.Where(pe => pe.PeNumber != null && pe.PeNumber.Contains(peNumber));
             }
-            
+
             if (!string.IsNullOrEmpty(reference))
             {
                 query = query.Where(pe => pe.JobReference != null && pe.JobReference.Contains(reference));
             }
-            
+
             if (!string.IsNullOrEmpty(customer))
             {
                 query = query.Where(pe => pe.Customer != null && pe.Customer.Contains(customer));
             }
-            
+
             // Order by service required date
             var events = await query
                 .OrderByDescending(pe => pe.ServiceRequiredDate)
                 .ToListAsync();
 
             _logger.LogInformation($"Found {events.Count} events for contractor {contractorName}");
-            
+
             return View(events);
         }
 
@@ -135,12 +135,12 @@ namespace SFCDashboard.Controllers
 
             var plannedEvent = await _context.PlannedEvents
                 .FirstOrDefaultAsync(pe => pe.PeNumber == peNumber);
-            
+
             if (plannedEvent == null)
             {
                 return NotFound($"Planned Event with PE Number {peNumber} not found");
             }
-            
+
             // Verify this event belongs to the contractor (exact match)
             if (plannedEvent.ContractorName != contractorName)
             {
@@ -152,11 +152,11 @@ namespace SFCDashboard.Controllers
                 .Where(t => t.PENumber == plannedEvent.PeNumber)
                 .OrderBy(t => t.TaskSeq)
                 .ToListAsync();
-            
+
             ViewBag.PETasks = peTasks;
             ViewBag.ReturnUrl = returnUrl ?? Url.Action("ContractorRecords", new { contractorName });
             ViewBag.ContractorName = contractorName;
-            
+
             return View(plannedEvent);
         }
 
@@ -171,7 +171,7 @@ namespace SFCDashboard.Controllers
             // Verify the PE belongs to this contractor
             var plannedEvent = await _context.PlannedEvents
                 .FirstOrDefaultAsync(pe => pe.PeNumber == peNumber && pe.ContractorName == contractorName);
-                
+
             if (plannedEvent == null)
             {
                 return NotFound("Planned Event not found or does not belong to this contractor");
@@ -180,7 +180,7 @@ namespace SFCDashboard.Controllers
             // Check if this PE has survey tasks
             var hasSurveyTask = await _context.PETasks
                 .AnyAsync(t => t.PENumber == peNumber && t.Task == "SURVEY FIBER ROUTE");
-                
+
             if (!hasSurveyTask)
             {
                 TempData["Error"] = "No survey tasks found for this PE";
@@ -201,8 +201,83 @@ namespace SFCDashboard.Controllers
 
             var hasSurveyTask = await _context.PETasks
                 .AnyAsync(t => t.PENumber == peNumber && t.Task == "SURVEY FIBER ROUTE");
-                
+
             return Json(new { hasSurveyTasks = hasSurveyTask });
+        }
+
+        // GET: ContractorView/GetNotifications
+        [HttpGet]
+        public async Task<IActionResult> GetNotifications(string contractorName, bool unreadOnly = false)
+        {
+            if (string.IsNullOrEmpty(contractorName))
+            {
+                return Json(new { notifications = new List<object>(), count = 0 });
+            }
+
+            var query = _context.ContractorNotifications
+                .Where(n => n.ContractorName == contractorName);
+
+            if (unreadOnly)
+            {
+                query = query.Where(n => !n.IsRead);
+            }
+
+            var notifications = await query
+                .OrderByDescending(n => n.CreatedAt)
+                .Select(n => new
+                {
+                    id = n.Id,
+                    peNumber = n.PENumber,
+                    message = n.Message,
+                    type = n.NotificationType,
+                    isRead = n.IsRead,
+                    createdAt = n.CreatedAt.ToString("MMM dd, yyyy HH:mm"),
+                    relatedTaskId = n.RelatedTaskId,
+                    relatedActivityId = n.RelatedActivityId
+                })
+                .Take(50) // Limit to latest 50 notifications
+                .ToListAsync();
+
+            var unreadCount = await _context.ContractorNotifications
+                .CountAsync(n => n.ContractorName == contractorName && !n.IsRead);
+
+            return Json(new { notifications, count = unreadCount });
+        }
+
+        // POST: ContractorView/MarkNotificationAsRead
+        [HttpPost]
+        public async Task<IActionResult> MarkNotificationAsRead(int notificationId)
+        {
+            var notification = await _context.ContractorNotifications.FindAsync(notificationId);
+            if (notification != null)
+            {
+                notification.IsRead = true;
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            return Json(new { success = false });
+        }
+
+        // POST: ContractorView/MarkAllNotificationsAsRead
+        [HttpPost]
+        public async Task<IActionResult> MarkAllNotificationsAsRead(string contractorName)
+        {
+            if (string.IsNullOrEmpty(contractorName))
+            {
+                return Json(new { success = false });
+            }
+
+            var notifications = await _context.ContractorNotifications
+                .Where(n => n.ContractorName == contractorName && !n.IsRead)
+                .ToListAsync();
+
+            foreach (var notification in notifications)
+            {
+                notification.IsRead = true;
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
         }
     }
 }
