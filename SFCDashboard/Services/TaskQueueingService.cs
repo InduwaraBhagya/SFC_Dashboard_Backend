@@ -26,8 +26,6 @@ namespace SFCDashboard.Services
             _logger = logger;
             _cache = cache;
         }        public async Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int take = 20, int? year = null)
-
-        public async Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int take = 20)
         {
             var stopwatch = Stopwatch.StartNew();
             var today = DateTime.Today;
@@ -45,7 +43,7 @@ namespace SFCDashboard.Services
                 {
                     query = query.Where(t => t.PlannedEvent != null && 
                                            !string.IsNullOrEmpty(t.PlannedEvent.PeNumber) &&
-                                        t.PlannedEvent.PeNumber.Length >= 6 &&
+                                           t.PlannedEvent.PeNumber.Length >= 6 &&
                                            t.PlannedEvent.PeNumber.Substring(2, 4) == year.Value.ToString());
                 }
         
@@ -136,11 +134,9 @@ namespace SFCDashboard.Services
                     stopwatch.ElapsedMilliseconds);
                 return new List<TaskQueueItem>();
             }
-        }
-
-        public async Task<TaskQueueItem> GetNextTaskAsync(int? workgroupId = null)
+        }        public async Task<TaskQueueItem> GetNextTaskAsync(int? workgroupId = null, int? year = null)
         {
-            var prioritizedTasks = await GetPrioritizedTasksAsync(workgroupId, take: 1);
+            var prioritizedTasks = await GetPrioritizedTasksAsync(workgroupId, take: 1, year);
             return prioritizedTasks.Count > 0 ? prioritizedTasks[0] : null;
         }
 

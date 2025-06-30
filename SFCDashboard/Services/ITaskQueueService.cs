@@ -6,7 +6,9 @@ namespace SFCDashboard.Services
 {
     public interface ITaskQueueService
     {
-        Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int take = 20);
-        // Add any other methods your TaskQueueingService has that should be exposed through the interface
+        Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int take = 20, int? year = null);
+        Task<TaskQueueItem> GetNextTaskAsync(int? workgroupId = null, int? year = null);
+        Task<List<int>> GetAvailableYearsAsync();
+        Task<Dictionary<int, int>> GetTaskCountByYearAsync(int? workgroupId = null);
     }
 }
