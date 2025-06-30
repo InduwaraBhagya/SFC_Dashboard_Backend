@@ -41,7 +41,7 @@ namespace SFCDashboard.Services
                         var escalation = new Escalation
                         {
                             TaskId = task.Id,
-                            Level = escalationLevel,
+                            Level = escalationLevel, // This will be implicitly converted to int?
                             Title = $"Task {task.PENumber} OLA Violation - Level {escalationLevel}",
                             Message = CreateEscalationMessage(task, escalationLevel, violationDuration),
                             CreatedAt = DateTime.Now,
@@ -91,9 +91,11 @@ namespace SFCDashboard.Services
         {
             // Users with role level 0 (normal users) see level 1 escalations
             // Users with higher role levels see escalations >= their role level
-            int minEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;            return await _context.Escalations
+            int minEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
+            
+            return await _context.Escalations
                 .Include(e => e.PETask)
-                .Where(e => !e.IsResolved && e.Level >= minEscalationLevel)
+                .Where(e => !e.IsResolved && e.Level.HasValue && e.Level.Value >= minEscalationLevel)
                 .OrderByDescending(e => e.CreatedAt)
                 .ToListAsync();
         }
@@ -133,7 +135,8 @@ namespace SFCDashboard.Services
         public async Task<object> GetEscalationStatsAsync()
         {
             var stats = await _context.Escalations
-                .GroupBy(e => e.Level)
+                .Where(e => e.Level.HasValue)
+                .GroupBy(e => e.Level.Value)
                 .Select(g => new {
                     Level = g.Key,
                     Total = g.Count(),

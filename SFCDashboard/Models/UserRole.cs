@@ -16,7 +16,7 @@ namespace SFCDashboard.Models
         [Required(ErrorMessage = "Role name is required")]
         [StringLength(100)]
         public string Name { get; set; }
-
+        public int Level { get; set; }
         // Navigation property without Required attribute
         public virtual ICollection<RolePermission> RolePermissions { get; set; }
     }

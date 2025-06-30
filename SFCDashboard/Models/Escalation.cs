@@ -13,8 +13,7 @@ namespace SFCDashboard.Models
         [ForeignKey("TaskId")]
         public virtual PETask PETask { get; set; }
 
-        public int? RecipientId { get; set; }
-        public int? Level { get; set; }
+        public int? Level { get; set; } // 1, 2, or 3
         public string Title { get; set; }
         public string Message { get; set; }
         public DateTime CreatedAt { get; set; }

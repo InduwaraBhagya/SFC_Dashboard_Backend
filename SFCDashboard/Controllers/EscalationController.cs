@@ -101,7 +101,7 @@ namespace SFCDashboard.Controllers
                 TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Fixed navigation
                 PENumber = escalation.PETask?.PENumber ?? "Unknown",   // Fixed navigation
                 TaskStatus = escalation.PETask?.TaskStatus,            // Fixed navigation
-                Level = escalation.Level
+                Level = escalation.Level ?? 0,
             };
             
             ViewData["PlannedEventId"] = plannedEventId;
@@ -205,7 +205,7 @@ namespace SFCDashboard.Controllers
                     TaskName = e.PETask?.Task ?? "Unknown Task",
                     PENumber = e.PETask?.PENumber ?? "Unknown",
                     TaskStatus = e.PETask?.TaskStatus,
-                    Level = e.Level,
+                    Level = e.Level ?? 0,
                     // Role-based display instead of recipient
                     RecipientRole = GetRoleNameByLevel(e.Level ?? 0)
                 }).ToList();

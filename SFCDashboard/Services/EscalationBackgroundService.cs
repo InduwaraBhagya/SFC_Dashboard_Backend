@@ -30,11 +30,10 @@ namespace SFCDashboard.Services
                 try
                 {
                     _logger.LogInformation("Running escalation check");
-                    
-                    using (var scope = _serviceProvider.CreateScope())
+                      using (var scope = _serviceProvider.CreateScope())
                     {
                         var escalationService = scope.ServiceProvider.GetRequiredService<EscalationService>();
-                        await escalationService.ProcessViolationEscalationsAsync();
+                        await escalationService.CheckAndCreateEscalationsAsync();
                     }
                 }
                 catch (Exception ex)
