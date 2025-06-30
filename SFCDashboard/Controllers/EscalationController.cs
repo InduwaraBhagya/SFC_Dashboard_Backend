@@ -32,50 +32,40 @@ namespace SFCDashboard.Controllers
             
             // Get the current user with role information
             var currentUser = await _context.Users
+                .Include(u => u.UserRole)
                 .FirstOrDefaultAsync(u => u.Id == userId);
             
             if (currentUser == null || currentUser.UserRoleId == 0)
                 return Json(new { count = 0, escalations = new List<object>() });
             
-            // Get escalations based on filter - COMPARING USER ROLE ID
-            List<Escalation> escalations;
-            if (filter == "all")
+            // Get user's role level (0 for normal users, higher for management)
+            int userRoleLevel = currentUser.UserRole?.Level ?? 0;
+            
+            // Get escalations based on user role level using the service
+            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(userRoleLevel);
+            
+            // Apply filter
+            if (filter == "unread")
             {
-                // Get all escalations for this user's role (read and unread, but not ignored)
-                escalations = await _context.Escalations
-                    .Include(e => e.PETask)
-                    .Where(e => e.RecipientId == currentUser.Id)
-                    .OrderByDescending(e => e.CreatedAt)
-                    .ToListAsync();
-            }
-            else
-            {
-                // Get only unread escalations for this user's role
-                escalations = await _context.Escalations
-                    .Include(e => e.PETask)
-                    .Where(e => e.RecipientId == currentUser.Id )
-                    .OrderByDescending(e => e.CreatedAt)
-                    .ToListAsync();
+                escalations = escalations.Where(e => !e.IsRead).ToList();
             }
             
             // Project to anonymous objects with all required fields
             var result = escalations.Select(e => new {
                 id = e.Id,
                 taskId = e.TaskId,
-                taskWorkGroup = e.PETask?.TaskWorkGroup, // Include TaskWorkGroup from PETask
                 level = e.Level,
                 createdAt = e.CreatedAt,
-                isRead = e.IsRead
+                isRead = e.IsRead,
+                title = e.Title,
+                message = e.Message
             }).ToList();
             
             return Json(new { count = result.Count, escalations = result });
-        }
-        
-        public async Task<IActionResult> Details(int id)
+        }        public async Task<IActionResult> Details(int id)
         {
             var escalation = await _context.Escalations
-                .Include(e => e.PETask)
-                .Include(e => e.IgnoredBy)
+                .Include(e => e.PETask) // Fixed navigation property
                 .FirstOrDefaultAsync(e => e.Id == id);
                 
             if (escalation == null)
@@ -86,8 +76,7 @@ namespace SFCDashboard.Controllers
             // Mark as read when viewed
             if (!escalation.IsRead)
             {
-                escalation.IsRead = true;
-                await _context.SaveChangesAsync();
+                await _escalationService.MarkAsReadAsync(id);
             }
             
             // Get the planned event ID
@@ -99,31 +88,7 @@ namespace SFCDashboard.Controllers
                     .FirstOrDefaultAsync(pe => pe.PeNumber == task.PENumber);
                 plannedEventId = plannedEvent?.Id;
             }
-            
-            // Get recipient information if available
-            string recipientName = "Unknown";
-            string recipientRole = "Unknown";
-            
-            if (escalation.RecipientId.HasValue)
-            {
-                var recipient = await _context.Users
-                    .Include(u => u.UserRole)
-                    .FirstOrDefaultAsync(u => u.Id == escalation.RecipientId.Value);
-                
-                if (recipient != null)
-                {
-                    recipientName = recipient.Name;
-                    recipientRole = recipient.UserRole?.Name ?? "Unknown Role";
-                }
-            }
-                string resolvedByName = "Not resolved";
-    if (escalation.IgnoredById.HasValue)
-    {
-        var resolver = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == escalation.IgnoredById.Value);
-        resolvedByName = resolver?.Name ?? "Unknown User";
-    }
-            // Create the view model from the entity
+              // Create the view model from the entity
             var viewModel = new EscalationViewModel
             {
                 Id = escalation.Id,
@@ -132,21 +97,16 @@ namespace SFCDashboard.Controllers
                 CreatedAt = escalation.CreatedAt,
                 IsRead = escalation.IsRead,
                 IsResolved = escalation.IsResolved,
-                RecipientId = escalation.RecipientId,
                 TaskId = escalation.TaskId,
-                TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Make sure this is set
-                PENumber = escalation.PETask?.PENumber ?? "Unknown",
-                RecipientName = recipientName,
-                RecipientRole = recipientRole,
-                // Include any other task-related properties you want to display
-                TaskStatus = escalation.PETask?.TaskStatus,
-                ResolvedByName = resolvedByName,  // Add this property to show name instead of ID
-
+                TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Fixed navigation
+                PENumber = escalation.PETask?.PENumber ?? "Unknown",   // Fixed navigation
+                TaskStatus = escalation.PETask?.TaskStatus,            // Fixed navigation
+                Level = escalation.Level
             };
             
             ViewData["PlannedEventId"] = plannedEventId;
             
-            return View(viewModel); // Pass the view model instead of the entity
+            return View(viewModel);
         }
         
         [HttpPost]
@@ -157,10 +117,8 @@ namespace SFCDashboard.Controllers
                 return BadRequest("Reason is required");
             }
             
-            // Get current user ID (implement according to your auth system)
-            int userId = int.Parse(User.FindFirst("UserId").Value);
-            
-            //await _escalationService.IgnoreEscalationAsync(id, reason, userId);
+            // Use the service to resolve the escalation
+            await _escalationService.ResolveEscalationAsync(id);
             
             return RedirectToAction("Index", "Home");
         }
@@ -173,18 +131,26 @@ namespace SFCDashboard.Controllers
             if (userId == 0)
                 return Json(new { success = false });
             
-            // Get all unread escalations for this user
-            var unreadEscalations = await _context.Escalations
-                .Where(e => e.RecipientId == userId && e.IsRead != true)
-                .ToListAsync();
+            // Get current user with role information
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            
+            if (currentUser == null)
+                return Json(new { success = false });
+            
+            // Get user's role level
+            int userRoleLevel = currentUser.UserRole?.Level ?? 0;
+            
+            // Get all unread escalations for this user's role level
+            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(userRoleLevel);
+            var unreadEscalations = escalations.Where(e => !e.IsRead).ToList();
             
             // Mark them all as read
             foreach (var escalation in unreadEscalations)
             {
-                escalation.IsRead = true;
+                await _escalationService.MarkAsReadAsync(escalation.Id);
             }
-            
-            await _context.SaveChangesAsync();
             
             return Json(new { success = true });
         }
@@ -213,79 +179,56 @@ namespace SFCDashboard.Controllers
                 if (userId == 0)
                     return RedirectToAction("Index", "Home");
                 
-                // Get the current user with role and workgroup information
+                // Get the current user with role information
                 var currentUser = await _context.Users
                     .Include(u => u.UserRole)
-                    .Include(u => u.UserWorkGroups)
-                        .ThenInclude(uwg => uwg.WorkGroup)
                     .FirstOrDefaultAsync(u => u.Id == userId);
                 
                 if (currentUser == null)
                     return RedirectToAction("Index", "Home");
                 
-                // Get user's role ID and workgroup names
-                var userWorkgroups = currentUser.UserWorkGroups
-                    .Select(uwg => uwg.WorkGroup.Name)
-                    .ToList();
-                    
-
+                // Get user's role level
+                int userRoleLevel = currentUser.UserRole?.Level ?? 0;
                 
-                // Get escalations where this user is the recipient
-                var escalations = await _context.Escalations
-                    .Include(e => e.PETask)
-                    .Include(e => e.IgnoredBy)
-                    .Where(e => e.RecipientId == userId)
-                    .OrderByDescending(e => e.CreatedAt)
-                    .ToListAsync();
-                
-                // Manually retrieve recipient information
-                var userIds = escalations.Where(e => e.RecipientId.HasValue).Select(e => e.RecipientId.Value).Distinct().ToList();
-                
-                // Fetch users data and create a lookup dictionary
-                var users = await _context.Users
-                    .Include(u => u.UserRole)
-                    .Where(u => userIds.Contains(u.Id))
-                    .ToDictionaryAsync(u => u.Id, u => u);
-                
-                // Map to view models
-                var viewModels = escalations.Select(e => 
+                // Get escalations using the service
+                var escalations = await _escalationService.GetEscalationsByUserRoleAsync(userRoleLevel);
+                  // Map to view models
+                var viewModels = escalations.Select(e => new EscalationViewModel
                 {
-                    // Get recipient information if available
-                    string recipientName = "Unknown";
-                    string recipientRole = "Unknown Role";
-                    if (e.RecipientId.HasValue && users.TryGetValue(e.RecipientId.Value, out var recipient))
-                    {
-                        recipientName = recipient.Name;
-                        recipientRole = recipient.UserRole?.Name ?? "Unknown Role";
-                    }
-                    
-                    return new EscalationViewModel
-                    {
-                        Id = e.Id,
-                        Title = e.Title,
-                        Message = e.Message,
-                        CreatedAt = e.CreatedAt,
-                        IsRead = e.IsRead,
-                        IsResolved = e.IsResolved,
-                        TaskId = e.TaskId,
-                        TaskName = e.PETask?.Task ?? "Unknown Task",
-                        PENumber = e.PETask?.PENumber ?? "Unknown",
-                        TaskStatus = e.PETask?.TaskStatus,
-                        RecipientId = e.RecipientId,
-                        RecipientName = recipientName,
-                        RecipientRole = recipientRole,
-                        ResolvedByName = e.IgnoredBy?.Name ?? "Not Resolved"
-                    };
+                    Id = e.Id,
+                    Title = e.Title,
+                    Message = e.Message,
+                    CreatedAt = e.CreatedAt,
+                    IsRead = e.IsRead,
+                    IsResolved = e.IsResolved,
+                    TaskId = e.TaskId,
+                    TaskName = e.PETask?.Task ?? "Unknown Task",
+                    PENumber = e.PETask?.PENumber ?? "Unknown",
+                    TaskStatus = e.PETask?.TaskStatus,
+                    Level = e.Level,
+                    // Role-based display instead of recipient
+                    RecipientRole = GetRoleNameByLevel(e.Level ?? 0)
                 }).ToList();
 
-                
-                return View(viewModels);
-            }
-            catch (Exception ex)
+                return View(viewModels);            }
+            catch (Exception)
             {
                 TempData["ErrorMessage"] = "An error occurred while retrieving escalations.";
                 return RedirectToAction("Index", "Home");
             }
+        }
+        
+
+        // Helper method to get role name by escalation level
+        private string GetRoleNameByLevel(int level)
+        {
+            return level switch
+            {
+                1 => "Normal Users",
+                2 => "Supervisors",
+                3 => "Managers",
+                _ => "All Users"
+            };
         }
 
         [HttpPost]
@@ -312,9 +255,7 @@ namespace SFCDashboard.Controllers
                     // Update resolution status
                     resolution.IsConfirmed = true;
                     resolution.ConfirmedDate = DateTime.Now;
-                    _context.Update(resolution);
-
-                    // Mark issue as resolved
+                    _context.Update(resolution);                    // Mark issue as resolved
                     if (issue != null)
                     {
                         issue.IsResolved = true;
@@ -391,44 +332,15 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Details", new { id });
                 }
 
-                var escalation = await _context.Escalations.FindAsync(id);
-                if (escalation == null)
-                {
-                    TempData["ErrorMessage"] = "Escalation not found.";
-                    return RedirectToAction("Index");
-                }
-
-                // Get current user for tracking who resolved it
-                int userId = await GetCurrentUserIdAsync();
-
-                // Update the escalation
-                escalation.IsResolved = true;
-                escalation.IgnoreReason = reason; // Use the IgnoreReason field to store resolution reason
-                escalation.IgnoredAt = DateTime.Now;
-                escalation.IgnoredById = userId;
-
-                // Update the task's OLA violation status if it exists
-                // var task = await _context.PETasks.FindAsync(escalation.TaskId);
-                // if (task != null)
-                // {
-                //      Make sure the IsOLAViolate property exists using reflection
-                //     var property = typeof(PETask).GetProperty("IsOLAViolate");
-                //     if (property != null)
-                //     {
-                //         property.SetValue(task, false);
-                //         _context.Update(task);
-                //     }
-                // }
-
-                await _context.SaveChangesAsync();
+                // Use the service to resolve the escalation
+                await _escalationService.ResolveEscalationAsync(id);
 
                 TempData["SuccessMessage"] = "Escalation has been resolved.";
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"Error resolving escalation: {ex.Message}";
-                return RedirectToAction("Details", new { id });
+                TempData["ErrorMessage"] = $"Error resolving escalation: {ex.Message}";                return RedirectToAction("Details", new { id });
             }
         }
     }
