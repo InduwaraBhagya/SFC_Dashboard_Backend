@@ -3614,48 +3614,57 @@ namespace SFCDashboard.Controllers
 
 
 
-        // Add this action method
-        [HttpGet]
-        public async Task<IActionResult> TaskQueue(int? workgroupId, int take = 20)
-        {
-            var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
-            var effectiveWorkgroupId = canViewAll ? workgroupId : userWorkgroupId;
+// GET: PlannedEvents/TaskQueue
+[HttpGet]
+public async Task<IActionResult> TaskQueue(int? workgroupId, int? year = null, int take = 20)
+{
+    var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
+    var effectiveWorkgroupId = canViewAll ? workgroupId : userWorkgroupId;
 
-            try
-            {
-                // Load workgroups for the dropdown
-                var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-                ViewData["Workgroups"] = workgroups;
-                ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
-                ViewData["CanSwitchWorkgroup"] = canViewAll;
+    try
+    {
+        // Load workgroups for the dropdown
+        var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+        ViewData["Workgroups"] = workgroups;
+        ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
+        ViewData["SelectedYear"] = year;
+        ViewData["CanSwitchWorkgroup"] = canViewAll;
 
-                // Get prioritized tasks from the queue service
-                var prioritizedTasks = await _taskQueueService.GetPrioritizedTasksAsync(effectiveWorkgroupId, take);
+        // Get years for the dropdown from actual PE numbers
+        var years = await _taskQueueService.GetAvailableYearsAsync();
+        ViewData["AvailableYears"] = years;
 
-                // Get statistics for the summary boxes
-                // Get statistics for the summary boxes
-                ViewData["UrgentCount"] = prioritizedTasks.Count(t => t.Task.IsUrgent);
-                ViewData["OLAViolateCount"] = prioritizedTasks.Count(t => t.Task.IsOLAViolate && !t.Task.IsUrgent);
-                ViewData["ApproachingDeadlineCount"] = prioritizedTasks.Count(t =>
-                    !t.Task.IsUrgent &&
-                    !t.Task.IsOLAViolate &&
-                    t.DaysUntilDue >= 0 &&
-                    t.DaysUntilDue <= Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3)));
+        // Get prioritized tasks from the queue service
+        var prioritizedTasks = await _taskQueueService.GetPrioritizedTasksAsync(
+            workgroupId: effectiveWorkgroupId, 
+            year: year, 
+            take: take);
 
-                // Fix the regular tasks count calculation:
-                ViewData["RegularTaskCount"] = prioritizedTasks.Count(t =>
-                    !t.Task.IsUrgent &&
-                    !t.Task.IsOLAViolate &&
-                    (t.DaysUntilDue < 0 || t.DaysUntilDue > Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3))));
-                return View(prioritizedTasks);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading task queue with workgroup filter {workgroupId}", workgroupId);
-                TempData["ErrorMessage"] = "An error occurred while loading the task queue.";
-                return View(new List<TaskQueueItem>());
-            }
-        }
+        // Get statistics for the summary boxes
+        ViewData["UrgentCount"] = prioritizedTasks.Count(t => t.Task.IsUrgent);
+        ViewData["OLAViolateCount"] = prioritizedTasks.Count(t => t.Task.IsOLAViolate && !t.Task.IsUrgent);
+        ViewData["ApproachingDeadlineCount"] = prioritizedTasks.Count(t =>
+            !t.Task.IsUrgent &&
+            !t.Task.IsOLAViolate &&
+            t.DaysUntilDue >= 0 &&
+            t.DaysUntilDue <= Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3)));
+
+        // Fix the regular tasks count calculation:
+        ViewData["RegularTaskCount"] = prioritizedTasks.Count(t =>
+            !t.Task.IsUrgent &&
+            !t.Task.IsOLAViolate &&
+            (t.DaysUntilDue < 0 || t.DaysUntilDue > Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3))));
+
+        return View(prioritizedTasks);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error loading task queue with workgroupId: {workgroupId}, year: {year}, take: {take}", 
+            workgroupId, year, take);
+        TempData["ErrorMessage"] = "An error occurred while loading the task queue.";
+        return View(new List<TaskQueueItem>());
+    }
+}
 
         // POST: PlannedEvents/RemoveUrgentStatus
         [HttpPost]

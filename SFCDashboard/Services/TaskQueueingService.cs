@@ -27,7 +27,7 @@ namespace SFCDashboard.Services
             _cache = cache;
         }
 
-        public async Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int take = 20)
+        public async Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int? year = null, int take = 20)
         {
             var stopwatch = Stopwatch.StartNew();
             var today = DateTime.Today;
@@ -58,6 +58,16 @@ namespace SFCDashboard.Services
                         query = query.Where(t => t.TaskWorkGroup != null && 
                                                t.TaskWorkGroup.Contains(workgroup.Name));
                     }
+                }
+                
+                // Apply year filter if specified
+                if (year.HasValue)
+                {
+                    // Filter based on the year in the PE number (assuming format PE2023xxx)
+                    query = query.Where(t => t.PlannedEvent != null && 
+                                         t.PlannedEvent.PeNumber != null &&
+                                         t.PlannedEvent.PeNumber.Length >= 6 &&
+                                         t.PlannedEvent.PeNumber.Substring(2, 4) == year.Value.ToString());
                 }
 
                 // Use projection to select only needed data
@@ -138,17 +148,52 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<TaskQueueItem> GetNextTaskAsync(int? workgroupId = null)
+        public async Task<TaskQueueItem> GetNextTaskAsync(int? workgroupId = null, int? year = null)
         {
-            var prioritizedTasks = await GetPrioritizedTasksAsync(workgroupId, take: 1);
+            var prioritizedTasks = await GetPrioritizedTasksAsync(workgroupId, year, take: 1);
             return prioritizedTasks.Count > 0 ? prioritizedTasks[0] : null;
         }
 
-        private async Task<WorkGroup> GetWorkgroupAsync(int workgroupId)
+        public async Task<List<int>> GetAvailableYearsAsync()
+        {
+            try
+            {
+                // Get distinct years from PE numbers in the format PE2023xxx
+                var years = await _context.PlannedEvents
+                    .Where(p => p.PeNumber != null && 
+                               p.PeNumber.StartsWith("PE") && 
+                               p.PeNumber.Length >= 6 &&
+                               EF.Functions.Like(p.PeNumber, "PE2[0-9][2-9][0-9]%"))
+                    .Select(p => p.PeNumber!.Substring(2, 4))
+                    .Distinct()
+                    .ToListAsync();
+
+                // Convert to integers and filter valid years, then sort descending
+                var validYears = years
+                    .Where(y => int.TryParse(y, out int year) && year >= 2020 && year <= DateTime.Now.Year + 1)
+                    .Select(y => int.Parse(y))
+                    .OrderByDescending(y => y)
+                    .ToList();
+
+                _logger.LogInformation("Found {count} available years: {years}", 
+                    validYears.Count, string.Join(", ", validYears));
+
+                return validYears;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available years from PE numbers");
+                // Return default years if there's an error
+                var currentYear = DateTime.Now.Year;
+                return Enumerable.Range(currentYear - 4, 5).OrderByDescending(y => y).ToList();
+            }
+        }
+
+        private async Task<WorkGroup?> GetWorkgroupAsync(int workgroupId)
         {
             string cacheKey = string.Format(WORKGROUP_CACHE_KEY, workgroupId);
             
-            if (!_cache.TryGetValue(cacheKey, out WorkGroup workgroup))
+            if (!_cache.TryGetValue(cacheKey, out WorkGroup? workgroup))
             {
                 workgroup = await _context.WorkGroups.FindAsync(workgroupId);
                 
@@ -304,7 +349,7 @@ namespace SFCDashboard.Services
 
     public class TaskQueueItem
     {
-        public PETask Task { get; set; }
+        public required PETask Task { get; set; }
         public double PriorityScore { get; set; }
         public int DaysUntilDue { get; set; }
         public DateTime? EffectiveDeadline { get; set; }

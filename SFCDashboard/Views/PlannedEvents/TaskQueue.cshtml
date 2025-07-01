@@ -84,11 +84,9 @@
                             {
                                 @foreach (var year in (IEnumerable<int>)ViewData["AvailableYears"])
                                 {
-                                    var taskCountsByYear = ViewData["TaskCountsByYear"] as Dictionary<int, int>;
-                                    var taskCount = taskCountsByYear?.GetValueOrDefault(year, 0) ?? 0;
                                     <option value="@year" 
                                         selected="@(ViewData["SelectedYear"]?.ToString() == year.ToString())">
-                                        @year (@taskCount tasks)
+                                        @year
                                     </option>
                                 }
                             }
@@ -121,11 +119,9 @@
                             {
                                 @foreach (var year in (IEnumerable<int>)ViewData["AvailableYears"])
                                 {
-                                    var taskCountsByYear = ViewData["TaskCountsByYear"] as Dictionary<int, int>;
-                                    var taskCount = taskCountsByYear?.GetValueOrDefault(year, 0) ?? 0;
                                     <option value="@year" 
                                         selected="@(ViewData["SelectedYear"]?.ToString() == year.ToString())">
-                                        @year (@taskCount tasks)
+                                        @year
                                     </option>
                                 }
                             }
