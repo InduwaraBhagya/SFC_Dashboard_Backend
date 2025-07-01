@@ -12,9 +12,39 @@
             <i class="bi bi-building icon-white icon-lg me-3"></i>
             <span class="contractor-name">@contractorName </span>Projects
         </h1>
-        <a href="@Url.Action("Index")" class="btn btn-outline-primary no-print">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
-        </a>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Notification Bell -->
+            <div class="dropdown">
+                <button class="btn btn-outline-light position-relative" type="button"
+                    id="contractorNotificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="border: none; padding: 0.5rem;">
+                    <img src="~/images/notification.png" alt="Notifications"
+                        style="width: 24px; height: 24px; filter: brightness(0) invert(1);" />
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                        id="notificationCount" style="display:none; font-size: 0.6rem;">0</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end notification-dropdown"
+                    style="width: 350px; max-height: 400px; overflow-y: auto;">
+                    <div class="dropdown-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-bell me-2"></i>Notifications</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="markAllAsRead">Mark All
+                            Read</button>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div id="notificationList">
+                        <!-- Notifications will be loaded here -->
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item text-center">
+                        <button type="button" class="btn btn-sm btn-link" id="refreshNotifications">Refresh</button>
+                    </div>
+                </div>
+            </div>
+
+            <a href="@Url.Action("Index")" class="btn btn-outline-primary no-print">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
     </div>
 
     <div class="contractor-card contractor-search mb-4 no-print">
@@ -40,7 +70,8 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-search"></i> Search
                         </button>
-                        <a href="@Url.Action("ContractorRecords", new { contractorName = contractorName })" class="btn btn-secondary">
+                        <a href="@Url.Action("ContractorRecords", new { contractorName = contractorName })"
+                            class="btn btn-secondary">
                             <i class="bi bi-x-circle"></i> Clear
                         </a>
                     </div>
@@ -93,10 +124,12 @@
                                 <td>@Html.DisplayFor(modelItem => item.CusType)</td>
                                 <td class="no-print">
                                     <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="location.href='@Url.Action("Details", new { peNumber = item.PeNumber, contractorName = ViewData["ContractorName"] })'">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            onclick="location.href='@Url.Action("Details", new { peNumber = item.PeNumber, contractorName = ViewData["ContractorName"] })'">
                                             <i class="bi bi-eye"></i> PE Details
                                         </button>
-                                        <button type="button" class="btn btn-primary btn-sm" data-pe-number="@item.PeNumber" onclick="location.href='@Url.Action("Details", "SurveyTasks", new { peNumber = item.PeNumber })'">
+                                        <button type="button" class="btn btn-primary btn-sm" data-pe-number="@item.PeNumber"
+                                            onclick="location.href='@Url.Action("Details", "SurveyTasks", new { peNumber = item.PeNumber })'">
                                             <i class="bi bi-clipboard-check"></i> View BOQ Details
                                         </button>
                                     </div>
@@ -113,23 +146,118 @@
                     <div class="empty-state">
                         <i class="bi bi-folder-x display-1 text-muted mb-3"></i>
                         <h5 class="text-muted mb-2">No Projects Found</h5>
-                        <p class="text-muted mb-0">No projects found for your company. If you believe this is incorrect, please verify your contractor name matches exactly with the records in the system.</p>
+                        <p class="text-muted mb-0">No projects found for your company. If you believe this is incorrect,
+                            please verify your contractor name matches exactly with the records in the system.</p>
                     </div>
                 </div>
             }
         </div>
     </div>
 
-    <div class="d-flex justify-content-end mt-3 mb-4 no-print">
+    @* <div class="d-flex justify-content-end mt-3 mb-4 no-print">
         <button type="button" class="btn btn-outline-primary" id="exportBtn">
             <i class="bi bi-file-earmark-excel"></i> Export to Excel
         </button>
-    </div>
+    </div> *@
 </div>
 
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const contractorName = '@contractorName';
+
+            // Load notifications on page load
+            loadNotifications();
+
+            // Refresh notifications every 30 seconds
+            setInterval(loadNotifications, 30000);
+
+            // Load notifications function
+            function loadNotifications() {
+                $.get('/ContractorView/GetNotifications', { contractorName: contractorName })
+                    .done(function (data) {
+                        updateNotificationUI(data.notifications, data.count);
+                    })
+                    .fail(function () {
+                        console.error('Failed to load notifications');
+                    });
+            }
+
+            // Update notification UI
+            function updateNotificationUI(notifications, unreadCount) {
+                const $notificationList = $('#notificationList');
+                const $notificationCount = $('#notificationCount');
+
+                // Update badge count
+                if (unreadCount > 0) {
+                    $notificationCount.text(unreadCount).show();
+                } else {
+                    $notificationCount.hide();
+                }
+
+                // Clear existing notifications
+                $notificationList.empty();
+
+                if (notifications.length === 0) {
+                    $notificationList.append(`
+                            <div class="dropdown-item-text text-center text-muted py-3">
+                                <i class="bi bi-bell-slash me-2"></i>No notifications
+                            </div>
+                        `);
+                    return;
+                }
+
+                // Add notifications
+                notifications.forEach(function (notification) {
+                    const isUnread = !notification.isRead;
+                    const unreadClass = isUnread ? 'bg-light border-start border-primary border-3' : '';
+
+                    $notificationList.append(`
+                            <div class="dropdown-item notification-item ${unreadClass}" 
+                                 data-notification-id="${notification.id}" 
+                                 data-pe-number="${notification.peNumber}"
+                                 style="cursor: pointer; white-space: normal;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold small">${notification.peNumber}</div>
+                                        <div class="text-muted small mt-1">${notification.message}</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">${notification.createdAt}</div>
+                                    </div>
+                                    ${isUnread ? '<div class="text-primary ms-2"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i></div>' : ''}
+                                </div>
+                            </div>
+                        `);
+                });
+            }
+
+            // Handle notification click
+            $(document).on('click', '.notification-item', function () {
+                const notificationId = $(this).data('notification-id');
+                const peNumber = $(this).data('pe-number');
+
+                // Mark as read
+                $.post('/ContractorView/MarkNotificationAsRead', { notificationId: notificationId })
+                    .done(function () {
+                        // Redirect to survey task details
+                        window.location.href = `/SurveyTasks/Details/${peNumber}`;
+                    });
+            });
+
+            // Handle mark all as read
+            $('#markAllAsRead').on('click', function (e) {
+                e.stopPropagation();
+                $.post('/ContractorView/MarkAllNotificationsAsRead', { contractorName: contractorName })
+                    .done(function () {
+                        loadNotifications();
+                    });
+            });
+
+            // Handle refresh notifications
+            $('#refreshNotifications').on('click', function (e) {
+                e.stopPropagation();
+                loadNotifications();
+            });
+
             // Add search functionality
             const searchForm = document.getElementById('searchForm');
             const searchInputs = searchForm.querySelectorAll('input');
@@ -143,7 +271,7 @@
                     row.style.opacity = '0';
                     row.style.transform = 'translateY(20px)';
                     row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                    
+
                     setTimeout(() => {
                         row.style.opacity = '1';
                         row.style.transform = 'translateY(0)';
@@ -195,7 +323,7 @@
             // Enhanced search with debouncing
             let searchTimeout;
             searchInputs.forEach(input => {
-                input.addEventListener('input', function() {
+                input.addEventListener('input', function () {
                     clearTimeout(searchTimeout);
                     searchTimeout = setTimeout(filterTable, 300);
                 });
@@ -210,12 +338,12 @@
             // Enhanced button interactions
             const actionButtons = document.querySelectorAll('.btn-group .btn');
             actionButtons.forEach(button => {
-                button.addEventListener('click', function(e) {
+                button.addEventListener('click', function (e) {
                     // Add loading state
                     const icon = this.querySelector('i');
                     const originalClass = icon.className;
                     icon.className = 'bi bi-arrow-clockwise spinning';
-                    
+
                     // Reset after navigation (will be interrupted by page change)
                     setTimeout(() => {
                         icon.className = originalClass;
@@ -224,7 +352,7 @@
             });
 
             // Handle export to Excel with enhanced UX
-            document.getElementById('exportBtn').addEventListener('click', function() {
+            document.getElementById('exportBtn').addEventListener('click', function () {
                 // Add loading state
                 const originalText = this.innerHTML;
                 this.innerHTML = '<i class="bi bi-arrow-clockwise spinning me-2"></i>Exporting...';
@@ -234,16 +362,16 @@
                 let tableData = [];
                 const headers = [];
                 const table = document.querySelector('.contractor-table');
-                
+
                 // Get headers
                 table.querySelectorAll('thead th').forEach(th => {
                     if (!th.classList.contains('no-print')) {
                         headers.push(th.textContent.trim());
                     }
                 });
-                
+
                 tableData.push(headers);
-                
+
                 // Get visible rows
                 const rows = table.querySelectorAll('tbody tr');
                 rows.forEach(row => {
@@ -257,10 +385,10 @@
                         tableData.push(rowData);
                     }
                 });
-                
+
                 // Convert to CSV
                 const csvContent = tableData.map(row => row.join(',')).join('\n');
-                
+
                 // Download
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
@@ -282,14 +410,14 @@
             // Check for survey tasks and update button states
             function checkSurveyTasks() {
                 const surveyButtons = document.querySelectorAll('button[data-pe-number]');
-                
+
                 surveyButtons.forEach(async (button) => {
                     const peNumber = button.getAttribute('data-pe-number');
-                    
+
                     try {
                         const response = await fetch(`@Url.Action("HasSurveyTasks", "ContractorView")?peNumber=${encodeURIComponent(peNumber)}`);
                         const result = await response.json();
-                        
+
                         if (!result.hasSurveyTasks) {
                             button.disabled = true;
                             button.title = 'No survey tasks available for this PE';
@@ -307,10 +435,10 @@
             let currentRowIndex = -1;
             const tableRows = tableBody.querySelectorAll('tr');
 
-            document.addEventListener('keydown', function(e) {
+            document.addEventListener('keydown', function (e) {
                 if (tableRows.length === 0) return;
 
-                switch(e.key) {
+                switch (e.key) {
                     case 'ArrowDown':
                         if (e.altKey) { // Alt + Arrow Down for table navigation
                             e.preventDefault();
@@ -342,13 +470,13 @@
             function updateRowFocus() {
                 // Remove previous focus
                 tableRows.forEach(row => row.classList.remove('table-row-focused'));
-                
+
                 // Add focus to current row
                 if (currentRowIndex >= 0) {
                     tableRows[currentRowIndex].classList.add('table-row-focused');
-                    tableRows[currentRowIndex].scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'nearest' 
+                    tableRows[currentRowIndex].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
                     });
                 }
             }
@@ -366,7 +494,7 @@
             transform: translateX(2px);
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
         }
-        
+
         [data-theme="dark"] .table-row-focused {
             background-color: rgba(51, 65, 85, 0.8) !important;
             border-left-color: var(--primary) !important;
@@ -375,10 +503,15 @@
         .spinning {
             animation: spin 1s linear infinite;
         }
-        
+
         @@keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Enhanced badge animation */
@@ -434,6 +567,7 @@
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -441,8 +575,15 @@
         }
 
         @@keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 0.3; }
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
         }
 
         /* Accessibility and reduced motion */
@@ -451,11 +592,11 @@
                 animation: none !important;
                 transition: none !important;
             }
-            
+
             .contractor-table tbody tr:hover {
                 transform: none !important;
             }
-            
+
             .btn-group .btn:hover {
                 transform: none !important;
             }
@@ -466,11 +607,11 @@
             .contractor-header h1 {
                 font-size: 1.5rem;
             }
-            
+
             .contractor-search .form-control:focus {
                 transform: none;
             }
-            
+
             .btn-group .btn:hover {
                 transform: none;
             }
