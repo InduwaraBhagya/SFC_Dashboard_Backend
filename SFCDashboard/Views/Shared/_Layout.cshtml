@@ -18,8 +18,8 @@
     : null;
 
     var isAdmin = currentUser?.UserRole?.HasPermission("Admin") == true;
-    var isHomePage = ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && 
-                     ViewContext.RouteData.Values["action"]?.ToString() == "Index";
+    var isHomePage = ViewContext.RouteData.Values["controller"]?.ToString() == "Home" &&
+    ViewContext.RouteData.Values["action"]?.ToString() == "Index";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -60,7 +60,8 @@
         <header>
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
                 <div class="container-fluid">
-                    <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="Home" asp-action="Index">
+                    <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="Home"
+                        asp-action="Index">
                         <img src="~/images/logo.png" alt="SFCDashboard" height="40" class="logo-img" />
                     </a>
 
@@ -73,7 +74,7 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-controller="PlannedEvents" asp-action="Index">
                                     <i class="bi bi-speedometer2"></i> Dashboard
-                            </a>
+                                </a>
                             </li>
                             @if (isAdmin)
                             {
@@ -135,7 +136,7 @@
                             }
 
                         </ul>
-                        
+
                         <form class="d-flex align-items-center me-3" method="get" asp-controller="PlannedEvents"
                             asp-action="GlobalSearch" role="search" style="min-width:320px;">
                             <div class="input-group">
@@ -170,18 +171,20 @@
                             <button class="btn btn-outline-light position-relative" type="button" id="reminderDropdown"
                                 data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem;">
                                 <i class="bi bi-bell" style="font-size: 1.2rem;"></i>
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                <span
+                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                                     id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
                             </button>
-                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown" 
-                                 style="width: 350px; max-height: 400px; overflow-y: auto;">
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
+                                style="width: 350px; max-height: 400px; overflow-y: auto;">
                                 <div class="dropdown-header bg-primary text-white p-3">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0">
                                             <i class="bi bi-bell me-2"></i>Reminders
                                         </h6>
                                         <div>
-                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead" title="Mark all as read">
+                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
+                                                title="Mark all as read">
                                                 <i class="bi bi-check-all"></i>
                                             </button>
                                             <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
@@ -190,7 +193,8 @@
                                         </div>
                                     </div>
                                     <div class="btn-group btn-group-sm w-100 mt-2">
-                                        <button type="button" class="btn btn-outline-light active" data-filter="unread">Unread</button>
+                                        <button type="button" class="btn btn-outline-light active"
+                                            data-filter="unread">Unread</button>
                                         <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
                                     </div>
                                 </div>
@@ -210,13 +214,13 @@
             </nav>
         </header>
     }
-    
+
     <div class="@(isHomePage ? "" : "container mt-4")">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
-    
+
     @if (!isHomePage)
     {
         <footer class="bg-dark text-white mt-4">
@@ -416,17 +420,17 @@
                     .then(data => {
                         // Filter to ensure only reminders are processed (extra safety)
                         const reminderData = data.filter(item => item.isReminder !== false);
-                        
+
                         const reminderList = document.getElementById('reminderNotificationList');
                         const reminderBadge = document.getElementById('reminderCount');
-                        
+
                         if (!reminderList) return;
-                        
+
                         reminderList.innerHTML = '';
 
                         // Filter data based on current filter
-                        const filteredData = currentReminderFilter === 'unread' 
-                            ? reminderData.filter(r => !r.isRead) 
+                        const filteredData = currentReminderFilter === 'unread'
+                            ? reminderData.filter(r => !r.isRead)
                             : reminderData;
 
                         // Update badge count (always show unread count)
@@ -453,7 +457,7 @@
                             reminderElement.style.borderBottom = '1px solid #eee';
                             reminderElement.setAttribute('data-reminder-id', reminder.id);
                             reminderElement.setAttribute('data-pe-id', reminder.plannedEventId);
-                            
+
                             reminderElement.innerHTML = `
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div class="flex-grow-1">
@@ -471,19 +475,19 @@
                                         <ul class="dropdown-menu dropdown-menu-end">
                                             <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); viewPEDetails(${reminder.plannedEventId})">
                                                 <i class="bi bi-eye me-2"></i>View PE Details</a></li>
-                                            ${!reminder.isRead ? 
-                                                `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); markReminderAsRead(${reminder.id})">
+                                            ${!reminder.isRead ?
+                                    `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); markReminderAsRead(${reminder.id})">
                                                     <i class="bi bi-check me-2"></i>Mark as Read</a></li>` : ''
-                                            }
+                                }
                                         </ul>
                                     </div>
                                 </div>`;
-                            
+
                             // Add click event to show details modal
-                            reminderElement.addEventListener('click', function() {
+                            reminderElement.addEventListener('click', function () {
                                 showReminderDetails(reminder);
                             });
-                            
+
                             reminderList.appendChild(reminderElement);
                         });
                     })
@@ -525,13 +529,13 @@
                 </div>
             `;
 
-            document.getElementById('reminderDetailsContent').innerHTML = detailsContent;
-            document.getElementById('viewPEDetailsBtn').href = `/PlannedEvents/Details/${reminder.plannedEventId}`;
+                document.getElementById('reminderDetailsContent').innerHTML = detailsContent;
+                document.getElementById('viewPEDetailsBtn').href = `/PlannedEvents/Details/${reminder.plannedEventId}`;
 
-            // Show the modal
-            const modal = new bootstrap.Modal(document.getElementById('reminderDetailsModal'));
-            modal.show();
-        }
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('reminderDetailsModal'));
+                modal.show();
+            }
 
             // Helper functions to extract PE number and customer from reminder message
             function extractPENumber(message) {
@@ -553,12 +557,12 @@
                     },
                     body: JSON.stringify({ id: reminderId })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        loadReminders(); // Reload to update the list
-                    }
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadReminders(); // Reload to update the list
+                        }
+                    });
             }
 
             function markAllRemindersAsRead() {
@@ -569,12 +573,12 @@
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        loadReminders(); // Reload to update the list
-                    }
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadReminders(); // Reload to update the list
+                        }
+                    });
             }
 
             function viewPEDetails(peId) {
@@ -593,29 +597,29 @@
             }
 
             // Event listeners
-            document.getElementById('refreshReminders')?.addEventListener('click', function(e) {
+            document.getElementById('refreshReminders')?.addEventListener('click', function (e) {
                 e.stopPropagation();
                 loadReminders();
             });
-            
-            document.getElementById('markAllRemindersRead')?.addEventListener('click', function(e) {
+
+            document.getElementById('markAllRemindersRead')?.addEventListener('click', function (e) {
                 e.stopPropagation();
                 markAllRemindersAsRead();
             });
 
             // Filter buttons
             document.querySelectorAll('#reminderDropdown + .dropdown-menu .btn-group button[data-filter]').forEach(button => {
-                button.addEventListener('click', function(e) {
+                button.addEventListener('click', function (e) {
                     e.stopPropagation();
-                    
+
                     // Remove active class from all filter buttons
                     document.querySelectorAll('#reminderDropdown + .dropdown-menu .btn-group button[data-filter]').forEach(btn => {
                         btn.classList.remove('active');
                     });
-                    
+
                     // Add active class to clicked button
                     this.classList.add('active');
-                    
+
                     // Update filter and reload
                     currentReminderFilter = this.getAttribute('data-filter');
                     loadReminders();
@@ -630,7 +634,8 @@
     </script>
 
     <!-- Reminder Details Modal -->
-    <div class="modal fade" id="reminderDetailsModal" tabindex="-1" aria-labelledby="reminderDetailsModalLabel" aria-hidden="true">
+    <div class="modal fade" id="reminderDetailsModal" tabindex="-1" aria-labelledby="reminderDetailsModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-warning text-dark">
@@ -653,6 +658,69 @@
             </div>
         </div>
     </div>
+
+    <script>
+        $(document).ready(function () {
+            // Initialize theme from localStorage or default to light
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            applyTheme(savedTheme);
+            updateToggleState(savedTheme);
+
+            // Dark mode toggle functionality
+            $('#darkModeToggle').on('change', function () {
+                const isChecked = this.checked;
+                const newTheme = isChecked ? 'dark' : 'light';
+
+                applyTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+
+            function applyTheme(theme) {
+                // Remove existing theme classes
+                document.documentElement.removeAttribute('data-theme');
+                document.body.removeAttribute('data-theme');
+
+                // Apply new theme
+                document.documentElement.setAttribute('data-theme', theme);
+                document.body.setAttribute('data-theme', theme);
+
+                // Update CSS custom properties for smooth transition
+                if (theme === 'dark') {
+                    document.documentElement.style.setProperty('--bg-color', '#1a1a1a');
+                    document.documentElement.style.setProperty('--text-color', '#ffffff');
+                    document.documentElement.style.setProperty('--card-bg', '#2d2d2d');
+                    document.documentElement.style.setProperty('--border-color', '#404040');
+                    document.documentElement.style.setProperty('--input-bg', '#333333');
+                } else {
+                    document.documentElement.style.setProperty('--bg-color', '#ffffff');
+                    document.documentElement.style.setProperty('--text-color', '#212529');
+                    document.documentElement.style.setProperty('--card-bg', '#ffffff');
+                    document.documentElement.style.setProperty('--border-color', '#dee2e6');
+                    document.documentElement.style.setProperty('--input-bg', '#ffffff');
+                }
+            }
+
+            function updateToggleState(theme) {
+                const toggle = document.getElementById('darkModeToggle');
+                if (toggle) {
+                    toggle.checked = theme === 'dark';
+                }
+            }
+
+            // Listen for system theme changes
+            if (window.matchMedia) {
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                mediaQuery.addEventListener('change', function (e) {
+                    // Only auto-switch if user hasn't manually set a preference
+                    if (!localStorage.getItem('theme')) {
+                        const newTheme = e.matches ? 'dark' : 'light';
+                        applyTheme(newTheme);
+                        updateToggleState(newTheme);
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>
