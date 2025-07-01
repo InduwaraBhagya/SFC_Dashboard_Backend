@@ -1,0 +1,249 @@
+@using SFCDashboard.Models
+@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "OLA Violate Records - Multi Workgroup View";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-clock-history text-primary me-3"></i>OLA Violation Records
+        </h1>
+        <a asp-action="MultiWorkgroupView" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Workgroups Filter Section -->
+    <div class="workgroup-filter mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel-fill me-2"></i> Filter by Workgroups
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" asp-action="MultiWorkgroupOLAViolateView" id="workgroupFilterForm">
+                    <div class="row g-3 align-items-center">
+                        <div class="col">
+                            <label for="workgroupsFilter" class="form-label">Select Workgroups:</label>
+                            <select id="workgroupsFilter" name="workgroupIds" class="form-select workgroup-select" data-placeholder="Select Workgroups" multiple>
+                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> userWorkGroups)
+                                {
+                                    foreach (var workgroup in userWorkGroups)
+                                    {
+                                        var isSelected = ViewData["SelectedWorkgroupIds"] is List<int> selectedIds && selectedIds.Contains(workgroup.Id);
+                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                    }
+                                }
+                            </select>
+                            <div class="form-text">You can select multiple workgroups</div>
+                        </div>
+                        <div class="col-auto d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-funnel"></i> Apply Filter
+                            </button>
+                            @if (ViewData["SelectedWorkgroupIds"] is List<int> ids && ids.Any())
+                            {
+                                <a href="@Url.Action("MultiWorkgroupOLAViolateView")" class="btn btn-outline-secondary ms-2">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selected Workgroups Badge -->
+    @if (ViewData["FilteredWorkgroups"] != null)
+    {
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Showing OLA Violation Records For:</strong> @ViewData["FilteredWorkgroups"]
+        </div>
+    }
+
+    <!-- Search Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="searchForm" class="row g-3" method="get">
+                @if (ViewData["SelectedWorkgroupIds"] is List<int> selectedWorkgroupIds && selectedWorkgroupIds.Any())
+                {
+                    foreach (var id in selectedWorkgroupIds)
+                    {
+                        <input type="hidden" name="workgroupIds" value="@id" />
+                    }
+                }
+                <div class="col-md-3">
+                    <label for="searchPeNumber" class="form-label">PE Number</label>
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber"
+                        value="@ViewData["SearchPeNumber"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchCustomer" class="form-label">Customer</label>
+                    <input type="text" class="form-control" id="searchCustomer" name="customer"
+                        value="@ViewData["SearchCustomer"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchReference" class="form-label">Request Reference</label>
+                    <input type="text" class="form-control" id="searchReference" name="reference"
+                        value="@ViewData["SearchReference"]">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <a href="@Url.Action("MultiWorkgroupOLAViolateView", new { workgroupIds = ViewData["SelectedWorkgroupIds"] })" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>OLA Violation Records</h5>
+                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>PE Number</th>
+                            <th>Customer</th>
+                            <th>Request Reference</th>
+                            <th>Current Task</th>
+                            <th>Workgroup</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.PeNumber</td>
+                                <td>@item.Customer</td>
+                                <td>@item.RequestReferenceNo</td>
+                                <td>@item.TaskName</td>
+                                <td>@item.TaskWg</td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id" 
+                                       asp-route-returnUrl="@Url.Action("MultiWorkgroupOLAViolateView", new { workgroupIds = ViewData["SelectedWorkgroupIds"] })" 
+                                       class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i> No OLA violations found.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Select2 for workgroup filter
+            $('#workgroupsFilter').select2({
+                placeholder: "Select workgroups",
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Add search functionality
+            const searchForm = document.getElementById('searchForm');
+            const searchInputs = searchForm.querySelectorAll('input[type="text"]');
+            const tableBody = document.querySelector('table tbody');
+            const noRecordsAlert = document.querySelector('.alert-info');
+
+            function filterTable() {
+                const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+                const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+                const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+
+                let visibleRows = 0;
+                const rows = tableBody.getElementsByTagName('tr');
+
+                Array.from(rows).forEach(row => {
+                    const cells = row.getElementsByTagName('td');
+                    if (cells.length > 0) {
+                        const matchPeNumber = cells[0].textContent.trim().toLowerCase().includes(peNumber);
+                        const matchCustomer = cells[1].textContent.trim().toLowerCase().includes(customer);
+                        const matchReference = cells[2].textContent.trim().toLowerCase().includes(reference);
+
+                        if (matchPeNumber && matchCustomer && matchReference) {
+                            row.style.display = '';
+                            visibleRows++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    }
+                });
+
+                // Update record count
+                const badge = document.querySelector('.badge');
+                if (badge) {
+                    badge.textContent = visibleRows + ' Records';
+                }
+
+                // Show/hide no records message
+                if (noRecordsAlert && visibleRows === 0) {
+                    if (noRecordsAlert.style.display !== 'block') {
+                        const newAlert = document.createElement('div');
+                        newAlert.className = 'alert alert-info mt-3';
+                        newAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i> No matching OLA violations found.';
+                        tableBody.parentElement.appendChild(newAlert);
+                    }
+                } else {
+                    const existingAlerts = document.querySelectorAll('.card-body .alert-info');
+                    existingAlerts.forEach(alert => {
+                        if (alert !== noRecordsAlert) {
+                            alert.remove();
+                        }
+                    });
+                }
+            }
+
+            // Add real-time search
+            searchInputs.forEach(input => {
+                input.addEventListener('input', filterTable);
+            });
+
+            // Prevent form submission (using real-time filter instead)
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                filterTable();
+            });
+        });
+    </script>
+}
