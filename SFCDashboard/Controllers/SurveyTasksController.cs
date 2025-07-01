@@ -9,6 +9,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Drawing;
 
 namespace SFCDashboard.Controllers
 {
@@ -710,6 +713,9 @@ namespace SFCDashboard.Controllers
                 return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
             }
         }
+
+        // Add this action method to your SurveyTasksController
+        // ExportToExcel method has been removed as requested
 
         private async Task<SystemUser?> GetCurrentUserAsync()
         {

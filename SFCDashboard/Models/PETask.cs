@@ -39,6 +39,7 @@ namespace SFCDashboard.Models
         public bool IsOLAViolate { get; set; }// Change from TimeSpan? to DateTime?
         public DateTime OLADateTime { get; internal set; }
         public DateTime? ViolationStartTime { get; set; }
+        public bool EscalationsDisabled { get; set; } = false; // New property to disable escalations for this task
 
     }
 }

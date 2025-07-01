@@ -12,8 +12,11 @@ using SFCDashboard.Middleware;
 
 using Microsoft.Extensions.DependencyInjection;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+using OfficeOpenXml; // Add EPPlus namespace
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure EPPlus license globally
 
 builder.Services.AddControllersWithViews();
 

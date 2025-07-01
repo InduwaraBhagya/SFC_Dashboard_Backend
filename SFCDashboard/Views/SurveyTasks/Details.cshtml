@@ -58,8 +58,11 @@
                 <a href="@Url.Action("Index", "UDManager")" class="btn btn-info btn-sm me-2">
                     <i class="bi bi-database-fill-gear me-1"></i>Manage UD Items
                 </a>
-                <button type="button" class="btn btn-primary btn-sm" id="toggleBoqForm">
+                <button type="button" class="btn btn-primary btn-sm me-2" id="toggleBoqForm">
                     <i class="bi bi-plus-circle me-1"></i>Add BOQ Item
+                </button>
+                <button type="button" class="btn btn-success btn-sm" id="exportBoqBtn">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Export to Excel
                 </button>
             </div>
         </div>
@@ -69,7 +72,9 @@
             <form id="inlineBoqForm" method="post" action="javascript:void(0);">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="TaskId" name="TaskId" value="@Model.Task.Id" />
-                <div class="row g-3">
+                
+                <!-- First row - categories and quantity -->
+                <div class="row g-3 mb-3">
                     <div class="col-md-3">
                         <label for="CategoryId" class="form-label">Category</label>
                         <select class="form-select" id="CategoryId" name="CategoryId" required>
@@ -92,20 +97,81 @@
                         <label for="Quantity" class="form-label">Quantity</label>
                         <input type="number" class="form-control" id="Quantity" name="Quantity" step="0.01" min="0.01" required>
                     </div>
+                </div>
+                
+                <!-- Second row - Unit Rate fields -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <h6 class="text-muted">Unit Rate</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="MainMaterialRate" class="form-label">Main Material Rate</label>
+                        <input type="number" class="form-control" id="MainMaterialRate" name="MainMaterialRate" step="0.01" min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="AccessoriesRate" class="form-label">Accessories Rate</label>
+                        <input type="number" class="form-control" id="AccessoriesRate" name="AccessoriesRate" step="0.01" min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="ServicesOverheadRate" class="form-label">Services + Overhead Rate</label>
+                        <input type="number" class="form-control" id="ServicesOverheadRate" name="ServicesOverheadRate" step="0.01" min="0">
+                    </div>
+                </div>
+                
+                <!-- Third row - Total Rate fields (read-only, auto-calculated) -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <h6 class="text-muted">Total Estimated Amount</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="MainMaterialTotal" class="form-label">Main Material Total (a)</label>
+                        <input type="number" class="form-control" id="MainMaterialTotal" name="MainMaterialTotal" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="AccessoriesTotal" class="form-label">Accessories Total (b)</label>
+                        <input type="number" class="form-control" id="AccessoriesTotal" name="AccessoriesTotal" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="ServicesOHTotal" class="form-label">Services+OH Total (c)</label>
+                        <input type="number" class="form-control" id="ServicesOHTotal" name="ServicesOHTotal" readonly>
+                    </div>
+                </div>
+                
+                <!-- Fourth row - Approval Amounts (read-only, auto-calculated) -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <h6 class="text-muted">Total Approved Amount</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="P0Amount" class="form-label">P0 Amount (a+b+c)</label>
+                        <input type="number" class="form-control" id="P0Amount" name="P0Amount" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="P1Amount" class="form-label">P1 Amount (b+c)</label>
+                        <input type="number" class="form-control" id="P1Amount" name="P1Amount" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="P2Amount" class="form-label">P2 Amount (c)</label>
+                        <input type="number" class="form-control" id="P2Amount" name="P2Amount" readonly>
+                    </div>
+                </div>
+                
+                <!-- Fifth row - Other fields and buttons -->
+                <div class="row g-3">
                     <div class="col-md-3">
                         <label for="Unit" class="form-label">Unit</label>
                         <input type="text" class="form-control" id="Unit" name="Unit" readonly>
                     </div>
                     <div class="col-md-3">
-                        <label for="UnitPrice" class="form-label">Unit Price</label>
-                        <input type="number" class="form-control" id="UnitPrice" name="UnitPrice" step="0.01" min="0.01" readonly>
+                        <label for="UnitPrice" class="form-label">Base Unit Price</label>
+                        <input type="number" class="form-control" id="UnitPrice" name="UnitPrice" step="0.01" readonly>
                     </div>
                     <div class="col-md-3">
                         <label for="AdjustedUnitPrice" class="form-label">Adjusted Unit Price</label>
                         <input type="number" class="form-control" id="AdjustedUnitPrice" name="AdjustedUnitPrice" readonly>
                     </div>
                     <div class="col-md-3">
-                        <label for="Amount" class="form-label">Amount</label>
+                        <label for="Amount" class="form-label">Total Amount</label>
                         <input type="number" class="form-control" id="Amount" name="Amount" readonly>
                     </div>
                     <div class="col-12">
@@ -128,9 +194,12 @@
                             <th>UD Name</th>
                             <th>Quantity</th>
                             <th>Unit</th>
-                            <th>Unit Price</th>
-                            <th>Adjusted Unit Price</th>
-                            <th>Amount</th>
+                            <th>Material Rate</th>
+                            <th>Accessories Rate</th>
+                            <th>Services Rate</th>
+                            <th>P0 (a+b+c)</th>
+                            <th>P1 (b+c)</th>
+                            <th>P2 (c)</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -145,9 +214,12 @@
                                     <td>@item.UDName.Name</td>
                                     <td>@item.Quantity.ToString("N2")</td>
                                     <td>@item.Unit</td>
-                                    <td>@item.UnitPrice.ToString("N2")</td>
-                                    <td>@item.AdjustedUnitPrice.ToString("N2")</td>
-                                    <td>@item.Amount.ToString("N2")</td>
+                                    <td>@item.MainMaterialRate.ToString("N2")</td>
+                                    <td>@item.AccessoriesRate.ToString("N2")</td>
+                                    <td>@item.ServicesOverheadRate.ToString("N2")</td>
+                                    <td>@item.P0Amount.ToString("N2")</td>
+                                    <td>@item.P1Amount.ToString("N2")</td>
+                                    <td>@item.P2Amount.ToString("N2")</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <button type="button" class="btn btn-primary edit-boq" data-id="@item.Id">
@@ -164,7 +236,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="9" class="text-center py-4">
+                                <td colspan="12" class="text-center py-4">
                                     <i class="bi bi-info-circle me-2"></i>No BOQ items added yet
                                 </td>
                             </tr>
@@ -339,17 +411,68 @@
                         </div>
                     </div>
                     
+                    <!-- Unit Rate Fields -->
+                    <h6 class="text-muted mb-3">Unit Rate</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="editMainMaterialRate" class="form-label">Main Material Rate</label>
+                            <input type="number" class="form-control" id="editMainMaterialRate" name="MainMaterialRate" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editAccessoriesRate" class="form-label">Accessories Rate</label>
+                            <input type="number" class="form-control" id="editAccessoriesRate" name="AccessoriesRate" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editServicesOverheadRate" class="form-label">Services + Overhead Rate</label>
+                            <input type="number" class="form-control" id="editServicesOverheadRate" name="ServicesOverheadRate" step="0.01" min="0">
+                        </div>
+                    </div>
+                    
+                    <!-- Total Estimated Amount Fields -->
+                    <h6 class="text-muted mb-3">Total Estimated Amount</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="editMainMaterialTotal" class="form-label">Main Material Total (a)</label>
+                            <input type="number" class="form-control" id="editMainMaterialTotal" name="MainMaterialTotal" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editAccessoriesTotal" class="form-label">Accessories Total (b)</label>
+                            <input type="number" class="form-control" id="editAccessoriesTotal" name="AccessoriesTotal" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editServicesOHTotal" class="form-label">Services+OH Total (c)</label>
+                            <input type="number" class="form-control" id="editServicesOHTotal" name="ServicesOHTotal" readonly>
+                        </div>
+                    </div>
+                    
+                    <!-- Total Approved Amount Fields -->
+                    <h6 class="text-muted mb-3">Total Approved Amount</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="editP0Amount" class="form-label">P0 Amount (a+b+c)</label>
+                            <input type="number" class="form-control" id="editP0Amount" name="P0Amount" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editP1Amount" class="form-label">P1 Amount (b+c)</label>
+                            <input type="number" class="form-control" id="editP1Amount" name="P1Amount" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editP2Amount" class="form-label">P2 Amount (c)</label>
+                            <input type="number" class="form-control" id="editP2Amount" name="P2Amount" readonly>
+                        </div>
+                    </div>
+                    
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="editUnit" class="form-label">Unit</label>
                             <input type="text" class="form-control" id="editUnit" name="Unit" readonly>
                         </div>
                         <div class="col-md-4">
-                            <label for="editUnitPrice" class="form-label">Unit Price</label>
-                            <input type="number" class="form-control" id="editUnitPrice" name="UnitPrice" step="0.01" min="0" readonly>
+                            <label for="editUnitPrice" class="form-label">Base Unit Price</label>
+                            <input type="number" class="form-control" id="editUnitPrice" name="UnitPrice" step="0.01" readonly>
                         </div>
                         <div class="col-md-4">
-                            <label for="editAmount" class="form-label">Amount</label>
+                            <label for="editAmount" class="form-label">Total Amount</label>
                             <input type="number" class="form-control" id="editAmount" name="Amount" readonly>
                         </div>
                     </div>
@@ -365,6 +488,8 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <!-- SheetJS library for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
     $(document).ready(function () {
         // Load categories when page loads
@@ -373,6 +498,16 @@
         // Toggle BOQ form
         $('#toggleBoqForm').on('click', function() {
             $('#boqFormSection').slideToggle();
+        });
+        
+        // Handle export to Excel button click
+        $('#exportBoqBtn').on('click', function() {
+            // Check if there are BOQ items to export
+            if ($('#boqTable tbody tr').length > 0 && !$('#boqTable tbody tr:first').find('td:first').hasClass('text-center')) {
+                exportBOQToExcel();
+            } else {
+                alert('There are no BOQ items to export.');
+            }
         });
         
         // Cancel BOQ form
@@ -474,50 +609,34 @@ $('#SubCategoryId').on('change', function() {
         $('#inlineBoqForm').on('submit', function(e) {
             e.preventDefault();
             
-            // Log the form values before sending
-            console.log("Form values:", {
-                TaskId: $('#TaskId').val(),
-                CategoryId: $('#CategoryId').val(),
-                SubCategoryId: $('#SubCategoryId').val(),
-                UDNameId: $('#UDNameId').val(),
-                Unit: $('#Unit').val(),
-                UnitPrice: $('#UnitPrice').val()
-            });
-            
             // Validate required fields
             if (!$('#CategoryId').val() || !$('#SubCategoryId').val() || !$('#UDNameId').val() || !$('#Quantity').val()) {
                 alert('Please fill in all required fields');
                 return;
             }
             
-            // Format values properly
-            var quantity = parseFloat($('#Quantity').val()) || 0;
-            var unitPrice = parseFloat($('#UnitPrice').val()) || 0;
-            var adjustedUnitPrice = parseFloat($('#AdjustedUnitPrice').val()) || 0;
-            var amount = parseFloat($('#Amount').val()) || 0;
-            
-            console.log("Submitting BOQ with values:", {
-                TaskId: $('#TaskId').val(),
-                CategoryId: $('#CategoryId').val(),
-                SubCategoryId: $('#SubCategoryId').val(),
-                UDNameId: $('#UDNameId').val(),
-                Quantity: quantity,
-                Unit: $('#Unit').val(),
-                UnitPrice: unitPrice,
-                AdjustedUnitPrice: adjustedUnitPrice,
-                Amount: amount
-            });
-            
             var formData = {
                 TaskId: $('#TaskId').val(),
                 CategoryId: $('#CategoryId').val(),
                 SubCategoryId: $('#SubCategoryId').val(),
                 UDNameId: $('#UDNameId').val(),
-                Quantity: quantity,
+                Quantity: parseFloat($('#Quantity').val()) || 0,
                 Unit: $('#Unit').val(),
-                UnitPrice: unitPrice,
-                AdjustedUnitPrice: adjustedUnitPrice,
-                Amount: amount,
+                UnitPrice: parseFloat($('#UnitPrice').val()) || 0,
+                AdjustedUnitPrice: parseFloat($('#AdjustedUnitPrice').val()) || 0,
+                Amount: parseFloat($('#Amount').val()) || 0,
+                
+                // Add the new fields
+                MainMaterialRate: parseFloat($('#MainMaterialRate').val()) || 0,
+                AccessoriesRate: parseFloat($('#AccessoriesRate').val()) || 0,
+                ServicesOverheadRate: parseFloat($('#ServicesOverheadRate').val()) || 0,
+                MainMaterialTotal: parseFloat($('#MainMaterialTotal').val()) || 0,
+                AccessoriesTotal: parseFloat($('#AccessoriesTotal').val()) || 0,
+                ServicesOHTotal: parseFloat($('#ServicesOHTotal').val()) || 0,
+                P0Amount: parseFloat($('#P0Amount').val()) || 0,
+                P1Amount: parseFloat($('#P1Amount').val()) || 0,
+                P2Amount: parseFloat($('#P2Amount').val()) || 0,
+                
                 __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
             };
             
@@ -526,9 +645,7 @@ $('#SubCategoryId').on('change', function() {
                 type: 'POST',
                 data: formData,
                 success: function(response) {
-                    console.log("Server response:", response);
                     if (response.success) {
-                        // Reload the page to show the new item
                         location.reload();
                     } else {
                         alert('Error adding BOQ item: ' + (response.message || 'Unknown error'));
@@ -654,6 +771,17 @@ $('.edit-boq').on('click', function() {
                 $('#editUnit').val(data.unit);
                 $('#editUnitPrice').val(data.unitPrice);
                 $('#editAmount').val(data.amount);
+                
+                // Add this to your edit-boq click handler inside the success function
+$('#editMainMaterialRate').val(data.mainMaterialRate);
+$('#editAccessoriesRate').val(data.accessoriesRate);
+$('#editServicesOverheadRate').val(data.servicesOverheadRate);
+$('#editMainMaterialTotal').val(data.mainMaterialTotal);
+$('#editAccessoriesTotal').val(data.accessoriesTotal);
+$('#editServicesOHTotal').val(data.servicesOHTotal);
+$('#editP0Amount').val(data.p0Amount);
+$('#editP1Amount').val(data.p1Amount);
+$('#editP2Amount').val(data.p2Amount);
                 
                 // Update modal title
                 $('#editBoqModalLabel').text('Edit BOQ Item #' + data.id);
@@ -795,9 +923,32 @@ function calculateEditAmount() {
     var quantity = parseFloat($('#editQuantity').val()) || 0;
     var unitPrice = parseFloat($('#editUnitPrice').val()) || 0;
     
-    // Get RTOM weight from server or use default
-    var rtomWeight = @Json.Serialize(ViewBag.RTOMWeight ?? 1.0);
+    // Get rates
+    var mainMaterialRate = parseFloat($('#editMainMaterialRate').val()) || 0;
+    var accessoriesRate = parseFloat($('#editAccessoriesRate').val()) || 0;
+    var servicesRate = parseFloat($('#editServicesOverheadRate').val()) || 0;
     
+    // Calculate totals
+    var mainMaterialTotal = mainMaterialRate * quantity;
+    var accessoriesTotal = accessoriesRate * quantity;
+    var servicesTotal = servicesRate * quantity;
+    
+    // Calculate approval amounts
+    var p0Amount = mainMaterialTotal + accessoriesTotal + servicesTotal;
+    var p1Amount = accessoriesTotal + servicesTotal;
+    var p2Amount = servicesTotal;
+    
+    // Update fields
+    $('#editMainMaterialTotal').val(mainMaterialTotal.toFixed(2));
+    $('#editAccessoriesTotal').val(accessoriesTotal.toFixed(2));
+    $('#editServicesOHTotal').val(servicesTotal.toFixed(2));
+    
+    $('#editP0Amount').val(p0Amount.toFixed(2));
+    $('#editP1Amount').val(p1Amount.toFixed(2));
+    $('#editP2Amount').val(p2Amount.toFixed(2));
+    
+    // Original calculations
+    var rtomWeight = @Json.Serialize(ViewBag.RTOMWeight ?? 1.0);
     var adjustedUnitPrice = unitPrice * rtomWeight;
     var amount = adjustedUnitPrice * quantity;
     
@@ -805,61 +956,14 @@ function calculateEditAmount() {
     $('#editAmount').val(amount.toFixed(2));
 }
 
-// Save BOQ edit
-$('#saveBoqEdit').on('click', function() {
-    // Basic validation
-    var form = $('#editBoqForm');
-    if (!form[0].checkValidity()) {
-        form[0].reportValidity();
-        return;
-    }
-    
-    // Show loading state
-    var saveButton = $(this);
-    var originalText = saveButton.text();
-    saveButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
-    
-    var formData = {
-        Id: $('#editId').val(),
-        TaskId: $('#editTaskId').val(),
-        CategoryId: $('#editCategoryId').val(),
-        SubCategoryId: $('#editSubCategoryId').val(),
-        UDNameId: $('#editUDNameId').val(),
-        Quantity: $('#editQuantity').val(),
-        Unit: $('#editUnit').val(),
-        UnitPrice: $('#editUnitPrice').val(),
-        __RequestVerificationToken: form.find('input[name="__RequestVerificationToken"]').val()
-    };
-    
-    console.log("Sending update request with data:", formData);
-    
-    $.ajax({
-        url: '@Url.Action("EditInline", "BOQ")',
-        type: 'POST',
-        data: formData,
-        success: function(response) {
-            console.log("Response received:", response);
-            if (response.success) {
-                // Close the modal
-                bootstrap.Modal.getInstance(document.getElementById('editBoqModal')).hide();
-                
-                // Reload the page to show updated data
-                location.reload();
-            } else {
-                // Reset button and show error
-                saveButton.prop('disabled', false).text(originalText);
-                alert('Error updating BOQ item: ' + (response.message || 'Unknown error'));
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error("AJAX Error:", status, error);
-            console.log("Response:", xhr.responseText);
-            
-            // Reset button and show error
-            saveButton.prop('disabled', false).text(originalText);
-            alert('An error occurred while updating the BOQ item. See console for details.');
-        }
-    });
+// Add event listeners for the rate fields
+$('#MainMaterialRate, #AccessoriesRate, #ServicesOverheadRate').on('input', function() {
+    calculateAmount();
+});
+
+// Add event listeners for the edit form rate fields
+$('#editMainMaterialRate, #editAccessoriesRate, #editServicesOverheadRate').on('input', function() {
+    calculateEditAmount();
 });
         
         // Helper functions
@@ -882,9 +986,32 @@ $('#saveBoqEdit').on('click', function() {
             var quantity = parseFloat($('#Quantity').val()) || 0;
             var unitPrice = parseFloat($('#UnitPrice').val()) || 0;
             
-            // Get RTOM weight from server or use default
-            var rtomWeight = @Json.Serialize(ViewBag.RTOMWeight ?? 1.0);
+            // Get rates
+            var mainMaterialRate = parseFloat($('#MainMaterialRate').val()) || 0;
+            var accessoriesRate = parseFloat($('#AccessoriesRate').val()) || 0;
+            var servicesRate = parseFloat($('#ServicesOverheadRate').val()) || 0;
             
+            // Calculate totals
+            var mainMaterialTotal = mainMaterialRate * quantity;
+            var accessoriesTotal = accessoriesRate * quantity;
+            var servicesTotal = servicesRate * quantity;
+            
+            // Calculate approval amounts
+            var p0Amount = mainMaterialTotal + accessoriesTotal + servicesTotal;
+            var p1Amount = accessoriesTotal + servicesTotal;
+            var p2Amount = servicesTotal;
+            
+            // Update fields
+            $('#MainMaterialTotal').val(mainMaterialTotal.toFixed(2));
+            $('#AccessoriesTotal').val(accessoriesTotal.toFixed(2));
+            $('#ServicesOHTotal').val(servicesTotal.toFixed(2));
+            
+            $('#P0Amount').val(p0Amount.toFixed(2));
+            $('#P1Amount').val(p1Amount.toFixed(2));
+            $('#P2Amount').val(p2Amount.toFixed(2));
+            
+            // Original calculations
+            var rtomWeight = @Json.Serialize(ViewBag.RTOMWeight ?? 1.0);
             var adjustedUnitPrice = unitPrice * rtomWeight;
             var amount = adjustedUnitPrice * quantity;
             
@@ -903,10 +1030,77 @@ $('#saveBoqEdit').on('click', function() {
             $('#Amount').val('');
         }
         
+        // Export BOQ table to Excel
+        function exportBOQToExcel() {
+            // Get the table data
+            var tableData = [];
+            var headers = [];
+            
+            // Get headers
+            $('#boqTable thead tr th').each(function() {
+                // Skip the Actions column
+                if ($(this).text() !== 'Actions') {
+                    headers.push($(this).text());
+                }
+            });
+            
+            tableData.push(headers);
+            
+            // Get table data
+            $('#boqTable tbody tr').each(function() {
+                var rowData = [];
+                $(this).find('td').each(function(index) {
+                    // Skip the last column (Actions)
+                    if (index < headers.length) {
+                        // Get the text content without commas for amounts
+                        var cellText = $(this).text().trim().replace(/,/g, '');
+                        rowData.push(cellText);
+                    }
+                });
+                
+                // Only add rows that have data (not empty rows)
+                if (rowData.length > 0 && rowData[0] !== '') {
+                    tableData.push(rowData);
+                }
+            });
+            
+            // Add total row if available
+            if ($('#boqTable tfoot').is(':visible')) {
+                var totalRow = ['', '', '', '', '', '', '', 'Total Amount:', $('#totalAmountCell').text()];
+                // Pad the total row to match header length
+                while (totalRow.length < headers.length) {
+                    totalRow.push('');
+                }
+                tableData.push(totalRow);
+            }
+            
+            // Create workbook and worksheet
+            var wb = XLSX.utils.book_new();
+            var ws = XLSX.utils.aoa_to_sheet(tableData);
+            
+            // Add worksheet to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'BOQ Data');
+            
+            // Get current date for filename
+            var now = new Date();
+            var dateStr = now.getFullYear() + '-' + 
+                         String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                         String(now.getDate()).padStart(2, '0');
+            
+            // Generate filename with task ID and PE number if available
+            var taskId = '@Model.Task.Id';
+            var peNumber = '@Model.Task.PENumber';
+            var fileName = 'BOQ_' + (peNumber || taskId) + '_' + dateStr + '.xlsx';
+            
+            // Export to Excel
+            XLSX.writeFile(wb, fileName);
+        }
+        
         function updateTotalAmount() {
             var total = 0;
             $('#boqTable tbody tr').each(function () {
-                var amount = parseFloat($(this).find('td:eq(7)').text().replace(/,/g, ''));
+                // Update this to use the right column index for the total amount
+                var amount = parseFloat($(this).find('td:eq(8)').text().replace(/,/g, ''));
                 if (!isNaN(amount)) {
                     total += amount;
                 }
@@ -916,6 +1110,9 @@ $('#saveBoqEdit').on('click', function() {
                 minimumFractionDigits: 2, 
                 maximumFractionDigits: 2 
             }));
+            
+            // Update the data attribute for the submit button
+            $('#submitBoqTotalBtn').data('total-amount', total);
             
             // Show footer if hidden
             if (total > 0 && $('#boqTable tfoot').is(':hidden')) {

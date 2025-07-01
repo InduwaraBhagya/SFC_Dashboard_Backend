@@ -12,6 +12,7 @@ namespace SFCDashboard.Models
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; }
         public bool IsResolved { get; set; }
+        public int Level { get; set; }
 
         // Task properties
         public int TaskId { get; set; }

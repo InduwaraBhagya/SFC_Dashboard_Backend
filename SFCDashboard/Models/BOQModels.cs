@@ -99,6 +99,27 @@ namespace SFCDashboard.Models
         [Required]
         public decimal Quantity { get; set; }
         
+        // Added columns similar to your imageolumns similar to your image
+        public decimal MainMaterialRate { get; set; }
+        
+        public decimal AccessoriesRate { get; set; }
+        
+        public decimal ServicesOverheadRate { get; set; }
+        
+        // Total rates
+        public decimal MainMaterialTotal { get; set; }
+        
+        public decimal AccessoriesTotal { get; set; }
+        
+        public decimal ServicesOHTotal { get; set; }
+        
+        // Approval amounts// Approval amounts
+        public decimal P0Amount { get; set; } // (a+b+c)set; } // (a+b+c)
+        
+        public decimal P1Amount { get; set; } // (b+c)   public decimal P1Amount { get; set; } // (b+c)
+                
+        public decimal P2Amount { get; set; } // cnt { get; set; } // c
+           
         [Required]
         [MaxLength(50)]
         public string Unit { get; set; }
@@ -132,9 +153,11 @@ namespace SFCDashboard.Models
         public int SubCategoryId { get; set; }
         
         [Required(ErrorMessage = "UD Name is required")]
-        public int UDNameId { get; set; }
-        
-        [Required(ErrorMessage = "Quantity is required")]
+        public int UDNameId { get; set; }   
+               
+        public string UDNameValue { get; set; }       
+        public string SubCategoryName { get; set; }        
+        public string CategoryName { get; set; }        // Additional properties for display                public decimal Amount { get; set; }                public decimal AdjustedUnitPrice { get; set; }                public decimal UnitPrice { get; set; }        [Range(0.01, double.MaxValue, ErrorMessage = "Unit Price must be greater than 0")]        [Required(ErrorMessage = "Unit Price is required")]                public string Unit { get; set; }        [Required(ErrorMessage = "Unit is required")]                public decimal Quantity { get; set; }        [Range(0.01, double.MaxValue, ErrorMessage = "Quantity must be greater than 0")]        [Required(ErrorMessage = "Quantity is required")]        [Required(ErrorMessage = "Quantity is required")]
         [Range(0.01, double.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
         public decimal Quantity { get; set; }
         
@@ -150,8 +173,26 @@ namespace SFCDashboard.Models
         public decimal Amount { get; set; }
         
         // Additional properties for display
-        public string CategoryName { get; set; }
-        public string SubCategoryName { get; set; }
-        public string UDNameValue { get; set; }
+        
+        // New columns for rates and amounts
+        public decimal MainMaterialRate { get; set; }
+        
+        public decimal AccessoriesRate { get; set; }
+        
+        public decimal ServicesOverheadRate { get; set; }
+        
+        // Total amounts
+        public decimal MainMaterialTotal { get; set; }
+        
+        public decimal AccessoriesTotal { get; set; }
+        
+        public decimal ServicesOHTotal { get; set; }
+        
+        // Approval amounts
+        public decimal P0Amount { get; set; }
+        
+        public decimal P1Amount { get; set; }
+        
+        public decimal P2Amount { get; set; }
     }
 }
