@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
 using System;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -221,7 +225,21 @@ namespace SFCDashboard.Controllers
                 decimal quantity = model.Quantity;
                 decimal adjustedUnitPrice = unitPrice * weightValue;
                 decimal amount = adjustedUnitPrice * quantity;
-                
+
+                // Remove these lines since GetCurrentUserId() doesn't exist
+                // model.CreatedAt = DateTime.Now;
+                // model.CreatedByUserId = GetCurrentUserId();
+
+                // Calculate totals for new columns
+                decimal mainMaterialTotal = model.MainMaterialRate * model.Quantity;
+                decimal accessoriesTotal = model.AccessoriesRate * model.Quantity;
+                decimal servicesOHTotal = model.ServicesOverheadRate * model.Quantity;
+
+                // Calculate approval amounts
+                decimal p0Amount = mainMaterialTotal + accessoriesTotal + servicesOHTotal;
+                decimal p1Amount = accessoriesTotal + servicesOHTotal;
+                decimal p2Amount = servicesOHTotal;
+
                 _logger.LogInformation($"Calculated values: UnitPrice={unitPrice}, " +
                     $"Weight={weightValue}, AdjustedPrice={adjustedUnitPrice}, " +
                     $"Quantity={quantity}, Amount={amount}");
@@ -239,7 +257,18 @@ namespace SFCDashboard.Controllers
                     AdjustedUnitPrice = adjustedUnitPrice, 
                     Amount = amount,
                     CreatedAt = DateTime.Now,
-                    CreatedByUserId = currentUser.Id
+                    CreatedByUserId = currentUser.Id,
+                    
+                    // Add the new fields
+                    MainMaterialRate = model.MainMaterialRate,
+                    AccessoriesRate = model.AccessoriesRate,
+                    ServicesOverheadRate = model.ServicesOverheadRate,
+                    MainMaterialTotal = mainMaterialTotal,
+                    AccessoriesTotal = accessoriesTotal,
+                    ServicesOHTotal = servicesOHTotal,
+                    P0Amount = p0Amount,
+                    P1Amount = p1Amount,
+                    P2Amount = p2Amount
                 };
 
                 _context.BOQs.Add(boq);
@@ -304,7 +333,16 @@ namespace SFCDashboard.Controllers
                 Amount = boq.Amount,
                 CategoryName = boq.Category?.Category,
                 SubCategoryName = boq.SubCategory?.SubCategory,
-                UDNameValue = boq.UDName?.Name
+                UDNameValue = boq.UDName?.Name,
+                MainMaterialRate = boq.MainMaterialRate,
+                AccessoriesRate = boq.AccessoriesRate,
+                ServicesOverheadRate = boq.ServicesOverheadRate,
+                MainMaterialTotal = boq.MainMaterialTotal,
+                AccessoriesTotal = boq.AccessoriesTotal,    
+                ServicesOHTotal = boq.ServicesOHTotal,
+                P0Amount = boq.P0Amount,        
+                P1Amount = boq.P1Amount,
+                P2Amount = boq.P2Amount    
             };
 
             ViewBag.TaskId = boq.TaskId;
@@ -381,6 +419,21 @@ namespace SFCDashboard.Controllers
             boq.UnitPrice = model.UnitPrice;
             boq.AdjustedUnitPrice = adjustedUnitPrice;
             boq.Amount = amount;
+            
+            // Update new columns
+            boq.MainMaterialRate = model.MainMaterialRate;
+            boq.AccessoriesRate = model.AccessoriesRate;
+            boq.ServicesOverheadRate = model.ServicesOverheadRate;
+            
+            // Calculate and update totals
+            boq.MainMaterialTotal = model.MainMaterialRate * model.Quantity;
+            boq.AccessoriesTotal = model.AccessoriesRate * model.Quantity;
+            boq.ServicesOHTotal = model.ServicesOverheadRate * model.Quantity;
+            
+            // Calculate approval amounts
+            boq.P0Amount = boq.MainMaterialTotal + boq.AccessoriesTotal + boq.ServicesOHTotal;
+            boq.P1Amount = boq.AccessoriesTotal + boq.ServicesOHTotal;
+            boq.P2Amount = boq.ServicesOHTotal;
 
             try
             {
@@ -459,49 +512,43 @@ namespace SFCDashboard.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBOQDetails(int id)
         {
-            try
-            {
-                _logger.LogInformation($"GetBOQDetails called for BOQ ID: {id}");
+            var boq = _context.BOQs
+                .Include(b => b.Category)
+                .Include(b => b.SubCategory)
+                .Include(b => b.UDName)
+                .FirstOrDefault(b => b.Id == id);
                 
-                // Find the BOQ entry with all related data
-                var boq = await _context.BOQs
-                    .Include(b => b.Category)
-                    .Include(b => b.SubCategory)
-                    .Include(b => b.UDName)
-                    .FirstOrDefaultAsync(m => m.Id == id);
-
-                if (boq == null)
-                {
-                    _logger.LogWarning($"BOQ with ID {id} not found");
-                    return NotFound();
-                }
-
-                // Create a response object with all required data
-                var result = new
-                {
-                    id = boq.Id,
-                    taskId = boq.TaskId,
-                    categoryId = boq.CategoryId,
-                    subCategoryId = boq.SubCategoryId,
-                    udNameId = boq.UDNameId,
-                    quantity = boq.Quantity,
-                    unit = boq.Unit,
-                    unitPrice = boq.UnitPrice,
-                    adjustedUnitPrice = boq.AdjustedUnitPrice,
-                    amount = boq.Amount,
-                    categoryName = boq.Category?.Category,
-                    subCategoryName = boq.SubCategory?.SubCategory,
-                    udNameValue = boq.UDName?.Name
-                };
-
-                _logger.LogInformation($"BOQ details retrieved successfully for ID: {id}");
-                return Json(result);
-            }
-            catch (Exception ex)
+            if (boq == null)
             {
-                _logger.LogError(ex, $"Error getting BOQ details for ID: {id}");
-                return Json(new { error = ex.Message });
+                return NotFound();
             }
+            
+            var result = new
+            {
+                id = boq.Id,
+                taskId = boq.TaskId,
+                categoryId = boq.CategoryId,
+                subCategoryId = boq.SubCategoryId,
+                udNameId = boq.UDNameId,
+                quantity = boq.Quantity,
+                unit = boq.Unit,
+                unitPrice = boq.UnitPrice,
+                adjustedUnitPrice = boq.AdjustedUnitPrice,
+                amount = boq.Amount,
+                
+                // Make sure these fields are included
+                mainMaterialRate = boq.MainMaterialRate,
+                accessoriesRate = boq.AccessoriesRate,
+                servicesOverheadRate = boq.ServicesOverheadRate,
+                mainMaterialTotal = boq.MainMaterialTotal,
+                accessoriesTotal = boq.AccessoriesTotal,
+                servicesOHTotal = boq.ServicesOHTotal,
+                p0Amount = boq.P0Amount,
+                p1Amount = boq.P1Amount,
+                p2Amount = boq.P2Amount
+            };
+            
+            return Json(result);
         }
 
         // POST: BOQ/EditInline
@@ -583,6 +630,21 @@ namespace SFCDashboard.Controllers
                 boq.UnitPrice = unitPrice;
                 boq.AdjustedUnitPrice = adjustedUnitPrice;
                 boq.Amount = amount;
+                
+                // Update new columns
+                boq.MainMaterialRate = model.MainMaterialRate;
+                boq.AccessoriesRate = model.AccessoriesRate;
+                boq.ServicesOverheadRate = model.ServicesOverheadRate;
+                
+                // Calculate and update totals
+                boq.MainMaterialTotal = model.MainMaterialRate * quantity;
+                boq.AccessoriesTotal = model.AccessoriesRate * quantity;
+                boq.ServicesOHTotal = model.ServicesOverheadRate * quantity;
+                
+                // Calculate approval amounts
+                boq.P0Amount = boq.MainMaterialTotal + boq.AccessoriesTotal + boq.ServicesOHTotal;
+                boq.P1Amount = boq.AccessoriesTotal + boq.ServicesOHTotal;
+                boq.P2Amount = boq.ServicesOHTotal;
 
                 // Add activity to SurveyTaskActivities
                 var activity = new SurveyTaskActivity
@@ -608,6 +670,8 @@ namespace SFCDashboard.Controllers
                 return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
             }
         }
+
+
 
         private bool BOQExists(int id)
         {
