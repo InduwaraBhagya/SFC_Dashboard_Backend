@@ -432,8 +432,17 @@ namespace SFCDashboard.Controllers
                 .ThenInclude(uwg => uwg.WorkGroup)
                 .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
-            // Check if user belongs to NET-PROJ-ACC-CABLE workgroup
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            // Get current user's workgroup info first
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+
+            // Check Draw Fiber access based on selected workgroups (prioritizing filter selection)
+            var selectedWorkgroupIdsForAccess = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
+            var workgroupNamesForAccess = await _context.WorkGroups
+                .Where(w => selectedWorkgroupIdsForAccess.Contains(w.Id))
+                .Select(w => w.Name)
+                .ToListAsync();
+            bool hasDrawFiberAccess = workgroupNamesForAccess.Any(name =>
+                name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
 
             ViewData["HasDrawFiberAccess"] = hasDrawFiberAccess;
             ViewData["CanAcceptUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanAcceptUrgentRequests") == true;
@@ -443,9 +452,6 @@ namespace SFCDashboard.Controllers
             customer = customer?.Trim();
             jobReference = jobReference?.Trim();
             soNumber = soNumber?.Trim();
-
-            // Get current user's workgroup info
-            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
             // Security check - if user has ViewAll or only one workgroup, redirect back to Index
             if (canViewAll || userWorkgroupIds.Count <= 1)
@@ -506,11 +512,11 @@ namespace SFCDashboard.Controllers
                 ViewData["SelectedWorkgroupNames"] = selectedWorkgroupNames;
             }
 
-            // Calculate dashboard counts
-            ViewData["UrgentCount"] = await GetUrgentCount(selectedWorkgroupIds);
-            ViewData["InProgressCount"] = await GetInProgressCount(selectedWorkgroupIds);
-            ViewData["OLAViolateCount"] = await GetOLAViolateCount(selectedWorkgroupIds);
-            ViewData["HoldCount"] = await GetHoldCount(selectedWorkgroupIds);
+            // Calculate dashboard counts using multi-workgroup specific methods
+            ViewData["UrgentCount"] = await GetUrgentCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
+            ViewData["InProgressCount"] = await GetInProgressCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
+            ViewData["OLAViolateCount"] = await GetOLAViolateCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
+            ViewData["HoldCount"] = await GetHoldCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
 
             ViewData["SearchType"] = searchType ?? "peNumber";
             ViewData["PENumberFilter"] = peNumber;
@@ -3235,7 +3241,213 @@ namespace SFCDashboard.Controllers
             return count;
         }
 
+        // Multi-workgroup count methods - these prioritize filter selection over user workgroups
+        // and check Draw Fiber access based on selected workgroups in the filter
 
+        private async Task<int> GetUrgentCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            _logger.LogInformation("Getting urgent count for multi-workgroup view. Selected: {selected}, User: {user}",
+                selectedWorkgroupIds != null && selectedWorkgroupIds.Any() ? string.Join(", ", selectedWorkgroupIds) : "NONE",
+                userWorkgroupIds != null && userWorkgroupIds.Any() ? string.Join(", ", userWorkgroupIds) : "NONE");
+
+            // Get PE numbers with OLA violation
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            // Base query for urgent records
+            var query = _context.PlannedEvents
+                .Where(p => p.PEStatus == "urgent" &&
+                           p.IsHold == false &&
+                           !violatingPENumbers.Contains(p.PeNumber ?? ""));
+
+            // Filter by selected workgroups or all user's workgroups if none selected
+            var effectiveWorkgroupIds = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+            var selectedWorkgroupNames = await _context.WorkGroups
+                .Where(w => effectiveWorkgroupIds.Contains(w.Id))
+                .Select(w => w.Name)
+                .ToListAsync();
+
+            if (selectedWorkgroupNames.Any())
+            {
+                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
+                    name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                if (filterHasDrawFiberAccess)
+                {
+                    query = query.Where(p => p.TaskWg != null && (
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                        (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                    ));
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+
+            var count = await query.CountAsync();
+            _logger.LogInformation("Multi-workgroup urgent count: {count} for effective workgroups: {workgroups}",
+                count, string.Join(", ", effectiveWorkgroupIds ?? new List<int>()));
+
+            return count;
+        }
+
+        private async Task<int> GetInProgressCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            _logger.LogInformation("Getting in-progress count for multi-workgroup view. Selected: {selected}, User: {user}",
+                selectedWorkgroupIds != null && selectedWorkgroupIds.Any() ? string.Join(", ", selectedWorkgroupIds) : "NONE",
+                userWorkgroupIds != null && userWorkgroupIds.Any() ? string.Join(", ", userWorkgroupIds) : "NONE");
+
+            // Get PE numbers with OLA violation to exclude
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            // Base query for in-progress records
+            var query = _context.PlannedEvents
+                .Where(p => (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                           p.IsHold == false &&
+                           !violatingPENumbers.Contains(p.PeNumber ?? ""));
+
+            // Filter by selected workgroups or all user's workgroups if none selected
+            var effectiveWorkgroupIds = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+            var selectedWorkgroupNames = await _context.WorkGroups
+                .Where(w => effectiveWorkgroupIds != null && effectiveWorkgroupIds.Contains(w.Id))
+                .Select(w => w.Name)
+                .ToListAsync();
+
+            if (selectedWorkgroupNames.Any())
+            {
+                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
+                    name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                if (filterHasDrawFiberAccess)
+                {
+                    query = query.Where(p => p.TaskWg != null && (
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                        (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                    ));
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+
+            var count = await query.CountAsync();
+            _logger.LogInformation("Multi-workgroup in-progress count: {count} for effective workgroups: {workgroups}",
+                count, string.Join(", ", effectiveWorkgroupIds ?? new List<int>()));
+
+            return count;
+        }
+
+        private async Task<int> GetOLAViolateCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            _logger.LogInformation("Getting OLA violate count for multi-workgroup view. Selected: {selected}, User: {user}",
+                selectedWorkgroupIds != null && selectedWorkgroupIds.Any() ? string.Join(", ", selectedWorkgroupIds) : "NONE",
+                userWorkgroupIds != null && userWorkgroupIds.Any() ? string.Join(", ", userWorkgroupIds) : "NONE");
+
+            // Get PE numbers with OLA violation
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            // Base query for OLA violating records
+            var query = _context.PlannedEvents
+                .Where(p => violatingPENumbers.Contains(p.PeNumber ?? ""));
+
+            // Filter by selected workgroups or all user's workgroups if none selected
+            var effectiveWorkgroupIds = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+            var selectedWorkgroupNames = await _context.WorkGroups
+                .Where(w => effectiveWorkgroupIds != null && effectiveWorkgroupIds.Contains(w.Id))
+                .Select(w => w.Name)
+                .ToListAsync();
+
+            if (selectedWorkgroupNames.Any())
+            {
+                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
+                    name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                if (filterHasDrawFiberAccess)
+                {
+                    query = query.Where(p => p.TaskWg != null && (
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                        (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                    ));
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+
+            var count = await query.CountAsync();
+            _logger.LogInformation("Multi-workgroup OLA violate count: {count} for effective workgroups: {workgroups}",
+                count, string.Join(", ", effectiveWorkgroupIds ?? new List<int>()));
+
+            return count;
+        }
+
+        private async Task<int> GetHoldCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+            _logger.LogInformation("Getting hold count for multi-workgroup view. Selected: {selected}, User: {user}",
+                selectedWorkgroupIds != null && selectedWorkgroupIds.Any() ? string.Join(", ", selectedWorkgroupIds) : "NONE",
+                userWorkgroupIds != null && userWorkgroupIds.Any() ? string.Join(", ", userWorkgroupIds) : "NONE");
+
+            // Base query for hold records
+            var query = _context.PlannedEvents
+                .Where(p => p.IsHold == true);
+
+            // Filter by selected workgroups or all user's workgroups if none selected
+            var effectiveWorkgroupIds = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+            var selectedWorkgroupNames = await _context.WorkGroups
+                .Where(w => effectiveWorkgroupIds != null && effectiveWorkgroupIds.Contains(w.Id))
+                .Select(w => w.Name)
+                .ToListAsync();
+
+            if (selectedWorkgroupNames.Any())
+            {
+                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
+                bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
+                    name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                if (filterHasDrawFiberAccess)
+                {
+                    query = query.Where(p => p.TaskWg != null && (
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)) ||
+                        (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                    ));
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        selectedWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+
+            var count = await query.CountAsync();
+            _logger.LogInformation("Multi-workgroup hold count: {count} for effective workgroups: {workgroups}",
+                count, string.Join(", ", effectiveWorkgroupIds ?? new List<int>()));
+
+            return count;
+        }
 
         // Helper to extract date from PE number
         private DateTime? GetDateFromPeNumber(string peNumber)
