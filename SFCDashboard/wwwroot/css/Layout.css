@@ -236,6 +236,26 @@ for details on configuring this project to bundle and minify static web assets. 
   color: #154360;
 }
 
+/* Warning button variant */
+.btn-warning {
+  color: #7d4e00;
+  background: #fde047;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(253, 224, 71, 0.4);
+}
+
+.btn-warning:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(253, 224, 71, 0.6);
+  background: #facc15;
+  color: #451a03;
+}
+
 /* Dark mode styles from Layout.cshtml */
 :root {
     --bg-color: #ffffff;
@@ -310,7 +330,7 @@ body {
 }
 
 .container {
-    background-color: var(--bg-color) !important;
+    background-color: transparent !important;
     color: var(--text-color) !important;
     flex: 1;
 }
