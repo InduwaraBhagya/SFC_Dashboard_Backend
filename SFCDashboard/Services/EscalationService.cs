@@ -158,14 +158,19 @@ namespace SFCDashboard.Services
         // Get escalations by role level for display
         public async Task<List<Escalation>> GetEscalationsByUserRoleAsync(int userRoleLevel)
         {
-            // Users with role level 0 (normal users) see level 1 escalations
-            // Users with higher role levels see escalations >= their role level
-            int minEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
+            // Show escalations only when escalation level exactly matches user role level
+            // Special case: Role Level 0 users see Level 1 escalations (since no Level 0 escalations are created)
+            // Role Level 1: See only Level 1 escalations
+            // Role Level 2: See only Level 2 escalations
+            // Role Level 3: See only Level 3 escalations
+            
+            int targetEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
             
             return await _context.Escalations
                 .Include(e => e.PETask)
-                .Where(e => e.Level.HasValue && e.Level.Value >= minEscalationLevel)
-                .OrderByDescending(e => e.CreatedAt)
+                    .ThenInclude(t => t.PlannedEvent)
+                .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel)
+                .OrderByDescending(e => e.CreatedAt)  // Order by creation date
                 .ToListAsync();
         }
 
@@ -178,6 +183,24 @@ namespace SFCDashboard.Services
                 escalation.IsRead = true;
                 await _context.SaveChangesAsync();
             }
+        }
+
+        // Get escalation count for a specific user role level
+        public async Task<int> GetEscalationCountByUserRoleAsync(int userRoleLevel, bool unreadOnly = false)
+        {
+            // Count escalations only when escalation level exactly matches user role level
+            // Special case: Role Level 0 users see Level 1 escalations
+            int targetEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
+            
+            var query = _context.Escalations
+                .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel);
+
+            if (unreadOnly)
+            {
+                query = query.Where(e => !e.IsRead);
+            }
+
+            return await query.CountAsync();
         }
 
 
