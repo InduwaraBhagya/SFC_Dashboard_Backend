@@ -26,19 +26,20 @@
     {
         <!-- Enhanced Filter Section -->
         <div class="workgroup-filter-section">
-            <div class="filter-header">
-                <h4 class="filter-title">
+            <div class="filter-header d-flex justify-content-between align-items-center">
+                <h4 class="filter-title mb-0">
                     <i class="bi bi-funnel-fill"></i>
                     Filter by Workgroups
                 </h4>
-                <button class="filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="true" aria-controls="filterContent">
-                    <i class="bi bi-chevron-up"></i>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent">
+                    <i class="bi bi-funnel"></i>
+                    <span class="d-none d-sm-inline">Show Filter</span>
                 </button>
             </div>
             
-            <div class="collapse show" id="filterContent">
+            <div class="collapse" id="filterContent">
                 <form method="get" asp-action="Index">
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label class="form-label" for="workgroupFilter">
                             <i class="bi bi-people-fill"></i>
                             Select Workgroups
@@ -46,32 +47,35 @@
                                 <i class="bi bi-info-circle"></i>
                             </span>
                         </label>
-                        <select class="form-select" name="workgroupId" id="workgroupFilter" multiple>
-                            @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                            {
-                                foreach (var workgroup in workgroups)
-                                {
-                                    bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
-                                                    (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
-                                    <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                }
-                            }
-                        </select>
+                        <div class="filter-row">
+                            <div class="filter-select-container">
+                                <select class="form-select" name="workgroupId" id="workgroupFilter" multiple>
+                                    @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                    {
+                                        foreach (var workgroup in workgroups)
+                                        {
+                                            bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
+                                                            (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
+                                            <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="filter-actions">
+                                <button type="submit" class="btn btn-filter-apply btn-sm">
+                                    <i class="bi bi-funnel-fill"></i>
+                                    Apply Filter
+                                </button>
+                                <a href="@Url.Action("Index")" class="btn btn-filter-clear btn-sm">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                    Clear Filter
+                                </a>
+                            </div>
+                        </div>
                         <div class="form-text mt-2">
                             <i class="bi bi-lightbulb"></i>
-                            <small>Tip: Use Ctrl+Click to select multiple workgroups, or use the search to find specific ones.</small>
+                            <small>Tip: Use Ctrl+Click to select multiple workgroups.</small>
                         </div>
-                    </div>
-                    
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn-filter-apply">
-                            <i class="bi bi-funnel-fill"></i>
-                            Apply Filter
-                        </button>
-                        <a href="@Url.Action("Index")" class="btn btn-filter-clear">
-                            <i class="bi bi-x-circle-fill"></i>
-                            Clear Filter
-                        </a>
                     </div>
                 </form>
                 
@@ -176,19 +180,20 @@
         <div class="col-lg-8">
             <!-- Enhanced Search Section -->
             <div class="search-section">
-                <div class="search-header">
-                    <h5>
+                <div class="search-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
                         <i class="bi bi-search"></i>
                         Search PE Records
                     </h5>
-                    <div class="search-shortcuts">
-                        <small class="text-muted">
-                            <kbd>Alt</kbd> + <kbd>S</kbd> to focus search
-                        </small>
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapse" aria-expanded="false" aria-controls="searchFormCollapse">
+                            <span class="d-none d-sm-inline"> Show Search</span>
+                        </button>
                     </div>
                 </div>
                 
-                <form method="get" asp-action="Index">
+                <div class="collapse" id="searchFormCollapse">
+                    <form method="get" asp-action="Index">
                     <div class="search-form-row">
                         <div class="search-type-selector">
                             <label class="form-label" for="searchType">
@@ -230,22 +235,16 @@
                                     <i class="bi bi-search text-muted"></i>
                                 </div>
                             </div>
-                            <div class="form-text mt-1">
-                                <small class="text-muted">
-                                    <i class="bi bi-info-circle"></i>
-                                    Search is case-insensitive and supports partial matches
-                                </small>
-                            </div>
                         </div>
                         
                         <div class="search-button-container">
-                            <button type="submit" class="btn btn-search">
+                            <button type="submit" class="btn btn-search btn-sm">
                                 <i class="bi bi-search"></i>
                                 Search
                             </button>
                             @if (isSearchPerformed)
                             {
-                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary mt-2 btn-sm">
+                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm mt-1">
                                     <i class="bi bi-x-circle"></i>
                                     Clear Search
                                 </a>
@@ -253,6 +252,7 @@
                         </div>
                     </div>
                 </form>
+                </div>
             </div>
 
             <div class="container-fluid mt-4"></div>
@@ -946,6 +946,52 @@
                 }, 100);
             });
         });
+        
+        // Search section toggle functionality
+        const searchCollapse = document.getElementById('searchFormCollapse');
+        const toggleButton = document.querySelector('[data-bs-target="#searchFormCollapse"]');
+        
+        if (searchCollapse && toggleButton) {
+            const buttonText = toggleButton.querySelector('.d-none.d-sm-inline');
+            const buttonIcon = toggleButton.querySelector('i');
+            
+            searchCollapse.addEventListener('show.bs.collapse', function () {
+                if (buttonText) buttonText.textContent = 'Hide Search';
+                if (buttonIcon) buttonIcon.className = 'bi bi-funnel-fill';
+                toggleButton.classList.remove('btn-outline-primary');
+                toggleButton.classList.add('btn-primary');
+            });
+            
+            searchCollapse.addEventListener('hide.bs.collapse', function () {
+                if (buttonText) buttonText.textContent = 'Show Search';
+                if (buttonIcon) buttonIcon.className = 'bi bi-funnel';
+                toggleButton.classList.remove('btn-primary');
+                toggleButton.classList.add('btn-outline-primary');
+            });
+        }
+        
+        // Workgroup filter section toggle functionality
+        const filterCollapse = document.getElementById('filterContent');
+        const filterToggleButton = document.querySelector('[data-bs-target="#filterContent"]');
+        
+        if (filterCollapse && filterToggleButton) {
+            const filterButtonText = filterToggleButton.querySelector('.d-none.d-sm-inline');
+            const filterButtonIcon = filterToggleButton.querySelector('i');
+            
+            filterCollapse.addEventListener('show.bs.collapse', function () {
+                if (filterButtonText) filterButtonText.textContent = 'Hide Filter';
+                if (filterButtonIcon) filterButtonIcon.className = 'bi bi-funnel-fill';
+                filterToggleButton.classList.remove('btn-outline-primary');
+                filterToggleButton.classList.add('btn-primary');
+            });
+            
+            filterCollapse.addEventListener('hide.bs.collapse', function () {
+                if (filterButtonText) filterButtonText.textContent = 'Show Filter';
+                if (filterButtonIcon) filterButtonIcon.className = 'bi bi-funnel';
+                filterToggleButton.classList.remove('btn-primary');
+                filterToggleButton.classList.add('btn-outline-primary');
+            });
+        }
     </script>
     <script src="~/js/index.js"></script>
 }
