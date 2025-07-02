@@ -53,7 +53,7 @@ namespace SFCDashboard.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Name")] UserRole userRole, int[] selectedPermissions)
+        public async Task<IActionResult> Create([Bind("Name,Level")] UserRole userRole, int[] selectedPermissions)
         {
             if (ModelState.IsValid)
             {
@@ -120,7 +120,7 @@ namespace SFCDashboard.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name")] UserRole userRole, int[] selectedPermissions)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Level")] UserRole userRole, int[] selectedPermissions)
         {
             if (id != userRole.Id)
             {
@@ -143,6 +143,7 @@ namespace SFCDashboard.Controllers
 
                     // Update basic properties
                     existingRole.Name = userRole.Name;
+                    existingRole.Level = userRole.Level;
 
                     // Remove existing permissions
                     _context.RolePermissions.RemoveRange(existingRole.RolePermissions);

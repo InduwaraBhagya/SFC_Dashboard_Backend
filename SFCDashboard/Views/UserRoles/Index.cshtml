@@ -41,6 +41,10 @@
                                 <i class="bi bi-shield-lock me-2"></i>
                                 @Html.DisplayNameFor(model => model.Name)
                             </th>
+                            <th scope="col" class="px-4 py-3 text-center" style="width: 120px;">
+                                <i class="bi bi-bar-chart-steps me-2"></i>
+                                Level
+                            </th>
                             <th scope="col" class="px-4 py-3 text-center" style="width: 200px;">Actions</th>
                         </tr>
                     </thead>
@@ -51,6 +55,32 @@
                                     <div class="d-flex align-items-center">
                                         <span class="fw-medium">@Html.DisplayFor(modelItem => item.Name)</span>
                                     </div>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @if (item.Level == 0)
+                                    {
+                                        <span class="badge bg-secondary rounded-pill fs-6">
+                                            Level 0
+                                        </span>
+                                    }
+                                    else if (item.Level == 1)
+                                    {
+                                        <span class="badge bg-success rounded-pill fs-6">
+                                            Level 1
+                                        </span>
+                                    }
+                                    else if (item.Level == 2)
+                                    {
+                                        <span class="badge bg-warning rounded-pill fs-6">
+                                            Level 2
+                                        </span>
+                                    }
+                                    else if (item.Level == 3)
+                                    {
+                                        <span class="badge bg-danger rounded-pill fs-6">
+                                            Level 3
+                                        </span>
+                                    }
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="btn-group" role="group">
