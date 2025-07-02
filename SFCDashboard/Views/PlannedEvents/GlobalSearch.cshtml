@@ -504,7 +504,7 @@
                                                     </td>
                                                     <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                                                     <td>
-                                                        @if (issue.IsResolved || issue.IsHiddenFromInbox)
+                                                        @if (issue.IsHiddenFromInbox)
                                                         {
                                                             <span class="badge bg-success">Fixed</span>
                                                         }

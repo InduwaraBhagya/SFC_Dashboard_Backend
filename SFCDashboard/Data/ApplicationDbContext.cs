@@ -35,6 +35,7 @@ namespace SFCDashboard.Data
         public DbSet<ProjectPEMapping> ProjectPEMappings { get; set; }
         public DbSet<Escalation> Escalations { get; set; }
         public DbSet<SurveyTaskActivity> SurveyTaskActivities { get; set; } // <-- Added DbSet for SurveyTaskActivity
+        public DbSet<SystemConfiguration> SystemConfigurations { get; set; }
 
         public DbSet<UDCategory> UDCategories { get; set; }
         public DbSet<UDSubCategory> UDSubCategories { get; set; }
