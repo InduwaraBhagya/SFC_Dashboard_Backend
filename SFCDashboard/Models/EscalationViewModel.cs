@@ -11,7 +11,6 @@ namespace SFCDashboard.Models
         public string Message { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; }
-        public bool IsResolved { get; set; }
         public int Level { get; set; }
 
         // Task properties
@@ -26,7 +25,6 @@ namespace SFCDashboard.Models
         public int? RecipientId { get; set; }
         public string RecipientName { get; set; }
         public string RecipientRole { get; set; }
-        public string ResolvedByName { get; set; }
 
     }
 }

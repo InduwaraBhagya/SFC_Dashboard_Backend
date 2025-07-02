@@ -19,8 +19,6 @@ namespace SFCDashboard.Models
         public DateTime CreatedAt { get; set; }
 
         public bool IsRead { get; set; }
-        public bool IsResolved { get; set; }
-
 
         public bool IsIgnored { get; set; }
 
@@ -29,10 +27,8 @@ namespace SFCDashboard.Models
 
         public DateTime? IgnoredAt { get; set; }
 
-
         [ForeignKey("IgnoredBy")]
         public int? IgnoredById { get; set; }
-
 
         public virtual SystemUser IgnoredBy { get; set; }
 

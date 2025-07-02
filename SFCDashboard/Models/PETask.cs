@@ -37,7 +37,7 @@ namespace SFCDashboard.Models
         public PlannedEvent? PlannedEvent { get; set; }
         public DateTime? EstimatedTime { get; set; }
         public bool IsOLAViolate { get; set; }// Change from TimeSpan? to DateTime?
-        public DateTime OLADateTime { get; internal set; }
+        public DateTime? OLADateTime { get; set; } // Made nullable to avoid default DateTime.MinValue
         public DateTime? ViolationStartTime { get; set; }
         public bool EscalationsDisabled { get; set; } = false; // New property to disable escalations for this task
 

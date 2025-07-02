@@ -96,7 +96,6 @@ namespace SFCDashboard.Controllers
                 Message = escalation.Message,
                 CreatedAt = escalation.CreatedAt,
                 IsRead = escalation.IsRead,
-                IsResolved = escalation.IsResolved,
                 TaskId = escalation.TaskId,
                 TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Fixed navigation
                 PENumber = escalation.PETask?.PENumber ?? "Unknown",   // Fixed navigation
@@ -116,9 +115,9 @@ namespace SFCDashboard.Controllers
             {
                 return BadRequest("Reason is required");
             }
-            
-            // Use the service to resolve the escalation
-            await _escalationService.ResolveEscalationAsync(id);
+
+            // Simply mark the escalation as read since we removed resolve functionality
+            await _escalationService.MarkAsReadAsync(id);
             
             return RedirectToAction("Index", "Home");
         }
@@ -200,7 +199,6 @@ namespace SFCDashboard.Controllers
                     Message = e.Message,
                     CreatedAt = e.CreatedAt,
                     IsRead = e.IsRead,
-                    IsResolved = e.IsResolved,
                     TaskId = e.TaskId,
                     TaskName = e.PETask?.Task ?? "Unknown Task",
                     PENumber = e.PETask?.PENumber ?? "Unknown",
@@ -332,15 +330,61 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Details", new { id });
                 }
 
-                // Use the service to resolve the escalation
-                await _escalationService.ResolveEscalationAsync(id);
+                // Simply mark the escalation as read since we removed resolve functionality
+                await _escalationService.MarkAsReadAsync(id);
 
-                TempData["SuccessMessage"] = "Escalation has been resolved.";
+                TempData["SuccessMessage"] = "Escalation has been marked as read.";
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"Error resolving escalation: {ex.Message}";                return RedirectToAction("Details", new { id });
+                TempData["ErrorMessage"] = $"Error updating escalation: {ex.Message}";
+                return RedirectToAction("Details", new { id });
+            }
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetEscalationServiceStatus()
+        {
+            try
+            {
+                bool isEnabled = await _escalationService.IsEscalationEnabledAsync();
+                return Json(new { enabled = isEnabled });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { enabled = true, error = ex.Message });
+            }
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> ToggleEscalationService()
+        {
+            try
+            {
+                // Get current user ID for authorization check (optional)
+                int userId = await GetCurrentUserIdAsync();
+                if (userId == 0)
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+                
+                // Get current status and toggle it
+                bool currentStatus = await _escalationService.IsEscalationEnabledAsync();
+                bool newStatus = !currentStatus;
+                
+                await _escalationService.SetEscalationEnabledAsync(newStatus);
+                
+                string statusMessage = newStatus ? "enabled" : "disabled";
+                return Json(new { 
+                    success = true, 
+                    enabled = newStatus, 
+                    message = $"Escalation service has been {statusMessage}" 
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error toggling escalation service: {ex.Message}" });
             }
         }
     }

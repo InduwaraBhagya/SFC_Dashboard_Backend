@@ -1134,7 +1134,7 @@ namespace SFCDashboard.Controllers
             var escalations = await _context.Escalations
                 .Include(e => e.PETask)
                 .Include(e => e.IgnoredBy)
-                .Where(e => peTaskIds.Contains(e.TaskId) && e.IsResolved)
+                .Where(e => peTaskIds.Contains(e.TaskId) )
                 .ToListAsync();
 
             plannedEvent.Escalations = escalations;
