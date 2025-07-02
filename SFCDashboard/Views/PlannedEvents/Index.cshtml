@@ -24,70 +24,67 @@
 <div class="container-fluid mt-4">
     @if (ViewData["CanViewAll"] as bool? == true)
     {
-        <div class="workgroup-filter mb-4">
-            <div class="card shadow border-0 rounded-3">
-                <div class="card-header bg-gradient d-flex align-items-center">
-                    <i class="bi bi-funnel-fill me-2"></i>
-                    <span class="fw-semibold">Filter Records</span>
-                    <div class="ms-auto">
-                        <button class="btn btn-sm btn-link text-decoration-none p-0 filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="true">
-                            <i class="bi bi-chevron-up"></i>
+        <!-- Enhanced Filter Section -->
+        <div class="workgroup-filter-section">
+            <div class="filter-header">
+                <h4 class="filter-title">
+                    <i class="bi bi-funnel-fill"></i>
+                    Filter by Workgroups
+                </h4>
+                <button class="filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="true" aria-controls="filterContent">
+                    <i class="bi bi-chevron-up"></i>
+                </button>
+            </div>
+            
+            <div class="collapse show" id="filterContent">
+                <form method="get" asp-action="Index">
+                    <div class="mb-4">
+                        <label class="form-label" for="workgroupFilter">
+                            <i class="bi bi-people-fill"></i>
+                            Select Workgroups
+                            <span class="info-tooltip" data-tooltip="You can select multiple workgroups to view combined data">
+                                <i class="bi bi-info-circle"></i>
+                            </span>
+                        </label>
+                        <select class="form-select" name="workgroupId" id="workgroupFilter" multiple>
+                            @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                            {
+                                foreach (var workgroup in workgroups)
+                                {
+                                    bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
+                                                    (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
+                                    <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                }
+                            }
+                        </select>
+                        <div class="form-text mt-2">
+                            <i class="bi bi-lightbulb"></i>
+                            <small>Tip: Use Ctrl+Click to select multiple workgroups, or use the search to find specific ones.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button type="submit" class="btn btn-filter-apply">
+                            <i class="bi bi-funnel-fill"></i>
+                            Apply Filter
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-filter-clear">
+                            <i class="bi bi-x-circle-fill"></i>
+                            Clear Filter
+                        </a>
+                    </div>
+                </form>
+                
+                @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
+                {
+                    <div class="active-filter-badge">
+                        <i class="bi bi-check-circle-fill"></i>
+                        Active filter: @ViewData["SelectedWorkgroupName"]
+                        <button class="filter-clear-btn" onclick="location.href='@Url.Action("Index")'" aria-label="Clear filter">
+                            <i class="bi bi-x"></i>
                         </button>
                     </div>
-                </div>
-                <div class="collapse show" id="filterContent">
-                    <div class="card-body bg-light bg-opacity-50">
-                        <form method="get" asp-action="Index" id="workgroupFilterForm">
-                            <div class="row g-3 align-items-center">
-                                <div class="col-lg-7 col-md-6">
-                                    <label for="workgroupFilter" class="form-label mb-1 d-flex align-items-center">
-                                        <i class="bi bi-people-fill me-2"></i> Select Workgroup
-                                    </label>
-                                    <div class="input-group align-content-center">
-                                        <span class="input-group-text bg-transparent border-end-0">
-                                            <i class="bi bi-search text-muted"></i>
-                                        </span>
-                                        <select id="workgroupFilter" name="workgroupId" class="form-select border-start-0 ps-0 workgroup-select" data-placeholder="Select Workgroup">
-                                            <option value="">All Workgroups</option>
-                                            @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                            {
-                                                foreach (var workgroup in workgroups)
-                                                {
-                                                    bool isSelected = ViewData["SelectedWorkgroupId"] != null && 
-                                                                    (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
-                                                    <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                                }
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-lg-5 col-md-6 d-flex align-items-end justify-content-end">
-                                    <div class="d-flex gap-2">
-                                        <button type="submit" class="btn btn-primary btn-with-icon">
-                                            <i class="bi bi-funnel me-2"></i> Apply Filter
-                                        </button>
-                                        <a href="@Url.Action("Index")" 
-                                        class="btn btn-outline-secondary btn-with-icon">
-                                            <i class="bi bi-x-circle me-2"></i> Clear
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
-                            {
-                                <div class="mt-3">
-                                    <div class="filter-active-badge d-inline-flex align-items-center rounded-pill py-2 px-3">
-                                        <i class="bi bi-funnel-fill me-2 text-primary"></i>
-                                        <span>Currently filtering by: <strong>@ViewData["SelectedWorkgroupName"]</strong></span>
-                                        <a href="@Url.Action("Index")" class="ms-3 text-decoration-none filter-clear">
-                                            <i class="bi bi-x-circle"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            }
-                        </form>
-                    </div>
-                </div>
+                }
             </div>
         </div>
     }
@@ -177,36 +174,82 @@
     <div class="row">
         <!-- Left Column - Existing Content -->
         <div class="col-lg-8">
-            <div class="search-section mb-4">
+            <!-- Enhanced Search Section -->
+            <div class="search-section">
+                <div class="search-header">
+                    <h5>
+                        <i class="bi bi-search"></i>
+                        Search PE Records
+                    </h5>
+                    <div class="search-shortcuts">
+                        <small class="text-muted">
+                            <kbd>Alt</kbd> + <kbd>S</kbd> to focus search
+                        </small>
+                    </div>
+                </div>
+                
                 <form method="get" asp-action="Index">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label for="searchType" class="form-label">Search By:</label>
-                                <select class="form-select" id="searchType" name="searchType" onchange="toggleSearchFields()">
-                                    <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
-                                    <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
-                                    <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
-                                    <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
-                                </select>
+                    <div class="search-form-row">
+                        <div class="search-type-selector">
+                            <label class="form-label" for="searchType">
+                                <i class="bi bi-funnel"></i>
+                                Search By
+                            </label>
+                            <select class="form-select" name="searchType" id="searchType" onchange="toggleSearchFields()">
+                                <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">
+                                    <i class="bi bi-hash"></i> PE Number
+                                </option>
+                                <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">
+                                    <i class="bi bi-person"></i> Customer
+                                </option>
+                                <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">
+                                    <i class="bi bi-briefcase"></i> Job Reference
+                                </option>
+                                <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">
+                                    <i class="bi bi-receipt"></i> SO Number
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <div class="search-input-container">
+                            <label class="form-label" id="searchLabel">
+                                <i class="bi bi-hash"></i>
+                                PE Number
+                            </label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" name="peNumber" id="searchInput" 
+                                       placeholder="Enter PE Number" 
+                                       value="@(
+                                           ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
+                                           ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
+                                           ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
+                                           ViewData["PENumberFilter"]
+                                       )"
+                                       autocomplete="off">
+                                <div class="input-icon position-absolute top-50 end-0 translate-middle-y me-3">
+                                    <i class="bi bi-search text-muted"></i>
+                                </div>
+                            </div>
+                            <div class="form-text mt-1">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i>
+                                    Search is case-insensitive and supports partial matches
+                                </small>
                             </div>
                         </div>
-
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="indexSearchInput" class="form-label" id="indexSearchLabel">PE Number:</label>
-                                <input type="text" class="form-control" id="indexSearchInput" name="peNumber" placeholder="Enter PE Number"
-                                    value="@(
-                                        ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
-                                        ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
-                                        ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
-                                        ViewData["PENumberFilter"]
-                                    )" />
-                            </div>
-                        </div>
-
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-primary btn-ripple w-100">Search</button>
+                        
+                        <div class="search-button-container">
+                            <button type="submit" class="btn btn-search">
+                                <i class="bi bi-search"></i>
+                                Search
+                            </button>
+                            @if (isSearchPerformed)
+                            {
+                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary mt-2 btn-sm">
+                                    <i class="bi bi-x-circle"></i>
+                                    Clear Search
+                                </a>
+                            }
                         </div>
                     </div>
                 </form>
@@ -778,15 +821,129 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script>
-        $(document).ready(function () {
-            $('.filter-toggle-btn').on('click', function() {
-                $(this).find('i').toggleClass('bi-chevron-up bi-chevron-down');
-            });
-
-            // Enable search for workgroup filter
+        $(document).ready(function() {
+            // Initialize Select2 with enhanced styling
             $('#workgroupFilter').select2({
+                placeholder: "Select workgroups...",
                 allowClear: true,
-                width: '100%'
+                width: '100%',
+                closeOnSelect: false,
+                templateResult: function(option) {
+                    if (!option.id) return option.text;
+                    return $('<span><i class="bi bi-people me-2"></i>' + option.text + '</span>');
+                },
+                templateSelection: function(option) {
+                    if (!option.id) return option.text;
+                    return $('<span><i class="bi bi-check-circle me-1"></i>' + option.text + '</span>');
+                }
+            });
+            
+            // Animated toggle for filter section
+            $('.filter-toggle-btn').on('click', function() {
+                const icon = $(this).find('i');
+                const target = $(this).data('bs-target');
+                
+                setTimeout(() => {
+                    if ($(target).hasClass('show')) {
+                        icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+                    } else {
+                        icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+                    }
+                }, 150);
+            });
+            
+            // Enhanced search type toggle
+            function toggleSearchFields() {
+                const searchType = $('#searchType').val();
+                const inputField = $('#searchInput');
+                const label = $('#searchLabel');
+                
+                // Add loading animation
+                inputField.addClass('loading-shimmer');
+                
+                setTimeout(() => {
+                    switch (searchType) {
+                        case 'customer':
+                            label.html('<i class="bi bi-person"></i> Customer Name');
+                            inputField.attr('name', 'customer');
+                            inputField.attr('placeholder', 'Enter customer name');
+                            break;
+                        case 'jobReference':
+                            label.html('<i class="bi bi-briefcase"></i> Job Reference');
+                            inputField.attr('name', 'jobReference');
+                            inputField.attr('placeholder', 'Enter job reference');
+                            break;
+                        case 'soNumber':
+                            label.html('<i class="bi bi-receipt"></i> SO Number');
+                            inputField.attr('name', 'soNumber');
+                            inputField.attr('placeholder', 'Enter SO number');
+                            break;
+                        default:
+                            label.html('<i class="bi bi-hash"></i> PE Number');
+                            inputField.attr('name', 'peNumber');
+                            inputField.attr('placeholder', 'Enter PE number');
+                    }
+                    
+                    inputField.removeClass('loading-shimmer');
+                    inputField.focus();
+                }, 300);
+            }
+            
+            // Make toggleSearchFields available globally
+            window.toggleSearchFields = toggleSearchFields;
+            
+            // Add success animation when filter is applied
+            if (window.location.search.includes('workgroupId')) {
+                $('.workgroup-filter-section').addClass('filter-success');
+                setTimeout(() => {
+                    $('.workgroup-filter-section').removeClass('filter-success');
+                }, 600);
+            }
+            
+            // Enhanced form validation
+            $('.btn-filter-apply').on('click', function(e) {
+                const selectedOptions = $('#workgroupFilter').val();
+                if (!selectedOptions || selectedOptions.length === 0) {
+                    e.preventDefault();
+                    
+                    // Show elegant error message
+                    const errorMsg = $('<div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">' +
+                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                        'Please select at least one workgroup to apply the filter.' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>');
+                    
+                    $('.filter-actions').parent().append(errorMsg);
+                    
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        errorMsg.fadeOut();
+                    }, 5000);
+                }
+            });
+            
+            // Add keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                // Alt + F to focus on filter
+                if (e.altKey && e.key === 'f') {
+                    e.preventDefault();
+                    $('#workgroupFilter').select2('open');
+                }
+                
+                // Alt + S to focus on search
+                if (e.altKey && e.key === 's') {
+                    e.preventDefault();
+                    $('#searchInput').focus();
+                }
+            });
+            
+            // Add smooth scrolling to results
+            $('.btn-search, .btn-filter-apply').on('click', function() {
+                setTimeout(() => {
+                    $('html, body').animate({
+                        scrollTop: $('.search-section').offset().top + $('.search-section').outerHeight() + 20
+                    }, 500);
+                }, 100);
             });
         });
     </script>
