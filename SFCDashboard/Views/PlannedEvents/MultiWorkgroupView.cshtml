@@ -20,156 +20,172 @@
 }
 
 <div class="container-fluid mt-4">
-    <!-- Multiple Workgroups Filter Section -->
-    <div class="workgroup-filter mb-4">
-        <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-gradient d-flex align-items-center">
-                <i class="bi bi-funnel-fill me-2"></i>
-                <span class="fw-semibold">Filter by Workgroups</span>
-                <div class="ms-auto">
-                    <button class="btn btn-sm btn-link text-decoration-none p-0 filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#workgroupFilterContent" aria-expanded="true">
-                        <i class="bi bi-chevron-up"></i>
+    <!-- Enhanced Filter Section -->
+    <div class="workgroup-filter-section">
+        <div class="filter-header d-flex justify-content-between align-items-center">
+            <h4 class="filter-title mb-0">
+                <i class="bi bi-funnel-fill"></i>
+                Filter by Workgroups
+            </h4>
+            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent">
+                <i class="bi bi-funnel"></i>
+                <span class="d-none d-sm-inline">Show Filter</span>
+            </button>
+        </div>
+        
+        <div class="collapse" id="filterContent">
+            <form method="get" asp-action="MultiWorkgroupView">
+                <div class="mb-3">
+                    <label class="form-label" for="workgroupsFilter">
+                        <i class="bi bi-people-fill"></i>
+                        Select Workgroups
+                        <span class="info-tooltip" data-tooltip="You can select multiple workgroups to view combined data">
+                            <i class="bi bi-info-circle"></i>
+                        </span>
+                    </label>
+                    <div class="filter-row">
+                        <div class="filter-select-container">
+                            <select class="form-select" name="workgroupIds" id="workgroupsFilter" multiple>
+                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                {
+                                    foreach (var workgroup in workgroups)
+                                    {
+                                        bool isSelected = ViewData["SelectedWorkgroupIds"] is List<int> selectedWorkgroupIds && 
+                                                         selectedWorkgroupIds.Contains(workgroup.Id);
+                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="filter-actions">
+                            <button type="submit" class="btn btn-filter-apply btn-sm">
+                                <i class="bi bi-funnel-fill"></i>
+                                Apply Filter
+                            </button>
+                            @if (ViewData["SelectedWorkgroupIds"] is List<int> ids && ids.Any())
+                            {
+                                <a href="@Url.Action("MultiWorkgroupView", new { searchType = ViewData["SearchType"], 
+                                                               peNumber = ViewData["PENumberFilter"],
+                                                               customer = ViewData["CustomerFilter"],
+                                                               jobReference = ViewData["JobReferenceFilter"],
+                                                               soNumber = ViewData["SONumberFilter"] })" 
+                                   class="btn btn-filter-clear btn-sm">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                    Clear Filter
+                                </a>
+                            }
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">
+                        <i class="bi bi-lightbulb"></i>
+                        <small>Tip: Use Ctrl+Click to select multiple workgroups.</small>
+                    </div>
+                </div>
+            </form>
+            
+            @if (ViewData["SelectedWorkgroupIds"] is List<int> selectedIds && selectedIds.Any())
+            {
+                <div class="active-filter-badge">
+                    <i class="bi bi-check-circle-fill"></i>
+                    Active filter: @ViewData["FilteredWorkgroups"]
+                    <button class="filter-clear-btn" onclick="location.href='@Url.Action("MultiWorkgroupView", new { searchType = ViewData["SearchType"], 
+                                               peNumber = ViewData["PENumberFilter"],
+                                               customer = ViewData["CustomerFilter"],
+                                               jobReference = ViewData["JobReferenceFilter"],
+                                               soNumber = ViewData["SONumberFilter"] })'" aria-label="Clear filter">
+                        <i class="bi bi-x"></i>
                     </button>
                 </div>
-            </div>
-            <div class="collapse show" id="workgroupFilterContent">
-                <div class="card-body bg-light bg-opacity-50">
-                    <form method="get" asp-action="MultiWorkgroupView" id="workgroupFilterForm">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-lg-7 col-md-6">
-                                <label for="workgroupsFilter" class="form-label mb-1 d-flex align-items-center">
-                                    <i class="bi bi-people-fill me-2"></i> Select Workgroups
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-transparent border-end-0">
-                                        <i class="bi bi-search text-muted"></i>
-                                    </span>
-                                    <select id="workgroupsFilter" name="workgroupIds" class="form-select border-start-0 ps-0 workgroup-select" data-placeholder="Select Multiple Workgroups" multiple>
-                                        @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                        {
-                                            foreach (var workgroup in workgroups)
-                                            {
-                                                bool isSelected = ViewData["SelectedWorkgroupIds"] is List<int> selectedWorkgroupIds && 
-                                                                 selectedWorkgroupIds.Contains(workgroup.Id);
-                                                <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                            }
-                                        }
-                                    </select>
-                                </div>
-                                <div class="form-text mt-1">
-                                    <i class="bi bi-info-circle me-1"></i>You can select multiple workgroups to view combined data
-                                </div>
-                            </div>
-                            <div class="col-lg-5 col-md-6 d-flex align-items-end justify-content-end">
-                                <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-primary btn-with-icon">
-                                        <i class="bi bi-funnel me-2"></i> Apply Filter
-                                    </button>
-                                    @if (ViewData["SelectedWorkgroupIds"] is List<int> ids && ids.Any())
-                                    {
-                                        <a href="@Url.Action("MultiWorkgroupView", new { searchType = ViewData["SearchType"], 
-                                                                       peNumber = ViewData["PENumberFilter"],
-                                                                       customer = ViewData["CustomerFilter"],
-                                                                       jobReference = ViewData["JobReferenceFilter"],
-                                                                       soNumber = ViewData["SONumberFilter"] })" 
-                                           class="btn btn-outline-secondary btn-with-icon">
-                                            <i class="bi bi-x-circle me-2"></i> Clear
-                                        </a>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                        @if (ViewData["SelectedWorkgroupIds"] is List<int> selectedIds && selectedIds.Any())
-                        {
-                            <div class="mt-3">
-                                <div class="filter-active-badge d-inline-flex align-items-center rounded-pill py-2 px-3">
-                                    <i class="bi bi-funnel-fill me-2 text-primary"></i>
-                                    <span>Active filter: <strong>@ViewData["FilteredWorkgroups"]</strong></span>
-                                    <a href="@Url.Action("MultiWorkgroupView", new { searchType = ViewData["SearchType"], 
-                                                                   peNumber = ViewData["PENumberFilter"],
-                                                                   customer = ViewData["CustomerFilter"],
-                                                                   jobReference = ViewData["JobReferenceFilter"],
-                                                                   soNumber = ViewData["SONumberFilter"] })" 
-                                       class="ms-3 text-decoration-none filter-clear">
-                                        <i class="bi bi-x-circle"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        }
-                    </form>
-                </div>
-            </div>
+            }
         </div>
     </div>
 
     <div class="row">
         <!-- Left Column - Content -->
         <div class="col-lg-8">
-            <div class="search-section mb-4">
-                <div class="card shadow border-0 rounded-3">
-                    <div class="card-header bg-gradient d-flex align-items-center">
-                        <i class="bi bi-search me-2"></i>
-                        <span class="fw-semibold">Search PE Records</span>
-                        <div class="ms-auto">
-                            <button class="btn btn-sm btn-link text-decoration-none p-0 filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#searchFilterContent" aria-expanded="true">
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                        </div>
+            <!-- Enhanced Search Section -->
+            <div class="search-section">
+                <div class="search-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search"></i>
+                        Search PE Records
+                    </h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapse" aria-expanded="false" aria-controls="searchFormCollapse">
+                            <span class="d-none d-sm-inline"> Show Search</span>
+                        </button>
                     </div>
-                    <div class="collapse show" id="searchFilterContent">
-                        <div class="card-body bg-light bg-opacity-50">
-                            <form method="get" asp-action="MultiWorkgroupView">
-                                @if (ViewData["SelectedWorkgroupIds"] is List<int> selectedWorkgroupIds && selectedWorkgroupIds.Any())
-                                {
-                                    foreach (var id in selectedWorkgroupIds)
-                                    {
-                                        <input type="hidden" name="workgroupIds" value="@id" />
-                                    }
-                                }
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            <label for="searchType" class="form-label mb-1 d-flex align-items-center">
-                                                <i class="bi bi-funnel me-2"></i> Search By
-                                            </label>
-                                            <select class="form-select" id="searchType" name="searchType" onchange="toggleSearchFields()">
-                                                <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
-                                                <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
-                                                <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
-                                                <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="indexSearchInput" class="form-label mb-1" id="indexSearchLabel">
-                                                <i class="bi bi-input-cursor me-2"></i> PE Number
-                                            </label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-transparent border-end-0">
-                                                    <i class="bi bi-search text-muted"></i>
-                                                </span>
-                                                <input type="text" class="form-control border-start-0 ps-0" id="indexSearchInput" name="peNumber" placeholder="Enter PE Number"
-                                                    value="@(
-                                                        ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
-                                                        ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
-                                                        ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
-                                                        ViewData["PENumberFilter"]
-                                                    )" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <button type="submit" class="btn btn-primary btn-with-icon w-100">
-                                            <i class="bi bi-search me-2"></i> Search
-                                        </button>
+                </div>
+                
+                <div class="collapse" id="searchFormCollapse">
+                    <form method="get" asp-action="MultiWorkgroupView">
+                        @if (ViewData["SelectedWorkgroupIds"] is List<int> selectedWorkgroupIds && selectedWorkgroupIds.Any())
+                        {
+                            foreach (var id in selectedWorkgroupIds)
+                            {
+                                <input type="hidden" name="workgroupIds" value="@id" />
+                            }
+                        }
+                        <div class="search-form-row">
+                            <div class="search-type-selector">
+                                <label class="form-label" for="searchType">
+                                    <i class="bi bi-funnel"></i>
+                                    Search By
+                                </label>
+                                <select class="form-select" name="searchType" id="searchType" onchange="toggleSearchFields()">
+                                    <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">
+                                        <i class="bi bi-hash"></i> PE Number
+                                    </option>
+                                    <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">
+                                        <i class="bi bi-person"></i> Customer
+                                    </option>
+                                    <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">
+                                        <i class="bi bi-briefcase"></i> Job Reference
+                                    </option>
+                                    <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">
+                                        <i class="bi bi-receipt"></i> SO Number
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="search-input-container">
+                                <label class="form-label" id="searchLabel">
+                                    <i class="bi bi-hash"></i>
+                                    PE Number
+                                </label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" name="peNumber" id="searchInput" 
+                                           placeholder="Enter PE Number" 
+                                           value="@(
+                                               ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
+                                               ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
+                                               ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
+                                               ViewData["PENumberFilter"]
+                                           )"
+                                           autocomplete="off">
+                                    <div class="input-icon position-absolute top-50 end-0 translate-middle-y me-3">
+                                        <i class="bi bi-search text-muted"></i>
                                     </div>
                                 </div>
-                            </form>
+                            </div>
+                            
+                            <div class="search-button-container">
+                                <button type="submit" class="btn btn-search btn-sm">
+                                    <i class="bi bi-search"></i>
+                                    Search
+                                </button>
+                                @if (isSearchPerformed)
+                                {
+                                    <a href="@Url.Action("MultiWorkgroupView", new { 
+                                        workgroupIds = ViewData["SelectedWorkgroupIds"] as List<int> 
+                                    })" class="btn btn-outline-secondary btn-sm mt-1">
+                                        <i class="bi bi-x-circle"></i>
+                                        Clear Search
+                                    </a>
+                                }
+                            </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
 
@@ -820,32 +836,66 @@
         
         function toggleSearchFields() {
             var searchType = $('#searchType').val();
-            var inputField = $('#indexSearchInput');
-            var label = $('#indexSearchLabel');
+            var inputField = $('#searchInput');
+            var label = $('#searchLabel');
             
             switch (searchType) {
                 case 'customer':
-                    label.html('<i class="bi bi-person me-2"></i> Customer Name');
+                    label.html('<i class="bi bi-person"></i> Customer Name');
                     inputField.attr('name', 'customer');
                     inputField.attr('placeholder', 'Enter customer name');
                     break;
                 case 'jobReference':
-                    label.html('<i class="bi bi-briefcase me-2"></i> Job Reference');
+                    label.html('<i class="bi bi-briefcase"></i> Job Reference');
                     inputField.attr('name', 'jobReference');
                     inputField.attr('placeholder', 'Enter job reference');
                     break;
                 case 'soNumber':
-                    label.html('<i class="bi bi-file-text me-2"></i> SO Number');
+                    label.html('<i class="bi bi-receipt"></i> SO Number');
                     inputField.attr('name', 'soNumber');
                     inputField.attr('placeholder', 'Enter SO number');
                     break;
                 default:
-                    label.html('<i class="bi bi-input-cursor me-2"></i> PE Number');
+                    label.html('<i class="bi bi-hash"></i> PE Number');
                     inputField.attr('name', 'peNumber');
                     inputField.attr('placeholder', 'Enter PE number');
                     break;
             }
         }
+
+        // Toggle button state management for collapsible sections
+        function setupToggleButtons() {
+            // Filter toggle
+            $('#filterContent').on('show.bs.collapse', function () {
+                const btn = $('button[data-bs-target="#filterContent"]');
+                btn.find('span').text(' Hide Filter');
+                btn.find('i').removeClass('bi-funnel').addClass('bi-funnel-fill');
+            });
+
+            $('#filterContent').on('hide.bs.collapse', function () {
+                const btn = $('button[data-bs-target="#filterContent"]');
+                btn.find('span').text(' Show Filter');
+                btn.find('i').removeClass('bi-funnel-fill').addClass('bi-funnel');
+            });
+
+            // Search toggle
+            $('#searchFormCollapse').on('show.bs.collapse', function () {
+                const btn = $('button[data-bs-target="#searchFormCollapse"]');
+                btn.find('span').text(' Hide Search');
+                btn.find('i').removeClass('bi-search').addClass('bi-search');
+            });
+
+            $('#searchFormCollapse').on('hide.bs.collapse', function () {
+                const btn = $('button[data-bs-target="#searchFormCollapse"]');
+                btn.find('span').text(' Show Search');
+                btn.find('i').removeClass('bi-search').addClass('bi-search');
+            });
+        }
+
+        // Initialize toggle buttons on page load
+        $(document).ready(function() {
+            setupToggleButtons();
+        });
     </script>
     <script src="~/js/index.js"></script>
 }
