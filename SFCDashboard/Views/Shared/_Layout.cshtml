@@ -1,7 +1,7 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @using SFCDashboard.Data
 @using Microsoft.AspNetCore.Http
-@inject ApplicationDbContext Context
+@inject ApplicationDbContext _context
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     var userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name;
@@ -10,9 +10,9 @@
     : null;
 
     var currentUser = !string.IsNullOrEmpty(serviceId)
-    ? await Context.Users
+    ? await _context.Users
     .Include(u => u.UserRole)
-    .ThenInclude(r => r.RolePermissions)
+    .ThenInclude(r => r!.RolePermissions)
     .ThenInclude(rp => rp.Permission)
     .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
     : null;
@@ -117,6 +117,11 @@
                                             </a>
                                         </li>
                                         <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="Permissions" asp-action="Index">
+                                                <i class="bi bi-shield-check me-2"></i> <span>Manage Permissions</span>
+                                            </a>
+                                        </li>
+                                        <li>
                                             <hr class="dropdown-divider">
                                         </li>
                                         <li>
@@ -214,7 +219,7 @@
                         </div>
 
                         <span class="nav-link text-white" style="pointer-events:none;">
-                            @currentUser.Name
+                            @(currentUser?.Name ?? "Guest")
                         </span>
 
                         <partial name="_LoginPartial" />

@@ -1,9 +1,27 @@
 @using SFCDashboard.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Http
 @inject ApplicationDbContext _context
+@inject IHttpContextAccessor HttpContextAccessor
 @model Project
 
 @{
     ViewData["Title"] = Model.ProjectName;
+    
+    var userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name;
+    var serviceId = !string.IsNullOrEmpty(userName) && userName.Length >= 6
+        ? userName.Substring(0, 6)
+        : null;
+
+    var currentUser = !string.IsNullOrEmpty(serviceId)
+        ? await _context.Users
+            .Include(u => u.UserRole)
+            .ThenInclude(r => r!.RolePermissions)
+            .ThenInclude(rp => rp.Permission)
+            .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
+        : null;
+
+    var canManageProjects = currentUser?.UserRole?.HasPermission("ManageProjects") == true;
 }
 
 <div class="container-fluid mt-4">
@@ -18,30 +36,33 @@
     </div>
 
     <!-- PE Search Section -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Add PEs to Project</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" id="searchInput" class="form-control"
-                               placeholder="Search PE by number or customer...">
+    @if (canManageProjects)
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Add PEs to Project</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="searchInput" class="form-control"
+                                   placeholder="Search PE by number or customer...">
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button id="assignSelectedPEs" class="btn btn-primary" style="display:none">
+                            <i class="bi bi-plus-circle me-1"></i>Assign Selected PEs
+                        </button>
                     </div>
                 </div>
-                <div class="col-md-6 text-end">
-                    <button id="assignSelectedPEs" class="btn btn-primary" style="display:none">
-                        <i class="bi bi-plus-circle me-1"></i>Assign Selected PEs
-                    </button>
+                <div id="searchResults" class="mt-3">
+                    <!-- Search results will be displayed here -->
                 </div>
             </div>
-            <div id="searchResults" class="mt-3">
-                <!-- Search results will be displayed here -->
-            </div>
         </div>
-    </div>
+    }
 
     <!-- Assigned PEs List -->
     <div class="card">
@@ -61,7 +82,10 @@
                                 <th>Required Date</th>
                                 <th>Current Task</th> <!-- Add this column -->
                                 <th>Progress</th>
-                                <th>Actions</th>
+                                @if (canManageProjects)
+                                {
+                                    <th>Actions</th>
+                                }
                             </tr>
                         </thead>
                         <tbody>
@@ -136,18 +160,30 @@
                                             <span class="ms-2 small">@progressPercent%</span>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="btn-group">
+                                    @if (canManageProjects)
+                                    {
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="@Url.Action("Details", "PlannedEvents", new { id = pe.PlannedEventId })"
+                                                   class="btn btn-sm btn-info me-2" target="_blank">
+                                                    <i class="bi bi-eye"></i> View Details
+                                                </a>
+                                                <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
+                                                        data-pe-number="@pe.PlannedEvent.PeNumber">
+                                                    <i class="bi bi-trash"></i> Remove
+                                                </button>
+                                            </div>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td>
                                             <a href="@Url.Action("Details", "PlannedEvents", new { id = pe.PlannedEventId })"
-                                               class="btn btn-sm btn-info me-2" target="_blank">
+                                               class="btn btn-sm btn-info" target="_blank">
                                                 <i class="bi bi-eye"></i> View Details
                                             </a>
-                                            <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
-                                                    data-pe-number="@pe.PlannedEvent.PeNumber">
-                                                <i class="bi bi-trash"></i> Remove
-                                            </button>
-                                        </div>
-                                    </td>
+                                        </td>
+                                    }
                                 </tr>
                             }
                         </tbody>
@@ -223,6 +259,8 @@
 
 @section Scripts {
     <script>
+        var canManageProjects = @Json.Serialize(canManageProjects);
+        
         $(document).ready(function () {
             let currentSearchPage = 1;
             let selectedPEs = new Set();
@@ -418,11 +456,13 @@
                                                                                 class="btn btn-sm btn-info me-2" target="_blank">
                                                                                 <i class="bi bi-eye"></i> View Details
                                                                             </a>
-                                                                            <button class="btn btn-sm btn-danger remove-pe"
-                                                                                data-pe-id="${pe.id}"
-                                                                                data-pe-number="${pe.peNumber}">
-                                                                                <i class="bi bi-trash"></i> Remove
-                                                                            </button>
+                                                                            ${canManageProjects ? 
+                                                                                `<button class="btn btn-sm btn-danger remove-pe"
+                                                                                    data-pe-id="${pe.id}"
+                                                                                    data-pe-number="${pe.peNumber}">
+                                                                                    <i class="bi bi-trash"></i> Remove
+                                                                                </button>` : ''
+                                                                            }
                                                                         </div>
                                                                     </td>
                                                                 </tr>`;
