@@ -123,7 +123,6 @@
 
 @section Scripts {
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/urgentRecords.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Add search functionality
@@ -172,6 +171,12 @@
             searchForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 filterTable();
+            });
+
+            // Ensure Bootstrap dropdowns are properly initialized
+            var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+            var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+                return new bootstrap.Dropdown(dropdownToggleEl);
             });
         });
     </script>

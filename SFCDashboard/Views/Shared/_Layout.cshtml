@@ -76,6 +76,22 @@
                                     <i class="bi bi-speedometer2"></i> Dashboard
                                 </a>
                             </li>
+                            <li>
+                                <a class="nav-link" asp-controller="Escalation" asp-action="Index">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Escalations
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-link" asp-controller="Project" asp-action="Index">
+                                    <i class="bi bi-folder-fill me-2"></i>Projects
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment"
+                                    asp-action="Index">
+                                    <i class="bi bi-person-check-fill me-2"></i>Customer Assignments
+                                </a>
+                            </li>
                             @if (isAdmin)
                             {
                                 <li class="nav-item dropdown">
@@ -110,16 +126,6 @@
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item" asp-controller="Project" asp-action="Index">
-                                                <i class="bi bi-folder-fill me-2"></i> <span>Projects</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Escalation" asp-action="Index">
-                                                <i class="bi bi-exclamation-triangle-fill me-2"></i> <span>Escalations</span>
-                                            </a>
-                                        </li>
-                                        <li>
                                             <a class="dropdown-item" asp-area="" asp-controller="ContractorView"
                                                 asp-action="ContractorRecords">
                                                 <i class="bi bi-building me-2"></i> <span>Contractor View</span>
@@ -133,12 +139,6 @@
                                         </li>
                                         <li>
                                             <hr class="dropdown-divider">
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="CustomerUserAssignment"
-                                                asp-action="Index">
-                                                <i class="bi bi-person-check-fill me-2"></i> <span>Customer Assignments</span>
-                                            </a>
                                         </li>
                                     </ul>
                                 </li>
