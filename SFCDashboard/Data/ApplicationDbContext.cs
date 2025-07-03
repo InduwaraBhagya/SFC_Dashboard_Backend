@@ -86,7 +86,10 @@ namespace SFCDashboard.Data
             new Permission { Id = 4, Name = "CanMakeTasksUrgent", Description = "Can mark a \"Task\" of a specific PE as Urgent" },
             new Permission { Id = 5, Name = "Admin", Description = "Admin permissions" },
             new Permission { Id = 6, Name = "ViewAll", Description = "Can view all records" },
-            new Permission { Id = 7, Name = "CanReportIssues", Description = "Can report issues on Planned Events" }
+            new Permission { Id = 7, Name = "CanReportIssues", Description = "Can report issues on Planned Events" },
+            new Permission { Id = 8, Name = "ManageProjects", Description = "Can manage projects" },
+            new Permission { Id = 9, Name = "ManageCustomerAssignments", Description = "Can manage customer assignments" },
+            new Permission { Id = 10, Name = "ManageDrawFiberPerms", Description = "Can manage draw fiber permissions for NET-PROJ-ACC-CABLE workgroup users" }
             // Add other permissions here
             );
 

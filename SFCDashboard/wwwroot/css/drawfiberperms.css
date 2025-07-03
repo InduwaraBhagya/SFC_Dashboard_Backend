@@ -1,0 +1,35 @@
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.table th {
+    border-top: none;
+}
+
+.permission-toggle {
+    transform: scale(1.2);
+}
+
+.update-permissions-btn:disabled {
+    opacity: 0.6;
+}
+
+.draw-fiber-perms-container {
+    background: var(--bg-color, #ffffff);
+    color: var(--text-color, #212529);
+}
+
+.draw-fiber-perms-card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #dee2e6);
+}
