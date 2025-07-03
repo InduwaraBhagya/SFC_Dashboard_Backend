@@ -29,7 +29,7 @@ namespace SFCDashboard.Controllers
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "PlannedEvents");
+                return RedirectToAction("Index", "Home");
             }
 
             var email = User.Identity?.Name ?? string.Empty;
@@ -69,7 +69,7 @@ namespace SFCDashboard.Controllers
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "PlannedEvents");
+                return RedirectToAction("Index", "Home");
             }
 
             var email = User.Identity?.Name ?? string.Empty;
@@ -129,7 +129,7 @@ namespace SFCDashboard.Controllers
                 try
                 {
                     await _context.SaveChangesAsync();
-                    return RedirectToAction("Index", "PlannedEvents");
+                    return RedirectToAction("Index", "Home");
                 }
                 catch (DbUpdateException)
                 {

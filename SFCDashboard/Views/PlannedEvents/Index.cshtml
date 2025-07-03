@@ -22,76 +22,6 @@
 @{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
 
 <div class="container-fluid mt-4">
-    @if (ViewData["CanViewAll"] as bool? == true)
-    {
-        <!-- Enhanced Filter Section -->
-        <div class="workgroup-filter-section">
-            <div class="filter-header d-flex justify-content-between align-items-center">
-                <h4 class="filter-title mb-0">
-                    <i class="bi bi-funnel-fill"></i>
-                    Filter by Workgroups
-                </h4>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent">
-                    <i class="bi bi-funnel"></i>
-                    <span class="d-none d-sm-inline">Show Filter</span>
-                </button>
-            </div>
-            
-            <div class="collapse" id="filterContent">
-                <form method="get" asp-action="Index">
-                    <div class="mb-3">
-                        <label class="form-label" for="workgroupFilter">
-                            <i class="bi bi-people-fill"></i>
-                            Select Workgroups
-                            <span class="info-tooltip" data-tooltip="You can select multiple workgroups to view combined data">
-                                <i class="bi bi-info-circle"></i>
-                            </span>
-                        </label>
-                        <div class="filter-row">
-                            <div class="filter-select-container">
-                                <select class="form-select" name="workgroupId" id="workgroupFilter" multiple>
-                                    @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                    {
-                                        foreach (var workgroup in workgroups)
-                                        {
-                                            bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
-                                                            (int)ViewData["SelectedWorkgroupId"] == workgroup.Id;
-                                            <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                        }
-                                    }
-                                </select>
-                            </div>
-                            <div class="filter-actions">
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-funnel-fill"></i>
-                                    Apply Filter
-                                </button>
-                                <a href="@Url.Action("Index")" class="btn btn-filter-clear btn-sm">
-                                    <i class="bi bi-x-circle-fill"></i>
-                                    Clear Filter
-                                </a>
-                            </div>
-                        </div>
-                        <div class="form-text mt-2">
-                            <i class="bi bi-lightbulb"></i>
-                            <small>Tip: Use Ctrl+Click to select multiple workgroups.</small>
-                        </div>
-                    </div>
-                </form>
-                
-                @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
-                {
-                    <div class="active-filter-badge">
-                        <i class="bi bi-check-circle-fill"></i>
-                        Active filter: @ViewData["SelectedWorkgroupName"]
-                        <button class="filter-clear-btn" onclick="location.href='@Url.Action("Index")'" aria-label="Clear filter">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
-                }
-            </div>
-        </div>
-    }
 @{
     var nextTask = ViewBag.NextTask as List<TaskQueueItem>;
     var hasNextTask = ViewBag.HasNextTask;
@@ -103,158 +33,314 @@
         ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count <= 1);
 }
 
-@if (shouldShowNextTask)
+<!-- Top Section: Dynamic Layout Based on Permissions -->
+@if (ViewData["CanViewAll"] as bool? == true)
 {
-<!-- Next Task Card -->
-<div class="card border-primary mb-4 shadow-sm">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="bi bi-arrow-right-circle-fill me-2"></i> Next Task
-        </h5>
-        <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-sm btn-light">
-            <i class="bi bi-list-task me-1"></i> View All Tasks
-        </a>
-    </div>
-    
-    <div class="card-body">
-        @if (hasNextTask)
-        {
-                var task = nextTask[0];
-            <div class="d-flex align-items-center">
-                <div class="flex-shrink-0">
-                    @{
-                        string badgeClass = task.PriorityLevel switch
-                        {
-                            "URGENT P0" => "bg-danger fw-bold",
-                            "URGENT P1" => "bg-danger",
-                            "URGENT P2" => "bg-danger",
-                            "URGENT" => "bg-danger",
-                            "OLA VIOLATION" => "bg-warning text-dark",
-                            "APPROACHING DEADLINE" => "bg-info text-dark",
-                            _ => "bg-secondary"
-                        };
-                    }
-                    <span class="badge @badgeClass p-3">
-                        <i class="bi bi-lightning-charge-fill"></i>
-                    </span>
-                </div>
-                <div class="flex-grow-1 ms-3">
-                    <h5 class="card-title mb-1">@task.Task.Task</h5>
-                    <p class="card-text mb-1 text-muted">
-                        <small>
-                            <i class="bi bi-file-earmark-text me-1"></i> PE: @task.Task.PENumber 
-                            <i class="bi bi-person ms-2 me-1"></i> @task.Task.PlannedEvent?.Customer
-                        </small>
-                    </p>
-                    <p class="mb-0">
-                        @{
-                            string daysClass = task.IsOverdue ? "text-danger fw-bold" : 
-                                (task.DaysUntilDue <= 2) ? "text-warning fw-bold" : "text-success";
-                        }
-                        <span class="@daysClass">
-                            <i class="bi bi-calendar-check me-1"></i>
-                            @task.DueStatus
-                        </span>
-                    </p>
-                </div>
-                <div class="flex-shrink-0 ms-3">
-                    <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" 
-                       class="btn btn-primary">
-                        <i class="bi bi-arrow-right"></i> View Details
-                    </a>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="text-center py-4">
-                <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
-                <p class="mt-3 mb-0">No pending tasks in your queue!</p>
-            </div>
-        }
-    </div>
-</div>
-}
-    <div class="row">
-        <!-- Left Column - Existing Content -->
-        <div class="col-lg-8">
-            <!-- Enhanced Search Section -->
-            <div class="search-section">
-                <div class="search-header d-flex justify-content-between align-items-center">
+    <!-- For ViewAll Users: Workgroup Filter and Search PE Side by Side -->
+    <div class="row mb-4">
+        <!-- Workgroup Filter Card -->
+        <div class="col-lg-6 mb-3">
+            <div class="card border-primary h-100 shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="bi bi-search"></i>
-                        Search PE Records
+                        <i class="bi bi-funnel-fill me-2"></i> Filter by Workgroups
                     </h5>
-                    <div class="d-flex align-items-center gap-3">
-                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapse" aria-expanded="false" aria-controls="searchFormCollapse">
-                            <span class="d-none d-sm-inline"> Show Search</span>
-                        </button>
+                    <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                
+                <div class="collapse" id="filterContent">
+                    <div class="card-body">
+                        <form method="get" asp-action="Index">
+                            <div class="mb-3">
+                                <label class="form-label" for="workgroupFilter">
+                                    <i class="bi bi-people-fill"></i>
+                                    Select Workgroups
+                                    <span class="info-tooltip" data-tooltip="You can select multiple workgroups to view combined data">
+                                        <i class="bi bi-info-circle"></i>
+                                    </span>
+                                </label>
+                                <div class="filter-row">
+                                    <div class="filter-select-container mb-3">
+                                        <select class="form-select" name="workgroupId" id="workgroupFilter" multiple>
+                                            @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                            {
+                                                foreach (var workgroup in workgroups)
+                                                {
+                                                    bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
+                                                                    ViewData["SelectedWorkgroupId"].Equals(workgroup.Id);
+                                                    <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="filter-actions d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-funnel-fill"></i>
+                                            Apply Filter
+                                        </button>
+                                        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                                            <i class="bi bi-x-circle"></i>
+                                            Clear Filter
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                Active filter: <strong>@ViewData["SelectedWorkgroupName"]</strong>
+                            </div>
+                        }
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search PE Records Card -->
+        <div class="col-lg-6 mb-3">
+            <div class="card border-info h-100 shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search"></i> Search PE Records
+                    </h5>
+                    <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapse" aria-expanded="false" aria-controls="searchFormCollapse">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
                 </div>
                 
                 <div class="collapse" id="searchFormCollapse">
-                    <form method="get" asp-action="Index">
-                    <div class="search-form-row">
-                        <div class="search-type-selector">
-                            <label class="form-label" for="searchType">
-                                <i class="bi bi-funnel"></i>
-                                Search By
-                            </label>
-                            <select class="form-select" name="searchType" id="searchType" onchange="toggleSearchFields()">
-                                <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">
+                    <div class="card-body">
+                        <form method="get" asp-action="Index">
+                        <div class="search-form-row">
+                            <div class="search-type-selector mb-3">
+                                <label class="form-label" for="searchType">
+                                    <i class="bi bi-funnel"></i> Search By
+                                </label>
+                                <select class="form-select" name="searchType" id="searchType" onchange="toggleSearchFields()">
+                                    <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">
+                                        PE Number
+                                    </option>
+                                    <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">
+                                        Customer
+                                    </option>
+                                    <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">
+                                        Job Reference
+                                    </option>
+                                    <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">
+                                        SO Number
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="search-input-container mb-3">
+                                <label class="form-label" id="searchLabel">
                                     <i class="bi bi-hash"></i> PE Number
-                                </option>
-                                <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">
-                                    <i class="bi bi-person"></i> Customer
-                                </option>
-                                <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">
-                                    <i class="bi bi-briefcase"></i> Job Reference
-                                </option>
-                                <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">
-                                    <i class="bi bi-receipt"></i> SO Number
-                                </option>
-                            </select>
-                        </div>
-                        
-                        <div class="search-input-container">
-                            <label class="form-label" id="searchLabel">
-                                <i class="bi bi-hash"></i>
-                                PE Number
-                            </label>
-                            <div class="position-relative">
-                                <input type="text" class="form-control" name="peNumber" id="searchInput" 
-                                       placeholder="Enter PE Number" 
-                                       value="@(
-                                           ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
-                                           ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
-                                           ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
-                                           ViewData["PENumberFilter"]
-                                       )"
-                                       autocomplete="off">
-                                <div class="input-icon position-absolute top-50 end-0 translate-middle-y me-3">
-                                    <i class="bi bi-search text-muted"></i>
+                                </label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" name="peNumber" id="searchInput" 
+                                           placeholder="Enter PE Number" 
+                                           value="@(
+                                               ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
+                                               ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
+                                               ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
+                                               ViewData["PENumberFilter"]
+                                           )"
+                                           autocomplete="off">
+                                    <div class="input-icon position-absolute top-50 end-0 translate-middle-y me-3">
+                                        <i class="bi bi-search text-muted"></i>
+                                    </div>
                                 </div>
                             </div>
+                            
+                            <div class="search-button-container d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i> Search
+                                </button>
+                                @if (isSearchPerformed)
+                                {
+                                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                                        <i class="bi bi-x-circle"></i> Clear Search
+                                    </a>
+                                }
+                            </div>
                         </div>
-                        
-                        <div class="search-button-container">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="bi bi-search"></i>
-                                Search
-                            </button>
-                            @if (isSearchPerformed)
-                            {
-                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm mt-1">
-                                    <i class="bi bi-x-circle"></i>
-                                    Clear Search
-                                </a>
-                            }
-                        </div>
+                        </form>
                     </div>
-                </form>
                 </div>
             </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- For Regular Users: Next Task and Search PE Side by Side -->
+    <div class="row mb-4">
+        @if (shouldShowNextTask)
+        {
+            <!-- Next Task Card -->
+            <div class="col-lg-6 mb-3">
+                <div class="card border-primary h-100 shadow-sm">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-arrow-right-circle-fill me-2"></i> Next Task
+                        </h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-sm btn-light">
+                                <i class="bi bi-list-task me-1"></i> View All Tasks
+                            </a>
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#nextTaskContent" aria-expanded="false" aria-controls="nextTaskContent">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="collapse" id="nextTaskContent">
+                        <div class="card-body">
+                        @if (hasNextTask && nextTask != null && nextTask.Count > 0)
+                        {
+                                var task = nextTask[0];
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    @{
+                                        string badgeClass = task.PriorityLevel switch
+                                        {
+                                            "URGENT P0" => "bg-danger fw-bold",
+                                            "URGENT P1" => "bg-danger",
+                                            "URGENT P2" => "bg-danger",
+                                            "URGENT" => "bg-danger",
+                                            "OLA VIOLATION" => "bg-warning text-dark",
+                                            "APPROACHING DEADLINE" => "bg-info text-dark",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @badgeClass p-3">
+                                        <i class="bi bi-lightning-charge-fill"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5 class="card-title mb-1">@task.Task.Task</h5>
+                                    <p class="card-text mb-1 text-muted">
+                                        <small>
+                                            <i class="bi bi-file-earmark-text me-1"></i> PE: @task.Task.PENumber 
+                                            <i class="bi bi-person ms-2 me-1"></i> @task.Task.PlannedEvent?.Customer
+                                        </small>
+                                    </p>
+                                    <p class="mb-0">
+                                        @{
+                                            string daysClass = task.IsOverdue ? "text-danger fw-bold" : 
+                                                (task.DaysUntilDue <= 2) ? "text-warning fw-bold" : "text-success";
+                                        }
+                                        <span class="@daysClass">
+                                            <i class="bi bi-calendar-check me-1"></i>
+                                            @task.DueStatus
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="flex-shrink-0 ms-3">
+                                    <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" 
+                                       class="btn btn-primary">
+                                        <i class="bi bi-arrow-right"></i> View Details
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                                <p class="mt-3 mb-0">No pending tasks in your queue!</p>
+                            </div>
+                        }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        
+        <!-- Search PE Records Card -->
+        <div class="@(shouldShowNextTask ? "col-lg-6" : "col-lg-12") mb-3">
+            <div class="card border-info h-100 shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search"></i> Search PE Records
+                    </h5>
+                    <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapse" aria-expanded="false" aria-controls="searchFormCollapse">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                
+                <div class="collapse" id="searchFormCollapse">
+                    <div class="card-body">
+                        <form method="get" asp-action="Index">
+                        <div class="search-form-row">
+                            <div class="search-type-selector mb-3">
+                                <label class="form-label" for="searchType">
+                                    <i class="bi bi-funnel"></i> Search By
+                                </label>
+                                <select class="form-select" name="searchType" id="searchType" onchange="toggleSearchFields()">
+                                    <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">
+                                        PE Number
+                                    </option>
+                                    <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">
+                                        Customer
+                                    </option>
+                                    <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">
+                                        Job Reference
+                                    </option>
+                                    <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">
+                                        SO Number
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="search-input-container mb-3">
+                                <label class="form-label" id="searchLabel">
+                                    <i class="bi bi-hash"></i> PE Number
+                                </label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" name="peNumber" id="searchInput" 
+                                           placeholder="Enter PE Number" 
+                                           value="@(
+                                               ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
+                                               ViewData["SearchType"]?.ToString() == "jobReference" ? ViewData["JobReferenceFilter"] :
+                                               ViewData["SearchType"]?.ToString() == "soNumber" ? ViewData["SONumberFilter"] :
+                                               ViewData["PENumberFilter"]
+                                           )"
+                                           autocomplete="off">
+                                    <div class="input-icon position-absolute top-50 end-0 translate-middle-y me-3">
+                                        <i class="bi bi-search text-muted"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="search-button-container d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i> Search
+                                </button>
+                                @if (isSearchPerformed)
+                                {
+                                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                                        <i class="bi bi-x-circle"></i> Clear Search
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
+    <div class="row">
+        <!-- Left Column - Existing Content -->
+        <div class="col-lg-8">
             <div class="container-fluid mt-4"></div>
 
             @if (Model != null && Model.Any())
@@ -644,21 +730,21 @@
                             var unreadCount = 0;
                             
                             // Count unread issues
-                            if (ViewData["InboxIssues"] != null)
+                            if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssues)
                             {
-                                unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
+                                unreadCount += inboxIssues.Count(i => !i.IsRead);
                             }
                             
                             // Count pending urgent PE requests
-                            if (ViewData["PendingUrgentRequests"] != null)
+                            if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> urgentRequests)
                             {
-                                unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
+                                unreadCount += urgentRequests.Count();
                             }
                             
                             // Count pending urgent task requests
-                            if (ViewData["PendingTaskRequests"] != null)
+                            if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> taskRequests)
                             {
-                                unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
+                                unreadCount += taskRequests.Count();
                             }
                             
                             if (unreadCount > 0)
@@ -687,9 +773,9 @@
                                 <div class="messages-container mt-3">
                                     @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
                                     {<!-- Urgent Request Confirmation Messages -->
-                                    @if (ViewData["PendingUrgentRequests"] != null)
+                                    @if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> pendingRequests)
                                     {
-                                        foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
+                                        foreach (var request in pendingRequests)
                                         {
                                             <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
                                                 <div class="message-indicator"></div>
@@ -713,9 +799,9 @@
                                     }
                                     
                                     <!-- Task Urgent Requests -->
-                                    @if (ViewData["PendingTaskRequests"] != null)
+                                    @if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> pendingTasks)
                                     {
-                                        foreach (var task in (IEnumerable<PETask>)ViewData["PendingTaskRequests"])
+                                        foreach (var task in pendingTasks)
                                         {
                                             <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
                                                 <div class="message-indicator"></div>
@@ -738,9 +824,9 @@
                                 }
                                     
                                     <!-- Issue Messages -->
-                    @if (ViewData["InboxIssues"] != null)
+                    @if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssuesList)
                         {
-                            foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
+                            foreach (var issue in inboxIssuesList)
                         {
                         
                                         
@@ -947,49 +1033,146 @@
             });
         });
         
-        // Search section toggle functionality
+        // Synchronized card collapse/expand functionality
         const searchCollapse = document.getElementById('searchFormCollapse');
-        const toggleButton = document.querySelector('[data-bs-target="#searchFormCollapse"]');
-        
-        if (searchCollapse && toggleButton) {
-            const buttonText = toggleButton.querySelector('.d-none.d-sm-inline');
-            const buttonIcon = toggleButton.querySelector('i');
-            
-            searchCollapse.addEventListener('show.bs.collapse', function () {
-                if (buttonText) buttonText.textContent = 'Hide Search';
-                if (buttonIcon) buttonIcon.className = 'bi bi-funnel-fill';
-                toggleButton.classList.remove('btn-outline-primary');
-                toggleButton.classList.add('btn-primary');
-            });
-            
-            searchCollapse.addEventListener('hide.bs.collapse', function () {
-                if (buttonText) buttonText.textContent = 'Show Search';
-                if (buttonIcon) buttonIcon.className = 'bi bi-funnel';
-                toggleButton.classList.remove('btn-primary');
-                toggleButton.classList.add('btn-outline-primary');
-            });
-        }
-        
-        // Workgroup filter section toggle functionality
+        const searchToggleButton = document.querySelector('[data-bs-target="#searchFormCollapse"]');
+        const nextTaskCollapse = document.getElementById('nextTaskContent');
+        const nextTaskToggleButton = document.querySelector('[data-bs-target="#nextTaskContent"]');
         const filterCollapse = document.getElementById('filterContent');
         const filterToggleButton = document.querySelector('[data-bs-target="#filterContent"]');
         
-        if (filterCollapse && filterToggleButton) {
-            const filterButtonText = filterToggleButton.querySelector('.d-none.d-sm-inline');
-            const filterButtonIcon = filterToggleButton.querySelector('i');
+        // Track which button was clicked to avoid infinite loops
+        let isManualToggle = false;
+        
+        // Function to update chevron icons for two cards
+        function updateChevronIcons(isExpanded, button1, button2) {
+            const icon1 = button1?.querySelector('i');
+            const icon2 = button2?.querySelector('i');
             
-            filterCollapse.addEventListener('show.bs.collapse', function () {
-                if (filterButtonText) filterButtonText.textContent = 'Hide Filter';
-                if (filterButtonIcon) filterButtonIcon.className = 'bi bi-funnel-fill';
-                filterToggleButton.classList.remove('btn-outline-primary');
-                filterToggleButton.classList.add('btn-primary');
+            if (icon1) {
+                icon1.className = isExpanded ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+            }
+            if (icon2) {
+                icon2.className = isExpanded ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+            }
+        }
+        
+        // Scenario 1: ViewAll users - Sync workgroup filter and search cards
+        if (filterCollapse && searchCollapse && filterToggleButton && searchToggleButton) {
+            // When filter card is shown, show search card
+            filterCollapse.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    searchBsCollapse.show();
+                }
+                updateChevronIcons(true, filterToggleButton, searchToggleButton);
             });
             
-            filterCollapse.addEventListener('hide.bs.collapse', function () {
-                if (filterButtonText) filterButtonText.textContent = 'Show Filter';
-                if (filterButtonIcon) filterButtonIcon.className = 'bi bi-funnel';
-                filterToggleButton.classList.remove('btn-primary');
-                filterToggleButton.classList.add('btn-outline-primary');
+            // When filter card is hidden, hide search card
+            filterCollapse.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    searchBsCollapse.hide();
+                }
+                updateChevronIcons(false, filterToggleButton, searchToggleButton);
+            });
+            
+            // When search card is shown, show filter card
+            searchCollapse.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const filterBsCollapse = bootstrap.Collapse.getOrCreateInstance(filterCollapse);
+                    filterBsCollapse.show();
+                }
+                updateChevronIcons(true, filterToggleButton, searchToggleButton);
+            });
+            
+            // When search card is hidden, hide filter card
+            searchCollapse.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const filterBsCollapse = bootstrap.Collapse.getOrCreateInstance(filterCollapse);
+                    filterBsCollapse.hide();
+                }
+                updateChevronIcons(false, filterToggleButton, searchToggleButton);
+            });
+            
+            // Reset the manual toggle flag after animations complete
+            filterCollapse.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            filterCollapse.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            searchCollapse.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            searchCollapse.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+        }
+        // Scenario 2: Regular users - Sync next task and search cards
+        else if (nextTaskCollapse && searchCollapse && nextTaskToggleButton && searchToggleButton) {
+            // When search card is shown, show next task card
+            searchCollapse.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const nextTaskBsCollapse = bootstrap.Collapse.getOrCreateInstance(nextTaskCollapse);
+                    nextTaskBsCollapse.show();
+                }
+                updateChevronIcons(true, searchToggleButton, nextTaskToggleButton);
+            });
+            
+            // When search card is hidden, hide next task card
+            searchCollapse.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const nextTaskBsCollapse = bootstrap.Collapse.getOrCreateInstance(nextTaskCollapse);
+                    nextTaskBsCollapse.hide();
+                }
+                updateChevronIcons(false, searchToggleButton, nextTaskToggleButton);
+            });
+            
+            // When next task card is shown, show search card
+            nextTaskCollapse.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    searchBsCollapse.show();
+                }
+                updateChevronIcons(true, searchToggleButton, nextTaskToggleButton);
+            });
+            
+            // When next task card is hidden, hide search card
+            nextTaskCollapse.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    searchBsCollapse.hide();
+                }
+                updateChevronIcons(false, searchToggleButton, nextTaskToggleButton);
+            });
+            
+            // Reset the manual toggle flag after animations complete
+            searchCollapse.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            searchCollapse.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            nextTaskCollapse.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            nextTaskCollapse.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
             });
         }
     </script>
@@ -1157,7 +1340,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Send Reply</button>
+                        <button type="submit" class="btn btn-success">Send Reply</button>
                     </div>
                 </form>
         </div>

@@ -735,6 +735,49 @@ namespace SFCDashboard.Controllers
                 ?? false;
         }
 
+        private async Task<List<string>> GetUserAssignedCustomersAsync()
+        {
+            var currentUserId = await GetCurrentUserIdAsync();
+            
+            var assignedCustomers = await _context.CustomerUserAssignments
+                .Where(c => c.UserId == currentUserId)
+                .Select(c => c.Customer)
+                .ToListAsync();
+                
+            return assignedCustomers;
+        }
+
+        private async Task<IQueryable<PlannedEvent>> ApplyCustomerFilteringAsync(IQueryable<PlannedEvent> query, List<string> salesWorkgroups, bool canViewAll)
+        {
+            // Get user's assigned customers
+            var assignedCustomers = await GetUserAssignedCustomersAsync();
+            
+            if (!canViewAll)
+            {
+                // Apply workgroup filtering first
+                query = query.Where(p => salesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                ));
+                
+                // If user has assigned customers, further filter by those customers
+                if (assignedCustomers.Any())
+                {
+                    query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
+                }
+            }
+            else
+            {
+                // For users with ViewAll permission, still apply customer filtering if they have assigned customers
+                if (assignedCustomers.Any())
+                {
+                    query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
+                }
+            }
+            
+            return query;
+        }
+
         public async Task<IActionResult> SalesView(string searchType, string peNumber, string customer,
         string jobReference, string soNumber, int? pageIndex = 1)
         {
@@ -766,13 +809,8 @@ namespace SFCDashboard.Controllers
             // Base query for records where user's workgroup matches either TaskWg or SectionHandledBy
             var baseQuery = _context.PlannedEvents.AsQueryable();
 
-            if (!canViewAll)
-            {
-                baseQuery = baseQuery.Where(p => salesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                ));
-            }
+            // Apply customer filtering with workgroup checks
+            baseQuery = await ApplyCustomerFilteringAsync(baseQuery, salesWorkgroups, canViewAll);
 
             // Calculate dashboard counts using the same logic as specific views
             ViewData["UrgentCount"] = await baseQuery
@@ -2630,13 +2668,8 @@ namespace SFCDashboard.Controllers
 
             var query = _context.PlannedEvents.AsQueryable();
 
-            if (!canViewAll)
-            {
-                query = query.Where(p => salesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                ));
-            }
+            // Apply customer filtering with workgroup checks
+            query = await ApplyCustomerFilteringAsync(query, salesWorkgroups, canViewAll);
 
             query = query.Where(p =>
                 (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
@@ -2664,14 +2697,8 @@ namespace SFCDashboard.Controllers
 
             var query = _context.PlannedEvents.Where(p => p.IsHold);
 
-            // Apply workgroup filtering only if user doesn't have ViewAll permission
-            if (!canViewAll)
-            {
-                query = query.Where(p => salesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                ));
-            }
+            // Apply customer filtering with workgroup checks
+            query = await ApplyCustomerFilteringAsync(query, salesWorkgroups, canViewAll);
 
             var records = await query
                 .OrderByDescending(p => p.ServiceRequiredDate)
@@ -2700,14 +2727,8 @@ namespace SFCDashboard.Controllers
                        !p.IsHold &&
                        !violatingPENumbers.Contains(p.PeNumber));
 
-            // Apply workgroup filtering only if user doesn't have ViewAll permission
-            if (!canViewAll)
-            {
-                query = query.Where(p => salesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                ));
-            }
+            // Apply customer filtering with workgroup checks
+            query = await ApplyCustomerFilteringAsync(query, salesWorkgroups, canViewAll);
 
             var records = await query
                 .OrderByDescending(p => p.ServiceRequiredDate)
@@ -2734,13 +2755,8 @@ namespace SFCDashboard.Controllers
             var query = _context.PlannedEvents
                 .Where(p => violatingPENumbers.Contains(p.PeNumber));
 
-            if (!canViewAll)
-            {
-                query = query.Where(p => salesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                ));
-            }
+            // Apply customer filtering with workgroup checks
+            query = await ApplyCustomerFilteringAsync(query, salesWorkgroups, canViewAll);
 
             var records = await query
                 .OrderByDescending(p => p.ServiceRequiredDate)

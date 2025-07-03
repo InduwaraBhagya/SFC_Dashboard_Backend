@@ -1,7 +1,7 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @using SFCDashboard.Data
 @using Microsoft.AspNetCore.Http
-@inject ApplicationDbContext Context
+@inject ApplicationDbContext _context
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     var userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name;
@@ -10,9 +10,9 @@
     : null;
 
     var currentUser = !string.IsNullOrEmpty(serviceId)
-    ? await Context.Users
+    ? await _context.Users
     .Include(u => u.UserRole)
-    .ThenInclude(r => r.RolePermissions)
+    .ThenInclude(r => r!.RolePermissions)
     .ThenInclude(rp => rp.Permission)
     .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
     : null;
@@ -76,6 +76,22 @@
                                     <i class="bi bi-speedometer2"></i> Dashboard
                                 </a>
                             </li>
+                            <li>
+                                <a class="nav-link" asp-controller="Escalation" asp-action="Index">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Escalations
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-link" asp-controller="Project" asp-action="Index">
+                                    <i class="bi bi-folder-fill me-2"></i>Projects
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment"
+                                    asp-action="Index">
+                                    <i class="bi bi-person-check-fill me-2"></i>Customer Assignments
+                                </a>
+                            </li>
                             @if (isAdmin)
                             {
                                 <li class="nav-item dropdown">
@@ -101,22 +117,17 @@
                                             </a>
                                         </li>
                                         <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="Permissions" asp-action="Index">
+                                                <i class="bi bi-shield-check me-2"></i> <span>Manage Permissions</span>
+                                            </a>
+                                        </li>
+                                        <li>
                                             <hr class="dropdown-divider">
                                         </li>
                                         <li>
                                             <a class="dropdown-item" asp-area="" asp-controller="PERecords"
                                                 asp-action="ImportExcel">
                                                 <i class="bi bi-file-earmark-arrow-up-fill me-2"></i> <span>Import Excel</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Project" asp-action="Index">
-                                                <i class="bi bi-folder-fill me-2"></i> <span>Projects</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Escalation" asp-action="Index">
-                                                <i class="bi bi-exclamation-triangle-fill me-2"></i> <span>Escalations</span>
                                             </a>
                                         </li>
                                         <li>
@@ -130,6 +141,9 @@
                                                 asp-action="ImportExcel">
                                                 <i class="bi bi-person-lines-fill me-2"></i> <span>Network Engineers</span>
                                             </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
                                         </li>
                                     </ul>
                                 </li>
@@ -205,7 +219,7 @@
                         </div>
 
                         <span class="nav-link text-white" style="pointer-events:none;">
-                            @currentUser.Name
+                            @(currentUser?.Name ?? "Guest")
                         </span>
 
                         <partial name="_LoginPartial" />

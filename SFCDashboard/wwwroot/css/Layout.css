@@ -11,7 +11,6 @@ for details on configuring this project to bundle and minify static web assets. 
   padding: 0.75rem 0;
   min-height: 70px;
   position: relative;
-  z-index: 1030;
 }
 
 .navbar-brand {
@@ -784,6 +783,50 @@ footer .container {
     font-size: 0.75em;
 }
 
+/* Critical modal fixes - ensure Bootstrap modal works properly */
+.modal.fade .modal-dialog {
+  transition: transform 0.3s ease-out;
+  transform: translate(0, -50px);
+}
+
+.modal.show .modal-dialog {
+  transform: none;
+}
+
+/* Ensure modal is always on top of everything */
+.modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 1060 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  outline: 0 !important;
+}
+
+/* Force navbar below modals */
+.navbar {
+  z-index: 1020 !important;
+}
+
+/* Force all dropdowns below modals */
+.dropdown-menu {
+  z-index: 1000 !important;
+}
+
+/* Ensure modal backdrop is behind modal content but above everything else */
+.modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 1040 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
 /* Responsive improvements */
 @media (max-width: 991.98px) {
   .navbar {
@@ -968,7 +1011,6 @@ button.accept-policy {
   max-width: 320px;
   width: auto;
   animation: dropdownFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 9999 !important;
   position: absolute !important;
   white-space: nowrap;
   overflow: hidden;
@@ -1093,74 +1135,35 @@ button.accept-policy {
   }
 }
 
-/* Dropdown positioning and z-index fixes */
+/* Dropdown positioning fixes */
 .navbar .dropdown {
   position: relative;
-  z-index: 1040;
 }
 
 .navbar .dropdown-menu {
-  z-index: 9999 !important;
   position: absolute !important;
 }
 
 /* Ensure dropdown is always on top */
 .dropdown-menu.show {
-  z-index: 9999 !important;
   position: absolute !important;
 }
 
-/* Container and content z-index management */
+/* Container and content management */
 .container {
   position: relative;
-  z-index: 1;
 }
 
 main[role="main"] {
   position: relative;
-  z-index: 1;
 }
 
-/* Ensure all page content stays below navbar dropdowns */
+/* Page content layout */
 header {
   position: relative;
-  z-index: 1030;
 }
 
-/* Bootstrap dropdown override for better z-index handling */
-.dropdown-menu {
-  z-index: 9999 !important;
-}
-
-.dropdown.show .dropdown-menu {
-  z-index: 9999 !important;
-}
-
-/* Modal z-index fixes */
-.modal {
-  z-index: 10000 !important;
-}
-
-.modal-backdrop {
-  display: none !important;
-}
-
-.modal-backdrop.show {
-  display: none !important;
-}
-
-.modal-backdrop.fade {
-  display: none !important;
-}
-
-/* Replace backdrop with modal background */
-.modal {
-  background: rgba(0, 0, 0, 0.5) !important;
-}
-
-.modal.show {
-  background: rgba(0, 0, 0, 0.5) !important;
-}
+/* Let Bootstrap handle modal z-index naturally */
 
 /* Ensure modal closes when clicking outside */
 .modal-dialog {
@@ -1171,67 +1174,9 @@ header {
   pointer-events: auto;
 }
 
-.modal-header,
-.modal-body,
-.modal-footer {
-  z-index: 10003 !important;
-  position: relative;
-}
+/* Remove all custom z-index overrides - let Bootstrap handle modal layering */
 
-.modal-footer .btn,
-.modal-body .btn,
-.modal-header .btn {
-  z-index: 10004 !important;
-  position: relative;
-  pointer-events: auto !important;
-}
-
-/* Ensure modal buttons are clickable */
-.modal .btn {
-  z-index: 10005 !important;
-  position: relative !important;
-  pointer-events: auto !important;
-}
-
-/* Additional modal interaction fixes */
-.modal-content * {
-  pointer-events: auto !important;
-}
-
-.modal-backdrop.show {
-  z-index: 9998 !important;
-}
-
-/* Form elements in modals */
-.modal .form-control,
-.modal .form-select,
-.modal .form-check-input,
-.modal input,
-.modal select,
-.modal textarea,
-.modal button {
-  z-index: 10005 !important;
-  position: relative;
-  pointer-events: auto !important;
-}
-
-/* Links and interactive elements in modals */
-.modal a,
-.modal .dropdown-toggle,
-.modal .nav-link {
-  z-index: 10005 !important;
-  position: relative;
-  pointer-events: auto !important;
-}
-
-/* Dark mode modal fixes */
-[data-theme="dark"] .modal-content {
-  z-index: 10002 !important;
-}
-
-[data-theme="dark"] .modal-backdrop {
-  z-index: 9998 !important;
-}
+/* Remove theme-specific modal overrides - let Bootstrap handle */
 
 /* Theme Switch Styles */
 .theme-switch-wrapper {
@@ -1329,3 +1274,5 @@ input:checked+.slider .sun-icon {
 input:focus+.slider {
     box-shadow: 0 0 1px #2196F3;
 }
+
+/* Let Bootstrap handle all modal z-index values naturally */
