@@ -19,6 +19,24 @@
             </div>
         </div>
         <div class="card-body">
+            <!-- Simple Search Bar -->
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="escalationSearch" class="form-control" placeholder="Type to search escalations..." autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button id="markAllReadBtn" onclick="markAllAsRead()" class="btn btn-info">
+                        <i class="bi bi-check2-all"></i> Mark All as Read
+                    </button>
+                </div>
+            </div>
+
             <div class="mb-4">
                 <ul class="nav nav-tabs" id="escalationTabs" role="tablist">
                     <li class="nav-item" role="presentation">
@@ -181,7 +199,135 @@
         // Load escalation service status on page load
         $(document).ready(function() {
             loadEscalationServiceStatus();
+            initializeSimpleSearch();
         });
+
+        // Initialize simple search functionality
+        function initializeSimpleSearch() {
+            $('#escalationSearch').on('input', function() {
+                filterEscalations($(this).val());
+            });
+        }
+
+        // Simple search filter function
+        function filterEscalations(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            
+            // Get all table rows in all tabs
+            $('.table tbody tr').each(function() {
+                const row = $(this);
+                const rowText = row.text().toLowerCase();
+                
+                // Check if search term appears anywhere in the row
+                if (term === '' || rowText.includes(term)) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
+            });
+            
+            // Update tab badges and show/hide no results messages
+            updateTabBadges();
+            updateNoResultsMessages(term);
+        }
+
+        // Update tab badges based on visible rows
+        function updateTabBadges() {
+            const unreadVisible = $('#unread tbody tr:visible').length;
+            const readVisible = $('#read tbody tr:visible').length;
+            const allVisible = $('#all tbody tr:visible').length;
+            
+            $('#unread-tab .badge').text(unreadVisible);
+            $('#read-tab .badge').text(readVisible);
+            $('#all-tab .badge').text(allVisible);
+        }
+
+        // Show/hide no results messages
+        function updateNoResultsMessages(searchTerm) {
+            const tabs = ['unread', 'read', 'all'];
+            
+            tabs.forEach(tab => {
+                const tabPane = $(`#${tab}`);
+                const visibleRows = tabPane.find('tbody tr:visible').length;
+                const table = tabPane.find('.table-responsive');
+                const alertInfo = tabPane.find('.alert-info');
+                
+                // Remove existing no results message
+                tabPane.find('.no-search-results').remove();
+                
+                if (searchTerm && visibleRows === 0) {
+                    // Hide table and existing alert, show no results message
+                    table.hide();
+                    alertInfo.hide();
+                    tabPane.append(`
+                        <div class="alert alert-warning no-search-results">
+                            <i class="bi bi-search me-2"></i> No escalations match your search.
+                        </div>
+                    `);
+                } else if (visibleRows > 0) {
+                    // Show table, hide alerts
+                    table.show();
+                    alertInfo.hide();
+                } else {
+                    // Show original alert if no search term and no rows
+                    table.hide();
+                    alertInfo.show();
+                }
+            });
+        }
+
+        // Clear search
+        function clearSearch() {
+            $('#escalationSearch').val('');
+            filterEscalations('');
+        }
+
+        // Mark all escalations as read
+        function markAllAsRead() {
+            const btn = $('#markAllReadBtn');
+            const originalText = btn.html();
+            
+            // Show loading state
+            btn.prop('disabled', true).html('<i class="spinner-border spinner-border-sm me-2"></i>Processing...');
+            
+            $.ajax({
+                url: '@Url.Action("MarkAllAsRead", "Escalation")',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        // Show success message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success('All escalations marked as read');
+                        } else {
+                            alert('All escalations marked as read');
+                        }
+                        
+                        // Refresh the page to show updated data
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        // Show error message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error('Failed to mark escalations as read');
+                        } else {
+                            alert('Failed to mark escalations as read');
+                        }
+                    }
+                },
+                error: function() {
+                    // Show error message
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error('Server error occurred. Please try again.');
+                    } else {
+                        alert('Server error occurred. Please try again.');
+                    }
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
 
         // Function to refresh the page
         function refreshEscalations() {
