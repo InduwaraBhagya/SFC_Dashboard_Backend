@@ -8,11 +8,25 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SFCDashboard.Migrations
 {
     /// <inheritdoc />
-    public partial class initialMigration : Migration
+    public partial class added : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "AreaNetworkEngineers",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Area = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EngineerName = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AreaNetworkEngineers", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "PEIssues",
                 columns: table => new
@@ -31,7 +45,8 @@ namespace SFCDashboard.Migrations
                     OriginalIssueId = table.Column<int>(type: "int", nullable: true),
                     IsResolved = table.Column<bool>(type: "bit", nullable: false),
                     IsResolutionRequest = table.Column<bool>(type: "bit", nullable: false),
-                    IsHiddenFromInbox = table.Column<bool>(type: "bit", nullable: false)
+                    IsHiddenFromInbox = table.Column<bool>(type: "bit", nullable: false),
+                    IsReminder = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -147,12 +162,57 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RTOMWeights",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RTOM = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Weight = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RTOMWeights", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SystemConfigurations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ConfigKey = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ConfigValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SystemConfigurations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UDCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Category = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UDCategories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserRoles",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Level = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -219,6 +279,26 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UDSubCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    SubCategory = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UDSubCategories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UDSubCategories_UDCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "UDCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RolePermissions",
                 columns: table => new
                 {
@@ -262,6 +342,36 @@ namespace SFCDashboard.Migrations
                         column: x => x.UserRoleId,
                         principalTable: "UserRoles",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UDNames",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    SubCategoryId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Unit = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UDNames", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UDNames_UDCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "UDCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
+                    table.ForeignKey(
+                        name: "FK_UDNames_UDSubCategories_SubCategoryId",
+                        column: x => x.SubCategoryId,
+                        principalTable: "UDSubCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -327,6 +437,9 @@ namespace SFCDashboard.Migrations
                     PRIORITY = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PE_CREATED_DATE = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsHold = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedDateFromPE = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UrgentRequestedByName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UrgentRequestedById = table.Column<int>(type: "int", nullable: true),
                     SystemUserId = table.Column<int>(type: "int", nullable: true),
                     WorkGroupId = table.Column<int>(type: "int", nullable: true)
                 },
@@ -352,8 +465,7 @@ namespace SFCDashboard.Migrations
                 {
                     SystemUserId = table.Column<int>(type: "int", nullable: false),
                     WorkGroupId = table.Column<int>(type: "int", nullable: false),
-                    Id = table.Column<int>(type: "int", nullable: false),
-                    WorkGroupId1 = table.Column<int>(type: "int", nullable: true)
+                    Id = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -370,11 +482,6 @@ namespace SFCDashboard.Migrations
                         principalTable: "WorkGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_UserWorkGroups_WorkGroups_WorkGroupId1",
-                        column: x => x.WorkGroupId1,
-                        principalTable: "WorkGroups",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -458,7 +565,10 @@ namespace SFCDashboard.Migrations
                     UrgentRequested = table.Column<bool>(type: "bit", nullable: false),
                     Priority = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     EstimatedTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsOLAViolate = table.Column<bool>(type: "bit", nullable: false)
+                    IsOLAViolate = table.Column<bool>(type: "bit", nullable: false),
+                    OLADateTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ViolationStartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EscalationsDisabled = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -493,37 +603,6 @@ namespace SFCDashboard.Migrations
                         name: "FK_ProjectPEMappings_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TaskEscalations",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PlannedEventId = table.Column<int>(type: "int", nullable: false),
-                    EscalationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    EscalationReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    EscalatedToUserId = table.Column<int>(type: "int", nullable: false),
-                    IsResolved = table.Column<bool>(type: "bit", nullable: false),
-                    ResolvedTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ResolutionComments = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TaskEscalations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TaskEscalations_PlannedEvents_PlannedEventId",
-                        column: x => x.PlannedEventId,
-                        principalTable: "PlannedEvents",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_TaskEscalations_Users_EscalatedToUserId",
-                        column: x => x.EscalatedToUserId,
-                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -596,6 +675,137 @@ namespace SFCDashboard.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BOQs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TaskId = table.Column<int>(type: "int", nullable: false),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    SubCategoryId = table.Column<int>(type: "int", nullable: false),
+                    UDNameId = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    MainMaterialRate = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AccessoriesRate = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ServicesOverheadRate = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    MainMaterialTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AccessoriesTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ServicesOHTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    P0Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    P1Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    P2Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Unit = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AdjustedUnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BOQs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BOQs_PETasks_TaskId",
+                        column: x => x.TaskId,
+                        principalTable: "PETasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BOQs_UDCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "UDCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
+                    table.ForeignKey(
+                        name: "FK_BOQs_UDNames_UDNameId",
+                        column: x => x.UDNameId,
+                        principalTable: "UDNames",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
+                    table.ForeignKey(
+                        name: "FK_BOQs_UDSubCategories_SubCategoryId",
+                        column: x => x.SubCategoryId,
+                        principalTable: "UDSubCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
+                    table.ForeignKey(
+                        name: "FK_BOQs_Users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Escalations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TaskId = table.Column<int>(type: "int", nullable: false),
+                    Level = table.Column<int>(type: "int", nullable: true),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    IsIgnored = table.Column<bool>(type: "bit", nullable: false),
+                    IgnoreReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IgnoredAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IgnoredById = table.Column<int>(type: "int", nullable: true),
+                    PlannedEventId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Escalations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Escalations_PETasks_TaskId",
+                        column: x => x.TaskId,
+                        principalTable: "PETasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Escalations_PlannedEvents_PlannedEventId",
+                        column: x => x.PlannedEventId,
+                        principalTable: "PlannedEvents",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Escalations_Users_IgnoredById",
+                        column: x => x.IgnoredById,
+                        principalTable: "Users",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SurveyTaskActivities",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PETaskId = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SystemUserId = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SurveyTaskActivities", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SurveyTaskActivities_PETasks_PETaskId",
+                        column: x => x.PETaskId,
+                        principalTable: "PETasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_SurveyTaskActivities_Users_SystemUserId",
+                        column: x => x.SystemUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TaskEstimationHistory",
                 columns: table => new
                 {
@@ -616,6 +826,36 @@ namespace SFCDashboard.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ContractorNotifications",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ContractorName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    PENumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    NotificationType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RelatedTaskId = table.Column<int>(type: "int", nullable: true),
+                    RelatedActivityId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ContractorNotifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ContractorNotifications_PETasks_RelatedTaskId",
+                        column: x => x.RelatedTaskId,
+                        principalTable: "PETasks",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ContractorNotifications_SurveyTaskActivities_RelatedActivityId",
+                        column: x => x.RelatedActivityId,
+                        principalTable: "SurveyTaskActivities",
+                        principalColumn: "Id");
+                });
+
             migrationBuilder.InsertData(
                 table: "Permissions",
                 columns: new[] { "Id", "Description", "Name" },
@@ -626,8 +866,59 @@ namespace SFCDashboard.Migrations
                     { 3, "Can view and accept Planned Event urgent requests", "CanAcceptUrgentRequests" },
                     { 4, "Can mark a \"Task\" of a specific PE as Urgent", "CanMakeTasksUrgent" },
                     { 5, "Admin permissions", "Admin" },
-                    { 6, "Can view all records", "ViewAll" }
+                    { 6, "Can view all records", "ViewAll" },
+                    { 7, "Can report issues on Planned Events", "CanReportIssues" }
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BOQs_CategoryId",
+                table: "BOQs",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BOQs_CreatedByUserId",
+                table: "BOQs",
+                column: "CreatedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BOQs_SubCategoryId",
+                table: "BOQs",
+                column: "SubCategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BOQs_TaskId",
+                table: "BOQs",
+                column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BOQs_UDNameId",
+                table: "BOQs",
+                column: "UDNameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ContractorNotifications_RelatedActivityId",
+                table: "ContractorNotifications",
+                column: "RelatedActivityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ContractorNotifications_RelatedTaskId",
+                table: "ContractorNotifications",
+                column: "RelatedTaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Escalations_IgnoredById",
+                table: "Escalations",
+                column: "IgnoredById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Escalations_PlannedEventId",
+                table: "Escalations",
+                column: "PlannedEventId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Escalations_TaskId",
+                table: "Escalations",
+                column: "TaskId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_PlannedEventId",
@@ -690,14 +981,14 @@ namespace SFCDashboard.Migrations
                 column: "PETaskListId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskEscalations_EscalatedToUserId",
-                table: "TaskEscalations",
-                column: "EscalatedToUserId");
+                name: "IX_SurveyTaskActivities_PETaskId",
+                table: "SurveyTaskActivities",
+                column: "PETaskId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskEscalations_PlannedEventId",
-                table: "TaskEscalations",
-                column: "PlannedEventId");
+                name: "IX_SurveyTaskActivities_SystemUserId",
+                table: "SurveyTaskActivities",
+                column: "SystemUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TaskEstimationHistory_TaskId",
@@ -730,6 +1021,21 @@ namespace SFCDashboard.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UDNames_CategoryId",
+                table: "UDNames",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UDNames_SubCategoryId",
+                table: "UDNames",
+                column: "SubCategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UDSubCategories_CategoryId",
+                table: "UDSubCategories",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UrgentReasons_PERecordID",
                 table: "UrgentReasons",
                 column: "PERecordID");
@@ -743,16 +1049,23 @@ namespace SFCDashboard.Migrations
                 name: "IX_UserWorkGroups_WorkGroupId",
                 table: "UserWorkGroups",
                 column: "WorkGroupId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserWorkGroups_WorkGroupId1",
-                table: "UserWorkGroups",
-                column: "WorkGroupId1");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AreaNetworkEngineers");
+
+            migrationBuilder.DropTable(
+                name: "BOQs");
+
+            migrationBuilder.DropTable(
+                name: "ContractorNotifications");
+
+            migrationBuilder.DropTable(
+                name: "Escalations");
+
             migrationBuilder.DropTable(
                 name: "Notifications");
 
@@ -766,10 +1079,13 @@ namespace SFCDashboard.Migrations
                 name: "RolePermissions");
 
             migrationBuilder.DropTable(
+                name: "RTOMWeights");
+
+            migrationBuilder.DropTable(
                 name: "SubTaskLists");
 
             migrationBuilder.DropTable(
-                name: "TaskEscalations");
+                name: "SystemConfigurations");
 
             migrationBuilder.DropTable(
                 name: "TaskEstimationHistory");
@@ -787,6 +1103,12 @@ namespace SFCDashboard.Migrations
                 name: "UserWorkGroups");
 
             migrationBuilder.DropTable(
+                name: "UDNames");
+
+            migrationBuilder.DropTable(
+                name: "SurveyTaskActivities");
+
+            migrationBuilder.DropTable(
                 name: "PEIssues");
 
             migrationBuilder.DropTable(
@@ -799,10 +1121,16 @@ namespace SFCDashboard.Migrations
                 name: "PETaskList");
 
             migrationBuilder.DropTable(
+                name: "PERecords");
+
+            migrationBuilder.DropTable(
+                name: "UDSubCategories");
+
+            migrationBuilder.DropTable(
                 name: "PETasks");
 
             migrationBuilder.DropTable(
-                name: "PERecords");
+                name: "UDCategories");
 
             migrationBuilder.DropTable(
                 name: "PlannedEvents");

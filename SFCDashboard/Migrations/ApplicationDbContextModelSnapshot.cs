@@ -353,6 +353,12 @@ namespace SFCDashboard.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("AccessoriesRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AccessoriesTotal")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("AdjustedUnitPrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -368,7 +374,28 @@ namespace SFCDashboard.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("MainMaterialRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MainMaterialTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("P0Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("P1Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("P2Amount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ServicesOHTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ServicesOverheadRate")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("SubCategoryId")
@@ -403,6 +430,55 @@ namespace SFCDashboard.Migrations
                     b.ToTable("BOQs");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.ContractorNotification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContractorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PENumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("RelatedActivityId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RelatedTaskId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelatedActivityId");
+
+                    b.HasIndex("RelatedTaskId");
+
+                    b.ToTable("ContractorNotifications");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.Escalation", b =>
                 {
                     b.Property<int>("Id")
@@ -430,9 +506,6 @@ namespace SFCDashboard.Migrations
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsResolved")
-                        .HasColumnType("bit");
-
                     b.Property<int?>("Level")
                         .HasColumnType("int");
 
@@ -441,9 +514,6 @@ namespace SFCDashboard.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("PlannedEventId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RecipientId")
                         .HasColumnType("int");
 
                     b.Property<int>("TaskId")
@@ -617,6 +687,9 @@ namespace SFCDashboard.Migrations
                     b.Property<DateTime?>("ActualTaskCreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("EscalationsDisabled")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("EstimatedTime")
                         .HasColumnType("datetime2");
 
@@ -629,7 +702,7 @@ namespace SFCDashboard.Migrations
                     b.Property<string>("OLA")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("OLADateTime")
+                    b.Property<DateTime?>("OLADateTime")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PENumber")
@@ -1138,6 +1211,35 @@ namespace SFCDashboard.Migrations
                     b.ToTable("SurveyTaskActivities");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.SystemConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ConfigKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ConfigValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SystemConfigurations");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.TaskEstimationHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -1332,6 +1434,9 @@ namespace SFCDashboard.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("Level")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1441,19 +1546,19 @@ namespace SFCDashboard.Migrations
                     b.HasOne("SFCDashboard.Models.UDCategory", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SystemUser", "CreatedBy")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SFCDashboard.Models.UDSubCategory", "SubCategory")
                         .WithMany()
                         .HasForeignKey("SubCategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SFCDashboard.Models.PETask", "Task")
@@ -1465,7 +1570,7 @@ namespace SFCDashboard.Migrations
                     b.HasOne("SFCDashboard.Models.UDName", "UDName")
                         .WithMany()
                         .HasForeignKey("UDNameId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Category");
@@ -1477,6 +1582,21 @@ namespace SFCDashboard.Migrations
                     b.Navigation("Task");
 
                     b.Navigation("UDName");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.ContractorNotification", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.SurveyTaskActivity", "RelatedActivity")
+                        .WithMany()
+                        .HasForeignKey("RelatedActivityId");
+
+                    b.HasOne("SFCDashboard.Models.PETask", "RelatedTask")
+                        .WithMany()
+                        .HasForeignKey("RelatedTaskId");
+
+                    b.Navigation("RelatedActivity");
+
+                    b.Navigation("RelatedTask");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.Escalation", b =>
@@ -1666,7 +1786,7 @@ namespace SFCDashboard.Migrations
                     b.HasOne("SFCDashboard.Models.UDCategory", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SFCDashboard.Models.UDSubCategory", "SubCategory")

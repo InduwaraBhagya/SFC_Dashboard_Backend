@@ -12,8 +12,8 @@ using SFCDashboard.Data;
 namespace SFCDashboard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250612065140_allowNullIgnorereasion")]
-    partial class allowNullIgnorereasion
+    [Migration("20250703033624_added")]
+    partial class added
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,27 @@ namespace SFCDashboard.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("AreaNetworkEngineer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Area")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EngineerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AreaNetworkEngineers");
+                });
 
             modelBuilder.Entity("Project", b =>
                 {
@@ -327,6 +348,140 @@ namespace SFCDashboard.Migrations
                     b.ToTable("UrgentReasons");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.BOQ", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AccessoriesRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AccessoriesTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AdjustedUnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MainMaterialRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MainMaterialTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("P0Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("P1Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("P2Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ServicesOHTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ServicesOverheadRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SubCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UDNameId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("SubCategoryId");
+
+                    b.HasIndex("TaskId");
+
+                    b.HasIndex("UDNameId");
+
+                    b.ToTable("BOQs");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.ContractorNotification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContractorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PENumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("RelatedActivityId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RelatedTaskId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelatedActivityId");
+
+                    b.HasIndex("RelatedTaskId");
+
+                    b.ToTable("ContractorNotifications");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.Escalation", b =>
                 {
                     b.Property<int>("Id")
@@ -339,8 +494,8 @@ namespace SFCDashboard.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("IgnoreReason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("IgnoredAt")
                         .HasColumnType("datetime2");
@@ -354,23 +509,28 @@ namespace SFCDashboard.Migrations
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
-                    b.Property<int>("Level")
+                    b.Property<int?>("Level")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("OLAViolationTime")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("RecipientId")
+                    b.Property<int?>("PlannedEventId")
                         .HasColumnType("int");
 
                     b.Property<int>("TaskId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IgnoredById");
 
-                    b.HasIndex("RecipientId");
+                    b.HasIndex("PlannedEventId");
 
                     b.HasIndex("TaskId");
 
@@ -439,6 +599,9 @@ namespace SFCDashboard.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsReminder")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsReply")
@@ -527,6 +690,9 @@ namespace SFCDashboard.Migrations
                     b.Property<DateTime?>("ActualTaskCreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("EscalationsDisabled")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("EstimatedTime")
                         .HasColumnType("datetime2");
 
@@ -539,7 +705,7 @@ namespace SFCDashboard.Migrations
                     b.Property<string>("OLA")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("OLADateTime")
+                    b.Property<DateTime?>("OLADateTime")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PENumber")
@@ -572,6 +738,9 @@ namespace SFCDashboard.Migrations
 
                     b.Property<bool>("UrgentRequested")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ViolationStartTime")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -701,6 +870,10 @@ namespace SFCDashboard.Migrations
                     b.Property<string>("ContractorName")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("CONTRACTOR_NAME");
+
+                    b.Property<DateTime?>("CreatedDateFromPE")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreatedDateFromPE");
 
                     b.Property<string>("CrmOrder")
                         .HasColumnType("nvarchar(max)")
@@ -889,6 +1062,12 @@ namespace SFCDashboard.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("TASK_WG");
 
+                    b.Property<int?>("UrgentRequestedById")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UrgentRequestedByName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("WoActualStartDate")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("WO_ACTUAL_START_DATE");
@@ -919,6 +1098,27 @@ namespace SFCDashboard.Migrations
                     b.HasIndex("WorkGroupId");
 
                     b.ToTable("PlannedEvents");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.RTOMWeight", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("RTOM")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Weight")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RTOMWeights");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.RolePermission", b =>
@@ -976,7 +1176,7 @@ namespace SFCDashboard.Migrations
                     b.ToTable("SubTaskLists");
                 });
 
-            modelBuilder.Entity("SFCDashboard.Models.TaskEscalation", b =>
+            modelBuilder.Entity("SFCDashboard.Models.SurveyTaskActivity", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -984,36 +1184,63 @@ namespace SFCDashboard.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("EscalatedToUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("EscalationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("EscalationTime")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsResolved")
-                        .HasColumnType("bit");
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PlannedEventId")
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PETaskId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ResolutionComments")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                    b.Property<int>("SystemUserId")
+                        .HasColumnType("int");
 
-                    b.Property<DateTime?>("ResolvedTime")
+                    b.HasKey("Id");
+
+                    b.HasIndex("PETaskId");
+
+                    b.HasIndex("SystemUserId");
+
+                    b.ToTable("SurveyTaskActivities");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.SystemConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ConfigKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ConfigValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EscalatedToUserId");
-
-                    b.HasIndex("PlannedEventId");
-
-                    b.ToTable("TaskEscalations");
+                    b.ToTable("SystemConfigurations");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.TaskEstimationHistory", b =>
@@ -1122,6 +1349,86 @@ namespace SFCDashboard.Migrations
                     b.ToTable("TaskHistories");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.UDCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UDCategories");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.UDName", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("SubCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("SubCategoryId");
+
+                    b.ToTable("UDNames");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.UDSubCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubCategory")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("UDSubCategories");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.UserRole", b =>
                 {
                     b.Property<int>("Id")
@@ -1129,6 +1436,9 @@ namespace SFCDashboard.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Level")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1151,14 +1461,9 @@ namespace SFCDashboard.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("int");
 
-                    b.Property<int?>("WorkGroupId1")
-                        .HasColumnType("int");
-
                     b.HasKey("SystemUserId", "WorkGroupId");
 
                     b.HasIndex("WorkGroupId");
-
-                    b.HasIndex("WorkGroupId1");
 
                     b.ToTable("UserWorkGroups");
                 });
@@ -1239,15 +1544,73 @@ namespace SFCDashboard.Migrations
                     b.Navigation("PERecord");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.BOQ", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.UDCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SystemUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.UDSubCategory", "SubCategory")
+                        .WithMany()
+                        .HasForeignKey("SubCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.PETask", "Task")
+                        .WithMany()
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.UDName", "UDName")
+                        .WithMany()
+                        .HasForeignKey("UDNameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("SubCategory");
+
+                    b.Navigation("Task");
+
+                    b.Navigation("UDName");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.ContractorNotification", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.SurveyTaskActivity", "RelatedActivity")
+                        .WithMany()
+                        .HasForeignKey("RelatedActivityId");
+
+                    b.HasOne("SFCDashboard.Models.PETask", "RelatedTask")
+                        .WithMany()
+                        .HasForeignKey("RelatedTaskId");
+
+                    b.Navigation("RelatedActivity");
+
+                    b.Navigation("RelatedTask");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.Escalation", b =>
                 {
                     b.HasOne("SystemUser", "IgnoredBy")
                         .WithMany()
                         .HasForeignKey("IgnoredById");
 
-                    b.HasOne("SystemUser", "Recipient")
-                        .WithMany()
-                        .HasForeignKey("RecipientId");
+                    b.HasOne("SFCDashboard.Models.PlannedEvent", null)
+                        .WithMany("Escalations")
+                        .HasForeignKey("PlannedEventId");
 
                     b.HasOne("SFCDashboard.Models.PETask", "PETask")
                         .WithMany()
@@ -1258,8 +1621,6 @@ namespace SFCDashboard.Migrations
                     b.Navigation("IgnoredBy");
 
                     b.Navigation("PETask");
-
-                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.Notification", b =>
@@ -1349,23 +1710,23 @@ namespace SFCDashboard.Migrations
                     b.Navigation("PETaskList");
                 });
 
-            modelBuilder.Entity("SFCDashboard.Models.TaskEscalation", b =>
+            modelBuilder.Entity("SFCDashboard.Models.SurveyTaskActivity", b =>
                 {
-                    b.HasOne("SystemUser", "EscalatedTo")
+                    b.HasOne("SFCDashboard.Models.PETask", "PETask")
                         .WithMany()
-                        .HasForeignKey("EscalatedToUserId")
+                        .HasForeignKey("PETaskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SFCDashboard.Models.PlannedEvent", "PlannedEvent")
+                    b.HasOne("SystemUser", "User")
                         .WithMany()
-                        .HasForeignKey("PlannedEventId")
+                        .HasForeignKey("SystemUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("EscalatedTo");
+                    b.Navigation("PETask");
 
-                    b.Navigation("PlannedEvent");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.TaskEstimationHistory", b =>
@@ -1423,6 +1784,36 @@ namespace SFCDashboard.Migrations
                     b.Navigation("PlannedEvent");
                 });
 
+            modelBuilder.Entity("SFCDashboard.Models.UDName", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.UDCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SFCDashboard.Models.UDSubCategory", "SubCategory")
+                        .WithMany()
+                        .HasForeignKey("SubCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("SubCategory");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.UDSubCategory", b =>
+                {
+                    b.HasOne("SFCDashboard.Models.UDCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("SFCDashboard.Models.UserWorkGroup", b =>
                 {
                     b.HasOne("SystemUser", "SystemUser")
@@ -1432,14 +1823,10 @@ namespace SFCDashboard.Migrations
                         .IsRequired();
 
                     b.HasOne("SFCDashboard.Models.WorkGroup", "WorkGroup")
-                        .WithMany()
+                        .WithMany("UserWorkGroups")
                         .HasForeignKey("WorkGroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("SFCDashboard.Models.WorkGroup", null)
-                        .WithMany("UserWorkGroups")
-                        .HasForeignKey("WorkGroupId1");
 
                     b.Navigation("SystemUser");
 
@@ -1458,6 +1845,11 @@ namespace SFCDashboard.Migrations
             modelBuilder.Entity("Project", b =>
                 {
                     b.Navigation("ProjectPEs");
+                });
+
+            modelBuilder.Entity("SFCDashboard.Models.PlannedEvent", b =>
+                {
+                    b.Navigation("Escalations");
                 });
 
             modelBuilder.Entity("SFCDashboard.Models.UserRole", b =>
