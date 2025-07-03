@@ -43,6 +43,7 @@ namespace SFCDashboard.Data
         public DbSet<RTOMWeight> RTOMWeights { get; set; }
         public DbSet<BOQ> BOQs { get; set; }
         public DbSet<ContractorNotification> ContractorNotifications { get; set; }
+        public DbSet<CustomerUserAssignment> CustomerUserAssignments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

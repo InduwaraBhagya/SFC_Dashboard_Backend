@@ -1,0 +1,382 @@
+@model SFCDashboard.Models.CustomerUserAssignmentManageViewModel
+
+@{
+    ViewData["Title"] = "Customer User Assignments";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-users me-2"></i>Customer User Assignments
+                    <small class="text-muted">Manage customer assignments to sales users</small>
+                </h2>
+            </div>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <!-- Search and Add New Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-search me-2"></i>Search & Add New Assignment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Search Form -->
+                        <div class="col-md-6">
+                            <form method="get" asp-action="Index">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="searchTerm" 
+                                           value="@Model.SearchTerm" placeholder="Search by customer, user name, or service ID...">
+                                    <button class="btn btn-outline-secondary" type="submit">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+                                    @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                                    {
+                                        <a href="@Url.Action("Index")" class="btn btn-outline-danger">
+                                            <i class="fas fa-times"></i> Clear
+                                        </a>
+                                    }
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Add New Assignment Form -->
+                        <div class="col-md-6">
+                            @if (Model.AvailableCustomers.Any())
+                            {
+                                <form method="post" asp-action="Create" class="d-flex gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <select name="Customer" id="customerSelect" class="form-select searchable-select" required
+                                            title="Search and select a customer to assign"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="top">
+                                        <option value="">Select Customer...</option>
+                                        @foreach (var customer in Model.AvailableCustomers)
+                                        {
+                                            <option value="@customer">@customer</option>
+                                        }
+                                    </select>
+                                    <select name="UserId" id="userSelect" class="form-select searchable-select" required
+                                            title="Search and select a sales user"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="top">
+                                        <option value="">Select User...</option>
+                                        @foreach (var user in Model.SalesUsers)
+                                        {
+                                            <option value="@user.Id">@user.Name (@user.ServiceId)</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="btn btn-success" title="Create new assignment">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>All customers have been assigned to users.
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignments Table -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>Current Assignments 
+                        <span class="badge bg-primary ms-2">@Model.Assignments.Count</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Assignments.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Assigned User</th>
+                                        <th>Service ID</th>
+                                        <th>Created</th>
+                                        <th>Last Updated</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var assignment in Model.Assignments)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@assignment.Customer</strong>
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-user me-2"></i>@assignment.UserName
+                                            </td>
+                                            <td>
+                                                <code>@assignment.UserServiceId</code>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">@assignment.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                            </td>
+                                            <td>
+                                                @if (assignment.UpdatedAt.HasValue)
+                                                {
+                                                    <small class="text-muted">@assignment.UpdatedAt.Value.ToString("MMM dd, yyyy")</small>
+                                                }
+                                                else
+                                                {
+                                                    <small class="text-muted">-</small>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                            onclick="editAssignment(@assignment.Id, '@assignment.Customer', @assignment.UserId)">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="deleteAssignment(@assignment.Id, '@assignment.Customer')">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No assignments found</h5>
+                            <p class="text-muted">
+                                @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                                {
+                                    <text>Try adjusting your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>Start by adding customer-user assignments above.</text>
+                                }
+                            </p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Assignment Modal -->
+<div class="modal fade" id="editAssignmentModal" tabindex="-1" aria-labelledby="editAssignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editAssignmentModalLabel">
+                    <i class="fas fa-edit me-2"></i>Edit Assignment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editAssignmentForm" method="post" asp-action="Update">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" id="editAssignmentId" name="id" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Customer</label>
+                        <input type="text" id="editCustomerName" class="form-control" readonly />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label" for="editUserId">Assigned User</label>
+                        <select id="editUserId" name="userId" class="form-select searchable-select" required>
+                            <option value="">Select User...</option>
+                            @foreach (var user in Model.SalesUsers)
+                            {
+                                <option value="@user.Id">@user.Name (@user.ServiceId)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteAssignmentModal" tabindex="-1" aria-labelledby="deleteAssignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAssignmentModalLabel">
+                    <i class="fas fa-trash me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="deleteAssignmentForm" method="post" asp-action="Delete">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" id="deleteAssignmentId" name="id" />
+                    <p>Are you sure you want to delete the assignment for customer:</p>
+                    <p><strong id="deleteCustomerName"></strong></p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This action cannot be undone.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Assignment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Select2 CSS and JS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    
+    <!-- Custom CSS for Select2 Bootstrap styling -->
+    <style>
+        .select2-container--default .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 36px;
+            padding-left: 12px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+        .select2-dropdown {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        .select2-container {
+            width: 100% !important;
+        }
+    </style>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Initialize Select2 for all searchable select elements
+            $('.searchable-select').select2({
+                placeholder: function() {
+                    return $(this).find('option:first').text();
+                },
+                allowClear: true,
+                width: '100%',
+                theme: 'default'
+            });
+
+            // Initialize Select2 for customer dropdown with custom configuration
+            $('#customerSelect').select2({
+                placeholder: 'Search and select customer...',
+                allowClear: true,
+                width: '100%',
+                theme: 'default',
+                language: {
+                    noResults: function() {
+                        return "No customers found";
+                    },
+                    searching: function() {
+                        return "Searching customers...";
+                    }
+                }
+            });
+
+            // Initialize Select2 for user dropdown with custom configuration
+            $('#userSelect').select2({
+                placeholder: 'Search and select user...',
+                allowClear: true,
+                width: '100%',
+                theme: 'default',
+                language: {
+                    noResults: function() {
+                        return "No users found";
+                    },
+                    searching: function() {
+                        return "Searching users...";
+                    }
+                }
+            });
+
+            // Initialize Select2 for edit modal user dropdown
+            $('#editUserId').select2({
+                placeholder: 'Search and select user...',
+                allowClear: true,
+                width: '100%',
+                theme: 'default',
+                dropdownParent: $('#editAssignmentModal'),
+                language: {
+                    noResults: function() {
+                        return "No users found";
+                    },
+                    searching: function() {
+                        return "Searching users...";
+                    }
+                }
+            });
+        });
+
+        function editAssignment(id, customerName, userId) {
+            document.getElementById('editAssignmentId').value = id;
+            document.getElementById('editCustomerName').value = customerName;
+            
+            // Set the value for Select2 dropdown
+            $('#editUserId').val(userId).trigger('change');
+            
+            var modal = new bootstrap.Modal(document.getElementById('editAssignmentModal'));
+            modal.show();
+        }
+
+        function deleteAssignment(id, customerName) {
+            document.getElementById('deleteAssignmentId').value = id;
+            document.getElementById('deleteCustomerName').textContent = customerName;
+            
+            var modal = new bootstrap.Modal(document.getElementById('deleteAssignmentModal'));
+            modal.show();
+        }
+    </script>
+}
