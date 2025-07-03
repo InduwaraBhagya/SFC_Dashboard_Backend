@@ -36,7 +36,7 @@ namespace SFCDashboard.Controllers
         }
 
         private async Task<IActionResult> RedirectBasedOnUserType(string searchType, string peNumber, string customer,
-            string jobReference, string soNumber, List<int>workgroupIds, int pageIndex)
+            string jobReference, string soNumber, List<int> workgroupIds, int pageIndex)
         {
             int currentUserId = await GetCurrentUserIdAsync();
 
@@ -115,7 +115,7 @@ namespace SFCDashboard.Controllers
             // Keep track of user's assigned workgroup(s) separately from the filter selection
             ViewData["UserAssignedWorkgroupIds"] = userWorkgroupIds;
             ViewData["UserAssignedWorkgroupNames"] = userWorkgroupNames;
-            
+
             ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _context.WorkGroups
                 .Where(w => canViewAll || userWorkgroupIds.Contains(w.Id))
@@ -190,8 +190,8 @@ namespace SFCDashboard.Controllers
             }
 
             // Calculate dashboard counts based on current workgroup context
-            var effectiveWorkgroupIds = canViewAll 
-                ? (workgroupId.HasValue ? new List<int> { workgroupId.Value } : null)  
+            var effectiveWorkgroupIds = canViewAll
+                ? (workgroupId.HasValue ? new List<int> { workgroupId.Value } : null)
                 : userWorkgroupIds;
 
             ViewData["UrgentCount"] = await GetUrgentCount(effectiveWorkgroupIds);
@@ -1134,7 +1134,7 @@ namespace SFCDashboard.Controllers
             var escalations = await _context.Escalations
                 .Include(e => e.PETask)
                 .Include(e => e.IgnoredBy)
-                .Where(e => peTaskIds.Contains(e.TaskId) )
+                .Where(e => peTaskIds.Contains(e.TaskId))
                 .ToListAsync();
 
             plannedEvent.Escalations = escalations;
@@ -1656,7 +1656,7 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: PlannedEvents/MultiWorkgroupInProgressView
-        public async Task<IActionResult> MultiWorkgroupInProgressView(List<int> workgroupIds, string searchType, 
+        public async Task<IActionResult> MultiWorkgroupInProgressView(List<int> workgroupIds, string searchType,
             string peNumber, string customer, string jobReference, string soNumber)
         {
             int currentUserId = await GetCurrentUserIdAsync();
@@ -1773,7 +1773,7 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: PlannedEvents/MultiWorkgroupHoldView
-        public async Task<IActionResult> MultiWorkgroupHoldView(List<int> workgroupIds, string searchType, 
+        public async Task<IActionResult> MultiWorkgroupHoldView(List<int> workgroupIds, string searchType,
             string peNumber, string customer, string jobReference, string soNumber)
         {
             int currentUserId = await GetCurrentUserIdAsync();
@@ -1819,7 +1819,7 @@ namespace SFCDashboard.Controllers
                 if (selectedWorkgroupNames.Any())
                 {
                     // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
                         name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
 
                     if (filterHasDrawFiberAccess)
@@ -1880,7 +1880,7 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: PlannedEvents/MultiWorkgroupUrgentView
-        public async Task<IActionResult> MultiWorkgroupUrgentView(List<int> workgroupIds, string searchType, 
+        public async Task<IActionResult> MultiWorkgroupUrgentView(List<int> workgroupIds, string searchType,
             string peNumber, string customer, string jobReference, string soNumber)
         {
             int currentUserId = await GetCurrentUserIdAsync();
@@ -1920,8 +1920,8 @@ namespace SFCDashboard.Controllers
 
                 // Base query for urgent records
                 var query = _context.PlannedEvents
-                    .Where(p => p.PEStatus == "urgent" && 
-                               p.IsHold == false && 
+                    .Where(p => p.PEStatus == "urgent" &&
+                               p.IsHold == false &&
                                !violatingPENumbers.Contains(p.PeNumber))
                     .AsNoTracking();
 
@@ -1935,7 +1935,7 @@ namespace SFCDashboard.Controllers
                 if (selectedWorkgroupNames.Any())
                 {
                     // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
                         name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
 
                     if (filterHasDrawFiberAccess)
@@ -1996,7 +1996,7 @@ namespace SFCDashboard.Controllers
         }
 
         // GET: PlannedEvents/MultiWorkgroupOLAViolateView
-        public async Task<IActionResult> MultiWorkgroupOLAViolateView(List<int> workgroupIds, string searchType, 
+        public async Task<IActionResult> MultiWorkgroupOLAViolateView(List<int> workgroupIds, string searchType,
             string peNumber, string customer, string jobReference, string soNumber)
         {
             int currentUserId = await GetCurrentUserIdAsync();
@@ -2049,7 +2049,7 @@ namespace SFCDashboard.Controllers
                 if (selectedWorkgroupNames.Any())
                 {
                     // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name => 
+                    bool filterHasDrawFiberAccess = selectedWorkgroupNames.Any(name =>
                         name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
 
                     if (filterHasDrawFiberAccess)
@@ -2396,7 +2396,9 @@ namespace SFCDashboard.Controllers
                 peNumber = plannedEvent.PeNumber,
                 customer = plannedEvent.Customer,
                 priority = plannedEvent.Priority,
+                urgentRequestedByName = plannedEvent.UrgentRequestedByName,
                 urgentRequestReason = ExtractUrgentRequestReason(plannedEvent.Priority)
+
             };
 
             return Json(details);
@@ -3614,57 +3616,57 @@ namespace SFCDashboard.Controllers
 
 
 
-// GET: PlannedEvents/TaskQueue
-[HttpGet]
-public async Task<IActionResult> TaskQueue(int? workgroupId, int? year = null, int take = 20)
-{
-    var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
-    var effectiveWorkgroupId = canViewAll ? workgroupId : userWorkgroupId;
+        // GET: PlannedEvents/TaskQueue
+        [HttpGet]
+        public async Task<IActionResult> TaskQueue(int? workgroupId, int? year = null, int take = 20)
+        {
+            var (userWorkgroupId, canViewAll) = await GetCurrentUserWorkGroupAsync();
+            var effectiveWorkgroupId = canViewAll ? workgroupId : userWorkgroupId;
 
-    try
-    {
-        // Load workgroups for the dropdown
-        var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
-        ViewData["Workgroups"] = workgroups;
-        ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
-        ViewData["SelectedYear"] = year;
-        ViewData["CanSwitchWorkgroup"] = canViewAll;
+            try
+            {
+                // Load workgroups for the dropdown
+                var workgroups = await _context.WorkGroups.OrderBy(w => w.Name).ToListAsync();
+                ViewData["Workgroups"] = workgroups;
+                ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
+                ViewData["SelectedYear"] = year;
+                ViewData["CanSwitchWorkgroup"] = canViewAll;
 
-        // Get years for the dropdown from actual PE numbers
-        var years = await _taskQueueService.GetAvailableYearsAsync();
-        ViewData["AvailableYears"] = years;
+                // Get years for the dropdown from actual PE numbers
+                var years = await _taskQueueService.GetAvailableYearsAsync();
+                ViewData["AvailableYears"] = years;
 
-        // Get prioritized tasks from the queue service
-        var prioritizedTasks = await _taskQueueService.GetPrioritizedTasksAsync(
-            workgroupId: effectiveWorkgroupId, 
-            year: year, 
-            take: take);
+                // Get prioritized tasks from the queue service
+                var prioritizedTasks = await _taskQueueService.GetPrioritizedTasksAsync(
+                    workgroupId: effectiveWorkgroupId,
+                    year: year,
+                    take: take);
 
-        // Get statistics for the summary boxes
-        ViewData["UrgentCount"] = prioritizedTasks.Count(t => t.Task.IsUrgent);
-        ViewData["OLAViolateCount"] = prioritizedTasks.Count(t => t.Task.IsOLAViolate && !t.Task.IsUrgent);
-        ViewData["ApproachingDeadlineCount"] = prioritizedTasks.Count(t =>
-            !t.Task.IsUrgent &&
-            !t.Task.IsOLAViolate &&
-            t.DaysUntilDue >= 0 &&
-            t.DaysUntilDue <= Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3)));
+                // Get statistics for the summary boxes
+                ViewData["UrgentCount"] = prioritizedTasks.Count(t => t.Task.IsUrgent);
+                ViewData["OLAViolateCount"] = prioritizedTasks.Count(t => t.Task.IsOLAViolate && !t.Task.IsUrgent);
+                ViewData["ApproachingDeadlineCount"] = prioritizedTasks.Count(t =>
+                    !t.Task.IsUrgent &&
+                    !t.Task.IsOLAViolate &&
+                    t.DaysUntilDue >= 0 &&
+                    t.DaysUntilDue <= Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3)));
 
-        // Fix the regular tasks count calculation:
-        ViewData["RegularTaskCount"] = prioritizedTasks.Count(t =>
-            !t.Task.IsUrgent &&
-            !t.Task.IsOLAViolate &&
-            (t.DaysUntilDue < 0 || t.DaysUntilDue > Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3))));
+                // Fix the regular tasks count calculation:
+                ViewData["RegularTaskCount"] = prioritizedTasks.Count(t =>
+                    !t.Task.IsUrgent &&
+                    !t.Task.IsOLAViolate &&
+                    (t.DaysUntilDue < 0 || t.DaysUntilDue > Math.Min(2, Math.Ceiling(t.OLAInDays * 0.3))));
 
-        return View(prioritizedTasks);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error loading task queue with workgroupId: {workgroupId}, year: {year}, take: {take}", 
-            workgroupId, year, take);
-        TempData["ErrorMessage"] = "An error occurred while loading the task queue.";
-        return View(new List<TaskQueueItem>());
-    }
-}
+                return View(prioritizedTasks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading task queue with workgroupId: {workgroupId}, year: {year}, take: {take}",
+                    workgroupId, year, take);
+                TempData["ErrorMessage"] = "An error occurred while loading the task queue.";
+                return View(new List<TaskQueueItem>());
+            }
+        }
 
         // POST: PlannedEvents/RemoveUrgentStatus
         [HttpPost]

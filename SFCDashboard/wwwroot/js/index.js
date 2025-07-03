@@ -276,15 +276,19 @@ function showUrgentRequestModal(type, id) {
         .then(data => {
             // Update the modal with details
             let detailsHtml = `
-                <div class="alert alert-info mb-3">
-                    <div class="row">
-                        <div class="col-sm-4 fw-bold">PE Number:</div>
-                        <div class="col-sm-8">${data.peNumber}</div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 fw-bold">Customer:</div>
-                        <div class="col-sm-8">${data.customer || 'Not specified'}</div>
-                    </div>`;
+        <div class="alert alert-info mb-3">
+            <div class="row">
+                <div class="col-sm-4 fw-bold">PE Number:</div>
+                <div class="col-sm-8">${data.peNumber}</div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4 fw-bold">Customer:</div>
+                <div class="col-sm-8">${data.customer || 'Not specified'}</div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4 fw-bold">Requested By:</div>
+                <div class="col-sm-8">${data.urgentRequestedByName || 'Unknown'}</div>
+            </div>`;
                     
             if (type === 'task') {
                 detailsHtml += `
