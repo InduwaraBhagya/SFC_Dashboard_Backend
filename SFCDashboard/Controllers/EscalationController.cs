@@ -41,8 +41,13 @@ namespace SFCDashboard.Controllers
             // Get user's role level (0 for normal users, higher for management)
             int userRoleLevel = currentUser.UserRole?.Level ?? 0;
             
-            // Get escalations based on user role level using the service
-            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(userRoleLevel);
+            // Get user's workgroups
+            var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+            
+            // Get escalations based on user role level and workgroups using the service
+            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(
+                userRoleLevel, 
+                canViewAll ? null : userWorkgroupNames);
             
             // Apply filter
             if (filter == "unread")
@@ -141,8 +146,13 @@ namespace SFCDashboard.Controllers
             // Get user's role level
             int userRoleLevel = currentUser.UserRole?.Level ?? 0;
             
-            // Get all unread escalations for this user's role level
-            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(userRoleLevel);
+            // Get user's workgroups
+            var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+            
+            // Get all unread escalations for this user's role level and workgroups
+            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(
+                userRoleLevel, 
+                canViewAll ? null : userWorkgroupNames);
             var unreadEscalations = escalations.Where(e => !e.IsRead).ToList();
             
             // Mark them all as read
@@ -189,8 +199,13 @@ namespace SFCDashboard.Controllers
                 // Get user's role level
                 int userRoleLevel = currentUser.UserRole?.Level ?? 0;
                 
-                // Get escalations using the service
-                var escalations = await _escalationService.GetEscalationsByUserRoleAsync(userRoleLevel);
+                // Get user's workgroups
+                var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+                
+                // Get escalations using the service with workgroup filtering
+                var escalations = await _escalationService.GetEscalationsByUserRoleAsync(
+                    userRoleLevel, 
+                    canViewAll ? null : userWorkgroupNames);
                   // Map to view models
                 var viewModels = escalations.Select(e => new EscalationViewModel
                 {
@@ -202,7 +217,7 @@ namespace SFCDashboard.Controllers
                     TaskId = e.TaskId,
                     TaskName = e.PETask?.Task ?? "Unknown Task",
                     PENumber = e.PETask?.PENumber ?? "Unknown",
-                    TaskStatus = e.PETask?.TaskStatus,
+                    TaskStatus = e.PETask?.TaskStatus ?? "Unknown",
                     Level = e.Level ?? 0,
                     // Role-based display instead of recipient
                     RecipientRole = GetRoleNameByLevel(e.Level ?? 0)
@@ -386,6 +401,66 @@ namespace SFCDashboard.Controllers
             {
                 return Json(new { success = false, message = $"Error toggling escalation service: {ex.Message}" });
             }
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> ManualEscalationCheck()
+        {
+            try
+            {
+                var result = await _escalationService.ManualEscalationCheckAsync();
+                return Json(new { success = true, message = result });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error running manual escalation check: {ex.Message}" });
+            }
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetOLAViolatedTasksDebugInfo()
+        {
+            try
+            {
+                var debugInfo = await _escalationService.GetOLAViolatedTasksDebugInfoAsync();
+                return Json(new { success = true, data = debugInfo });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error getting debug info: {ex.Message}" });
+            }
+        }
+
+        // Helper method to get current user's workgroups
+        private async Task<(List<int> workgroupIds, List<string> workgroupNames, bool canViewAll)> GetCurrentUserWorkGroupsAsync()
+        {
+            int currentUserId = await GetCurrentUserIdAsync();
+
+            var currentUser = await _context.Users
+                .Include(u => u.UserRole)
+                    .ThenInclude(r => r!.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
+                .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            if (currentUser == null)
+                return (new List<int>(), new List<string>(), false);
+
+            var workgroupIds = currentUser.UserWorkGroups?
+                .Select(uwg => uwg.WorkGroupId)
+                .ToList() ?? new List<int>();
+
+            var workgroupNames = currentUser.UserWorkGroups?
+                .Select(uwg => uwg.WorkGroup.Name)
+                .ToList() ?? new List<string>();
+
+            // Use the "ViewAll" permission instead of workgroup name
+            bool canViewAll = currentUser.UserRole?.HasPermission("ViewAll") == true;
+
+            return (workgroupIds, workgroupNames, canViewAll);
         }
     }
 }

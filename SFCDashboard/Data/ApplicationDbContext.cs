@@ -105,6 +105,45 @@ namespace SFCDashboard.Data
                 .WithMany()
                 .HasForeignKey(e => e.TaskId);
 
+            // Configure UDName foreign key relationships to prevent cascade conflicts
+            modelBuilder.Entity<UDName>()
+                .HasOne(u => u.Category)
+                .WithMany()
+                .HasForeignKey(u => u.CategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<UDName>()
+                .HasOne(u => u.SubCategory)
+                .WithMany()
+                .HasForeignKey(u => u.SubCategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Configure BOQ foreign key relationships to prevent cascade conflicts
+            modelBuilder.Entity<BOQ>()
+                .HasOne(b => b.Category)
+                .WithMany()
+                .HasForeignKey(b => b.CategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<BOQ>()
+                .HasOne(b => b.SubCategory)
+                .WithMany()
+                .HasForeignKey(b => b.SubCategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<BOQ>()
+                .HasOne(b => b.UDName)
+                .WithMany()
+                .HasForeignKey(b => b.UDNameId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Configure UDSubCategory relationship to prevent cascade conflicts
+            modelBuilder.Entity<UDSubCategory>()
+                .HasOne(s => s.Category)
+                .WithMany()
+                .HasForeignKey(s => s.CategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // Make sure System.Threading.Tasks.Task is not registered as an entity
             modelBuilder.Ignore<System.Threading.Tasks.Task>();
         }

@@ -88,8 +88,18 @@ namespace SFCDashboard.Services
                                              task.TaskCreatedDate;
                     var violationDuration = DateTime.Now - violationStart;
                     
+                    // Ensure we have a positive violation duration (safety check)
+                    if (violationDuration.TotalMinutes < 0)
+                    {
+                        Console.WriteLine($"Warning: Negative violation duration for task {task.PENumber}, skipping escalation creation");
+                        continue;
+                    }
+                    
                     // Determine escalation level based on violation duration
                     int escalationLevel = DetermineEscalationLevel(violationDuration);
+                    
+                    // Log the violation details for debugging
+                    Console.WriteLine($"Processing task {task.PENumber}: OLA violated for {violationDuration.TotalHours:F1} hours, escalation level: {escalationLevel}");
                     
                     // Check if escalation already exists for this task at this level
                     var existingEscalation = await _context.Escalations
@@ -111,6 +121,16 @@ namespace SFCDashboard.Services
 
                         _context.Escalations.Add(escalation);
                         await _context.SaveChangesAsync();
+
+                        // Log the escalation creation with specific details for Level 1 under 24 hours
+                        if (escalationLevel == 1 && violationDuration.TotalHours < 24)
+                        {
+                            Console.WriteLine($"Created Level 1 escalation for task {task.PENumber} - OLA violated {violationDuration.TotalHours:F1} hours ago (under 24 hours)");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Created Level {escalationLevel} escalation for task {task.PENumber} - OLA violated {violationDuration.TotalDays:F1} days ago");
+                        }
                     }
                 }
             }
@@ -127,14 +147,17 @@ namespace SFCDashboard.Services
                 return 3; // Level 3 after 3+ days
             else if (violationDuration.TotalDays >= 1)
                 return 2; // Level 2 after 1+ days
+            else if (violationDuration.TotalHours < 24)
+                return 1; // Level 1 for violations less than 24 hours
             else
-                return 1; // Level 1 immediately when OLA violated
+                return 1; // Level 1 for any other violation case
         }
 
         private string CreateEscalationMessage(PETask task, int level, TimeSpan duration)
         {
             var levelText = level switch
             {
+                1 when duration.TotalHours < 24 => $"immediate attention (violated {duration.TotalHours:F1} hours ago)",
                 1 => "immediate attention",
                 2 => "urgent attention (1+ days overdue)",
                 3 => "critical attention (3+ days overdue)",
@@ -144,8 +167,12 @@ namespace SFCDashboard.Services
             // Use the actual task start date - prefer ActualTaskCreatedDate if available, otherwise TaskCreatedDate
             var taskStartDate = task.ActualTaskCreatedDate ?? task.TaskCreatedDate;
 
+            var durationText = duration.TotalDays < 1 
+                ? $"{duration.TotalHours:F1} hours" 
+                : $"{duration.TotalDays:F1} days";
+
             return $"Task {task.PENumber} requires {levelText}. " +
-                   $"OLA violation duration: {duration.TotalDays:F1} days. " +
+                   $"OLA violation duration: {durationText}. " +
                    $"Task started: {taskStartDate:g}";
         }
 
@@ -155,8 +182,22 @@ namespace SFCDashboard.Services
             return $"Task {task.PENumber} OLA Violation - Level {level} - Customer: {customerName}";
         }
 
-        // Get escalations by role level for display
-        public async Task<List<Escalation>> GetEscalationsByUserRoleAsync(int userRoleLevel)
+        /// <summary>
+        /// Gets escalations filtered by user role level and workgroup with strict matching criteria.
+        /// Filtering Rules:
+        /// 1. Role Level Matching: Escalations are shown ONLY when escalation level EQUALS user role level
+        ///    - Role Level 0 users: See Level 1 escalations (special case since no Level 0 escalations are created)
+        ///    - Role Level 1 users: See ONLY Level 1 escalations
+        ///    - Role Level 2 users: See ONLY Level 2 escalations  
+        ///    - Role Level 3 users: See ONLY Level 3 escalations
+        /// 2. Workgroup Matching: Escalation's task workgroup must EXACTLY match one of user's workgroups
+        ///    - Uses exact string equality, not substring matching
+        ///    - If user has multiple workgroups, escalation is shown if task workgroup equals ANY of them
+        /// </summary>
+        /// <param name="userRoleLevel">User's role level (0-3)</param>
+        /// <param name="userWorkgroupNames">List of user's workgroup names for filtering (null means no workgroup filtering)</param>
+        /// <returns>List of escalations matching the strict filtering criteria</returns>
+        public async Task<List<Escalation>> GetEscalationsByUserRoleAsync(int userRoleLevel, List<string>? userWorkgroupNames = null)
         {
             // Show escalations only when escalation level exactly matches user role level
             // Special case: Role Level 0 users see Level 1 escalations (since no Level 0 escalations are created)
@@ -166,34 +207,52 @@ namespace SFCDashboard.Services
             
             int targetEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
             
-            return await _context.Escalations
+            var query = _context.Escalations
                 .Include(e => e.PETask)
                     .ThenInclude(t => t.PlannedEvent)
-                .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel)
+                .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel);
+            
+            // Filter by user workgroups if provided - using exact match for strict filtering
+            if (userWorkgroupNames != null && userWorkgroupNames.Any())
+            {
+                query = query.Where(e => e.PETask != null && 
+                    e.PETask.TaskWorkGroup != null && 
+                    userWorkgroupNames.Contains(e.PETask.TaskWorkGroup));
+            }
+            
+            return await query
                 .OrderByDescending(e => e.CreatedAt)  // Order by creation date
                 .ToListAsync();
         }
 
-        // Mark escalation as read
-        public async Task MarkAsReadAsync(int escalationId)
-        {
-            var escalation = await _context.Escalations.FindAsync(escalationId);
-            if (escalation != null)
-            {
-                escalation.IsRead = true;
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        // Get escalation count for a specific user role level
-        public async Task<int> GetEscalationCountByUserRoleAsync(int userRoleLevel, bool unreadOnly = false)
+        /// <summary>
+        /// Gets the count of escalations filtered by user role level and workgroup with strict matching criteria.
+        /// Uses the same filtering logic as GetEscalationsByUserRoleAsync:
+        /// 1. Role Level: EXACT match between escalation level and user role level
+        /// 2. Workgroup: EXACT match between task workgroup and user workgroups
+        /// </summary>
+        /// <param name="userRoleLevel">User's role level (0-3)</param>
+        /// <param name="unreadOnly">If true, count only unread escalations</param>
+        /// <param name="userWorkgroupNames">List of user's workgroup names for filtering (null means no workgroup filtering)</param>
+        /// <returns>Count of escalations matching the strict filtering criteria</returns>
+        // Get escalation count for a specific user role level and workgroups
+        public async Task<int> GetEscalationCountByUserRoleAsync(int userRoleLevel, bool unreadOnly = false, List<string>? userWorkgroupNames = null)
         {
             // Count escalations only when escalation level exactly matches user role level
             // Special case: Role Level 0 users see Level 1 escalations
             int targetEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
             
             var query = _context.Escalations
+                .Include(e => e.PETask)
                 .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel);
+
+            // Filter by user workgroups if provided - using exact match for strict filtering
+            if (userWorkgroupNames != null && userWorkgroupNames.Any())
+            {
+                query = query.Where(e => e.PETask != null && 
+                    e.PETask.TaskWorkGroup != null && 
+                    userWorkgroupNames.Contains(e.PETask.TaskWorkGroup));
+            }
 
             if (unreadOnly)
             {
@@ -219,6 +278,64 @@ namespace SFCDashboard.Services
                 .ToListAsync();
 
             return stats;
+        }
+
+        // Manual method to trigger escalation check (useful for testing)
+        public async Task<string> ManualEscalationCheckAsync()
+        {
+            try
+            {
+                await CheckAndCreateEscalationsAsync();
+                return "Manual escalation check completed successfully";
+            }
+            catch (Exception ex)
+            {
+                return $"Manual escalation check failed: {ex.Message}";
+            }
+        }
+
+        // Get current OLA violated tasks for debugging
+        public async Task<object> GetOLAViolatedTasksDebugInfoAsync()
+        {
+            var violatedTasks = await _context.PETasks
+                .Include(t => t.PlannedEvent)
+                .Where(t => t.TaskStatus != "Completed" && t.IsOLAViolate && !t.EscalationsDisabled)
+                .Select(t => new {
+                    t.Id,
+                    t.PENumber,
+                    t.TaskStatus,
+                    t.IsOLAViolate,
+                    t.ViolationStartTime,
+                    t.OLADateTime,
+                    t.ActualTaskCreatedDate,
+                    t.TaskCreatedDate,
+                    ViolationDurationHours = t.ViolationStartTime.HasValue ? 
+                        (DateTime.Now - t.ViolationStartTime.Value).TotalHours :
+                        t.OLADateTime.HasValue ?
+                        (DateTime.Now - t.OLADateTime.Value).TotalHours :
+                        t.ActualTaskCreatedDate.HasValue ?
+                        (DateTime.Now - t.ActualTaskCreatedDate.Value).TotalHours :
+                        (DateTime.Now - t.TaskCreatedDate).TotalHours,
+                    CustomerName = t.PlannedEvent != null ? t.PlannedEvent.Customer : "Unknown"
+                })
+                .ToListAsync();
+
+            return violatedTasks;
+        }
+
+        /// <summary>
+        /// Marks an escalation as read by updating its IsRead property to true.
+        /// </summary>
+        /// <param name="escalationId">The ID of the escalation to mark as read</param>
+        /// <returns>Task representing the async operation</returns>
+        public async Task MarkAsReadAsync(int escalationId)
+        {
+            var escalation = await _context.Escalations.FindAsync(escalationId);
+            if (escalation != null)
+            {
+                escalation.IsRead = true;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }
