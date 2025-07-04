@@ -2116,6 +2116,8 @@
     background-color: #343a40 !important;
     color: #f8f9fa !important;
     border-bottom: 2px solid #6c757d !important;
+}
+
 /* Reduce column spacing */
 .col-lg-6.mb-3,
 .col-md-6.mb-3,
