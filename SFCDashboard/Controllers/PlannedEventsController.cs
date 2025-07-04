@@ -3628,10 +3628,6 @@ namespace SFCDashboard.Controllers
             return userWorkgroups.Any(wg => wg == "NET-PROJ-ACC-CABLE");
         }
 
-
-
-
-
         // GET: PlannedEvents/TaskQueue
         [HttpGet]
         public async Task<IActionResult> TaskQueue(int? workgroupId, int? year = null, int take = 20)

@@ -1994,192 +1994,219 @@
     }
 }
 
-/* Enhanced Filter Actions */
+/* Enhanced Dark Theme Button Support */
 
-/* Table Header Visibility Improvements */
-.table thead th {
-    background-color: #f8f9fa !important;
-    color: #495057 !important;
-    border-bottom: 2px solid #dee2e6 !important;
-    font-weight: 600 !important;
-    padding: 0.75rem !important;
-    text-transform: uppercase;
-    font-size: 0.875rem;
-    letter-spacing: 0.5px;
+/* ========================================
+   COMPACT SPACING STYLES FOR INDEX VIEW
+   ======================================== */
+
+/* Reduce overall container spacing */
+.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
 }
 
-.table-light thead th {
-    background-color: #e9ecef !important;
-    color: #212529 !important;
-    border-bottom: 2px solid #adb5bd !important;
-}
-
-.table thead th,
-.table-light thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-/* Dark theme table support */
-
-/* ==============================================
-   ENHANCED BUTTON STYLES FOR PLANNEDEVENTS INDEX
-   ============================================== */
-
-/* Search Button Specific Styles */
-.search-button-container .btn-primary {
-    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%) !important;
-    border: none !important;
-    color: white !important;
-    box-shadow: 0 3px 8px rgba(23, 162, 184, 0.3) !important;
-}
-
-.search-button-container .btn-primary:hover {
-    background: linear-gradient(135deg, #138496 0%, #1e9e8a 100%) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 12px rgba(23, 162, 184, 0.4) !important;
-    color: white !important;
-}
-
-/* Next Task Button Styles */
-.btn-light {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 2px solid rgba(255, 255, 255, 0.5) !important;
-    color: #495057 !important;
-    padding: 0.375rem 0.75rem !important;
-    border-radius: 6px !important;
-    font-weight: 500 !important;
-    font-size: 0.8rem !important;
-    transition: all 0.3s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.375rem !important;
-    text-decoration: none !important;
-    white-space: nowrap !important;
-}
-
-.btn-light:hover {
-    background: white !important;
-    border-color: rgba(255, 255, 255, 0.8) !important;
-    color: #212529 !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Show Details Button in PE Records */
-.card-header button[data-bs-toggle="collapse"] {
-    background: linear-gradient(135deg, #4a89dc 0%, #5e9cea 100%) !important;
-    border: none !important;
-    color: white !important;
-    padding: 0.5rem 1rem !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    font-size: 0.875rem !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 3px 8px rgba(74, 137, 220, 0.3) !important;
-}
-
-.card-header button[data-bs-toggle="collapse"]:hover {
-    background: linear-gradient(135deg, #3a79cc 0%, #4e8eea 100%) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 10px rgba(74, 137, 220, 0.4) !important;
-    color: white !important;
-}
-
-/* Button Icon Spacing */
-.btn i {
-    margin-right: 0.375rem !important;
-}
-
-.btn i:only-child {
-    margin-right: 0 !important;
-}
-
-.btn i:last-child:not(:only-child) {
-    margin-right: 0 !important;
-    margin-left: 0.375rem !important;
-}
-
-/* Button Container Alignment */
-.filter-actions,
-.search-button-container {
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.75rem !important;
+/* Reduce top margins */
+.mt-4 {
     margin-top: 1rem !important;
 }
 
-/* Responsive Button Adjustments */
+.mt-3 {
+    margin-top: 0.75rem !important;
+}
+
+/* Reduce card margins and padding */
+.card {
+    margin-bottom: 0.75rem !important;
+}
+
+.card-body {
+    padding: 0.75rem !important;
+}
+
+.card-header {
+    padding: 0.5rem 0.75rem !important;
+}
+
+/* Reduce row margins */
+.row.mb-4 {
+    margin-bottom: 1rem !important;
+}
+
+.row.mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+/* Reduce column spacing */
+.col-lg-6.mb-3,
+.col-md-6.mb-3,
+.col-lg-8,
+.col-lg-4 {
+    padding-left: 0.375rem !important;
+    padding-right: 0.375rem !important;
+}
+
+.col-lg-6.mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+.col-md-6.mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+/* Make forms more compact */
+.mb-3 {
+    margin-bottom: 0.5rem !important;
+}
+
+.mb-2 {
+    margin-bottom: 0.375rem !important;
+}
+
+.form-label {
+    margin-bottom: 0.25rem !important;
+}
+
+/* Search form specific spacing */
+.search-form-row .mb-3 {
+    margin-bottom: 0.5rem !important;
+}
+
+.search-type-selector,
+.search-input-container,
+.search-button-container {
+    margin-bottom: 0.5rem !important;
+}
+
+/* Filter form specific spacing */
+.filter-row .mb-3 {
+    margin-bottom: 0.5rem !important;
+}
+
+.filter-select-container {
+    margin-bottom: 0.5rem !important;
+}
+
+/* Reduce spacing in collapse sections */
+.collapse .card-body {
+    padding: 0.5rem 0.75rem !important;
+}
+
+/* Reduce alert spacing */
+.alert {
+    margin-bottom: 0.75rem !important;
+    padding: 0.5rem 0.75rem !important;
+}
+
+/* Reduce table spacing */
+.table-responsive {
+    margin-bottom: 0.75rem !important;
+}
+
+.task-table td,
+.task-table th {
+    padding: 0.375rem !important;
+}
+
+/* Reduce message inbox spacing */
+.message-inbox-container {
+    padding: 0.75rem !important;
+}
+
+.messages-container {
+    margin-top: 0.75rem !important;
+}
+
+.message-item {
+    margin-bottom: 0.375rem !important;
+    padding: 0.5rem !important;
+}
+
+/* Reduce detail card spacing */
+.details-card {
+    margin-bottom: 0.75rem !important;
+}
+
+.details-card-body {
+    padding: 0.5rem !important;
+}
+
+.detail-item {
+    margin-bottom: 0.125rem !important;
+}
+
+/* Reduce dashboard card spacing */
+.dashboard-card {
+    margin-bottom: 0.75rem !important;
+    padding: 0.75rem !important;
+}
+
+/* Reduce pagination spacing */
+.pagination {
+    margin-bottom: 0.75rem !important;
+}
+
+/* Reduce comment block spacing */
+.comment-block {
+    margin-bottom: 0.5rem !important;
+}
+
+/* Make inbox filters more compact */
+.inbox-filters {
+    margin-top: 0.5rem !important;
+}
+
+.inbox-search-container {
+    margin-top: 0.5rem !important;
+}
+
+/* Reduce spacing in PE details */
+.pe-details-section {
+    margin-top: 0.75rem !important;
+    padding-top: 0.75rem !important;
+}
+
+/* Reduce button margins */
+.btn {
+    margin-right: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* Make the layout more compact on smaller screens */
 @media (max-width: 768px) {
-    .filter-actions,
-    .search-button-container {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 0.5rem !important;
+    .container-fluid {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
     }
     
-    .filter-actions .btn,
-    .search-button-container .btn {
-        width: 100% !important;
-        justify-content: center !important;
+    .col-lg-6,
+    .col-md-6,
+    .col-lg-8,
+    .col-lg-4 {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+    }
+    
+    .card-body {
+        padding: 0.5rem !important;
     }
 }
 
-/* Focus states for accessibility */
-.btn:focus,
-.btn:focus-visible {
-    outline: 2px solid rgba(74, 137, 220, 0.5) !important;
-    outline-offset: 2px !important;
-}
-[data-theme="dark"] .table thead th,
-[data-theme="dark"] .table-light thead th {
-    background-color: #343a40 !important;
-    color: #f8f9fa !important;
-    border-bottom: 2px solid #6c757d !important;
+/* Additional spacing overrides for forms */
+.form-group {
+    margin-bottom: 0.5rem !important;
 }
 
-/* Table body styling for better contrast */
-.table tbody td {
-    padding: 0.75rem !important;
-    vertical-align: middle !important;
-    border-top: 1px solid #dee2e6 !important;
+.input-group {
+    margin-bottom: 0.5rem !important;
 }
 
-[data-theme="dark"] .table tbody td {
-    border-top: 1px solid #495057 !important;
-    color: #f8f9fa !important;
+/* Make details sections more compact */
+.details-content .row {
+    margin: 0 !important;
 }
 
-/* Table striped rows */
-.table-striped tbody tr:nth-of-type(odd) {
-    background-color: rgba(0, 0, 0, 0.025) !important;
+.details-content .col-md-6 {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
 }
-
-[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* Table hover effect */
-.table-hover tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.075) !important;
-}
-
-[data-theme="dark"] .table-hover tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.075) !important;
-}
-
-/* Task table specific styling */
-.task-table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    border-radius: 0.5rem !important;
-    overflow: hidden !important;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
-}
-
-[data-theme="dark"] .task-table {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Enhanced Dark Theme Button Support */

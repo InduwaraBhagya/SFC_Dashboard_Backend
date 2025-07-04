@@ -13,7 +13,7 @@
 
 @if (TempData["SuccessMessage"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+    <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
         @TempData["SuccessMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
@@ -21,7 +21,7 @@
 
 @{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
 
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-2">
 @{
     var nextTask = ViewBag.NextTask as List<TaskQueueItem>;
     var hasNextTask = ViewBag.HasNextTask;
@@ -37,9 +37,9 @@
 @if (ViewData["CanViewAll"] as bool? == true)
 {
     <!-- For ViewAll Users: Workgroup Filter and Search PE Side by Side -->
-    <div class="row mb-4">
+    <div class="row mb-2">
         <!-- Workgroup Filter Card -->
-        <div class="col-lg-6 mb-3">
+        <div class="col-lg-6 mb-2">
             <div class="card border-primary h-100 shadow-sm">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -53,7 +53,7 @@
                 <div class="collapse" id="filterContent">
                     <div class="card-body">
                         <form method="get" asp-action="Index">
-                            <div class="mb-3">
+                            <div class="mb-2">
                                 <label class="form-label" for="workgroupFilter">
                                     <i class="bi bi-people-fill"></i>
                                     Select Workgroups
@@ -62,14 +62,14 @@
                                     </span>
                                 </label>
                                 <div class="filter-row">
-                                    <div class="filter-select-container mb-3">
+                                    <div class="filter-select-container mb-2">
                                         <select class="form-select" name="workgroupId" id="workgroupFilter" multiple>
                                             @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
                                             {
                                                 foreach (var workgroup in workgroups)
                                                 {
                                                     bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
-                                                                    ViewData["SelectedWorkgroupId"].Equals(workgroup.Id);
+                                                                    ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
                                                     <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
                                                 }
                                             }
@@ -102,7 +102,7 @@
         </div>
         
         <!-- Search PE Records Card -->
-        <div class="col-lg-6 mb-3">
+        <div class="col-lg-6 mb-2">
             <div class="card border-info h-100 shadow-sm">
                 <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -179,11 +179,11 @@
 else
 {
     <!-- For Regular Users: Next Task and Search PE Side by Side -->
-    <div class="row mb-4">
+    <div class="row mb-2">
         @if (shouldShowNextTask)
         {
             <!-- Next Task Card -->
-            <div class="col-lg-6 mb-3">
+            <div class="col-lg-6 mb-2">
                 <div class="card border-primary h-100 shadow-sm">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
@@ -201,9 +201,9 @@ else
                     
                     <div class="collapse" id="nextTaskContent">
                         <div class="card-body">
-                        @if (hasNextTask && nextTask != null && nextTask.Count > 0)
+                        @if (hasNextTask && nextTask?.Count > 0)
                         {
-                                var task = nextTask[0];
+                                var task = nextTask![0];
                             <div class="d-flex align-items-center">
                                 <div class="flex-shrink-0">
                                     @{
@@ -263,7 +263,7 @@ else
         }
         
         <!-- Search PE Records Card -->
-        <div class="@(shouldShowNextTask ? "col-lg-6" : "col-lg-12") mb-3">
+        <div class="@(shouldShowNextTask ? "col-lg-6" : "col-lg-12") mb-2">
             <div class="card border-info h-100 shadow-sm">
                 <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -347,7 +347,7 @@ else
             {
                 @foreach (var item in Model)
                 {
-                    <div class="card mb-3">
+                    <div class="card mb-2">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">PE Number: @item.PeNumber</h5>
                             <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@item.PeNumber" aria-expanded="false">
@@ -624,8 +624,8 @@ else
                 </nav>
             }
 
-            <div class="row mb-4">
-                <div class="col-md-6 mb-3">
+            <div class="row mb-2">
+                <div class="col-md-6 mb-2">
                     <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card urgent-card">
                         <div class="card-content">
                             <h4>Urgent Records</h4>
@@ -648,7 +648,7 @@ else
                         </div>
                     </a>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6 mb-2">
                     <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card inprogress-card">
                         <div class="card-content">
                             <h4>Regular Records</h4>
@@ -671,7 +671,7 @@ else
                         </div>
                     </a>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6 mb-2">
                     <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card ola-card">
                         <div class="card-content">
                             <h4>OLA Violate Records</h4>
@@ -694,7 +694,7 @@ else
                         </div>
                     </a>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6 mb-2">
                     <a href="@Url.Action("HoldRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card hold-card">
                         <div class="card-content">
                             <h4>Hold Records</h4>
@@ -846,8 +846,8 @@ else
                                                 @if (issue.IsResolutionRequest)
                                                 {
                                                     <text>
-                                                    data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
-                                                    data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                                    data-resolution-details="@(GetResolutionDetails(issue.OriginalIssueId ?? issue.Id))"
+                                                    data-resolution-id="@(GetResolutionId(issue.OriginalIssueId ?? issue.Id))"
                                                     onclick="showResolutionConfirm(this)"
                                                     </text>
                                                 }
@@ -1145,7 +1145,7 @@ else
                     const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
                     searchBsCollapse.show();
                 }
-                updateChevronIcons(true, searchToggleButton, nextTaskToggleButton);
+                updateChevronIcons(true, filterToggleButton, searchToggleButton);
             });
             
             // When next task card is hidden, hide search card
@@ -1155,7 +1155,7 @@ else
                     const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
                     searchBsCollapse.hide();
                 }
-                updateChevronIcons(false, searchToggleButton, nextTaskToggleButton);
+                updateChevronIcons(false, filterToggleButton, searchToggleButton);
             });
             
             // Reset the manual toggle flag after animations complete
@@ -1315,6 +1315,7 @@ else
     </div>
 </div>
 
+
 <!-- Issue Reply Modal -->
 <div class="modal fade" id="issueReplyModal" tabindex="-1" aria-labelledby="issueReplyModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -1390,21 +1391,21 @@ else
         try
         {
             if (ViewBag.ResolutionsByIssueId == null)
-                return "";
+                return string.Empty;
                 
             var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
             if (dictionary == null)
-                return "";
+                return string.Empty;
                 
             if (dictionary.ContainsKey(issueId))
-                return dictionary[issueId]?.ResolutionDetails ?? "";
+                return dictionary[issueId]?.ResolutionDetails ?? string.Empty;
                 
-            return "";
+            return string.Empty;
         }
         catch (Exception)
         {
             // Log error if needed
-            return "";
+            return string.Empty;
         }
     }
 
