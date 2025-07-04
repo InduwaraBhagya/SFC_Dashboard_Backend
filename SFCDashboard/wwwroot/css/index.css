@@ -1092,14 +1092,138 @@
       --ash-blue: #94a3b8;
   }
 
-  /* Enhanced Page Background */
+  /* Enhanced Page Background with Logo Pattern */
   body {
       background: linear-gradient(135deg, var(--light-blue) 0%, var(--light-ash) 100%);
       min-height: 100vh;
+      position: relative;
+  }
+
+  body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+          /* Light blue diagonal line */
+          repeating-linear-gradient(
+              45deg,
+              transparent 0px,
+              transparent 80px,
+              rgba(173, 216, 230, 0.25) 80px,
+              rgba(173, 216, 230, 0.25) 120px,
+              transparent 120px,
+              transparent 200px
+          ),
+          /* Dark blue diagonal line */
+          repeating-linear-gradient(
+              45deg,
+              transparent 0px,
+              transparent 140px,
+              rgba(30, 64, 175, 0.15) 140px,
+              rgba(30, 64, 175, 0.15) 180px,
+              transparent 180px,
+              transparent 260px
+          ),
+          /* Green diagonal line */
+          repeating-linear-gradient(
+              45deg,
+              transparent 0px,
+              transparent 200px,
+              rgba(34, 197, 94, 0.12) 200px,
+              rgba(34, 197, 94, 0.12) 240px,
+              transparent 240px,
+              transparent 320px
+          ),
+          /* Circular elements */
+          radial-gradient(
+              circle at 15% 25%,
+              rgba(173, 216, 230, 0.18) 0%,
+              rgba(173, 216, 230, 0.09) 15px,
+              transparent 16px
+          ),
+          radial-gradient(
+              circle at 85% 75%,
+              rgba(173, 216, 230, 0.15) 0%,
+              rgba(173, 216, 230, 0.08) 20px,
+              transparent 21px
+          ),
+          radial-gradient(
+              circle at 70% 20%,
+              rgba(30, 64, 175, 0.12) 0%,
+              rgba(30, 64, 175, 0.06) 8px,
+              transparent 9px
+          );
+      background-size: 
+          300px 300px,
+          400px 400px,
+          500px 500px,
+          600px 600px,
+          800px 800px,
+          400px 400px;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.6;
   }
 
   [data-theme="dark"] body {
       background: #1a1a1a;
+  }
+
+  [data-theme="dark"] body::before {
+      background-image: 
+          /* Light elements for dark theme */
+          repeating-linear-gradient(
+              45deg,
+              transparent 0px,
+              transparent 80px,
+              rgba(255, 255, 255, 0.06) 80px,
+              rgba(255, 255, 255, 0.06) 120px,
+              transparent 120px,
+              transparent 200px
+          ),
+          /* Blue diagonal line */
+          repeating-linear-gradient(
+              45deg,
+              transparent 0px,
+              transparent 140px,
+              rgba(59, 130, 246, 0.08) 140px,
+              rgba(59, 130, 246, 0.08) 180px,
+              transparent 180px,
+              transparent 260px
+          ),
+          /* Green diagonal line */
+          repeating-linear-gradient(
+              45deg,
+              transparent 0px,
+              transparent 200px,
+              rgba(34, 197, 94, 0.06) 200px,
+              rgba(34, 197, 94, 0.06) 240px,
+              transparent 240px,
+              transparent 320px
+          ),
+          /* Circular elements */
+          radial-gradient(
+              circle at 15% 25%,
+              rgba(255, 255, 255, 0.04) 0%,
+              rgba(255, 255, 255, 0.02) 15px,
+              transparent 16px
+          ),
+          radial-gradient(
+              circle at 85% 75%,
+              rgba(255, 255, 255, 0.03) 0%,
+              rgba(255, 255, 255, 0.015) 20px,
+              transparent 21px
+          ),
+          radial-gradient(
+              circle at 70% 20%,
+              rgba(59, 130, 246, 0.04) 0%,
+              rgba(59, 130, 246, 0.02) 8px,
+              transparent 9px
+          );
+      opacity: 0.4;
   }
 
   /* Enhanced Card Styling */
