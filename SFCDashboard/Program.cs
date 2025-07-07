@@ -64,6 +64,18 @@ builder.Services.AddRazorPages()
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITaskQueueService, TaskQueueingService>();
 
+// Register API Services
+builder.Services.AddScoped<IPlannedEventsApiService, PlannedEventsApiService>();
+builder.Services.AddScoped<IUsersApiService, UsersApiService>();
+builder.Services.AddScoped<IPETasksApiService, PETasksApiService>();
+builder.Services.AddScoped<IPEIssuesApiService, PEIssuesApiService>();
+builder.Services.AddScoped<IWorkGroupsApiService, WorkGroupsApiService>();
+builder.Services.AddScoped<IAreaNetworkEngineersApiService, AreaNetworkEngineersApiService>();
+builder.Services.AddScoped<IPETaskListsApiService, PETaskListsApiService>();
+builder.Services.AddScoped<IEscalationsApiService, EscalationsApiService>();
+builder.Services.AddScoped<IPEIssueResolutionsApiService, PEIssueResolutionsApiService>();
+builder.Services.AddScoped<ICustomerUserAssignmentsApiService, CustomerUserAssignmentsApiService>();
+
 var app = builder.Build();
 
 // Configure middleware
