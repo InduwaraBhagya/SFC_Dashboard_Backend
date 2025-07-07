@@ -57,13 +57,14 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> GetPlannedEventsByWorkgroupAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<IEnumerable<PlannedEvent>> GetPlannedEventsByWorkgroupAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
                 var query = _context.PlannedEvents.AsQueryable();
 
-                if (workgroupNames.Any())
+                // If user has ViewAll permission, don't filter by workgroup unless specifically requested
+                if (!canViewAll && workgroupNames.Any())
                 {
                     if (hasDrawFiberAccess)
                     {
@@ -71,7 +72,24 @@ namespace SFCDashboard.Services
                             p.TaskWg != null && (
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                            || _context.PETasks.Any(t => t.PENumber == p.PeNumber && t.Task.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                else if (canViewAll && workgroupNames.Any())
+                {
+                    // ViewAll users can still filter by specific workgroups if requested
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
                             )
                         );
                     }
@@ -91,7 +109,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> GetPlannedEventsByWorkgroupIdsAsync(List<int> workgroupIds, bool hasDrawFiberAccess = false)
+        public async Task<IEnumerable<PlannedEvent>> GetPlannedEventsByWorkgroupIdsAsync(List<int> workgroupIds, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
@@ -100,7 +118,7 @@ namespace SFCDashboard.Services
                     .Select(w => w.Name)
                     .ToListAsync();
 
-                return await GetPlannedEventsByWorkgroupAsync(workgroupNames, hasDrawFiberAccess);
+                return await GetPlannedEventsByWorkgroupAsync(workgroupNames, hasDrawFiberAccess, canViewAll);
             }
             catch (Exception ex)
             {
@@ -109,7 +127,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
@@ -123,10 +141,11 @@ namespace SFCDashboard.Services
                     .Where(p =>
                         (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
                         !p.IsHold &&
-                        !violatingPENumbers.Contains(p.PeNumber))
+                        (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)))
                     .AsNoTracking();
 
-                if (workgroupNames.Any())
+                // If user has ViewAll permission, don't filter by workgroup unless specifically requested
+                if (!canViewAll && workgroupNames.Any())
                 {
                     if (hasDrawFiberAccess)
                     {
@@ -134,7 +153,24 @@ namespace SFCDashboard.Services
                             p.TaskWg != null && (
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                            || _context.PETasks.Any(t => t.PENumber == p.PeNumber && t.Task.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                else if (canViewAll && workgroupNames.Any())
+                {
+                    // ViewAll users can still filter by specific workgroups if requested
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
                             )
                         );
                     }
@@ -154,7 +190,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
@@ -168,10 +204,11 @@ namespace SFCDashboard.Services
                     .Where(p =>
                         p.PEStatus == "urgent" &&
                         !p.IsHold &&
-                        !violatingPENumbers.Contains(p.PeNumber))
+                        (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)))
                     .AsNoTracking();
 
-                if (workgroupNames.Any())
+                // If user has ViewAll permission, don't filter by workgroup unless specifically requested
+                if (!canViewAll && workgroupNames.Any())
                 {
                     if (hasDrawFiberAccess)
                     {
@@ -179,7 +216,24 @@ namespace SFCDashboard.Services
                             p.TaskWg != null && (
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                            || _context.PETasks.Any(t => t.PENumber == p.PeNumber && t.Task.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                else if (canViewAll && workgroupNames.Any())
+                {
+                    // ViewAll users can still filter by specific workgroups if requested
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
                             )
                         );
                     }
@@ -199,7 +253,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
@@ -207,7 +261,8 @@ namespace SFCDashboard.Services
                     .Where(p => p.IsHold)
                     .AsNoTracking();
 
-                if (workgroupNames.Any())
+                // If user has ViewAll permission, don't filter by workgroup unless specifically requested
+                if (!canViewAll && workgroupNames.Any())
                 {
                     if (hasDrawFiberAccess)
                     {
@@ -215,7 +270,24 @@ namespace SFCDashboard.Services
                             p.TaskWg != null && (
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                            || _context.PETasks.Any(t => t.PENumber == p.PeNumber && t.Task.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                else if (canViewAll && workgroupNames.Any())
+                {
+                    // ViewAll users can still filter by specific workgroups if requested
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
                             )
                         );
                     }
@@ -235,7 +307,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
@@ -246,10 +318,11 @@ namespace SFCDashboard.Services
                     .ToListAsync();
 
                 var query = _context.PlannedEvents
-                    .Where(p => violatingPENumbers.Contains(p.PeNumber) && !p.IsHold)
+                    .Where(p => p.PeNumber != null && violatingPENumbers.Contains(p.PeNumber) && !p.IsHold)
                     .AsNoTracking();
 
-                if (workgroupNames.Any())
+                // If user has ViewAll permission, don't filter by workgroup unless specifically requested
+                if (!canViewAll && workgroupNames.Any())
                 {
                     if (hasDrawFiberAccess)
                     {
@@ -257,7 +330,24 @@ namespace SFCDashboard.Services
                             p.TaskWg != null && (
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                            || _context.PETasks.Any(t => t.PENumber == p.PeNumber && t.Task.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                else if (canViewAll && workgroupNames.Any())
+                {
+                    // ViewAll users can still filter by specific workgroups if requested
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
                             )
                         );
                     }
@@ -296,14 +386,14 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<IEnumerable<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
                 var query = _context.PlannedEvents.AsQueryable();
 
-                // Apply workgroup filtering
-                if (workgroupNames.Any())
+                // Apply workgroup filtering - If user has ViewAll permission, don't filter by workgroup unless specifically requested
+                if (!canViewAll && workgroupNames.Any())
                 {
                     if (hasDrawFiberAccess)
                     {
@@ -311,7 +401,24 @@ namespace SFCDashboard.Services
                             p.TaskWg != null && (
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                            || _context.PETasks.Any(t => t.PENumber == p.PeNumber && t.Task.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                else if (canViewAll && workgroupNames.Any())
+                {
+                    // ViewAll users can still filter by specific workgroups if requested
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
                             )
                         );
                     }
@@ -460,11 +567,11 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetUrgentCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<int> GetUrgentCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
-                var events = await GetUrgentPlannedEventsAsync(workgroupNames, hasDrawFiberAccess);
+                var events = await GetUrgentPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll);
                 return events.Count();
             }
             catch (Exception ex)
@@ -474,11 +581,11 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetInProgressCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<int> GetInProgressCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
-                var events = await GetInProgressPlannedEventsAsync(workgroupNames, hasDrawFiberAccess);
+                var events = await GetInProgressPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll);
                 return events.Count();
             }
             catch (Exception ex)
@@ -488,11 +595,11 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetOLAViolateCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<int> GetOLAViolateCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
-                var events = await GetOLAViolatingPlannedEventsAsync(workgroupNames, hasDrawFiberAccess);
+                var events = await GetOLAViolatingPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll);
                 return events.Count();
             }
             catch (Exception ex)
@@ -502,11 +609,11 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetHoldCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false)
+        public async Task<int> GetHoldCountAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
             {
-                var events = await GetHoldPlannedEventsAsync(workgroupNames, hasDrawFiberAccess);
+                var events = await GetHoldPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll);
                 return events.Count();
             }
             catch (Exception ex)
@@ -610,7 +717,6 @@ namespace SFCDashboard.Services
                             p.TaskWg != null && (
                             p.TaskWg.Contains(workgroupName)
                             || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                            || _context.PETasks.Any(t => t.PENumber == p.PeNumber && !string.IsNullOrEmpty(t.Task) && t.Task.Trim().ToLower() == "draw fiber")
                             )
                         );
                     }

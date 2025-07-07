@@ -42,20 +42,20 @@ namespace SFCDashboard.Controllers
                         if (workgroup != null)
                         {
                             records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(
-                                new List<string> { workgroup.Name }, hasDrawFiberAccess);
+                                new List<string> { workgroup.Name }, hasDrawFiberAccess, canViewAll);
                             ViewData["FilteredWorkgroup"] = workgroup.Name;
                         }
                         else
                         {
                             records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(
-                                new List<string>(), hasDrawFiberAccess);
+                                new List<string>(), hasDrawFiberAccess, canViewAll);
                         }
                     }
                     else
                     {
                         // Show all in-progress records
                         records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(
-                            new List<string>(), hasDrawFiberAccess);
+                            new List<string>(), hasDrawFiberAccess, canViewAll);
                     }
                 }
                 else
@@ -64,7 +64,7 @@ namespace SFCDashboard.Controllers
                     if (userWorkgroupNames.Any())
                     {
                         records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(
-                            userWorkgroupNames, hasDrawFiberAccess);
+                            userWorkgroupNames, hasDrawFiberAccess, canViewAll);
                         ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
                     }
                     else
