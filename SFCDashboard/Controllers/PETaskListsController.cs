@@ -154,7 +154,25 @@ namespace SFCDashboard.Controllers
             return _context.PETaskLists.Any(e => e.Id == id);
         }
 
+        // GET: PETaskLists/GetForPE
+        [HttpGet]
+        public async Task<IActionResult> GetForPE(int peId)
+        {
+            try
+            {
+                // Get all available task lists (not PE-specific based on the model structure)
+                var taskLists = await _context.PETaskLists
+                    .OrderBy(tl => tl.TaskSeq)
+                    .Select(tl => new { id = tl.Id, name = tl.Name })
+                    .ToListAsync();
 
+                return Json(taskLists);
+            }
+            catch (Exception)
+            {
+                // Log the error if you have a logger
+                return Json(new List<object>());
+            }
+        }
     }
 }
- 

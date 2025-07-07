@@ -246,7 +246,7 @@ namespace SFCDashboard.Services
                     .ToListAsync();
 
                 var query = _context.PlannedEvents
-                    .Where(p => violatingPENumbers.Contains(p.PeNumber))
+                    .Where(p => violatingPENumbers.Contains(p.PeNumber) && !p.IsHold)
                     .AsNoTracking();
 
                 if (workgroupNames.Any())
@@ -277,14 +277,16 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<IEnumerable<PlannedEvent>> GetPendingUrgentRequestsAsync()
+        public async Task<IEnumerable<PlannedEvent>> GetPendingUrgentRequestsAsync(int take = 10)
         {
             try
             {
+                _logger.LogInformation("Getting pending urgent requests, take: {take}", take);
+                
                 return await _context.PlannedEvents
                     .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
                     .OrderByDescending(p => p.PECreatedDate)
-                    .Take(10)
+                    .Take(take)
                     .ToListAsync();
             }
             catch (Exception ex)
@@ -587,25 +589,6 @@ namespace SFCDashboard.Services
             {
                 _logger.LogError(ex, "Error getting hold count for multi workgroup");
                 return 0;
-            }
-        }
-
-        public async Task<IEnumerable<PlannedEvent>> GetPendingUrgentRequestsAsync(int take = 10)
-        {
-            try
-            {
-                _logger.LogInformation("Getting pending urgent requests, take: {take}", take);
-                
-                return await _context.PlannedEvents
-                    .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
-                    .OrderByDescending(p => p.PECreatedDate)
-                    .Take(take)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting pending urgent requests");
-                return new List<PlannedEvent>();
             }
         }
 

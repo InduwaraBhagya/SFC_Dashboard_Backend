@@ -13,7 +13,6 @@ namespace SFCDashboard.Services
         Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false);
         Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false);
         Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false);
-        Task<IEnumerable<PlannedEvent>> GetPendingUrgentRequestsAsync();
         Task<IEnumerable<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, List<string> workgroupNames, bool hasDrawFiberAccess = false);
         Task<IEnumerable<PlannedEvent>> GetPlannedEventsBySalesWorkgroupAsync(List<string> salesWorkgroups, List<string> assignedCustomers, bool canViewAll);
         Task<PlannedEvent?> CreatePlannedEventAsync(PlannedEvent plannedEvent);
@@ -28,6 +27,11 @@ namespace SFCDashboard.Services
         Task<int> GetInProgressCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds);
         Task<int> GetOLAViolateCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds);
         Task<int> GetHoldCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds);
+        /// <summary>
+        /// Gets pending urgent requests with optional limit parameter
+        /// </summary>
+        /// <param name="take">Maximum number of records to return (default: 10)</param>
+        /// <returns>Collection of pending urgent planned events</returns>
         Task<IEnumerable<PlannedEvent>> GetPendingUrgentRequestsAsync(int take = 10);
         Task<PaginatedList<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, string? workgroupName, bool hasDrawFiberAccess, int pageIndex, int pageSize);
     }

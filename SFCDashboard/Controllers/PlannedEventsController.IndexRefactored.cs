@@ -162,7 +162,7 @@ namespace SFCDashboard.Controllers
                         pageSize);
 
                     // Get PE tasks for the paginated events using API service
-                    var peNumbers = paginatedList.Select(pe => pe.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).ToList();
+                    var peNumbers = paginatedList.Select(pe => pe.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).Cast<string>().ToList();
                     if (peNumbers.Any())
                     {
                         var allTasks = await _peTasksApi.GetPETasksByPENumbersAsync(peNumbers);

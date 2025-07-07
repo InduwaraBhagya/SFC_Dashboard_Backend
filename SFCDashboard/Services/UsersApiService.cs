@@ -166,22 +166,14 @@ namespace SFCDashboard.Services
                 var user = await _context.Users
                     .Include(u => u.UserWorkGroups)
                         .ThenInclude(uwg => uwg.WorkGroup)
-                    .Include(u => u.UserRole)
-                        .ThenInclude(r => r.RolePermissions)
-                        .ThenInclude(rp => rp.Permission)
                     .FirstOrDefaultAsync(u => u.Id == userId);
 
                 if (user == null)
                     return false;
 
-                // Check if user has DrawFiberAccess permission
-                bool hasPermission = user.UserRole?.HasPermission("DrawFiberAccess") == true;
-                if (hasPermission)
-                    return true;
-
-                // Check if user is in DRAW FIBER workgroup
+                // Check if user is in NET-PROJ-ACC-CABLE workgroup
                 return user.UserWorkGroups
-                    ?.Any(uwg => uwg.WorkGroup.Name.Contains("DRAW FIBER", StringComparison.OrdinalIgnoreCase))
+                    ?.Any(uwg => uwg.WorkGroup.Name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase))
                     ?? false;
             }
             catch (Exception ex)

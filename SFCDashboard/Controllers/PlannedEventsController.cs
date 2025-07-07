@@ -705,13 +705,23 @@ namespace SFCDashboard.Controllers
             // Check if current task is "Draw Fiber"
             bool isCurrentTaskDrawFiber = plannedEvent.TaskName?.Trim().ToLower() == "draw fiber";
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            bool hasCanManageEstimatedTime = currentUser?.UserRole?.HasPermission("CanManageEstimatedTime") == true;
+
+            // DEBUG: Log the individual conditions
+            _logger.LogInformation("EstimatedTime Debug - User {userId}: CanManageEstimatedTime={canManage}, DrawFiberAccess={drawAccess}, IsCurrentTaskDrawFiber={isDrawFiber}, TaskName='{taskName}'", 
+                currentUserId, hasCanManageEstimatedTime, hasDrawFiberAccess, isCurrentTaskDrawFiber, plannedEvent.TaskName);
 
             // Only allow estimated time management if user has permission, is in the right workgroup,
             // AND the current task is "Draw Fiber"
             ViewData["CanManageEstimatedTime"] =
-                currentUser?.UserRole?.HasPermission("CanManageEstimatedTime") == true &&
+                hasCanManageEstimatedTime &&
                 hasDrawFiberAccess &&
                 isCurrentTaskDrawFiber;
+
+            // DEBUG: Set individual values for debugging in view
+            ViewData["Debug_HasCanManageEstimatedTime"] = hasCanManageEstimatedTime;
+            ViewData["Debug_HasDrawFiberAccess"] = hasDrawFiberAccess;
+            ViewData["Debug_IsCurrentTaskDrawFiber"] = isCurrentTaskDrawFiber;
 
 
             if (plannedEvent == null)
@@ -2106,7 +2116,7 @@ namespace SFCDashboard.Controllers
             // Get all planned events and apply filtering
             var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
             var violatingEvents = allPlannedEvents
-                .Where(p => violatingPENumbers.Contains(p.PeNumber));
+                .Where(p => violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
 
             // Apply customer filtering with workgroup checks
             var filteredEvents = await ApplyCustomerFilteringAsync(violatingEvents.AsQueryable(), salesWorkgroups, canViewAll);
@@ -2865,6 +2875,31 @@ namespace SFCDashboard.Controllers
             {
                 _logger.LogError(ex, "Error refreshing next task");
                 return Json(new { success = false, message = "Error refreshing task queue." });
+            }
+        }
+
+        // GET: PlannedEvents/GetPETaskListsForPE
+        // Note: peId parameter is kept for API compatibility but not currently used
+        // The method returns all available task lists regardless of PE ID
+        [HttpGet]
+        public async Task<IActionResult> GetPETaskListsForPE(int peId)
+        {
+            try
+            {
+                // Get all available task lists using API service
+                // TODO: In the future, this could be filtered by peId if PE-specific task lists are needed
+                var taskLists = await _peTaskListsApi.GetPETaskListsAsync();
+                var result = taskLists
+                    .OrderBy(tl => tl.TaskSeq)
+                    .Select(tl => new { id = tl.Id, name = tl.Name })
+                    .ToList();
+
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PE task lists for PE {PeId}", peId);
+                return Json(new List<object>());
             }
         }
     }

@@ -915,7 +915,7 @@ if (estimatedTimeForm) {
             });
 
             // Populate task list dropdown
-            $.get('/PETaskLists/GetForPE', { peId: '@Model.Id' }, function (tasks) {
+            $.get('/PlannedEvents/GetPETaskListsForPE', { peId: '@Model.Id' }, function (tasks) {
                 tasks.forEach(function (task) {
                     $('#taskListId').append($('<option>', { value: task.id, text: task.name }));
                 });
