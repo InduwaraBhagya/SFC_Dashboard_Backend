@@ -76,22 +76,30 @@ namespace SFCDashboard.Controllers
         // Refactored count methods using API services
         private async Task<int> GetUrgentCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
         {
-            return await _plannedEventsApi.GetUrgentCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds);
+            int currentUserId = await GetCurrentUserIdAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            return await _plannedEventsApi.GetUrgentCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
         }
 
         private async Task<int> GetInProgressCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
         {
-            return await _plannedEventsApi.GetInProgressCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds);
+            int currentUserId = await GetCurrentUserIdAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            return await _plannedEventsApi.GetInProgressCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
         }
 
         private async Task<int> GetOLAViolateCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
         {
-            return await _plannedEventsApi.GetOLAViolateCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds);
+            int currentUserId = await GetCurrentUserIdAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            return await _plannedEventsApi.GetOLAViolateCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
         }
 
         private async Task<int> GetHoldCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
         {
-            return await _plannedEventsApi.GetHoldCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds);
+            int currentUserId = await GetCurrentUserIdAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            return await _plannedEventsApi.GetHoldCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
         }
 
         // Refactored CRUD operations using API services

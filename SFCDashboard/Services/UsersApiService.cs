@@ -126,7 +126,7 @@ namespace SFCDashboard.Services
                 if (user == null)
                     return false;
 
-                bool canViewAll = user.UserRole?.HasPermission("CanViewAll") == true;
+                bool canViewAll = user.UserRole?.HasPermission("ViewAll") == true;
                 return !canViewAll && (user.UserWorkGroups?.Count ?? 0) > 1;
             }
             catch (Exception ex)
@@ -223,7 +223,7 @@ namespace SFCDashboard.Services
                 if (user == null)
                     return (new List<int>(), new List<string>(), false);
 
-                bool canViewAll = user.UserRole?.HasPermission("CanViewAll") == true;
+                bool canViewAll = user.UserRole?.HasPermission("ViewAll") == true;
                 var workgroupIds = user.UserWorkGroups?.Select(uwg => uwg.WorkGroup.Id).ToList() ?? new List<int>();
                 var workgroupNames = user.UserWorkGroups?.Select(uwg => uwg.WorkGroup.Name).ToList() ?? new List<string>();
 
@@ -254,7 +254,7 @@ namespace SFCDashboard.Services
                 if (user == null)
                     return (new List<string>(), false);
 
-                bool canViewAll = user.UserRole?.HasPermission("CanViewAll") == true;
+                bool canViewAll = user.UserRole?.HasPermission("ViewAll") == true;
                 var salesWorkgroups = user.UserWorkGroups?
                     .Where(uwg => uwg.WorkGroup.Name.Contains("SALES", StringComparison.OrdinalIgnoreCase))
                     .Select(uwg => uwg.WorkGroup.Name)

@@ -178,10 +178,10 @@ namespace SFCDashboard.Controllers
             }
 
             // Calculate dashboard counts based on current workgroup context
-            ViewData["UrgentCount"] = await GetUrgentCount(effectiveWorkgroupIds ?? new List<int>());
-            ViewData["InProgressCount"] = await GetInProgressCount(effectiveWorkgroupIds ?? new List<int>());
-            ViewData["OLAViolateCount"] = await GetOLAViolateCount(effectiveWorkgroupIds ?? new List<int>());
-            ViewData["HoldCount"] = await GetHoldCount(effectiveWorkgroupIds ?? new List<int>());
+            ViewData["UrgentCount"] = await GetUrgentCount(effectiveWorkgroupIds);
+            ViewData["InProgressCount"] = await GetInProgressCount(effectiveWorkgroupIds);
+            ViewData["OLAViolateCount"] = await GetOLAViolateCount(effectiveWorkgroupIds);
+            ViewData["HoldCount"] = await GetHoldCount(effectiveWorkgroupIds);
 
 
             ViewData["SearchType"] = searchType ?? "peNumber";
@@ -618,7 +618,7 @@ namespace SFCDashboard.Controllers
                 // Use API service for search with pagination
                 int pageSize = 10;
                 paginatedList = await _plannedEventsApi.SearchPlannedEventsAsync(
-                    searchType, searchValue, null, false, pageIndex ?? 1, pageSize);
+                    searchType, searchValue, salesWorkgroups, false, pageIndex ?? 1, pageSize);
             }
             else
             {
@@ -1257,8 +1257,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get in-progress records using API service
-                var allRecords = await _plannedEventsApi.GetInProgressPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll);
+                // Get in-progress records using API service (MultiWorkgroup views should not use ViewAll permission)
+                var allRecords = await _plannedEventsApi.GetInProgressPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))
@@ -1353,8 +1353,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get hold records using API service
-                var allRecords = await _plannedEventsApi.GetHoldPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll);
+                // Get hold records using API service (MultiWorkgroup views should not use ViewAll permission)
+                var allRecords = await _plannedEventsApi.GetHoldPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))
@@ -1449,8 +1449,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get urgent records using API service
-                var allRecords = await _plannedEventsApi.GetUrgentPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll);
+                // Get urgent records using API service (MultiWorkgroup views should not use ViewAll permission)
+                var allRecords = await _plannedEventsApi.GetUrgentPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))
@@ -1545,8 +1545,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get OLA violating records using API service
-                var allRecords = await _plannedEventsApi.GetOLAViolatingPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll);
+                // Get OLA violating records using API service (MultiWorkgroup views should not use ViewAll permission)
+                var allRecords = await _plannedEventsApi.GetOLAViolatingPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))
@@ -2187,7 +2187,7 @@ namespace SFCDashboard.Controllers
             // If user has ViewAll and no specific workgroup selected, show ALL records
             if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
             {
-                var countAll = await _plannedEventsApi.GetUrgentCountAsync(new List<string>(), hasDrawFiberAccess);
+                var countAll = await _plannedEventsApi.GetUrgentCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("Urgent count (ViewAll): {count}", countAll);
                 return countAll;
             }
@@ -2198,7 +2198,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(w => w.Name).ToList();
 
-                var countFiltered = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess);
+                var countFiltered = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("Urgent count (ViewAll + filter): {count} for workgroups: {workgroups}",
                     countFiltered, string.Join(", ", workgroupIds));
                 return countFiltered;
@@ -2218,7 +2218,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(w => w.Name).ToList();
 
-                var count = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess);
+                var count = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
                 _logger.LogInformation("Urgent count: {count} for workgroups: {workgroups}",
                     count, workgroupIds != null ? string.Join(", ", workgroupIds) : "NULL");
                 return count;
@@ -2251,7 +2251,7 @@ namespace SFCDashboard.Controllers
             // If user has ViewAll and no specific workgroup selected, show ALL records
             if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
             {
-                var countAll = await _plannedEventsApi.GetOLAViolateCountAsync(new List<string>(), hasDrawFiberAccess);
+                var countAll = await _plannedEventsApi.GetOLAViolateCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("OLA violate count (ViewAll): {count}", countAll);
                 return countAll;
             }
@@ -2262,7 +2262,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(w => w.Name).ToList();
 
-                var countFiltered = await _plannedEventsApi.GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess);
+                var countFiltered = await _plannedEventsApi.GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("OLA violate count (ViewAll + filter): {count} for workgroups: {workgroups}",
                     countFiltered, string.Join(", ", workgroupIds));
                 return countFiltered;
@@ -2282,7 +2282,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
-                var count = await _plannedEventsApi.GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess);
+                var count = await _plannedEventsApi.GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
                 _logger.LogInformation("OLA violate count: {count} for workgroups: {workgroups}",
                     count, string.Join(", ", workgroupIds ?? new List<int>()));
                 return count;
@@ -2313,7 +2313,7 @@ namespace SFCDashboard.Controllers
             // If user has ViewAll and no specific workgroup selected, show ALL records
             if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
             {
-                var countAll = await _plannedEventsApi.GetHoldCountAsync(new List<string>(), hasDrawFiberAccess);
+                var countAll = await _plannedEventsApi.GetHoldCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("Hold count (ViewAll): {count}", countAll);
                 return countAll;
             }
@@ -2324,7 +2324,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
-                var countFiltered = await _plannedEventsApi.GetHoldCountAsync(workgroupNames, hasDrawFiberAccess);
+                var countFiltered = await _plannedEventsApi.GetHoldCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("Hold count (ViewAll + filter): {count} for workgroups: {workgroups}",
                     countFiltered, string.Join(", ", workgroupIds));
                 return countFiltered;
@@ -2344,7 +2344,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
-                var count = await _plannedEventsApi.GetHoldCountAsync(workgroupNames, hasDrawFiberAccess);
+                var count = await _plannedEventsApi.GetHoldCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
                 _logger.LogInformation("Hold count: {count} for workgroups: {workgroups}",
                     count, string.Join(", ", workgroupIds ?? new List<int>()));
                 return count;
@@ -2375,7 +2375,7 @@ namespace SFCDashboard.Controllers
             // If user has ViewAll and no specific workgroup selected, show ALL records
             if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
             {
-                var countAll = await _plannedEventsApi.GetInProgressCountAsync(new List<string>(), hasDrawFiberAccess);
+                var countAll = await _plannedEventsApi.GetInProgressCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("In-progress count (ViewAll): {count}", countAll);
                 return countAll;
             }
@@ -2386,7 +2386,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
-                var countFiltered = await _plannedEventsApi.GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess);
+                var countFiltered = await _plannedEventsApi.GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
                 _logger.LogInformation("In-progress count (ViewAll + filter): {count} for workgroups: {workgroups}",
                     countFiltered, string.Join(", ", workgroupIds));
                 return countFiltered;
@@ -2406,7 +2406,7 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
-                var count = await _plannedEventsApi.GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess);
+                var count = await _plannedEventsApi.GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
                 _logger.LogInformation("In-progress count: {count} for workgroups: {workgroups}",
                     count, string.Join(", ", workgroupIds ?? new List<int>()));
                 return count;

@@ -623,7 +623,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetUrgentCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        public async Task<int> GetUrgentCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
         {
             try
             {
@@ -633,7 +633,8 @@ namespace SFCDashboard.Services
                     .Select(w => w.Name)
                     .ToListAsync();
 
-                return await GetUrgentCountAsync(workgroupNames);
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
             }
             catch (Exception ex)
             {
@@ -642,7 +643,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetInProgressCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        public async Task<int> GetInProgressCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
         {
             try
             {
@@ -652,7 +653,8 @@ namespace SFCDashboard.Services
                     .Select(w => w.Name)
                     .ToListAsync();
 
-                return await GetInProgressCountAsync(workgroupNames);
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
             }
             catch (Exception ex)
             {
@@ -661,7 +663,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetOLAViolateCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        public async Task<int> GetOLAViolateCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
         {
             try
             {
@@ -671,7 +673,8 @@ namespace SFCDashboard.Services
                     .Select(w => w.Name)
                     .ToListAsync();
 
-                return await GetOLAViolateCountAsync(workgroupNames);
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
             }
             catch (Exception ex)
             {
@@ -680,7 +683,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<int> GetHoldCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        public async Task<int> GetHoldCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
         {
             try
             {
@@ -690,7 +693,8 @@ namespace SFCDashboard.Services
                     .Select(w => w.Name)
                     .ToListAsync();
 
-                return await GetHoldCountAsync(workgroupNames);
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetHoldCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
             }
             catch (Exception ex)
             {
@@ -758,6 +762,60 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error searching planned events");
+                return new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, pageSize);
+            }
+        }
+
+        public async Task<PaginatedList<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, List<string> salesWorkgroups, bool hasDrawFiberAccess, int pageIndex, int pageSize)
+        {
+            try
+            {
+                _logger.LogInformation("Searching planned events for sales: type={type}, value={value}, workgroups={workgroups}, drawFiber={drawFiber}", 
+                    searchType, searchValue, string.Join(",", salesWorkgroups), hasDrawFiberAccess);
+
+                var query = _context.PlannedEvents.AsQueryable();
+
+                // Apply sales workgroup filter - check both TaskWg and SectionHandledBy
+                if (salesWorkgroups.Any())
+                {
+                    query = query.Where(p => salesWorkgroups.Any(wg =>
+                        (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
+                        (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                    ));
+                }
+
+                // Apply search filters based on type
+                if (!string.IsNullOrEmpty(searchValue))
+                {
+                    switch (searchType)
+                    {
+                        case "customer":
+                            query = query.Where(p => p.Customer != null &&
+                                EF.Functions.Like(p.Customer, $"%{searchValue}%"));
+                            break;
+                        case "jobReference":
+                            query = query.Where(p => p.JobReference != null &&
+                                EF.Functions.Like(p.JobReference, $"%{searchValue}%"));
+                            break;
+                        case "soNumber":
+                            query = query.Where(p => p.SoNumber != null &&
+                                EF.Functions.Like(p.SoNumber, $"%{searchValue}%"));
+                            break;
+                        default: // peNumber
+                            query = query.Where(p => p.PeNumber != null &&
+                                EF.Functions.Like(p.PeNumber, $"%{searchValue}%"));
+                            break;
+                    }
+                }
+
+                query = query.OrderByDescending(p => p.PECreatedDate)
+                            .ThenBy(p => p.PeNumber);
+
+                return await PaginatedList<PlannedEvent>.CreateAsync(query.AsNoTracking(), pageIndex, pageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching planned events for sales workgroups");
                 return new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, pageSize);
             }
         }
