@@ -60,8 +60,12 @@
     <div class="card">
         <div class="card-header bg-danger text-white">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>Urgent Records</h5>
-                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+                <h5 class="mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>Urgent Records & Tasks</h5>
+                @{
+                    var urgentTasks = ViewData["UrgentTasks"] as IEnumerable<SFCDashboard.Models.PETask> ?? new List<SFCDashboard.Models.PETask>();
+                    var totalCount = Model.Count() + urgentTasks.Count();
+                }
+                <span class="badge bg-light text-dark">@totalCount Total</span>
             </div>
         </div>
         <div class="card-body">
@@ -71,13 +75,13 @@
                     <thead class="table-light">
                         <tr>
                             <th style="width: 5%;">#</th>
-                            <th style="width: 10%;">PE Number</th>
-                            <th style="width: 10%;">Region</th>
-                            <th style="width: 15%;">Request Reference</th>
+                            <th style="width: 12%;">PE Number</th>
+                            <th style="width: 18%;">Description</th>
+                            <th style="width: 12%;">Region</th>
                             <th style="width: 15%;">Customer</th>
-                            <th style="width: 15%;">Required Date</th>
-                            <th style="width: 10%;">Priority</th>
-                            <th style="width: 10%;">Actions</th>
+                            <th style="width: 12%;">Required/Target Date</th>
+                            <th style="width: 11%;">Priority</th>
+                            <th style="width: 15%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,8 +93,8 @@
                             <tr>
                                 <td>@(rowNumber++)</td>
                                 <td>@item.PeNumber</td>
-                                <td>@item.Region</td>
                                 <td>@item.RequestReferenceNo</td>
+                                <td>@item.Region</td>
                                 <td>@item.Customer</td>
                                 <td>
                                     @if (item.ServiceRequiredDate.HasValue)
@@ -136,14 +140,82 @@
                                 </td>
                             </tr>
                         }
+                        @foreach (var task in urgentTasks)
+                        {
+                            <tr class="table-warning">
+                                <td>@(rowNumber++)</td>
+                                <td><strong>@task.PENumber</strong></td>
+                                <td>@task.Task</td>
+                                <td>
+                                    <span class="badge bg-primary">@task.TaskWorkGroup</span>
+                                </td>
+                                <td>@(task.PlannedEvent?.Customer ?? "N/A")</td>
+                                <td>
+                                    @if (task.TaskCompleteDate != default(DateTime))
+                                    {
+                                        var daysRemaining = (task.TaskCompleteDate - DateTime.Now).Days;
+                                        <span class="@(daysRemaining <= 0 ? "text-danger fw-bold" : daysRemaining <= 3 ? "text-warning fw-bold" : "text-success")">
+                                            @task.TaskCompleteDate.ToString("yyyy-MM-dd")
+                                            @if (daysRemaining <= 0)
+                                            {
+                                                <small class="d-block text-danger">(Overdue)</small>
+                                            }
+                                            else if (daysRemaining <= 3)
+                                            {
+                                                <small class="d-block text-warning">(@daysRemaining days left)</small>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(task.Priority) && task.Priority.Contains("Priority 1"))
+                                    {
+                                        <span class="badge bg-danger">Opening Ceremony (P1)</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(task.Priority) && task.Priority.Contains("Priority 2"))
+                                    {
+                                        <span class="badge bg-warning text-dark">Critical Customer (P2)</span>
+                                    }
+                                    else if (task.IsUrgent)
+                                    {
+                                        <span class="badge bg-danger">URGENT TASK</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Standard</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-controller="PlannedEvents" asp-action="Details" asp-route-id="@task.PlannedEvent?.Id" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="bi bi-eye"></i> View PE
+                                        </a>
+                                        @if (task.TaskStatus?.ToUpper() == "ONGOING")
+                                        {
+                                            <form asp-controller="PETasks" asp-action="RemoveUrgentStatus" asp-route-id="@task.Id" method="post" 
+                                                  class="d-inline" onsubmit="return confirm('Are you sure you want to remove urgent status from this task?')">
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="bi bi-x-circle"></i> Remove
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             </div>
 
-            @if (!Model.Any())
+            @if (!Model.Any() && !(ViewData["UrgentTasks"] as IEnumerable<SFCDashboard.Models.PETask> ?? new List<SFCDashboard.Models.PETask>()).Any())
             {
                 <div class="alert alert-info mt-3">
-                    <i class="bi bi-info-circle me-2"></i> No urgent records found.
+                    <i class="bi bi-info-circle me-2"></i> No urgent records or tasks found.
                 </div>
             }
         </div>

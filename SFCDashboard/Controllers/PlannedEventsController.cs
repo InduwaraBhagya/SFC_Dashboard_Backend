@@ -1151,6 +1151,30 @@ namespace SFCDashboard.Controllers
                     }
                 }
 
+                // Get urgent tasks to include in the view
+                var urgentTasks = await _peTasksApi.GetUrgentTasksAsync();
+                
+                // Filter out tasks that belong to PEs already in the urgent records list
+                var urgentPeNumbers = records.Select(r => r.PeNumber).ToHashSet();
+                urgentTasks = urgentTasks.Where(t => !urgentPeNumbers.Contains(t.PENumber)).ToList();
+                
+                // Filter urgent tasks by workgroup if needed
+                if (!canViewAll && userWorkgroupNames.Any())
+                {
+                    urgentTasks = urgentTasks.Where(t => userWorkgroupNames.Contains(t.TaskWorkGroup ?? "")).ToList();
+                }
+                else if (canViewAll && workgroupId.HasValue)
+                {
+                    var workgroup = await _workGroupsApi.GetWorkGroupAsync(workgroupId.Value);
+                    if (workgroup != null)
+                    {
+                        urgentTasks = urgentTasks.Where(t => t.TaskWorkGroup == workgroup.Name).ToList();
+                    }
+                }
+
+                // Pass urgent tasks to the view
+                ViewData["UrgentTasks"] = urgentTasks;
+
                 // Set ViewData
                 ViewData["CanViewAll"] = canViewAll;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
@@ -1160,6 +1184,7 @@ namespace SFCDashboard.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading urgent records");
+                ViewData["UrgentTasks"] = new List<PETask>();
                 return View(new List<PlannedEvent>());
             }
         }

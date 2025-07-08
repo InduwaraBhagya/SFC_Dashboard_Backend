@@ -298,13 +298,13 @@ namespace SFCDashboard.Controllers
                 customer = task.PlannedEvent?.Customer,
                 taskName = task.Task,
                 priority = task.Priority,
-                urgentRequestReason = ExtractUrgentRequestReason(task.Priority)
+                urgentRequestReason = ExtractUrgentRequestReason(task.Priority ?? "")
             };
 
             return Json(details);
         }
 
-        private string ExtractUrgentRequestReason(string priority)
+        private string? ExtractUrgentRequestReason(string priority)
         {
             if (string.IsNullOrEmpty(priority))
                 return null;
@@ -467,7 +467,77 @@ namespace SFCDashboard.Controllers
             return Json(history);
         }
 
+        // GET: PETasks/UrgentTasks
+        public async Task<IActionResult> UrgentTasks()
+        {
+            var urgentTasks = await _context.PETasks
+                .Include(t => t.PlannedEvent)
+                .Where(t => t.IsUrgent == true && t.TaskStatus != "COMPLETED")
+                .OrderByDescending(t => t.UrgentMarkedDate)
+                .ThenBy(t => t.TaskCompleteDate)
+                .ToListAsync();
 
+            _logger.LogInformation("Retrieved {count} urgent tasks", urgentTasks.Count);
+
+            return View(urgentTasks);
+        }
+
+        // POST: PETasks/RemoveUrgentStatus
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveUrgentStatus(int id)
+        {
+            var task = await _context.PETasks
+                .Include(t => t.PlannedEvent)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null)
+            {
+                return NotFound();
+            }
+
+            // Remove urgent status
+            task.IsUrgent = false;
+            task.UrgentMarkedDate = null;
+            task.Priority = task.Priority?.Replace("[URGENT: Opening Ceremony - Priority 1]", "")
+                                         .Replace("[URGENT: Critical Customer - Priority 2]", "")
+                                         .Trim();
+
+            if (string.IsNullOrWhiteSpace(task.Priority))
+            {
+                task.Priority = null;
+            }
+
+            _context.Update(task);
+
+            // Check if this was the last urgent task for this PE
+            var remainingUrgentTasks = await _context.PETasks
+                .Where(t => t.PENumber == task.PENumber && t.IsUrgent == true && t.Id != id)
+                .CountAsync();
+
+            // If no more urgent tasks for this PE, remove urgent status from PE
+            if (remainingUrgentTasks == 0 && task.PlannedEvent != null)
+            {
+                task.PlannedEvent.PEStatus = "ongoing";
+                task.PlannedEvent.Priority = task.PlannedEvent.Priority?.Replace("[URGENT: Opening Ceremony - Priority 1]", "")
+                                                                      .Replace("[URGENT: Critical Customer - Priority 2]", "")
+                                                                      .Trim();
+
+                if (string.IsNullOrWhiteSpace(task.PlannedEvent.Priority))
+                {
+                    task.PlannedEvent.Priority = null;
+                }
+
+                _context.Update(task.PlannedEvent);
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Task {id} urgent status removed", id);
+            TempData["SuccessMessage"] = "Urgent status removed from task successfully.";
+
+            return RedirectToAction(nameof(UrgentTasks));
+        }
 
     }
 }

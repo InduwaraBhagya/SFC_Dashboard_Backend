@@ -31,8 +31,24 @@
         // Immediately set the theme before page loads
         (function () {
             const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-            document.body.setAttribute('data-theme', theme);
+            
+            // Set theme on documentElement immediately (this exists)
+            if (document.documentElement) {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+            
+            // Set theme on body when it becomes available
+            function setBodyTheme() {
+                if (document.body) {
+                    document.body.setAttribute('data-theme', theme);
+                } else {
+                    // Body doesn't exist yet, wait for it
+                    setTimeout(setBodyTheme, 10);
+                }
+            }
+            
+            // Try to set body theme immediately, or wait for it
+            setBodyTheme();
         })();
     </script>
 
@@ -267,6 +283,17 @@
 
     @await RenderSectionAsync("Scripts", required: false)
     <script>
+        // Declare global variables
+        let currentFilter = 'unread';
+        let currentReminderFilter = 'unread';
+        let currentType = 'all';
+        
+        // Placeholder function for combined notifications
+        function loadCombinedNotifications() {
+            // TODO: Implement combined notifications loading
+            console.log('Loading combined notifications with filter:', currentFilter, 'and type:', currentType);
+        }
+        
         $(document).ready(function () {
             // Load escalations when page is loaded
             loadEscalations();
@@ -415,30 +442,32 @@
             // Search functionality
             var select = document.getElementById('navbarSearchType');
             var input = document.getElementById('navbarSearchInput');
-            function updateInputNameAndPlaceholder() {
-                input.name = select.value;
-                switch (select.value) {
-                    case "peNumber":
-                        input.placeholder = "Search PE Number";
-                        break;
-                    case "customer":
-                        input.placeholder = "Search Customer";
-                        break;
-                    case "jobReference":
-                        input.placeholder = "Search Job Reference";
-                        break;
-                    case "soNumber":
-                        input.placeholder = "Search SO Number";
-                        break;
+            
+            // Only set up search functionality if both elements exist
+            if (select && input) {
+                function updateInputNameAndPlaceholder() {
+                    input.name = select.value;
+                    switch (select.value) {
+                        case "peNumber":
+                            input.placeholder = "Search PE Number";
+                            break;
+                        case "customer":
+                            input.placeholder = "Search Customer";
+                            break;
+                        case "jobReference":
+                            input.placeholder = "Search Job Reference";
+                            break;
+                        case "soNumber":
+                            input.placeholder = "Search SO Number";
+                            break;
+                    }
                 }
+                select.addEventListener('change', updateInputNameAndPlaceholder);
+                updateInputNameAndPlaceholder();
             }
-            select.addEventListener('change', updateInputNameAndPlaceholder);
-            updateInputNameAndPlaceholder();
 
 
             // Notification functionality
-            let currentFilter = 'unread';
-
             function loadReminders() {
                 fetch(`/PlannedEvents/GetReminders?showAll=${currentReminderFilter === 'all'}`)
                     .then(response => response.json())
