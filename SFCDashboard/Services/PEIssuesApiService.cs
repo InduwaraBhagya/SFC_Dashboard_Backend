@@ -69,7 +69,7 @@ namespace SFCDashboard.Services
             try
             {
                 return await _context.PEIssues
-                    .Where(i => i.ReceiverId == userId && !i.IsHiddenFromInbox)
+                    .Where(i => i.ReceiverId == userId && !i.IsHiddenFromInbox && (i.IsReminder == null || i.IsReminder == false))
                     .OrderByDescending(i => i.CreatedAt)
                     .Take(10)
                     .Select(i => new PEIssueViewModel
