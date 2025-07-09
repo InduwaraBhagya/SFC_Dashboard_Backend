@@ -14,5 +14,6 @@ namespace SFCDashboard.Services
         Task<bool> DeletePETaskAsync(int id);
         Task<IEnumerable<PETask>> GetPendingTaskRequestsAsync(int take = 5);
         Task<Dictionary<string, IEnumerable<PETask>>> GetTasksByPeNumbersAsync(List<string?> peNumbers);
+        Task<IEnumerable<PETask>> GetUrgentTasksAsync();
     }
 }

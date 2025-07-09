@@ -60,15 +60,25 @@ $(document).ready(function() {
     $(document).on('click', '#acceptUrgentRequestBtn', function() {
         const requestType = $('#urgentRequestType').val();
         const requestId = $('#urgentRequestId').val();
-        let priorityText = $('#urgentRequestDetails .row:nth-child(3) .col-sm-8').text() || '';
-        let urgentReason = 'OpeningCeremony';
-        if (priorityText.includes('Priority 2') || priorityText.toLowerCase().includes('critical customer')) {
+        let priorityText = '';
+        // Try to find the row with label 'Priority:'
+        $('#urgentRequestDetails .row').each(function() {
+            const label = $(this).find('.col-sm-4').text().trim().toLowerCase();
+            if (label.startsWith('priority')) {
+                priorityText = $(this).find('.col-sm-8').text().trim();
+            }
+        });
+
+        // Normalize the text for robust matching
+        const normPriority = priorityText.replace(/\s+/g, '').toLowerCase();
+        let urgentReason = 'OpeningCeremony'; // Default fallback
+        if (normPriority.includes('priority2') || normPriority.includes('criticalcustomer')) {
             urgentReason = 'CriticalCustomer';
-        } else if (priorityText.includes('Priority 0') || priorityText.toLowerCase().includes('network outage')) {
-            urgentReason = 'NetworkOutage';
-        } else if (priorityText.includes('Priority 1') || priorityText.toLowerCase().includes('opening ceremony')) {
+        } else if (normPriority.includes('priority1') || normPriority.includes('openingceremony')) {
             urgentReason = 'OpeningCeremony';
         }
+        console.log('Priority text:', priorityText, '| Normalized:', normPriority, '| Urgent reason:', urgentReason);
+
         const form = $('#urgentRequestForm');
         // Remove any previous urgentReason fields
         form.find('input[name="urgentReason"]').remove();

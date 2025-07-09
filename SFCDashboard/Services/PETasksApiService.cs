@@ -192,5 +192,23 @@ namespace SFCDashboard.Services
                 return new Dictionary<string, IEnumerable<PETask>>();
             }
         }
+
+        public async Task<IEnumerable<PETask>> GetUrgentTasksAsync()
+        {
+            try
+            {
+                return await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .Where(t => t.IsUrgent == true && t.TaskStatus != "COMPLETED")
+                    .OrderByDescending(t => t.UrgentMarkedDate)
+                    .ThenBy(t => t.TaskCompleteDate)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting urgent tasks");
+                return new List<PETask>();
+            }
+        }
     }
 }
