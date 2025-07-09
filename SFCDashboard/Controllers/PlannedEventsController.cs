@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
@@ -66,8 +66,11 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
 
-            // Check for sales workgroup first
-            if (await IsUserInSalesWorkgroup())
+            // Get current user's workgroup info first to check ViewAll permission
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+
+            // Check for sales workgroup, but only redirect if user doesn't have ViewAll permission
+            if (await IsUserInSalesWorkgroup() && !canViewAll)
             {
                 return RedirectToAction(nameof(SalesView), new
                 {
@@ -79,9 +82,6 @@ namespace SFCDashboard.Controllers
                     pageIndex
                 });
             }
-
-            // Get current user's workgroup info
-            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
             // If user does NOT have ViewAll and has multiple workgroups, redirect to MultiWorkgroupView
             if (!canViewAll && userWorkgroupIds.Count > 1)
@@ -490,18 +490,39 @@ namespace SFCDashboard.Controllers
             // Get user's assigned customers
             var assignedCustomers = await GetUserAssignedCustomersAsync();
             
+            // Debug logging
+            _logger.LogInformation("ApplyCustomerFilteringAsync - Sales Workgroups: {workgroups}", string.Join(", ", salesWorkgroups));
+            _logger.LogInformation("ApplyCustomerFilteringAsync - CanViewAll: {canViewAll}", canViewAll);
+            _logger.LogInformation("ApplyCustomerFilteringAsync - Assigned Customers: {customers}", string.Join(", ", assignedCustomers));
+            
             if (!canViewAll)
             {
-                // Apply workgroup filtering first
-                query = query.Where(p => salesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                    (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
+                // Apply workgroup filtering first with case-insensitive matching
+                // Convert workgroups to lowercase for comparison
+                var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
+                
+                var beforeFilterCount = query.Count();
+                query = query.Where(p => lowerSalesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && (
+                        p.TaskWg.ToLower() == wg ||
+                        p.TaskWg.ToLower().Contains(wg)
+                    )) ||
+                    (p.SectionHandledBy != null && (
+                        p.SectionHandledBy.ToLower() == wg ||
+                        p.SectionHandledBy.ToLower().Contains(wg)
+                    ))
                 ));
+                var afterWorkgroupFilterCount = query.Count();
+                
+                _logger.LogInformation("ApplyCustomerFilteringAsync - Before workgroup filter: {before}, After: {after}", 
+                    beforeFilterCount, afterWorkgroupFilterCount);
                 
                 // If user has assigned customers, further filter by those customers
                 if (assignedCustomers.Any())
                 {
                     query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
+                    var afterCustomerFilterCount = query.Count();
+                    _logger.LogInformation("ApplyCustomerFilteringAsync - After customer filter: {count}", afterCustomerFilterCount);
                 }
             }
             else
@@ -527,19 +548,55 @@ namespace SFCDashboard.Controllers
 
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any())
+            if (!salesWorkgroups.Any() || canViewAll)
             {
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index), new { searchType, peNumber, customer, jobReference, soNumber, pageIndex });
             }
+
+            // Debug logging
+            _logger.LogInformation("SalesView - User Sales Workgroups: {workgroups}", string.Join(", ", salesWorkgroups));
+            _logger.LogInformation("SalesView - CanViewAll: {canViewAll}", canViewAll);
+
+            // Get draw fiber access for the current user
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             // Get PE numbers with OLA violation
             var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
 
-            // Calculate dashboard counts using the appropriate API service methods
-            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountAsync(salesWorkgroups);
-            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountAsync(salesWorkgroups);
-            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolateCountAsync(salesWorkgroups);
-            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountAsync(salesWorkgroups);
+            // Calculate OLA violation count using the same logic as SalesOLAViolateRecords
+            var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
+            var violatingEvents = allPlannedEvents
+                .Where(p => violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
+            var filteredOLAViolatingEvents = await ApplyCustomerFilteringAsync(violatingEvents.AsQueryable(), salesWorkgroups, canViewAll);
+            var olaViolateCount = filteredOLAViolatingEvents.Count();
+
+            // Calculate Urgent count using the same logic as SalesUrgentRecords
+            var urgentEvents = allPlannedEvents
+                .Where(p => p.PEStatus == "urgent" &&
+                       !p.IsHold &&
+                       !violatingPENumbers.Contains(p.PeNumber));
+            var filteredUrgentEvents = await ApplyCustomerFilteringAsync(urgentEvents.AsQueryable(), salesWorkgroups, canViewAll);
+            var urgentCount = filteredUrgentEvents.Count();
+
+            // Calculate InProgress count using the same logic as SalesInProgressRecords
+            var filteredAllEvents = await ApplyCustomerFilteringAsync(allPlannedEvents.AsQueryable(), salesWorkgroups, canViewAll);
+            var inProgressEvents = filteredAllEvents
+                .Where(p =>
+                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                    !p.IsHold &&
+                    !violatingPENumbers.Contains(p.PeNumber));
+            var inProgressCount = inProgressEvents.Count();
+
+            // Calculate Hold count using the same logic as SalesHoldRecords
+            var holdEvents = allPlannedEvents.Where(p => p.IsHold);
+            var filteredHoldEvents = await ApplyCustomerFilteringAsync(holdEvents.AsQueryable(), salesWorkgroups, canViewAll);
+            var holdCount = filteredHoldEvents.Count();
+
+            // Set dashboard counts using the calculated values that match the records methods
+            ViewData["UrgentCount"] = urgentCount;
+            ViewData["InProgressCount"] = inProgressCount;
+            ViewData["OLAViolateCount"] = olaViolateCount; // Already calculated above
+            ViewData["HoldCount"] = holdCount;
 
 
             // Get pending urgent requests
@@ -615,10 +672,27 @@ namespace SFCDashboard.Controllers
                         break;
                 }
 
-                // Use API service for search with pagination
+                // Apply customer filtering with workgroup checks and ViewAll permission
+                var filteredSearchEvents = await ApplyCustomerFilteringAsync(allPlannedEvents.AsQueryable(), salesWorkgroups, canViewAll);
+                var materializedEvents = filteredSearchEvents.ToList();
+                
+                // Apply search filter
+                var searchResults = materializedEvents.Where(p =>
+                {
+                    return searchType.ToLower() switch
+                    {
+                        "customer" => p.Customer?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) == true,
+                        "jobreference" => p.JobReference?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) == true,
+                        "sonumber" => p.SoNumber?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) == true,
+                        _ => p.PeNumber?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) == true
+                    };
+                }).OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber);
+
+                // Apply pagination
                 int pageSize = 10;
-                paginatedList = await _plannedEventsApi.SearchPlannedEventsAsync(
-                    searchType, searchValue, salesWorkgroups, false, pageIndex ?? 1, pageSize);
+                var totalCount = searchResults.Count();
+                var items = searchResults.Skip(((pageIndex ?? 1) - 1) * pageSize).Take(pageSize).ToList();
+                paginatedList = new PaginatedList<PlannedEvent>(items, totalCount, pageIndex ?? 1, pageSize);
             }
             else
             {
@@ -2030,7 +2104,7 @@ namespace SFCDashboard.Controllers
 
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any())
+            if (!salesWorkgroups.Any() || canViewAll)
             {
                 return RedirectToAction(nameof(InProgressRecords));
             }
@@ -2062,7 +2136,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> SalesHoldRecords(int? pageIndex = 1)
         {
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any())
+            if (!salesWorkgroups.Any() || canViewAll)
             {
                 return RedirectToAction(nameof(HoldRecords));
             }
@@ -2085,7 +2159,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> SalesUrgentRecords(int? pageIndex = 1)
         {
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any())
+            if (!salesWorkgroups.Any() || canViewAll)
             {
                 return RedirectToAction(nameof(UrgentRecords));
             }
@@ -2113,7 +2187,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> SalesOLAViolateRecords(int? pageIndex = 1)
         {
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any())
+            if (!salesWorkgroups.Any() || canViewAll)
             {
                 return RedirectToAction(nameof(OLAViolateRecords));
             }

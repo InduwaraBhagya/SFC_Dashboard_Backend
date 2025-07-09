@@ -62,7 +62,7 @@
         <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>OLA Violation Records</h5>
-                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+                <span class="badge bg-light text-dark" id="recordCount">Showing @Model.Count() of @Model.Count() Records</span>
             </div>
         </div>
         <div class="card-body">
@@ -123,6 +123,8 @@
         const searchInputs = searchForm.querySelectorAll('input');
         const tableBody = document.querySelector('table tbody');
         const noRecordsAlert = document.querySelector('.alert-info');
+        const recordCountBadge = document.getElementById('recordCount');
+        const totalRecords = @Model.Count();
 
         function filterTable() {
             const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
@@ -134,46 +136,49 @@
 
             Array.from(rows).forEach(row => {
                 const cells = row.getElementsByTagName('td');
-                const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
-                const matchCustomer = cells[2].textContent.trim().toLowerCase().includes(customer);
-                const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
+                if (cells.length > 0) {
+                    const matchPeNumber = !peNumber || cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                    const matchReference = !reference || cells[2].textContent.trim().toLowerCase().includes(reference);
+                    const matchCustomer = !customer || cells[3].textContent.trim().toLowerCase().includes(customer);
 
-                if (matchPeNumber && matchCustomer && matchReference) {
-                    row.style.display = '';
-                    visibleRows++;
-                } else {
-                    row.style.display = 'none';
+                    if (matchPeNumber && matchReference && matchCustomer) {
+                        row.style.display = '';
+                        visibleRows++;
+                    } else {
+                        row.style.display = 'none';
+                    }
                 }
             });
 
             // Update record count
-            document.querySelector('.badge').textContent = visibleRows + ' Records';
+            if (recordCountBadge) {
+                if (peNumber || reference || customer) {
+                    // Show filtered results count
+                    recordCountBadge.textContent = `Showing ${visibleRows} of ${totalRecords} Records`;
+                    recordCountBadge.className = visibleRows > 0 ? 'badge bg-success text-white' : 'badge bg-warning text-dark';
+                } else {
+                    // Show total count when no filters applied
+                    recordCountBadge.textContent = `Showing ${totalRecords} of ${totalRecords} Records`;
+                    recordCountBadge.className = 'badge bg-light text-dark';
+                }
+            }
 
             // Show/hide no records message
-            if (noRecordsAlert) {
-                if (visibleRows === 0) {
-                    noRecordsAlert.style.display = 'block';
-                    
-                    // If no custom alert exists yet, create one
-                    if (!document.querySelector('.custom-no-results-alert')) {
-                        const customAlert = document.createElement('div');
-                        customAlert.className = 'alert alert-info custom-no-results-alert mt-3';
-                        customAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i> No matching OLA violation records found.';
-                        
-                        // Only append if records actually exist but are filtered out
-                        if (rows.length > 0) {
-                            tableBody.parentElement.appendChild(customAlert);
-                        }
-                    }
-                } else {
-                    noRecordsAlert.style.display = 'none';
-                    
-                    // Remove any custom alerts
-                    const customAlert = document.querySelector('.custom-no-results-alert');
-                    if (customAlert) {
-                        customAlert.remove();
-                    }
-                }
+            const existingCustomAlert = document.querySelector('.custom-no-results-alert');
+            if (existingCustomAlert) {
+                existingCustomAlert.remove();
+            }
+
+            if (visibleRows === 0 && rows.length > 0) {
+                const customAlert = document.createElement('div');
+                customAlert.className = 'alert alert-info custom-no-results-alert mt-3';
+                customAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i> No matching OLA violation records found.';
+                tableBody.parentElement.parentElement.appendChild(customAlert);
+            }
+
+            // Hide original no records alert if there are actual records
+            if (noRecordsAlert && rows.length > 0) {
+                noRecordsAlert.style.display = 'none';
             }
         }
 

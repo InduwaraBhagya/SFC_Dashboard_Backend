@@ -16,6 +16,9 @@
     </div>
 
     <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Search Records</h5>
+        </div>
         <div class="card-body">
             <form id="searchForm" class="row g-3" method="get">
                 <div class="col-md-3">
@@ -59,7 +62,7 @@
         <div class="card-header bg-danger text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Urgent Records</h5>
-                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+                <span class="badge bg-light text-dark" id="recordCount">Showing @Model.Count() of @Model.Count() Records</span>
             </div>
         </div>
         <div class="card-body">
@@ -69,8 +72,8 @@
                         <tr>
                             <th>#</th>
                             <th>PE Number</th>
+                            <th>Request Reference</th>
                             <th>Customer</th>
-                            <th>Service Type</th>
                             <th>Required Date</th>
                             <th>Priority</th>
                             <th>Actions</th>
@@ -83,8 +86,8 @@
                             <tr>
                                 <td>@(rowNumber++)</td>
                                 <td>@item.PeNumber</td>
+                                <td>@item.RequestReferenceNo</td>
                                 <td>@item.Customer</td>
-                                <td>@item.ServiceType</td>
                                 <td>@item.ServiceRequiredDate?.ToString("yyyy-MM-dd")</td>
                                 <td>
                                     @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
@@ -130,6 +133,8 @@
             const searchInputs = searchForm.querySelectorAll('input');
             const tableBody = document.querySelector('table tbody');
             const noRecordsAlert = document.querySelector('.alert-info');
+            const recordCountBadge = document.getElementById('recordCount');
+            const totalRecords = @Model.Count();
 
             function filterTable() {
                 const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
@@ -141,24 +146,49 @@
 
                 Array.from(rows).forEach(row => {
                     const cells = row.getElementsByTagName('td');
-                    const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
-                    const matchReference = cells[2].textContent.trim().toLowerCase().includes(reference);
-                    const matchCustomer = cells[3].textContent.trim().toLowerCase().includes(customer);
+                    if (cells.length > 0) {
+                        const matchPeNumber = !peNumber || cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                        const matchReference = !reference || cells[2].textContent.trim().toLowerCase().includes(reference);
+                        const matchCustomer = !customer || cells[3].textContent.trim().toLowerCase().includes(customer);
 
-                    if (matchPeNumber && matchReference && matchCustomer) {
-                        row.style.display = '';
-                        visibleRows++;
-                    } else {
-                        row.style.display = 'none';
+                        if (matchPeNumber && matchReference && matchCustomer) {
+                            row.style.display = '';
+                            visibleRows++;
+                        } else {
+                            row.style.display = 'none';
+                        }
                     }
                 });
 
                 // Update record count
-                document.querySelector('.badge').textContent = visibleRows + ' Records';
+                if (recordCountBadge) {
+                    if (peNumber || reference || customer) {
+                        // Show filtered results count
+                        recordCountBadge.textContent = `Showing ${visibleRows} of ${totalRecords} Records`;
+                        recordCountBadge.className = visibleRows > 0 ? 'badge bg-success text-white' : 'badge bg-warning text-dark';
+                    } else {
+                        // Show total count when no filters applied
+                        recordCountBadge.textContent = `Showing ${totalRecords} of ${totalRecords} Records`;
+                        recordCountBadge.className = 'badge bg-light text-dark';
+                    }
+                }
 
                 // Show/hide no records message
-                if (noRecordsAlert) {
-                    noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
+                const existingCustomAlert = document.querySelector('.custom-no-results-alert');
+                if (existingCustomAlert) {
+                    existingCustomAlert.remove();
+                }
+
+                if (visibleRows === 0 && rows.length > 0) {
+                    const customAlert = document.createElement('div');
+                    customAlert.className = 'alert alert-info custom-no-results-alert mt-3';
+                    customAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i> No matching urgent records found.';
+                    tableBody.parentElement.parentElement.appendChild(customAlert);
+                }
+
+                // Hide original no records alert if there are actual records
+                if (noRecordsAlert && rows.length > 0) {
+                    noRecordsAlert.style.display = 'none';
                 }
             }
 
