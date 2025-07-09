@@ -1,0 +1,14 @@
+{
+  "EscalationService": {
+    "ConfigCacheExpiration": "00:05:00",
+    "StatsCacheExpiration": "00:01:00",
+    "Level1HoursThreshold": 24,
+    "Level2DaysThreshold": 1,
+    "Level3DaysThreshold": 3,
+    "DefaultPageSize": 50,
+    "MaxPageSize": 200,
+    "AutoCheckInterval": "00:30:00",
+    "EnableAutoCreation": true,
+    "EnablePerformanceLogging": false
+  }
+}

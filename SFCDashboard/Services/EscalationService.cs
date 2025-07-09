@@ -1,21 +1,35 @@
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace SFCDashboard.Services
 {
     public class EscalationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMemoryCache _cache;
+        private readonly ILogger<EscalationService> _logger;
         private const string ESCALATION_ENABLED_KEY = "EscalationServiceEnabled";
+        private const string ESCALATION_CONFIG_CACHE_KEY = "EscalationConfig";
+        private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(5);
 
-        public EscalationService(ApplicationDbContext context)
+        public EscalationService(ApplicationDbContext context, IMemoryCache cache, ILogger<EscalationService> logger)
         {
             _context = context;
+            _cache = cache;
+            _logger = logger;
         }
 
         public async Task<bool> IsEscalationEnabledAsync()
         {
+            // Check cache first
+            if (_cache.TryGetValue(ESCALATION_CONFIG_CACHE_KEY, out bool isEnabled))
+            {
+                return isEnabled;
+            }
+
             var config = await _context.SystemConfigurations
                 .FirstOrDefaultAsync(c => c.ConfigKey == ESCALATION_ENABLED_KEY);
             
@@ -30,10 +44,17 @@ namespace SFCDashboard.Services
                 };
                 _context.SystemConfigurations.Add(config);
                 await _context.SaveChangesAsync();
-                return true;
+                isEnabled = true;
             }
-            
-            return bool.TryParse(config.ConfigValue, out bool isEnabled) && isEnabled;
+            else
+            {
+                isEnabled = bool.TryParse(config.ConfigValue, out bool result) && result;
+            }
+
+            // Set cache with expiration
+            _cache.Set(ESCALATION_CONFIG_CACHE_KEY, isEnabled, CacheExpiration);
+
+            return isEnabled;
         }
 
         public async Task SetEscalationEnabledAsync(bool enabled)
@@ -58,6 +79,9 @@ namespace SFCDashboard.Services
             }
             
             await _context.SaveChangesAsync();
+
+            // Update cache
+            _cache.Set(ESCALATION_CONFIG_CACHE_KEY, enabled, CacheExpiration);
         }
 
         public async Task CheckAndCreateEscalationsAsync()

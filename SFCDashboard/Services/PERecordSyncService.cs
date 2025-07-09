@@ -52,6 +52,13 @@ namespace SFCDashboard.Services
             {
                 _logger.LogInformation("Starting PE records synchronization");
 
+                // First, fix any existing tasks with null OLADateTime
+                using (var scope = _serviceProvider.CreateScope())
+                {
+                    var fixingContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    await FixExistingTaskOLADates(fixingContext);
+                }
+
                 // Load data with a dedicated context
                 List<PERecord> sourceRecords;
                 List<PlannedEvent> existingEvents;
@@ -74,16 +81,20 @@ namespace SFCDashboard.Services
                     return;
                 }
 
-                // Group records by PE_NUMBER to handle duplicates
-                var groupedRecords = sourceRecords.GroupBy(r => r.PE_NUMBER)
+                // Group records by PE_NUMBER to handle duplicates, filtering out null/empty PE_NUMBER
+                var groupedRecords = sourceRecords
+                    .Where(r => !string.IsNullOrEmpty(r.PE_NUMBER))
+                    .GroupBy(r => r.PE_NUMBER!)
                     .ToDictionary(g => g.Key, g => g.ToList());
 
                 _logger.LogInformation("Grouped {sourceCount} source records into {groupCount} unique PE numbers", 
                     sourceRecords.Count, groupedRecords.Count);
 
                 // Create lookup dictionary for faster searching
-                var existingEventsByPeNumber = existingEvents.ToDictionary(
-                    pe => pe.PeNumber, 
+                var existingEventsByPeNumber = existingEvents
+                    .Where(pe => !string.IsNullOrEmpty(pe.PeNumber))
+                    .ToDictionary(
+                    pe => pe.PeNumber!, 
                     pe => pe, 
                     StringComparer.OrdinalIgnoreCase); // Case insensitive comparison
 
@@ -125,7 +136,7 @@ namespace SFCDashboard.Services
 
                             // Now process the single/most recent record
                             var record = records.First();
-                            bool eventExists = existingEventsByPeNumber.TryGetValue(peNumber, out PlannedEvent existingEvent);
+                            bool eventExists = existingEventsByPeNumber.TryGetValue(peNumber, out PlannedEvent? existingEvent);
 
                             if (eventExists)
                             {
@@ -516,7 +527,11 @@ namespace SFCDashboard.Services
                             ACtualTaskCompleteDate = null,
                             IsUrgent = false,
                             UrgentRequested = false, // Initialize UrgentRequested flag
-                            Priority = string.Empty // Initialize Priority field
+                            Priority = string.Empty, // Initialize Priority field
+                            OLADateTime = taskCompleteDate, // Set OLA datetime to the calculated complete date
+                            IsOLAViolate = false, // Initialize OLA violation flag
+                            ViolationStartTime = null, // Initialize violation time
+                            EscalationsDisabled = false // Initialize escalations flag
                         };
 
                         // If this is the current task in the PE record, set actual dates and work group
@@ -658,6 +673,7 @@ namespace SFCDashboard.Services
                     {
                         // Update fields from template/task record
                         existingTask.OLA = templateTask.OLA;
+                        existingTask.OLADateTime = templateTask.OLADateTime; // Update OLA datetime
                         
                         // WORKGROUP HANDLING: Prioritize task-specific workgroups
                         // If this is the current task in the PE record, use record's workgroup
@@ -792,10 +808,13 @@ namespace SFCDashboard.Services
                     if (recordCount > 0)
                     {
                         var sampleRecord = await dbContext.PERecords.FirstOrDefaultAsync();
-                        diagnosticInfo.AppendLine("Sample PERecord:");
-                        diagnosticInfo.AppendLine($"- PE_NUMBER: {sampleRecord.PE_NUMBER ?? "NULL"}");
-                        diagnosticInfo.AppendLine($"- TASK_NAME: {sampleRecord.TASK_NAME ?? "NULL"}");
-                        diagnosticInfo.AppendLine($"- TASK_WG: {sampleRecord.TASK_WG ?? "NULL"}");
+                        if (sampleRecord != null)
+                        {
+                            diagnosticInfo.AppendLine("Sample PERecord:");
+                            diagnosticInfo.AppendLine($"- PE_NUMBER: {sampleRecord.PE_NUMBER ?? "NULL"}");
+                            diagnosticInfo.AppendLine($"- TASK_NAME: {sampleRecord.TASK_NAME ?? "NULL"}");
+                            diagnosticInfo.AppendLine($"- TASK_WG: {sampleRecord.TASK_WG ?? "NULL"}");
+                        }
                     }
                     
                     // Check PlannedEvent table
@@ -813,10 +832,13 @@ namespace SFCDashboard.Services
                     if (templateCount > 0)
                     {
                         var sampleTemplate = await dbContext.PETaskLists.FirstOrDefaultAsync();
-                        diagnosticInfo.AppendLine("Sample PETaskList:");
-                        diagnosticInfo.AppendLine($"- Name: {sampleTemplate.Name ?? "NULL"}");
-                        diagnosticInfo.AppendLine($"- TaskSeq: {sampleTemplate.TaskSeq}");
-                        diagnosticInfo.AppendLine($"- OLA_Parameters: {sampleTemplate.OLA_Parameters ?? "NULL"}");
+                        if (sampleTemplate != null)
+                        {
+                            diagnosticInfo.AppendLine("Sample PETaskList:");
+                            diagnosticInfo.AppendLine($"- Name: {sampleTemplate.Name ?? "NULL"}");
+                            diagnosticInfo.AppendLine($"- TaskSeq: {sampleTemplate.TaskSeq}");
+                            diagnosticInfo.AppendLine($"- OLA_Parameters: {sampleTemplate.OLA_Parameters ?? "NULL"}");
+                        }
                     }
                     
                     return diagnosticInfo.ToString();
@@ -825,6 +847,35 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 return $"Diagnostic error: {ex.Message}\n{ex.StackTrace}";
+            }
+        }
+
+        private async Task FixExistingTaskOLADates(ApplicationDbContext dbContext)
+        {
+            try
+            {
+                // Find tasks with null OLADateTime and set them based on TaskCompleteDate
+                var tasksWithNullOLA = await dbContext.PETasks
+                    .Where(t => t.OLADateTime == null)
+                    .ToListAsync();
+
+                if (tasksWithNullOLA.Any())
+                {
+                    _logger.LogInformation("Found {count} tasks with null OLADateTime, fixing them", tasksWithNullOLA.Count);
+                    
+                    foreach (var task in tasksWithNullOLA)
+                    {
+                        // Set OLADateTime to TaskCompleteDate
+                        task.OLADateTime = task.TaskCompleteDate;
+                    }
+                    
+                    await dbContext.SaveChangesAsync();
+                    _logger.LogInformation("Fixed OLADateTime for {count} tasks", tasksWithNullOLA.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fixing existing task OLA dates");
             }
         }
     }
