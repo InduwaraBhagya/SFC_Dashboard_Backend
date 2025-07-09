@@ -154,7 +154,7 @@ namespace SFCDashboard.Controllers
                 {
                     selectedWorkgroupName = await _workGroupsApi.GetWorkGroupNameAsync(workgroupId.Value);
                     effectiveWorkgroupIds = new List<int> { workgroupId.Value };
-                    
+
                     if (!string.IsNullOrEmpty(selectedWorkgroupName))
                     {
                         ViewData["FilteredWorkgroup"] = selectedWorkgroupName;
@@ -280,9 +280,7 @@ namespace SFCDashboard.Controllers
                 }
 
                 var searchResults = await _plannedEventsApi.SearchPlannedEventsAsync(
-                    searchType ?? "peNumber", searchString, 
-                    workgroupName != null ? new List<string> { workgroupName } : new List<string>(), 
-                    hasDrawFiberAccess, canViewAll);
+                    searchType ?? "peNumber", searchString, workgroupName, hasDrawFiberAccess, pageIndex, 10);
 
                 // Get PE tasks for the filtered results
                 if (searchResults.Any())
@@ -489,12 +487,7 @@ namespace SFCDashboard.Controllers
         {
             // Get user's assigned customers
             var assignedCustomers = await GetUserAssignedCustomersAsync();
-            
-            // Debug logging
-            _logger.LogInformation("ApplyCustomerFilteringAsync - Sales Workgroups: {workgroups}", string.Join(", ", salesWorkgroups));
-            _logger.LogInformation("ApplyCustomerFilteringAsync - CanViewAll: {canViewAll}", canViewAll);
-            _logger.LogInformation("ApplyCustomerFilteringAsync - Assigned Customers: {customers}", string.Join(", ", assignedCustomers));
-            
+
             if (!canViewAll)
             {
                 // Apply workgroup filtering first with case-insensitive matching
@@ -533,7 +526,7 @@ namespace SFCDashboard.Controllers
                     query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
                 }
             }
-            
+
             return query;
         }
 
@@ -745,7 +738,7 @@ namespace SFCDashboard.Controllers
 
             return Json(new { count });
         }
-        
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAllRemindersAsRead()
@@ -785,7 +778,7 @@ namespace SFCDashboard.Controllers
             bool hasCanManageEstimatedTime = currentUser?.UserRole?.HasPermission("CanManageEstimatedTime") == true;
 
             // DEBUG: Log the individual conditions
-            _logger.LogInformation("EstimatedTime Debug - User {userId}: CanManageEstimatedTime={canManage}, DrawFiberAccess={drawAccess}, IsCurrentTaskDrawFiber={isDrawFiber}, TaskName='{taskName}'", 
+            _logger.LogInformation("EstimatedTime Debug - User {userId}: CanManageEstimatedTime={canManage}, DrawFiberAccess={drawAccess}, IsCurrentTaskDrawFiber={isDrawFiber}, TaskName='{taskName}'",
                 currentUserId, hasCanManageEstimatedTime, hasDrawFiberAccess, isCurrentTaskDrawFiber, plannedEvent.TaskName);
 
             // Only allow estimated time management if user has permission, is in the right workgroup,
@@ -942,7 +935,7 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-            
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -1295,7 +1288,7 @@ namespace SFCDashboard.Controllers
                 // Determine search criteria
                 string searchValue = "";
                 string searchTypeValue = searchType ?? "peNumber";
-                
+
                 switch (searchTypeValue.ToLower())
                 {
                     case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
@@ -1391,7 +1384,7 @@ namespace SFCDashboard.Controllers
                 // Determine search criteria
                 string searchValue = "";
                 string searchTypeValue = searchType ?? "peNumber";
-                
+
                 switch (searchTypeValue.ToLower())
                 {
                     case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
@@ -1484,7 +1477,7 @@ namespace SFCDashboard.Controllers
                 // Determine search criteria
                 string searchValue = "";
                 string searchTypeValue = searchType ?? "peNumber";
-                
+
                 switch (searchTypeValue.ToLower())
                 {
                     case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
@@ -1583,7 +1576,7 @@ namespace SFCDashboard.Controllers
                 // Determine search criteria
                 string searchValue = "";
                 string searchTypeValue = searchType ?? "peNumber";
-                
+
                 switch (searchTypeValue.ToLower())
                 {
                     case "customer" when !string.IsNullOrEmpty(customer?.Trim()):
@@ -1643,7 +1636,7 @@ namespace SFCDashboard.Controllers
                 // Calculate violation details for display using API service
                 var peNumbers = allRecords.Select(pe => pe.PeNumber).ToList();
                 var allTasksByPe = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
-                
+
                 // Filter to only OLA violating tasks
                 var violatingTasks = allTasksByPe.SelectMany(kvp => kvp.Value)
                     .Where(t => t.IsOLAViolate)
@@ -1749,7 +1742,7 @@ namespace SFCDashboard.Controllers
                         TempData["SuccessMessage"] = "Planned Event updated successfully (no tasks to update).";
                         return RedirectToAction(nameof(UrgentRequestsList));
                     }
-                    
+
                     _logger.LogInformation("Updating tasks for PE: {peNumber}", peNumber);
 
                     // Get all tasks for this PE using API service
@@ -2114,7 +2107,7 @@ namespace SFCDashboard.Controllers
 
             // Get all planned events and apply filtering
             var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
-            
+
             // Apply customer filtering with workgroup checks
             var filteredEvents = await ApplyCustomerFilteringAsync(allPlannedEvents.AsQueryable(), salesWorkgroups, canViewAll);
 
@@ -2209,10 +2202,10 @@ namespace SFCDashboard.Controllers
             // Get violation details for view
             var peNumbers = records.Select(p => p.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).ToList();
             var violatingTasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
-            
+
             var currentDate = DateTime.Today;
             var violationDetails = new Dictionary<string, object>();
-            
+
             foreach (var kvp in violatingTasksByPeNumber)
             {
                 var violatingTasks = kvp.Value.Where(t => t.IsOLAViolate).ToList();
@@ -2238,7 +2231,7 @@ namespace SFCDashboard.Controllers
                     };
                 }
             }
-            
+
             ViewBag.ViolationDetails = violationDetails;
 
             ViewData["CanViewAll"] = canViewAll;

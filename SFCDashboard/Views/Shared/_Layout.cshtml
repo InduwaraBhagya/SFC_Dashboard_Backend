@@ -76,28 +76,27 @@
                                     <i class="bi bi-speedometer2"></i> Dashboard
                                 </a>
                             </li>
-                            <li>
+                            <li class="nav-item">
                                 <a class="nav-link" asp-controller="Escalation" asp-action="Index">
                                     <i class="bi bi-exclamation-triangle-fill me-2"></i>Escalations
                                 </a>
                             </li>
-                            <li>
+                            <li class="nav-item">
                                 <a class="nav-link" asp-controller="Project" asp-action="Index">
                                     <i class="bi bi-folder-fill me-2"></i>Projects
                                 </a>
                             </li>
                             @if (currentUser?.UserRole?.HasPermission("ManageCustomerAssignments") == true)
                             {
-                                <li>
-                                    <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment"
-                                        asp-action="Index">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment" asp-action="Index">
                                         <i class="bi bi-person-check-fill me-2"></i>Customer Assignments
                                     </a>
                                 </li>
                             }
                             @if (currentUser?.UserRole?.HasPermission("ManageDrawFiberPerms") == true)
                             {
-                                <li>
+                                <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="DrawFiberPerms" asp-action="Index">
                                         <i class="bi bi-diagram-3-fill me-2"></i>D/F Permissions
                                     </a>
@@ -128,7 +127,8 @@
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="Permissions" asp-action="Index">
+                                            <a class="dropdown-item" asp-area="" asp-controller="Permissions"
+                                                asp-action="Index">
                                                 <i class="bi bi-shield-check me-2"></i> <span>Manage Permissions</span>
                                             </a>
                                         </li>
@@ -437,7 +437,7 @@
 
 
             // Notification functionality
-            let currentFilter = 'unread';
+            let currentReminderFilter = 'unread'; // Define the filter variable
 
             function loadReminders() {
                 fetch(`/PlannedEvents/GetReminders?showAll=${currentReminderFilter === 'all'}`)
@@ -651,10 +651,28 @@
                 });
             });
 
+            // Reset to unread filter when dropdown is opened
+            document.getElementById('reminderDropdown')?.addEventListener('show.bs.dropdown', function () {
+                // Reset filter to unread
+                currentReminderFilter = 'unread';
+
+                // Update button states
+                document.querySelectorAll('#reminderDropdown + .dropdown-menu .btn-group button[data-filter]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector('#reminderDropdown + .dropdown-menu .btn-group button[data-filter="unread"]')?.classList.add('active');
+
+                // Reload reminders with unread filter
+                loadReminders();
+            });
+
             // Make functions globally accessible
             window.markReminderAsRead = markReminderAsRead;
             window.viewPEDetails = viewPEDetails;
             window.showReminderDetails = showReminderDetails;
+
+            // Load reminders on page load to show the unread count immediately
+            loadReminders();
         });
     </script>
 

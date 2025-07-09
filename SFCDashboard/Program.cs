@@ -110,7 +110,7 @@ app.Use(async (context, next) =>
     {
         Directory.CreateDirectory(uploadsDirectory);
     }
-    
+
     await next();
 });
 
