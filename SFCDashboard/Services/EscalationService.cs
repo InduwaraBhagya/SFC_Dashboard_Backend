@@ -14,12 +14,21 @@ namespace SFCDashboard.Services
         private const string ESCALATION_ENABLED_KEY = "EscalationServiceEnabled";
         private const string ESCALATION_CONFIG_CACHE_KEY = "EscalationConfig";
         private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(5);
+        
+        // Add timeout configuration
+        private static readonly TimeSpan DefaultQueryTimeout = TimeSpan.FromSeconds(30);
 
         public EscalationService(ApplicationDbContext context, IMemoryCache cache, ILogger<EscalationService> logger)
         {
             _context = context;
             _cache = cache;
             _logger = logger;
+            
+            // Configure command timeout for this context
+            if (_context.Database.IsRelational())
+            {
+                _context.Database.SetCommandTimeout(DefaultQueryTimeout);
+            }
         }
 
         public async Task<bool> IsEscalationEnabledAsync()
@@ -91,7 +100,7 @@ namespace SFCDashboard.Services
                 // Check if escalation service is enabled
                 if (!await IsEscalationEnabledAsync())
                 {
-                    Console.WriteLine("Escalation service is disabled. Skipping escalation check.");
+                    _logger.LogInformation("Escalation service is disabled. Skipping escalation check.");
                     return;
                 }
 
@@ -102,6 +111,28 @@ namespace SFCDashboard.Services
                     .Where(t => t.TaskStatus != "Completed" && t.IsOLAViolate && !t.EscalationsDisabled)
                     .ToListAsync();
 
+                if (!violatedTasks.Any())
+                {
+                    _logger.LogInformation("No violated tasks found for escalation processing.");
+                    return;
+                }
+
+                // Get all task IDs for batch processing
+                var taskIds = violatedTasks.Select(t => t.Id).ToList();
+                
+                // Batch load existing escalations to avoid N+1 queries
+                var existingEscalations = await _context.Escalations
+                    .Where(e => taskIds.Contains(e.TaskId))
+                    .ToListAsync();
+
+                // Create a lookup dictionary for faster access
+                var escalationLookup = existingEscalations
+                    .GroupBy(e => e.TaskId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                var newEscalations = new List<Escalation>();
+                var currentTime = DateTime.Now;
+
                 foreach (var task in violatedTasks)
                 {
                     // Calculate violation duration - use ViolationStartTime if available, 
@@ -110,12 +141,12 @@ namespace SFCDashboard.Services
                                              task.OLADateTime ?? 
                                              task.ActualTaskCreatedDate ?? 
                                              task.TaskCreatedDate;
-                    var violationDuration = DateTime.Now - violationStart;
+                    var violationDuration = currentTime - violationStart;
                     
                     // Ensure we have a positive violation duration (safety check)
                     if (violationDuration.TotalMinutes < 0)
                     {
-                        Console.WriteLine($"Warning: Negative violation duration for task {task.PENumber}, skipping escalation creation");
+                        _logger.LogWarning("Negative violation duration for task {PENumber}, skipping escalation creation", task.PENumber);
                         continue;
                     }
                     
@@ -123,15 +154,15 @@ namespace SFCDashboard.Services
                     int escalationLevel = DetermineEscalationLevel(violationDuration);
                     
                     // Log the violation details for debugging
-                    Console.WriteLine($"Processing task {task.PENumber}: OLA violated for {violationDuration.TotalHours:F1} hours, escalation level: {escalationLevel}");
+                    _logger.LogDebug("Processing task {PENumber}: OLA violated for {ViolationHours:F1} hours, escalation level: {EscalationLevel}", 
+                        task.PENumber, violationDuration.TotalHours, escalationLevel);
                     
-                    // Check if escalation already exists for this task at this level
-                    var existingEscalation = await _context.Escalations
-                        .FirstOrDefaultAsync(e => e.TaskId == task.Id && e.Level == escalationLevel);
+                    // Check if escalation already exists for this task at this level using our lookup
+                    var taskEscalations = escalationLookup.GetValueOrDefault(task.Id, new List<Escalation>());
+                    var existingEscalation = taskEscalations.FirstOrDefault(e => e.Level == escalationLevel);
                     
                     if (existingEscalation == null)
                     {
-                        
                         // Create new escalation
                         var escalation = new Escalation
                         {
@@ -139,29 +170,43 @@ namespace SFCDashboard.Services
                             Level = escalationLevel, // This will be implicitly converted to int?
                             Title = CreateEscalationTitle(task, escalationLevel),
                             Message = CreateEscalationMessage(task, escalationLevel, violationDuration),
-                            CreatedAt = DateTime.Now,
+                            CreatedAt = currentTime,
                             IsRead = false
                         };
 
-                        _context.Escalations.Add(escalation);
-                        await _context.SaveChangesAsync();
+                        newEscalations.Add(escalation);
 
                         // Log the escalation creation with specific details for Level 1 under 24 hours
                         if (escalationLevel == 1 && violationDuration.TotalHours < 24)
                         {
-                            Console.WriteLine($"Created Level 1 escalation for task {task.PENumber} - OLA violated {violationDuration.TotalHours:F1} hours ago (under 24 hours)");
+                            _logger.LogInformation("Prepared Level 1 escalation for task {PENumber} - OLA violated {ViolationHours:F1} hours ago (under 24 hours)", 
+                                task.PENumber, violationDuration.TotalHours);
                         }
                         else
                         {
-                            Console.WriteLine($"Created Level {escalationLevel} escalation for task {task.PENumber} - OLA violated {violationDuration.TotalDays:F1} days ago");
+                            _logger.LogInformation("Prepared Level {EscalationLevel} escalation for task {PENumber} - OLA violated {ViolationDays:F1} days ago", 
+                                escalationLevel, task.PENumber, violationDuration.TotalDays);
                         }
                     }
+                }
+
+                // Batch insert all new escalations
+                if (newEscalations.Any())
+                {
+                    _context.Escalations.AddRange(newEscalations);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Created {EscalationCount} new escalations in batch", newEscalations.Count);
+                }
+                else
+                {
+                    _logger.LogInformation("No new escalations needed");
                 }
             }
             catch (Exception ex)
             {
                 // Log error
-                Console.WriteLine($"Error in CheckAndCreateEscalationsAsync: {ex.Message}");
+                _logger.LogError(ex, "Error in CheckAndCreateEscalationsAsync: {ErrorMessage}", ex.Message);
+                throw; // Re-throw to allow proper error handling by the caller
             }
         }
 
@@ -360,6 +405,138 @@ namespace SFCDashboard.Services
                 escalation.IsRead = true;
                 await _context.SaveChangesAsync();
             }
+        }
+
+        /// <summary>
+        /// Processes escalations in batches to handle large datasets efficiently.
+        /// This method is particularly useful when dealing with thousands of violated tasks.
+        /// </summary>
+        /// <param name="batchSize">Number of tasks to process in each batch (default: 100)</param>
+        /// <returns>Task representing the async operation</returns>
+        public async Task CheckAndCreateEscalationsBatchAsync(int batchSize = 100)
+        {
+            try
+            {
+                // Check if escalation service is enabled
+                if (!await IsEscalationEnabledAsync())
+                {
+                    _logger.LogInformation("Escalation service is disabled. Skipping escalation check.");
+                    return;
+                }
+
+                _logger.LogInformation("Starting batch escalation processing with batch size: {BatchSize}", batchSize);
+
+                // Get count of violated tasks first
+                var totalCount = await _context.PETasks
+                    .Where(t => t.TaskStatus != "Completed" && t.IsOLAViolate && !t.EscalationsDisabled)
+                    .CountAsync();
+
+                if (totalCount == 0)
+                {
+                    _logger.LogInformation("No violated tasks found for escalation processing.");
+                    return;
+                }
+
+                _logger.LogInformation("Found {TotalCount} violated tasks to process in batches", totalCount);
+
+                var processedCount = 0;
+                var totalNewEscalations = 0;
+
+                // Process in batches
+                while (processedCount < totalCount)
+                {
+                    var batchTasks = await _context.PETasks
+                        .Include(t => t.PlannedEvent)
+                        .Where(t => t.TaskStatus != "Completed" && t.IsOLAViolate && !t.EscalationsDisabled)
+                        .OrderBy(t => t.Id) // Ensure consistent ordering
+                        .Skip(processedCount)
+                        .Take(batchSize)
+                        .ToListAsync();
+
+                    if (!batchTasks.Any())
+                        break;
+
+                    var batchResult = await ProcessTaskBatch(batchTasks);
+                    totalNewEscalations += batchResult;
+                    processedCount += batchTasks.Count;
+
+                    _logger.LogInformation("Processed batch: {ProcessedCount}/{TotalCount} tasks, {BatchEscalations} new escalations in this batch", 
+                        processedCount, totalCount, batchResult);
+                }
+
+                _logger.LogInformation("Batch escalation processing completed. Processed {ProcessedCount} tasks, created {TotalNewEscalations} new escalations", 
+                    processedCount, totalNewEscalations);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in CheckAndCreateEscalationsBatchAsync: {ErrorMessage}", ex.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Processes a batch of tasks and returns the number of new escalations created.
+        /// </summary>
+        /// <param name="tasks">Batch of tasks to process</param>
+        /// <returns>Number of new escalations created</returns>
+        private async Task<int> ProcessTaskBatch(List<PETask> tasks)
+        {
+            var taskIds = tasks.Select(t => t.Id).ToList();
+            
+            // Batch load existing escalations
+            var existingEscalations = await _context.Escalations
+                .Where(e => taskIds.Contains(e.TaskId))
+                .ToListAsync();
+
+            var escalationLookup = existingEscalations
+                .GroupBy(e => e.TaskId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var newEscalations = new List<Escalation>();
+            var currentTime = DateTime.Now;
+
+            foreach (var task in tasks)
+            {
+                var violationStart = task.ViolationStartTime ?? 
+                                   task.OLADateTime ?? 
+                                   task.ActualTaskCreatedDate ?? 
+                                   task.TaskCreatedDate;
+                var violationDuration = currentTime - violationStart;
+                
+                if (violationDuration.TotalMinutes < 0)
+                {
+                    _logger.LogWarning("Negative violation duration for task {PENumber}, skipping", task.PENumber);
+                    continue;
+                }
+                
+                var escalationLevel = DetermineEscalationLevel(violationDuration);
+                var taskEscalations = escalationLookup.GetValueOrDefault(task.Id, new List<Escalation>());
+                var existingEscalation = taskEscalations.FirstOrDefault(e => e.Level == escalationLevel);
+                
+                if (existingEscalation == null)
+                {
+                    var escalation = new Escalation
+                    {
+                        TaskId = task.Id,
+                        Level = escalationLevel,
+                        Title = CreateEscalationTitle(task, escalationLevel),
+                        Message = CreateEscalationMessage(task, escalationLevel, violationDuration),
+                        CreatedAt = currentTime,
+                        IsRead = false
+                    };
+
+                    newEscalations.Add(escalation);
+                }
+            }
+
+            // Batch insert new escalations
+            if (newEscalations.Any())
+            {
+                _context.Escalations.AddRange(newEscalations);
+                await _context.SaveChangesAsync();
+            }
+
+            return newEscalations.Count;
         }
     }
 }
