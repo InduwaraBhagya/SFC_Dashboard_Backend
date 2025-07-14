@@ -65,6 +65,12 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITaskQueueService, TaskQueueingService>();
 
 // Register API Services
+builder.Services.AddHttpClient<PERecordsApiService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(10); // 10 minute timeout for large Excel imports
+});
+builder.Services.AddScoped<PERecordsApiService>();
+builder.Services.AddScoped<SFCDashboard.Controllers.Api.PERecordsApiController>();
 builder.Services.AddScoped<IPlannedEventsApiService, PlannedEventsApiService>();
 builder.Services.AddScoped<IUsersApiService, UsersApiService>();
 builder.Services.AddScoped<IPETasksApiService, PETasksApiService>();
