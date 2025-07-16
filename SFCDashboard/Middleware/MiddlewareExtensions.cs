@@ -6,5 +6,10 @@ namespace SFCDashboard.Middleware
         {
             return builder.UseMiddleware<UserRegistrationMiddleware>();
         }
+
+        public static IApplicationBuilder UseGlobalExceptionHandler(this IApplicationBuilder builder)
+        {
+            return builder.UseMiddleware<GlobalExceptionMiddleware>();
+        }
     }
 }

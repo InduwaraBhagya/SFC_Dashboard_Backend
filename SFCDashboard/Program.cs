@@ -64,6 +64,17 @@ builder.Services.AddRazorPages()
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITaskQueueService, TaskQueueingService>();
 
+// Add CORS configuration for API endpoints
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 // Register API Services
 builder.Services.AddHttpClient<PERecordsApiService>(client =>
 {
@@ -91,12 +102,19 @@ if (!isDevelopment)
     app.UseHsts();
 }
 
+// Add global exception handler for API endpoints
+app.UseGlobalExceptionHandler();
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+
+// Enable CORS
+app.UseCors();
+
 app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
-
+app.UseCors(); // Enable CORS
 
 app.UseUserRegistration();
 

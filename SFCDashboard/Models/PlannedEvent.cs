@@ -182,7 +182,7 @@ namespace SFCDashboard.Models
     public bool HasPendingUrgentRequest => PEStatus == "PENDING_URGENT_CONFIRMATION";
     [Column("CreatedDateFromPE")]
     public DateTime? CreatedDateFromPE { get; set; }
-    public virtual ICollection<Escalation> Escalations { get; set; }
+    public virtual ICollection<Escalation>? Escalations { get; set; }
     public string? UrgentRequestedByName { get; internal set; }
     public int? UrgentRequestedById { get; internal set; }
   }
