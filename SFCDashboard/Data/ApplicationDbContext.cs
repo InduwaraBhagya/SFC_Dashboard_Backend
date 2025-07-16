@@ -34,15 +34,9 @@ namespace SFCDashboard.Data
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectPEMapping> ProjectPEMappings { get; set; }
         public DbSet<Escalation> Escalations { get; set; }
-        public DbSet<SurveyTaskActivity> SurveyTaskActivities { get; set; } // <-- Added DbSet for SurveyTaskActivity
         public DbSet<SystemConfiguration> SystemConfigurations { get; set; }
 
-        public DbSet<UDCategory> UDCategories { get; set; }
-        public DbSet<UDSubCategory> UDSubCategories { get; set; }
-        public DbSet<UDName> UDNames { get; set; }
-        public DbSet<RTOMWeight> RTOMWeights { get; set; }
-        public DbSet<BOQ> BOQs { get; set; }
-        public DbSet<ContractorNotification> ContractorNotifications { get; set; }
+
         public DbSet<CustomerUserAssignment> CustomerUserAssignments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -109,54 +103,7 @@ namespace SFCDashboard.Data
                 .WithMany()
                 .HasForeignKey(e => e.TaskId);
 
-            // Configure BOQ-related foreign key relationships to avoid cascade delete conflicts
-            modelBuilder.Entity<UDSubCategory>()
-                .HasOne(s => s.Category)
-                .WithMany()
-                .HasForeignKey(s => s.CategoryId)
-                .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<UDName>()
-                .HasOne(n => n.Category)
-                .WithMany()
-                .HasForeignKey(n => n.CategoryId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<UDName>()
-                .HasOne(n => n.SubCategory)
-                .WithMany()
-                .HasForeignKey(n => n.SubCategoryId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<BOQ>()
-                .HasOne(b => b.Category)
-                .WithMany()
-                .HasForeignKey(b => b.CategoryId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<BOQ>()
-                .HasOne(b => b.SubCategory)
-                .WithMany()
-                .HasForeignKey(b => b.SubCategoryId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<BOQ>()
-                .HasOne(b => b.UDName)
-                .WithMany()
-                .HasForeignKey(b => b.UDNameId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<BOQ>()
-                .HasOne(b => b.Task)
-                .WithMany()
-                .HasForeignKey(b => b.TaskId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<BOQ>()
-                .HasOne(b => b.CreatedBy)
-                .WithMany()
-                .HasForeignKey(b => b.CreatedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
 
             // Make sure System.Threading.Tasks.Task is not registered as an entity
             modelBuilder.Ignore<System.Threading.Tasks.Task>();
