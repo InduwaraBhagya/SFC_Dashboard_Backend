@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,8 +16,13 @@ using SFCDashboard.Services;
 
 namespace SFCDashboard.Controllers.Api
 {
+    /// <summary>
+    /// API Controller for PE Records management
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public class PERecordsApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -36,9 +42,14 @@ namespace SFCDashboard.Controllers.Api
         /// <summary>
         /// Import PE Records from Excel file
         /// </summary>
-        /// <param name="excelFile">Excel file containing PE Records</param>
+        /// <param name="excelFile">Excel file containing PE Records (.xlsx format)</param>
         /// <returns>Import result with success status and message</returns>
         [HttpPost("import")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit
+        [RequestFormLimits(MultipartBodyLengthLimit = 100 * 1024 * 1024)]
         public async Task<IActionResult> ImportPERecords(IFormFile excelFile)
         {
             try
@@ -49,6 +60,40 @@ namespace SFCDashboard.Controllers.Api
                     return BadRequest(new { 
                         success = false, 
                         message = "Please provide an Excel file to upload." 
+                    });
+                }
+
+                // Validate file size (additional check)
+                const long maxFileSize = 100 * 1024 * 1024; // 100MB
+                if (excelFile.Length > maxFileSize)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "File size exceeds maximum limit of 100MB." 
+                    });
+                }
+
+                // Validate file type more strictly
+                var allowedExtensions = new[] { ".xlsx" };
+                var fileExtension = Path.GetExtension(excelFile.FileName)?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(fileExtension) || !allowedExtensions.Contains(fileExtension))
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "Only .xlsx files are supported." 
+                    });
+                }
+
+                // Validate content type
+                var allowedContentTypes = new[] { 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/octet-stream" // Some browsers send this for xlsx files
+                };
+                if (!allowedContentTypes.Contains(excelFile.ContentType))
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "Invalid file type. Only Excel files (.xlsx) are allowed." 
                     });
                 }
 
@@ -88,12 +133,26 @@ namespace SFCDashboard.Controllers.Api
                                 _logger.LogInformation("Processed {processed} of {total} rows", processedRows, totalRows - 1);
                             }
 
+                            // Validate row has minimum required columns
+                            if (row.CellsUsed().Count() < 7)
+                            {
+                                _logger.LogWarning("Skipping row {rowNumber} - insufficient columns", row.RowNumber());
+                                continue;
+                            }
+
                             var peNumber = row.Cell(7).GetValue<string>();
 
                             // Skip rows with empty PE_NUMBER as they're essential
                             if (string.IsNullOrWhiteSpace(peNumber))
                             {
                                 _logger.LogWarning("Skipping row with empty PE_NUMBER at row {rowNumber}", row.RowNumber());
+                                continue;
+                            }
+
+                            // Validate PE_NUMBER format (basic validation)
+                            if (peNumber.Length > 50) // Assuming max length of 50
+                            {
+                                _logger.LogWarning("Skipping row {rowNumber} - PE_NUMBER too long: {peNumber}", row.RowNumber(), peNumber);
                                 continue;
                             }
 
@@ -250,17 +309,20 @@ namespace SFCDashboard.Controllers.Api
                 _logger.LogError(ex, "Error in ImportPERecords API");
                 return StatusCode(500, new { 
                     success = false, 
-                    message = $"Internal server error: {ex.Message}" 
+                    message = "An internal server error occurred. Please try again later." 
                 });
             }
         }
 
         /// <summary>
-        /// Import PE Records from JSON data (for future use when you get data from external API)
+        /// Import PE Records from JSON data
         /// </summary>
         /// <param name="peRecords">List of PE Records to import</param>
         /// <returns>Import result with success status and message</returns>
         [HttpPost("import-json")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ImportPERecordsFromJson([FromBody] List<PERecord> peRecords)
         {
             try
@@ -273,6 +335,16 @@ namespace SFCDashboard.Controllers.Api
                     });
                 }
 
+                // Validate input size
+                const int maxRecordCount = 100000; // 100k records limit
+                if (peRecords.Count > maxRecordCount)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = $"Maximum {maxRecordCount} records allowed per import." 
+                    });
+                }
+
                 _logger.LogInformation("Starting import of {count} PE records from JSON", peRecords.Count);
 
                 // Validate required fields
@@ -282,6 +354,16 @@ namespace SFCDashboard.Controllers.Api
                     return BadRequest(new { 
                         success = false, 
                         message = $"Found {invalidRecords.Count} records with missing PE_NUMBER." 
+                    });
+                }
+
+                // Validate PE_NUMBER lengths
+                var invalidLengthRecords = peRecords.Where(r => !string.IsNullOrWhiteSpace(r.PE_NUMBER) && r.PE_NUMBER.Length > 50).ToList();
+                if (invalidLengthRecords.Any())
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = $"Found {invalidLengthRecords.Count} records with PE_NUMBER longer than 50 characters." 
                     });
                 }
 
@@ -370,25 +452,61 @@ namespace SFCDashboard.Controllers.Api
                 _logger.LogError(ex, "Error in ImportPERecordsFromJson API");
                 return StatusCode(500, new { 
                     success = false, 
-                    message = $"Internal server error: {ex.Message}" 
+                    message = "An internal server error occurred. Please try again later." 
                 });
             }
         }
 
         /// <summary>
-        /// Get all PE Records
+        /// Get all PE Records with pagination support
         /// </summary>
-        /// <returns>List of all PE Records</returns>
+        /// <param name="request">Pagination request parameters</param>
+        /// <returns>Paginated list of PE Records</returns>
         [HttpGet]
-        public async Task<IActionResult> GetPERecords()
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetPERecords([FromQuery] PERecordsRequest request)
         {
             try
             {
-                var records = await _context.PERecords.ToListAsync();
+                // Validate pagination parameters
+                if (request.Page < 1)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "Page number must be greater than 0." 
+                    });
+                }
+
+                if (request.PageSize < 1 || request.PageSize > 10000)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "Page size must be between 1 and 10000." 
+                    });
+                }
+
+                var totalRecords = await _context.PERecords.CountAsync();
+                var records = await _context.PERecords
+                    .Skip((request.Page - 1) * request.PageSize)
+                    .Take(request.PageSize)
+                    .ToListAsync();
+
+                var totalPages = (int)Math.Ceiling((double)totalRecords / request.PageSize);
+
                 return Ok(new { 
                     success = true, 
                     data = records,
-                    count = records.Count
+                    pagination = new
+                    {
+                        currentPage = request.Page,
+                        pageSize = request.PageSize,
+                        totalRecords = totalRecords,
+                        totalPages = totalPages,
+                        hasNextPage = request.Page < totalPages,
+                        hasPreviousPage = request.Page > 1
+                    }
                 });
             }
             catch (Exception ex)
@@ -396,7 +514,7 @@ namespace SFCDashboard.Controllers.Api
                 _logger.LogError(ex, "Error retrieving PE records");
                 return StatusCode(500, new { 
                     success = false, 
-                    message = $"Error retrieving PE records: {ex.Message}" 
+                    message = "An error occurred while retrieving PE records." 
                 });
             }
         }
@@ -404,8 +522,10 @@ namespace SFCDashboard.Controllers.Api
         /// <summary>
         /// Get database statistics
         /// </summary>
-        /// <returns>Database statistics</returns>
+        /// <returns>Database statistics including record counts</returns>
         [HttpGet("stats")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDatabaseStats()
         {
             try
@@ -428,12 +548,18 @@ namespace SFCDashboard.Controllers.Api
                 _logger.LogError(ex, "Error retrieving database statistics");
                 return StatusCode(500, new { 
                     success = false, 
-                    message = $"Error retrieving statistics: {ex.Message}" 
+                    message = "An error occurred while retrieving database statistics." 
                 });
             }
         }
 
-        // Helper method to safely get cell values
+        /// <summary>
+        /// Safely get cell value with proper error handling and type conversion
+        /// </summary>
+        /// <typeparam name="T">Target type</typeparam>
+        /// <param name="row">Excel row</param>
+        /// <param name="columnIndex">Column index (1-based)</param>
+        /// <returns>Converted value or default</returns>
         private T GetCellValueSafely<T>(IXLRow row, int columnIndex)
         {
             try
@@ -461,5 +587,62 @@ namespace SFCDashboard.Controllers.Api
                 return default(T)!;
             }
         }
+    }
+
+    /// <summary>
+    /// Request model for paginated PE Records retrieval
+    /// </summary>
+    public class PERecordsRequest
+    {
+        /// <summary>
+        /// Page number (1-based)
+        /// </summary>
+        [Range(1, int.MaxValue, ErrorMessage = "Page number must be greater than 0")]
+        public int Page { get; set; } = 1;
+
+        /// <summary>
+        /// Number of records per page
+        /// </summary>
+        [Range(1, 10000, ErrorMessage = "Page size must be between 1 and 10000")]
+        public int PageSize { get; set; } = 1000;
+    }
+
+    /// <summary>
+    /// Response model for API operations
+    /// </summary>
+    public class ApiResponse<T>
+    {
+        /// <summary>
+        /// Indicates if the operation was successful
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// Response message
+        /// </summary>
+        public string Message { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Response data
+        /// </summary>
+        public T? Data { get; set; }
+
+        /// <summary>
+        /// Pagination information (if applicable)
+        /// </summary>
+        public PaginationInfo? Pagination { get; set; }
+    }
+
+    /// <summary>
+    /// Pagination information
+    /// </summary>
+    public class PaginationInfo
+    {
+        public int CurrentPage { get; set; }
+        public int PageSize { get; set; }
+        public int TotalRecords { get; set; }
+        public int TotalPages { get; set; }
+        public bool HasNextPage { get; set; }
+        public bool HasPreviousPage { get; set; }
     }
 }

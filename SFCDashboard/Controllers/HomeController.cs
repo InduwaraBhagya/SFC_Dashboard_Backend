@@ -22,7 +22,7 @@ namespace SFCDashboard.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        public IActionResult Unauthorized()
+        public new IActionResult Unauthorized()
         {
             var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
             ViewData["ServiceId"] = serviceId;

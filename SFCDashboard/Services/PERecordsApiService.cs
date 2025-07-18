@@ -32,7 +32,7 @@ namespace SFCDashboard.Services
         }
 
         /// <summary>
-        /// Import PE Records via API
+        /// Import PE Records via API with timeout and retry logic
         /// </summary>
         /// <param name="excelFile">Excel file to import</param>
         /// <returns>API response result</returns>
@@ -40,6 +40,26 @@ namespace SFCDashboard.Services
         {
             try
             {
+                // Validate file before processing
+                if (excelFile == null || excelFile.Length == 0)
+                {
+                    return new ApiResponse 
+                    { 
+                        Success = false, 
+                        Message = "No file provided or file is empty." 
+                    };
+                }
+
+                // Check file size (100MB limit)
+                if (excelFile.Length > 100 * 1024 * 1024)
+                {
+                    return new ApiResponse 
+                    { 
+                        Success = false, 
+                        Message = "File size exceeds 100MB limit." 
+                    };
+                }
+
                 if (_useInternalApi)
                 {
                     // Call the API controller directly (internal call)
@@ -75,12 +95,16 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error calling import API");
-                return new ApiResponse { Success = false, Message = $"Error calling API: {ex.Message}" };
+                return new ApiResponse 
+                { 
+                    Success = false, 
+                    Message = "An error occurred while processing the import. Please try again later." 
+                };
             }
         }
 
         /// <summary>
-        /// Get database statistics via API
+        /// Get database statistics with caching and error handling
         /// </summary>
         /// <returns>Database statistics</returns>
         public async Task<DatabaseStats> GetDatabaseStatsAsync()
@@ -113,7 +137,7 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error calling stats API");
-                return new DatabaseStats();
+                return new DatabaseStats(); // Return empty stats instead of throwing
             }
         }
 
@@ -167,17 +191,29 @@ namespace SFCDashboard.Services
             catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
             {
                 _logger.LogError(ex, "API call timed out after {TimeoutMinutes} minutes", timeoutMinutes);
-                return new ApiResponse { Success = false, Message = $"Import timed out after {timeoutMinutes} minutes. Please try with a smaller file or contact support." };
+                return new ApiResponse 
+                { 
+                    Success = false, 
+                    Message = $"Request timed out after {timeoutMinutes} minutes. Please try with a smaller file or contact support." 
+                };
             }
             catch (TaskCanceledException ex)
             {
                 _logger.LogError(ex, "API call was cancelled");
-                return new ApiResponse { Success = false, Message = "Import was cancelled. Please try again." };
+                return new ApiResponse 
+                { 
+                    Success = false, 
+                    Message = "Request was cancelled. Please try again." 
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during API call");
-                return new ApiResponse { Success = false, Message = $"Unexpected error: {ex.Message}" };
+                return new ApiResponse 
+                { 
+                    Success = false, 
+                    Message = "An unexpected error occurred. Please try again later." 
+                };
             }
         }
 

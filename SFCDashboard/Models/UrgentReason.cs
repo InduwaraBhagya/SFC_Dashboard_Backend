@@ -14,13 +14,13 @@ namespace SFCDB.Models
         public int PERecordID { get; set; }
 
         [ForeignKey("PERecordID")]
-        public virtual PERecord PERecord { get; set; }
+        public virtual required PERecord PERecord { get; set; }
 
-        public string Reason { get; set; }
+        public required string Reason { get; set; }
 
         public int Priority { get; set; }
 
-        public string RequestedBy { get; set; }
+        public required string RequestedBy { get; set; }
 
         public DateTime RequestedDate { get; set; }
     }
