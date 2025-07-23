@@ -9,7 +9,7 @@ using SFCDashboard.Data;
 using SFCDashboard.Services;
 using SFCDashboard.Controllers;
 using SFCDashboard.Middleware;
-
+using SFCDashboard.ApiClients;
 using Microsoft.Extensions.DependencyInjection;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using OfficeOpenXml; // Add EPPlus namespace
@@ -19,6 +19,26 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure EPPlus license globally
 
 builder.Services.AddControllersWithViews();
+
+// Configure HttpClient for API calls
+var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5292";
+builder.Services.AddHttpClient<IPlannedEventsApiClient, PlannedEventsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IPETasksApiClient, PETasksApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IUsersApiClient, UsersApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
