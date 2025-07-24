@@ -1,8 +1,8 @@
 using SFCDashboard.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.ApiClients
 {
-    public interface ITaskQueueService
+    public interface ITaskQueueApiClient
     {
         Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int? year = null, int take = 20);
         Task<TaskQueueItem?> GetNextTaskAsync(int? workgroupId = null, int? year = null);

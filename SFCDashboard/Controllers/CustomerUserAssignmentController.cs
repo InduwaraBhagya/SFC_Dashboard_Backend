@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Controllers;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
@@ -10,7 +11,7 @@ namespace SFCDashboard.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public CustomerUserAssignmentController(ApplicationDbContext context) : base(context)
+        public CustomerUserAssignmentController(ApplicationDbContext context, IPermissionsApiClient permissionsApi) : base(permissionsApi)
         {
             _context = context;
         }

@@ -13,12 +13,16 @@ namespace SFCDashboard.Middleware
             _next = next;
         }
 
-        public async Task InvokeAsync(HttpContext context, ApplicationDbContext dbContext)
+        public async Task InvokeAsync(HttpContext context)
         {
             if (context.User.Identity?.IsAuthenticated == true)
             {
                 var serviceId = ExtractServiceId(context.User.Identity.Name ?? string.Empty);
                 var azureAdName = context.User.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
+
+                // Create a scope to get the DbContext
+                using var scope = context.RequestServices.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
                 // First check if user exists in database
                 var user = await dbContext.Users

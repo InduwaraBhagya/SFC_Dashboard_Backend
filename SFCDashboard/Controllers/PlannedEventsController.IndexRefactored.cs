@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.Models;
-using SFCDashboard.Services;
 
 namespace SFCDashboard.Controllers
 {
@@ -86,8 +85,8 @@ namespace SFCDashboard.Controllers
                 var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
                 ViewBag.UserWorkgroupId = userWorkgroupId;
 
-                // Get next task using existing task queue service
-                var nextTaskList = await _taskQueueService.GetPrioritizedTasksAsync(
+                // Get next task using API client
+                var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(
                     workgroupId: userWorkgroupId,
                     take: 1);
                 ViewBag.NextTask = nextTaskList;
@@ -152,17 +151,11 @@ namespace SFCDashboard.Controllers
                     };
 
                     // Use API service for search
-                    plannedEvents = await _plannedEventsApi.SearchPlannedEventsAsync(searchType, searchValue, userWorkgroupNames, hasDrawFiberAccess);
-
-                    // Create paginated list
                     int pageSize = 10;
-                    var paginatedList = await PaginatedList<PlannedEvent>.CreateAsync(
-                        plannedEvents.AsQueryable(),
-                        pageIndex,
-                        pageSize);
-
+                    var searchResult = await _plannedEventsApi.SearchPlannedEventsAsync(searchType, searchValue, string.Join(",", userWorkgroupNames), hasDrawFiberAccess, pageIndex, pageSize);
+                    
                     // Get PE tasks for the paginated events using API service
-                    var peNumbers = paginatedList.Select(pe => pe.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).Cast<string>().ToList();
+                    var peNumbers = searchResult.Select(pe => pe.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).Cast<string>().ToList();
                     if (peNumbers.Any())
                     {
                         var allTasks = await _peTasksApi.GetPETasksByPENumbersAsync(peNumbers);
@@ -176,7 +169,7 @@ namespace SFCDashboard.Controllers
                         ViewBag.PETasksByPeNumber = new Dictionary<string, IEnumerable<PETask>>();
                     }
 
-                    return View(paginatedList);
+                    return View(searchResult);
                 }
                 else
                 {

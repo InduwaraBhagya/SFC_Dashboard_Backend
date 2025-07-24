@@ -24,7 +24,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync("api/petasks");
+                var response = await _httpClient.GetAsync("api/petasksapi");
                 response.EnsureSuccessStatusCode();
                 
                 var json = await response.Content.ReadAsStringAsync();
@@ -43,7 +43,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/petasks/{id}");
+                var response = await _httpClient.GetAsync($"api/petasksapi/{id}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return null;
@@ -67,7 +67,7 @@ namespace SFCDashboard.ApiClients
                 var json = JsonSerializer.Serialize(peTask, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                var response = await _httpClient.PostAsync("api/petasks", content);
+                var response = await _httpClient.PostAsync("api/petasksapi", content);
                 response.EnsureSuccessStatusCode();
                 
                 var responseJson = await response.Content.ReadAsStringAsync();
@@ -87,7 +87,7 @@ namespace SFCDashboard.ApiClients
                 var json = JsonSerializer.Serialize(peTask, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                var response = await _httpClient.PutAsync($"api/petasks/{peTask.Id}", content);
+                var response = await _httpClient.PutAsync($"api/petasksapi/{peTask.Id}", content);
                 response.EnsureSuccessStatusCode();
                 
                 var responseJson = await response.Content.ReadAsStringAsync();
@@ -104,7 +104,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.DeleteAsync($"api/petasks/{id}");
+                var response = await _httpClient.DeleteAsync($"api/petasksapi/{id}");
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
@@ -118,7 +118,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/petasks/by-pe/{Uri.EscapeDataString(peNumber)}");
+                var response = await _httpClient.GetAsync($"api/petasksapi/by-pe-number/{Uri.EscapeDataString(peNumber)}");
                 response.EnsureSuccessStatusCode();
                 
                 var json = await response.Content.ReadAsStringAsync();
@@ -128,7 +128,246 @@ namespace SFCDashboard.ApiClients
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching PE tasks for PE number {PENumber} from API", peNumber);
+                _logger.LogError(ex, "Error fetching PE tasks by PE number {PENumber} from API", peNumber);
+                return new List<PETask>();
+            }
+        }
+
+        public async Task<IEnumerable<PETask>> GetUrgentRequestsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/petasksapi/urgent-requests");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
+                
+                return tasks ?? new List<PETask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching urgent requests from API");
+                return new List<PETask>();
+            }
+        }
+
+        public async Task<IEnumerable<PETask>> GetOLAViolationsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/petasksapi/ola-violations");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
+                
+                return tasks ?? new List<PETask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching OLA violations from API");
+                return new List<PETask>();
+            }
+        }
+
+        public async Task<IEnumerable<PETask>> GetUrgentTasksAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/petasksapi/urgent-tasks");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
+                
+                return tasks ?? new List<PETask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching urgent tasks from API");
+                return new List<PETask>();
+            }
+        }
+
+        public async Task MarkAsUrgentAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/petasksapi/{id}/mark-urgent", null);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking PE task {Id} as urgent via API", id);
+                throw;
+            }
+        }
+
+        public async Task ProcessUrgentRequestAsync(int id, string urgentReason)
+        {
+            try
+            {
+                var requestData = new { urgentReason };
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync($"api/petasksapi/{id}/process-urgent", content);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing urgent request for PE task {Id} via API", id);
+                throw;
+            }
+        }
+
+        public async Task CompleteViolatedTaskAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/petasksapi/{id}/complete-violated", null);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error completing violated PE task {Id} via API", id);
+                throw;
+            }
+        }
+
+        public async Task RemoveUrgentStatusAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/petasksapi/{id}/remove-urgent", null);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing urgent status from PE task {Id} via API", id);
+                throw;
+            }
+        }
+
+        public async Task UpdateEstimatedTimeAsync(int id, DateTime estimatedTime)
+        {
+            try
+            {
+                var requestData = new { estimatedTime };
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PutAsync($"api/petasksapi/{id}/estimated-time", content);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating estimated time for PE task {Id} via API", id);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<PETask>> GetPendingTaskRequestsAsync(int limit = 5)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/petasksapi/pending-task-requests?limit={limit}");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching pending task requests via API");
+                return new List<PETask>();
+            }
+        }
+
+        public async Task<Dictionary<string, IEnumerable<PETask>>> GetTasksByPeNumbersAsync(List<string> peNumbers)
+        {
+            try
+            {
+                var requestData = new { peNumbers };
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("api/petasksapi/tasks-by-pe-numbers", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<Dictionary<string, IEnumerable<PETask>>>(responseJson, _jsonOptions) ?? 
+                       new Dictionary<string, IEnumerable<PETask>>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching tasks by PE numbers via API");
+                return new Dictionary<string, IEnumerable<PETask>>();
+            }
+        }
+
+        public async Task<List<string>> GetOLAViolatingPENumbersAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/petasksapi/ola-violating-pe-numbers");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<string>>(json, _jsonOptions) ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching OLA violating PE numbers via API");
+                return new List<string>();
+            }
+        }
+
+        public async Task<IEnumerable<PETask>> GetPETasksByPENumberAsync(string peNumber)
+        {
+            return await GetByPENumberAsync(peNumber);
+        }
+
+        public async Task<IEnumerable<PETask>> GetPETasksByPENumbersAsync(List<string> peNumbers)
+        {
+            try
+            {
+                var requestData = new { peNumbers };
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("api/petasksapi/pe-tasks-by-pe-numbers", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<IEnumerable<PETask>>(responseJson, _jsonOptions) ?? new List<PETask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching PE tasks by PE numbers via API");
+                return new List<PETask>();
+            }
+        }
+
+        public async Task<PETask> UpdatePETaskAsync(PETask peTask)
+        {
+            return await UpdateAsync(peTask);
+        }
+
+        public async Task<IEnumerable<PETask>> GetPendingUrgentTaskRequestsAsync(int limit = 5)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/petasksapi/pending-urgent-task-requests?limit={limit}");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching pending urgent task requests via API");
                 return new List<PETask>();
             }
         }

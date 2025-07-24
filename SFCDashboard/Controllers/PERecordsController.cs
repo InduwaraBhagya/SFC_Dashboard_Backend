@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
 using SFCDB.Models;
-using SFCDashboard.Services;
+using SFCDashboard.ApiClients;
 
 namespace SFCDB.Controllers
 {
@@ -18,16 +18,16 @@ namespace SFCDB.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PERecordsController> _logger;
-        private readonly PERecordsApiService _apiService;
+        private readonly IPERecordsApiClient _apiClient;
 
         public PERecordsController(
             ApplicationDbContext context,
             ILogger<PERecordsController> logger,
-            PERecordsApiService apiService)
+            IPERecordsApiClient apiClient)
         {
             _context = context;
             _logger = logger;
-            _apiService = apiService;
+            _apiClient = apiClient;
         }
 
         // GET: PERecords
@@ -43,11 +43,22 @@ namespace SFCDB.Controllers
             try
             {
                 // Get diagnostic info from API
-                var stats = await _apiService.GetDatabaseStatsAsync();
-                ViewBag.PERecordsCount = stats.PeRecordsCount;
-                ViewBag.PlannedEventsCount = stats.PlannedEventsCount;
-                ViewBag.PETasksCount = stats.PeTasksCount;
-                ViewBag.TaskTemplatesCount = stats.TaskTemplatesCount;
+                var statsResponse = await _apiClient.GetDatabaseStatsAsync();
+                if (statsResponse.Success && statsResponse.Data != null)
+                {
+                    var stats = statsResponse.Data;
+                    ViewBag.PERecordsCount = stats.PeRecordsCount;
+                    ViewBag.PlannedEventsCount = stats.PlannedEventsCount;
+                    ViewBag.PETasksCount = stats.PeTasksCount;
+                    ViewBag.TaskTemplatesCount = stats.TaskTemplatesCount;
+                }
+                else
+                {
+                    ViewBag.PERecordsCount = 0;
+                    ViewBag.PlannedEventsCount = 0;
+                    ViewBag.PETasksCount = 0;
+                    ViewBag.TaskTemplatesCount = 0;
+                }
             }
             catch (Exception ex)
             {
@@ -83,20 +94,12 @@ namespace SFCDB.Controllers
             {
                 _logger.LogInformation("Starting import via API for Excel file: {fileName}", excelFile.FileName);
                 
-                // Call the API service to import the Excel file
-                var result = await _apiService.ImportPERecordsAsync(excelFile);
+                // Call the API client to import the Excel file
+                var result = await _apiClient.ImportPERecordsAsync(excelFile);
                 
                 if (result.Success)
                 {
-                    if (result.SyncCompleted)
-                    {
-                        TempData["Message"] = $"Successfully replaced all records with {result.RecordCount} new records from Excel and synced to all related tables. " +
-                            $"PlannedEvents: {result.PlannedEventCount}, PETasks: {result.PeTaskCount}";
-                    }
-                    else
-                    {
-                        TempData["Message"] = result.Message;
-                    }
+                    TempData["Message"] = result.Message;
                 }
                 else
                 {

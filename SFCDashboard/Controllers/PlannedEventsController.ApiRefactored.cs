@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.Models;
-using SFCDashboard.Services;
 
 namespace SFCDashboard.Controllers
 {
@@ -10,38 +9,38 @@ namespace SFCDashboard.Controllers
         // Refactored helper methods using API services
         private async Task<(List<int> userWorkgroupIds, List<string> userWorkgroupNames, bool canViewAll)> GetCurrentUserWorkGroupsAsync()
         {
-            var userIdentity = User.Identity?.Name;
-            if (string.IsNullOrEmpty(userIdentity))
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
                 return (new List<int>(), new List<string>(), false);
 
-            return await _usersApi.GetCurrentUserWorkGroupsAsync(userIdentity);
+            return await _usersApi.GetCurrentUserWorkGroupsAsync(serviceId);
         }
 
         private async Task<(int userWorkgroupId, string userWorkgroupName)> GetCurrentUserWorkGroupAsync()
         {
-            var userIdentity = User.Identity?.Name;
-            if (string.IsNullOrEmpty(userIdentity))
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
                 return (0, string.Empty);
 
-            return await _usersApi.GetCurrentUserWorkGroupAsync(userIdentity);
+            return await _usersApi.GetCurrentUserWorkGroupAsync(serviceId);
         }
 
         private async Task<bool> HasMultipleWorkgroups()
         {
-            var userIdentity = User.Identity?.Name;
-            if (string.IsNullOrEmpty(userIdentity))
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
                 return false;
 
-            return await _usersApi.HasMultipleWorkgroupsAsync(userIdentity);
+            return await _usersApi.HasMultipleWorkgroupsAsync(serviceId);
         }
 
         private async Task<bool> IsUserInSalesWorkgroup()
         {
-            var userIdentity = User.Identity?.Name;
-            if (string.IsNullOrEmpty(userIdentity))
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
                 return false;
 
-            return await _usersApi.IsUserInSalesWorkgroupAsync(userIdentity);
+            return await _usersApi.IsUserInSalesWorkgroupAsync(serviceId);
         }
 
         private async Task<bool> HasDrawFiberAccessAsync(int userId)
@@ -57,11 +56,11 @@ namespace SFCDashboard.Controllers
 
         private async Task<(List<string> salesWorkgroups, bool canViewAll)> GetUserSalesWorkgroups()
         {
-            var userIdentity = User.Identity?.Name;
-            if (string.IsNullOrEmpty(userIdentity))
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
                 return (new List<string>(), false);
 
-            return await _usersApi.GetUserSalesWorkgroupsAsync(userIdentity);
+            return await _usersApi.GetUserSalesWorkgroupsAsync(serviceId);
         }
 
         private string ExtractServiceId(string email)
@@ -196,7 +195,10 @@ namespace SFCDashboard.Controllers
 
             // Get related PE tasks for this event
             var peTasks = (await _peTasksApi.GetPETasksByPENumberAsync(plannedEvent.PeNumber ?? "")).ToList();
-            SetTaskDatesFromPeNumber(plannedEvent.PeNumber, peTasks);
+            if (!string.IsNullOrEmpty(plannedEvent.PeNumber))
+            {
+                SetTaskDatesFromPeNumber(plannedEvent.PeNumber, peTasks);
+            }
             ViewBag.PETasks = peTasks;
 
             // Find PETaskListId for the current task name

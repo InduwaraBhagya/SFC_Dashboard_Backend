@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
@@ -10,7 +11,7 @@ namespace SFCDashboard.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PermissionsController> _logger;
 
-        public PermissionsController(ApplicationDbContext context, ILogger<PermissionsController> logger) : base(context)
+        public PermissionsController(ApplicationDbContext context, ILogger<PermissionsController> logger, IPermissionsApiClient permissionsApi) : base(permissionsApi)
         {
             _context = context;
             _logger = logger;

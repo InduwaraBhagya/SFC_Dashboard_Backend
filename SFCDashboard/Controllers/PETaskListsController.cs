@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
@@ -14,7 +15,7 @@ namespace SFCDashboard.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public PETaskListsController(ApplicationDbContext context) : base(context)
+        public PETaskListsController(ApplicationDbContext context, IPermissionsApiClient permissionsApi) : base(permissionsApi)
         {
             _context = context;
         }

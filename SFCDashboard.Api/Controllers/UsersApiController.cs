@@ -11,23 +11,22 @@ namespace SFCDashboard.Api.Controllers
     /// API Controller for Users management
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/users")]
     [Produces("application/json")]
-    [Authorize]
     public class UsersApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UsersApiController> _logger;
-        private readonly IUsersApiService _usersService;
+        private readonly IWebHostEnvironment _environment;
 
         public UsersApiController(
             ApplicationDbContext context,
             ILogger<UsersApiController> logger,
-            IUsersApiService usersService)
+            IWebHostEnvironment environment)
         {
             _context = context;
             _logger = logger;
-            _usersService = usersService;
+            _environment = environment;
         }
 
         /// <summary>
@@ -36,6 +35,12 @@ namespace SFCDashboard.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SystemUser>>> GetUsers()
         {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
             try
             {
                 var users = await _context.Users
@@ -55,6 +60,12 @@ namespace SFCDashboard.Api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<SystemUser>> GetUser(int id)
         {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
             try
             {
                 var user = await _context.Users
@@ -77,18 +88,51 @@ namespace SFCDashboard.Api.Controllers
         /// Get user by service ID
         /// </summary>
         [HttpGet("by-serviceid/{serviceId}")]
-        public async Task<ActionResult<SystemUser>> GetUserByServiceId(string serviceId)
+        public async Task<ActionResult<object>> GetUserByServiceId(string serviceId)
         {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
             try
             {
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+                // Query and project to DTO immediately to avoid circular references
+                var userDto = await _context.Users
+                    .Where(u => u.ServiceId == serviceId)
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.Name,
+                        u.ServiceId,
+                        u.UserRoleId,
+                        UserRole = u.UserRole == null ? null : new
+                        {
+                            u.UserRole.Id,
+                            u.UserRole.Name
+                        },
+                        UserWorkGroups = u.UserWorkGroups.Select(uwg => new
+                        {
+                            uwg.Id,
+                            uwg.WorkGroupId,
+                            uwg.SystemUserId,
+                            WorkGroup = uwg.WorkGroup == null ? null : new
+                            {
+                                uwg.WorkGroup.Id,
+                                uwg.WorkGroup.Name
+                            }
+                        }).ToList()
+                    })
+                    .FirstOrDefaultAsync();
 
-                if (user == null)
+                if (userDto == null)
                 {
-                    return NotFound();
+                    _logger.LogWarning("User with ServiceId '{ServiceId}' not found", serviceId);
+                    return NotFound($"User with ServiceId '{serviceId}' not found");
                 }
-                return Ok(user);
+                
+                return Ok(userDto);
             }
             catch (Exception ex)
             {
@@ -98,11 +142,235 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Debug endpoint to list all users and their ServiceIds
+        /// </summary>
+        [HttpGet("debug/all-serviceids")]
+        public async Task<ActionResult> GetAllServiceIds()
+        {
+            try
+            {
+                var users = await _context.Users
+                    .Select(u => new { u.Id, u.ServiceId, u.Name })
+                    .ToListAsync();
+                
+                return Ok(new 
+                { 
+                    TotalCount = users.Count,
+                    Users = users,
+                    Message = $"Found {users.Count} users in database"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all users");
+                return StatusCode(500, "An error occurred while retrieving users");
+            }
+        }
+
+        /// <summary>
+        /// Get user workgroups by service ID
+        /// </summary>
+        [HttpGet("current-user-workgroups/{serviceId}")]
+        public async Task<ActionResult<IEnumerable<int>>> GetCurrentUserWorkgroups(string serviceId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting workgroups for user with service ID: {serviceId}", serviceId);
+                var user = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+
+                if (user == null)
+                {
+                    return NotFound($"User with service ID {serviceId} not found");
+                }
+
+                var workgroupIds = user.UserWorkGroups.Select(uwg => uwg.WorkGroupId).ToList();
+                return Ok(workgroupIds);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting workgroups for user with service ID: {serviceId}", serviceId);
+                return StatusCode(500, "An error occurred while retrieving user workgroups");
+            }
+        }
+
+        /// <summary>
+        /// Check if user is in sales workgroup by service ID
+        /// </summary>
+        [HttpGet("is-in-sales-workgroup/{serviceId}")]
+        public async Task<ActionResult<bool>> IsInSalesWorkgroup(string serviceId)
+        {
+            try
+            {
+                _logger.LogInformation("Checking if user with service ID {serviceId} is in sales workgroup", serviceId);
+                var user = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+
+                if (user == null)
+                {
+                    return NotFound($"User with service ID {serviceId} not found");
+                }
+
+                var isInSales = user.UserWorkGroups.Any(uwg => 
+                    uwg.WorkGroup != null && uwg.WorkGroup.Name.ToLower().Contains("sales"));
+                return Ok(isInSales);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking sales workgroup for user with service ID: {serviceId}", serviceId);
+                return StatusCode(500, "An error occurred while checking sales workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get user ID by service ID
+        /// </summary>
+        [HttpGet("current-user-id/{serviceId}")]
+        public async Task<ActionResult<int>> GetCurrentUserId(string serviceId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting user ID for service ID: {serviceId}", serviceId);
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+
+                if (user == null)
+                {
+                    return NotFound($"User with service ID {serviceId} not found");
+                }
+
+                return Ok(user.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user ID for service ID: {serviceId}", serviceId);
+                return StatusCode(500, "An error occurred while retrieving user ID");
+            }
+        }
+
+        /// <summary>
+        /// Get user with role and workgroups by ID
+        /// </summary>
+        [HttpGet("{id}/with-role-and-workgroups")]
+        public async Task<ActionResult> GetUserWithRoleAndWorkgroups(int id)
+        {
+            try
+            {
+                _logger.LogInformation("Getting user with role and workgroups for ID: {id}", id);
+               
+                // First, let's check what workgroups exist for this user in the database
+                var userWorkgroups = await _context.UserWorkGroups
+                    .Include(uwg => uwg.WorkGroup)
+                    .Where(uwg => uwg.SystemUserId == id)
+                    .ToListAsync();
+                
+                _logger.LogInformation("Direct query: User {id} has {count} workgroup records: {workgroups}", 
+                    id, userWorkgroups.Count, 
+                    string.Join(", ", userWorkgroups.Select(uwg => $"WG:{uwg.WorkGroupId}({uwg.WorkGroup?.Name})")));
+
+                var user = await _context.Users
+                    .Include(u => u.UserRole)
+                        .ThenInclude(ur => ur.RolePermissions)
+                            .ThenInclude(rp => rp.Permission)
+                    .Include(u => u.UserWorkGroups)
+                        .ThenInclude(uwg => uwg.WorkGroup)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    return NotFound($"User with ID {id} not found");
+                }
+
+                _logger.LogInformation("User {id} entity has {workgroupCount} workgroup assignments loaded", 
+                    id, user.UserWorkGroups?.Count ?? 0);
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user with role and workgroups for ID: {id}", id);
+                return StatusCode(500, "An error occurred while retrieving user details");
+            }
+        }
+
+        /// <summary>
+        /// Check if user has draw fiber access by ID
+        /// </summary>
+        [HttpGet("{id}/has-draw-fiber-access")]
+        public async Task<ActionResult<bool>> HasDrawFiberAccess(int id)
+        {
+            try
+            {
+                _logger.LogInformation("Checking draw fiber access for user ID: {id}", id);
+                var user = await _context.Users
+                    .Include(u => u.UserRole)
+                    .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    return NotFound($"User with ID {id} not found");
+                }
+
+                // Check if user has draw fiber access based on role or workgroup
+                // This logic might need to be adjusted based on your business rules
+                var hasAccess = user.UserRole?.Name?.ToLower().Contains("admin") == true ||
+                               user.UserRole?.Name?.ToLower().Contains("engineer") == true ||
+                               user.UserWorkGroups.Any(uwg => uwg.WorkGroup?.Name?.ToLower().Contains("fiber") == true);
+
+                return Ok(hasAccess);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking draw fiber access for user ID: {id}", id);
+                return StatusCode(500, "An error occurred while checking draw fiber access");
+            }
+        }
+
+        /// <summary>
+        /// Get user workgroup by service ID (single workgroup)
+        /// </summary>
+        [HttpGet("current-user-workgroup/{serviceId}")]
+        public async Task<ActionResult<int?>> GetCurrentUserWorkgroup(string serviceId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting primary workgroup for user with service ID: {serviceId}", serviceId);
+                var user = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+
+                if (user == null)
+                {
+                    return NotFound($"User with service ID {serviceId} not found");
+                }
+
+                var primaryWorkgroupId = user.UserWorkGroups.FirstOrDefault()?.WorkGroupId;
+                return Ok(primaryWorkgroupId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting primary workgroup for user with service ID: {serviceId}", serviceId);
+                return StatusCode(500, "An error occurred while retrieving user workgroup");
+            }
+        }
+
+        /// <summary>
         /// Create a new user
         /// </summary>
         [HttpPost]
         public async Task<ActionResult<SystemUser>> CreateUser(SystemUser user)
         {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
             try
             {
                 _context.Users.Add(user);
@@ -123,6 +391,12 @@ namespace SFCDashboard.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, SystemUser user)
         {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
             if (id != user.Id)
             {
                 return BadRequest();
@@ -155,6 +429,12 @@ namespace SFCDashboard.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
             try
             {
                 var user = await _context.Users.FindAsync(id);

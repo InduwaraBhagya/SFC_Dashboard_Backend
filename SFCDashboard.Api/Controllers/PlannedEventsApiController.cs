@@ -73,6 +73,30 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get pending urgent requests
+        /// </summary>
+        [HttpGet("pending-urgent-requests")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetPendingUrgentRequests([FromQuery] int limit = 10)
+        {
+            try
+            {
+                _logger.LogInformation("Getting pending urgent requests with limit: {limit}", limit);
+                var urgentRequests = await _context.PlannedEvents
+                    .Where(pe => pe.UrgentRequestedById != null && pe.UrgentRequestedById > 0)
+                    .OrderByDescending(pe => pe.PECreatedDate)
+                    .Take(limit)
+                    .ToListAsync();
+
+                return Ok(urgentRequests);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting pending urgent requests");
+                return StatusCode(500, "An error occurred while retrieving pending urgent requests");
+            }
+        }
+
+        /// <summary>
         /// Create a new planned event
         /// </summary>
         [HttpPost]

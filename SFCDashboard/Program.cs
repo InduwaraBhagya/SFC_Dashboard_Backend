@@ -6,7 +6,6 @@ using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
-using SFCDashboard.Services;
 using SFCDashboard.Controllers;
 using SFCDashboard.Middleware;
 using SFCDashboard.ApiClients;
@@ -19,6 +18,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure EPPlus license globally
 
 builder.Services.AddControllersWithViews();
+
+// Add database context
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
+
+// Add memory cache
+builder.Services.AddMemoryCache();
 
 // Configure HttpClient for API calls
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5292";
@@ -40,18 +47,66 @@ builder.Services.AddHttpClient<IUsersApiClient, UsersApiClient>(client =>
     client.Timeout = TimeSpan.FromMinutes(5);
 });
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-           .EnableSensitiveDataLogging(builder.Environment.IsDevelopment())); // Add this line
+builder.Services.AddHttpClient<IPermissionsApiClient, PermissionsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 
-// First register PERecordSyncService as a singleton so it can be retrieved
-builder.Services.AddSingleton<PERecordSyncService>();
-// Then register it as a hosted service using the same instance
-builder.Services.AddHostedService(provider => provider.GetRequiredService<PERecordSyncService>());
-builder.Services.AddHostedService<OLAViolationService>();
-builder.Services.AddHostedService<HoldTaskReminderService>(); // Add this line
-builder.Services.AddScoped<EscalationService>();
-builder.Services.AddHostedService<EscalationBackgroundService>();
+builder.Services.AddHttpClient<IPERecordsApiClient, PERecordsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IEscalationsApiClient, EscalationsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IPETaskListsApiClient, PETaskListsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IPEIssuesApiClient, PEIssuesApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IPEIssueResolutionsApiClient, PEIssueResolutionsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IWorkGroupsApiClient, WorkGroupsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IAreaNetworkEngineersApiClient, AreaNetworkEngineersApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<ICustomerUserAssignmentsApiClient, CustomerUserAssignmentsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<ITaskQueueApiClient, TaskQueueApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
 // Load Azure AD Configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
 var isDevelopment = builder.Environment.IsDevelopment();
@@ -82,36 +137,6 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddRazorPages()
     .AddMicrosoftIdentityUI();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ITaskQueueService, TaskQueueingService>();
-
-// Add CORS configuration for API endpoints
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(builder =>
-    {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
-});
-
-// Register API Services
-builder.Services.AddHttpClient<PERecordsApiService>(client =>
-{
-    client.Timeout = TimeSpan.FromMinutes(10); // 10 minute timeout for large Excel imports
-});
-builder.Services.AddScoped<PERecordsApiService>();
-builder.Services.AddScoped<SFCDashboard.Controllers.Api.PERecordsApiController>();
-builder.Services.AddScoped<IPlannedEventsApiService, PlannedEventsApiService>();
-builder.Services.AddScoped<IUsersApiService, UsersApiService>();
-builder.Services.AddScoped<IPETasksApiService, PETasksApiService>();
-builder.Services.AddScoped<IPEIssuesApiService, PEIssuesApiService>();
-builder.Services.AddScoped<IWorkGroupsApiService, WorkGroupsApiService>();
-builder.Services.AddScoped<IAreaNetworkEngineersApiService, AreaNetworkEngineersApiService>();
-builder.Services.AddScoped<IPETaskListsApiService, PETaskListsApiService>();
-builder.Services.AddScoped<IEscalationsApiService, EscalationsApiService>();
-builder.Services.AddScoped<IPEIssueResolutionsApiService, PEIssueResolutionsApiService>();
-builder.Services.AddScoped<ICustomerUserAssignmentsApiService, CustomerUserAssignmentsApiService>();
 
 var app = builder.Build();
 
@@ -122,19 +147,12 @@ if (!isDevelopment)
     app.UseHsts();
 }
 
-// Add global exception handler for API endpoints
-app.UseGlobalExceptionHandler();
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Enable CORS
-app.UseCors();
-
 app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
-app.UseCors(); // Enable CORS
 
 app.UseUserRegistration();
 

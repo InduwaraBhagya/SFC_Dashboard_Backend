@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SFCDashboard.Services;
+using SFCDashboard.ApiClients;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
@@ -13,12 +13,12 @@ namespace SFCDashboard.Controllers
     [Authorize]
     public class EscalationController : Controller
     {
-        private readonly EscalationService _escalationService;
+        private readonly IEscalationsApiClient _escalationsApi;
         private readonly ApplicationDbContext _context;
         
-        public EscalationController(EscalationService escalationService, ApplicationDbContext context)
+        public EscalationController(IEscalationsApiClient escalationsApi, ApplicationDbContext context)
         {
-            _escalationService = escalationService;
+            _escalationsApi = escalationsApi;
             _context = context;
         }
         
@@ -45,7 +45,7 @@ namespace SFCDashboard.Controllers
             var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             
             // Get escalations based on user role level and workgroups using the service
-            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(
+            var escalations = await _escalationsApi.GetEscalationsByUserRoleAsync(
                 userRoleLevel, 
                 canViewAll ? null : userWorkgroupNames);
             
@@ -81,7 +81,7 @@ namespace SFCDashboard.Controllers
             // Mark as read when viewed
             if (!escalation.IsRead)
             {
-                await _escalationService.MarkAsReadAsync(id);
+                await _escalationsApi.MarkAsReadAsync(id);
             }
             
             // Get the planned event ID
@@ -104,7 +104,7 @@ namespace SFCDashboard.Controllers
                 TaskId = escalation.TaskId,
                 TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Fixed navigation
                 PENumber = escalation.PETask?.PENumber ?? "Unknown",   // Fixed navigation
-                TaskStatus = escalation.PETask?.TaskStatus,            // Fixed navigation
+                TaskStatus = escalation.PETask?.TaskStatus ?? "Unknown",            // Fixed navigation
                 Level = escalation.Level ?? 0,
             };
             
@@ -122,7 +122,7 @@ namespace SFCDashboard.Controllers
             }
 
             // Simply mark the escalation as read since we removed resolve functionality
-            await _escalationService.MarkAsReadAsync(id);
+            await _escalationsApi.MarkAsReadAsync(id);
             
             return RedirectToAction("Index", "Home");
         }
@@ -150,7 +150,7 @@ namespace SFCDashboard.Controllers
             var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             
             // Get all unread escalations for this user's role level and workgroups
-            var escalations = await _escalationService.GetEscalationsByUserRoleAsync(
+            var escalations = await _escalationsApi.GetEscalationsByUserRoleAsync(
                 userRoleLevel, 
                 canViewAll ? null : userWorkgroupNames);
             var unreadEscalations = escalations.Where(e => !e.IsRead).ToList();
@@ -158,7 +158,7 @@ namespace SFCDashboard.Controllers
             // Mark them all as read
             foreach (var escalation in unreadEscalations)
             {
-                await _escalationService.MarkAsReadAsync(escalation.Id);
+                await _escalationsApi.MarkAsReadAsync(escalation.Id);
             }
             
             return Json(new { success = true });
@@ -203,7 +203,7 @@ namespace SFCDashboard.Controllers
                 var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
                 
                 // Get escalations using the service with workgroup filtering
-                var escalations = await _escalationService.GetEscalationsByUserRoleAsync(
+                var escalations = await _escalationsApi.GetEscalationsByUserRoleAsync(
                     userRoleLevel, 
                     canViewAll ? null : userWorkgroupNames);
                   // Map to view models
@@ -346,7 +346,7 @@ namespace SFCDashboard.Controllers
                 }
 
                 // Simply mark the escalation as read since we removed resolve functionality
-                await _escalationService.MarkAsReadAsync(id);
+                await _escalationsApi.MarkAsReadAsync(id);
 
                 TempData["SuccessMessage"] = "Escalation has been marked as read.";
                 return RedirectToAction("Index");
@@ -363,7 +363,7 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                bool isEnabled = await _escalationService.IsEscalationEnabledAsync();
+                bool isEnabled = await _escalationsApi.IsEscalationEnabledAsync();
                 return Json(new { enabled = isEnabled });
             }
             catch (Exception ex)
@@ -385,10 +385,10 @@ namespace SFCDashboard.Controllers
                 }
                 
                 // Get current status and toggle it
-                bool currentStatus = await _escalationService.IsEscalationEnabledAsync();
+                bool currentStatus = await _escalationsApi.IsEscalationEnabledAsync();
                 bool newStatus = !currentStatus;
                 
-                await _escalationService.SetEscalationEnabledAsync(newStatus);
+                await _escalationsApi.SetEscalationEnabledAsync(newStatus);
                 
                 string statusMessage = newStatus ? "enabled" : "disabled";
                 return Json(new { 
@@ -409,7 +409,7 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var result = await _escalationService.ManualEscalationCheckAsync();
+                var result = await _escalationsApi.ManualEscalationCheckAsync();
                 return Json(new { success = true, message = result });
             }
             catch (Exception ex)
@@ -424,7 +424,7 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var debugInfo = await _escalationService.GetOLAViolatedTasksDebugInfoAsync();
+                var debugInfo = await _escalationsApi.GetOLAViolatedTasksDebugInfoAsync();
                 return Json(new { success = true, data = debugInfo });
             }
             catch (Exception ex)

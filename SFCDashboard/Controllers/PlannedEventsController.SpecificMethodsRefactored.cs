@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.Models;
-using SFCDashboard.Services;
 
 namespace SFCDashboard.Controllers
 {

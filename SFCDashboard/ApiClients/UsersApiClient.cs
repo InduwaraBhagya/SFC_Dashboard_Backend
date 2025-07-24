@@ -64,7 +64,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/users/by-service-id/{Uri.EscapeDataString(serviceId)}");
+                var response = await _httpClient.GetAsync($"api/users/by-serviceid/{Uri.EscapeDataString(serviceId)}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return null;
@@ -133,6 +133,226 @@ namespace SFCDashboard.ApiClients
                 _logger.LogError(ex, "Error deleting user {Id} via API", id);
                 throw;
             }
+        }
+
+        public async Task<int> GetCurrentUserIdAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/current-user-id/{Uri.EscapeDataString(serviceId)}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return 0;
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var userId = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                return userId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching current user ID for service ID {ServiceId} from API", serviceId);
+                return 0;
+            }
+        }
+
+        public async Task<SystemUser?> GetUserWithRoleAndWorkGroupsAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/{userId}/with-role-and-workgroups");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return null;
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<SystemUser>(json, _jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching user with role and workgroups for user ID {UserId} from API", userId);
+                return null;
+            }
+        }
+
+        public async Task<SystemUser?> GetUserByServiceIdAsync(string serviceId)
+        {
+            return await GetByServiceIdAsync(serviceId);
+        }
+
+        public async Task<(List<int> userWorkgroupIds, List<string> userWorkgroupNames, bool canViewAll)> GetCurrentUserWorkGroupsAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/current-user-workgroups/{Uri.EscapeDataString(serviceId)}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return (new List<int>(), new List<string>(), false);
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var userWorkgroupIds = JsonSerializer.Deserialize<List<int>>(json, _jsonOptions) ?? new List<int>();
+                
+                // For now, we'll return empty workgroup names and false for canViewAll
+                // as the API only returns workgroup IDs
+                return (userWorkgroupIds, new List<string>(), false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching current user workgroups for {ServiceId} from API", serviceId);
+                return (new List<int>(), new List<string>(), false);
+            }
+        }
+
+        public async Task<(int userWorkgroupId, string userWorkgroupName)> GetCurrentUserWorkGroupAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/current-user-workgroup/{Uri.EscapeDataString(serviceId)}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return (0, string.Empty);
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var userWorkgroupId = JsonSerializer.Deserialize<int?>(json, _jsonOptions) ?? 0;
+                
+                // For now, we'll return empty workgroup name as the API only returns workgroup ID
+                return (userWorkgroupId, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching current user workgroup for {ServiceId} from API", serviceId);
+                return (0, string.Empty);
+            }
+        }
+
+        public async Task<bool> HasMultipleWorkgroupsAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/has-multiple-workgroups/{Uri.EscapeDataString(serviceId)}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return false;
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<Dictionary<string, bool>>(json, _jsonOptions);
+                return result?.GetValueOrDefault("hasMultipleWorkgroups", false) ?? false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking multiple workgroups for {ServiceId} from API", serviceId);
+                return false;
+            }
+        }
+
+        public async Task<bool> IsUserInSalesWorkgroupAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/is-in-sales-workgroup/{Uri.EscapeDataString(serviceId)}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return false;
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<bool>(json, _jsonOptions);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking sales workgroup for {ServiceId} from API", serviceId);
+                return false;
+            }
+        }
+
+        public async Task<bool> HasDrawFiberAccessAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/{userId}/has-draw-fiber-access");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return false;
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<bool>(json, _jsonOptions);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking draw fiber access for user {UserId} from API", userId);
+                return false;
+            }
+        }
+
+        public async Task<List<string>> GetUserAssignedCustomersAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/{userId}/assigned-customers");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return new List<string>();
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<string>>(json, _jsonOptions) ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching assigned customers for user {UserId} from API", userId);
+                return new List<string>();
+            }
+        }
+
+        public async Task<(List<string> salesWorkgroups, bool canViewAll)> GetUserSalesWorkgroupsAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/sales-workgroups/{Uri.EscapeDataString(serviceId)}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return (new List<string>(), false);
+                    
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<Dictionary<string, object>>(json, _jsonOptions);
+                
+                if (result != null)
+                {
+                    var salesWorkgroups = JsonSerializer.Deserialize<List<string>>(result["salesWorkgroups"].ToString() ?? "[]", _jsonOptions) ?? new List<string>();
+                    var canViewAll = bool.Parse(result["canViewAll"].ToString() ?? "false");
+                    
+                    return (salesWorkgroups, canViewAll);
+                }
+                
+                return (new List<string>(), false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales workgroups for {ServiceId} from API", serviceId);
+                return (new List<string>(), false);
+            }
+        }
+
+        public async Task<SystemUser?> GetUserAsync(int userId)
+        {
+            return await GetUserWithRoleAndWorkGroupsAsync(userId);
         }
     }
 }

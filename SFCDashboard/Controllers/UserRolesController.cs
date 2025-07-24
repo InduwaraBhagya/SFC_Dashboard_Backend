@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
@@ -11,7 +12,7 @@ namespace SFCDashboard.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserRolesController> _logger;
 
-        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger) : base(context)
+        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger, IPermissionsApiClient permissionsApi) : base(permissionsApi)
         {
             _context = context;
             _logger = logger;
