@@ -12,7 +12,7 @@ namespace SFCDashboard.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserRolesController> _logger;
 
-        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger, IPermissionsApiClient permissionsApi) : base(permissionsApi)
+        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
         {
             _context = context;
             _logger = logger;

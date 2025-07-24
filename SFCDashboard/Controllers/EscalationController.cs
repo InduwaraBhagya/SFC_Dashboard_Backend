@@ -11,12 +11,12 @@ using System.Linq;
 namespace SFCDashboard.Controllers
 {
     [Authorize]
-    public class EscalationController : Controller
+    public class EscalationController : BaseController
     {
         private readonly IEscalationsApiClient _escalationsApi;
         private readonly ApplicationDbContext _context;
         
-        public EscalationController(IEscalationsApiClient escalationsApi, ApplicationDbContext context)
+        public EscalationController(IEscalationsApiClient escalationsApi, ApplicationDbContext context, IUsersApiClient usersApiClient) : base(usersApiClient)
         {
             _escalationsApi = escalationsApi;
             _context = context;

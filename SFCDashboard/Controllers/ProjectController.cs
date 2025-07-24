@@ -2,12 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
+using SFCDashboard.Controllers;
 
-public class ProjectController : Controller
+public class ProjectController : BaseController
 {
     private readonly ApplicationDbContext _context;
 
-    public ProjectController(ApplicationDbContext context)
+    public ProjectController(ApplicationDbContext context, IUsersApiClient usersApiClient) : base(usersApiClient)
     {
         _context = context;
     }

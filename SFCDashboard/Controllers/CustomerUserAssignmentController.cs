@@ -11,7 +11,7 @@ namespace SFCDashboard.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public CustomerUserAssignmentController(ApplicationDbContext context, IPermissionsApiClient permissionsApi) : base(permissionsApi)
+        public CustomerUserAssignmentController(ApplicationDbContext context, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
         {
             _context = context;
         }

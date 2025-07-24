@@ -63,15 +63,6 @@ namespace SFCDashboard.Controllers
             return await _usersApi.GetUserSalesWorkgroupsAsync(serviceId);
         }
 
-        private string ExtractServiceId(string email)
-        {
-            if (string.IsNullOrEmpty(email))
-                return string.Empty;
-
-            // Extract up to the first 6 characters of the email or service ID
-            return email.Length > 6 ? email.Substring(0, 6) : email;
-        }
-
         // Refactored count methods using API services
         private async Task<int> GetUrgentCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
         {

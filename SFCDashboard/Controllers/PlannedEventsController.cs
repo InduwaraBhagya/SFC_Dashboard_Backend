@@ -4,7 +4,7 @@ using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public partial class PlannedEventsController : Controller
+    public partial class PlannedEventsController : BaseController
     {
         private readonly IPlannedEventsApiClient _plannedEventsApi;
         private readonly IUsersApiClient _usersApi;
@@ -33,7 +33,7 @@ namespace SFCDashboard.Controllers
             ICustomerUserAssignmentsApiClient customerUserAssignmentsApi,
             ILogger<PlannedEventsController> logger,
             IWebHostEnvironment webHostEnvironment,
-            ITaskQueueApiClient taskQueueApiClient)
+            ITaskQueueApiClient taskQueueApiClient) : base(usersApi)
         {
             _plannedEventsApi = plannedEventsApi;
             _usersApi = usersApi;

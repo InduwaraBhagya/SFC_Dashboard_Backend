@@ -15,7 +15,7 @@ namespace SFCDashboard.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public PETaskListsController(ApplicationDbContext context, IPermissionsApiClient permissionsApi) : base(permissionsApi)
+        public PETaskListsController(ApplicationDbContext context, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
         {
             _context = context;
         }

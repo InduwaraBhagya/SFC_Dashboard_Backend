@@ -4,11 +4,12 @@ using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public class AdminControllerBase : Controller
+    public class AdminControllerBase : BaseController
     {
         private readonly IPermissionsApiClient _permissionsApi;
 
-        public AdminControllerBase(IPermissionsApiClient permissionsApi)
+        public AdminControllerBase(IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) 
+            : base(usersApiClient)
         {
             _permissionsApi = permissionsApi;
         }
@@ -33,6 +34,7 @@ namespace SFCDashboard.Controllers
                 return;
             }
 
+            // If admin check passes, proceed with base controller logic (setting user data)
             await base.OnActionExecutionAsync(context, next);
         }
     }
