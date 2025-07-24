@@ -119,5 +119,45 @@ namespace SFCDashboard.ApiClients
         {
             return await UpdateAsync(peIssue);
         }
+
+        public async Task<IEnumerable<PEIssue>> GetReceivedIssuesAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/received/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetSentIssuesAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/sent/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetUnreadInboxIssuesAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/unread-inbox/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssueViewModel>> GetInboxViewModelsAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/inbox-viewmodels/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions) ?? new List<PEIssueViewModel>();
+        }
+
+        public async Task<IEnumerable<PEIssueViewModel>> GetSentViewModelsAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/sent-viewmodels/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions) ?? new List<PEIssueViewModel>();
+        }
     }
 }

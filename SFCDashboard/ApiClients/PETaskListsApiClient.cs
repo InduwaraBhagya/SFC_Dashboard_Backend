@@ -72,5 +72,15 @@ namespace SFCDashboard.ApiClients
         {
             return await GetAllAsync();
         }
+
+        public async Task<bool> ExistsAsync(int id)
+        {
+            var response = await _httpClient.GetAsync($"api/petasklists/{id}/exists");
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return false;
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadAsStringAsync();
+            return bool.TryParse(result, out var exists) && exists;
+        }
     }
 }

@@ -11,5 +11,6 @@ namespace SFCDashboard.ApiClients
         Task DeleteAsync(int id);
         Task<PETaskList?> GetPETaskListByNameAsync(string taskName);
         Task<IEnumerable<PETaskList>> GetPETaskListsAsync();
+        Task<bool> ExistsAsync(int id);
     }
 }

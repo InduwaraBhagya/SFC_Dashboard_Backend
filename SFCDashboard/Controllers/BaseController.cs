@@ -6,7 +6,7 @@ namespace SFCDashboard.Controllers
 {
     public class BaseController : Controller
     {
-        private readonly IUsersApiClient _usersApiClient;
+        protected readonly IUsersApiClient _usersApiClient;
 
         public BaseController(IUsersApiClient usersApiClient)
         {
@@ -29,13 +29,23 @@ namespace SFCDashboard.Controllers
                 var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
                 if (!string.IsNullOrEmpty(serviceId))
                 {
-                    var currentUser = await _usersApiClient.GetByServiceIdAsync(serviceId);
-                    if (currentUser != null)
+                    // First get the user ID by service ID
+                    var userId = await _usersApiClient.GetCurrentUserIdAsync(serviceId);
+                    if (userId > 0)
                     {
-                        ViewData["CurrentUserName"] = currentUser.Name ?? "Guest";
-                        ViewData["IsAdmin"] = currentUser.UserRole?.HasPermission("Admin") == true;
-                        ViewData["CanManageCustomerAssignments"] = currentUser.UserRole?.HasPermission("ManageCustomerAssignments") == true;
-                        ViewData["CanManageDrawFiberPerms"] = currentUser.UserRole?.HasPermission("ManageDrawFiberPerms") == true;
+                        // Then get the user with role and permissions included
+                        var currentUser = await _usersApiClient.GetUserWithRoleAndWorkGroupsAsync(userId);
+                        if (currentUser != null)
+                        {
+                            ViewData["CurrentUserName"] = currentUser.Name ?? "Guest";
+                            ViewData["IsAdmin"] = currentUser.UserRole?.HasPermission("Admin") == true;
+                            ViewData["CanManageCustomerAssignments"] = currentUser.UserRole?.HasPermission("ManageCustomerAssignments") == true;
+                            ViewData["CanManageDrawFiberPerms"] = currentUser.UserRole?.HasPermission("ManageDrawFiberPerms") == true;
+                        }
+                        else
+                        {
+                            SetDefaultViewData();
+                        }
                     }
                     else
                     {

@@ -354,5 +354,24 @@ namespace SFCDashboard.ApiClients
         {
             return await GetUserWithRoleAndWorkGroupsAsync(userId);
         }
+
+        public async Task<List<SystemUser>> GetSalesUsersAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/users/sales-users");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var users = JsonSerializer.Deserialize<List<SystemUser>>(json, _jsonOptions);
+                
+                return users ?? new List<SystemUser>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales users from API");
+                return new List<SystemUser>();
+            }
+        }
     }
 }

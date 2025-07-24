@@ -6,7 +6,7 @@ namespace SFCDashboard.Controllers
 {
     public class AdminControllerBase : BaseController
     {
-        private readonly IPermissionsApiClient _permissionsApi;
+        protected readonly IPermissionsApiClient _permissionsApi;
 
         public AdminControllerBase(IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) 
             : base(usersApiClient)

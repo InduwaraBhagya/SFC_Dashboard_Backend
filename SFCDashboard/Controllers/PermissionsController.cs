@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
 using SFCDashboard.Models;
 using SFCDashboard.ApiClients;
 
@@ -8,19 +6,18 @@ namespace SFCDashboard.Controllers
 {
     public class PermissionsController : AdminControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly ILogger<PermissionsController> _logger;
 
-        public PermissionsController(ApplicationDbContext context, ILogger<PermissionsController> logger, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
+        public PermissionsController(ILogger<PermissionsController> logger, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
         {
-            _context = context;
             _logger = logger;
         }
 
         // GET: Permissions
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Permissions.ToListAsync());
+            var permissions = await _permissionsApi.GetAllPermissionsAsync();
+            return View(permissions);
         }
 
         // GET: Permissions/Create
@@ -35,8 +32,7 @@ namespace SFCDashboard.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(permission);
-                await _context.SaveChangesAsync();
+                await _permissionsApi.CreatePermissionAsync(permission);
                 TempData["SuccessMessage"] = "Permission created successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -51,7 +47,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var permission = await _context.Permissions.FindAsync(id);
+            var permission = await _permissionsApi.GetPermissionByIdAsync(id.Value);
             if (permission == null)
             {
                 return NotFound();
@@ -72,14 +68,13 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    _context.Update(permission);
-                    await _context.SaveChangesAsync();
+                    await _permissionsApi.UpdatePermissionAsync(permission);
                     TempData["SuccessMessage"] = "Permission updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (Exception)
                 {
-                    if (!PermissionExists(permission.Id))
+                    if (!await _permissionsApi.PermissionExistsAsync(permission.Id))
                     {
                         return NotFound();
                     }
@@ -92,9 +87,9 @@ namespace SFCDashboard.Controllers
             return View(permission);
         }
 
-        private bool PermissionExists(int id)
+        private async Task<bool> PermissionExists(int id)
         {
-            return _context.Permissions.Any(e => e.Id == id);
+            return await _permissionsApi.PermissionExistsAsync(id);
         }
     }
 }

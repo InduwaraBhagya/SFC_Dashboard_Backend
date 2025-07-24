@@ -687,5 +687,24 @@ namespace SFCDashboard.ApiClients
                 return 0;
             }
         }
+
+        public async Task<List<string>> GetDistinctCustomersAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/distinct-customers");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var customers = JsonSerializer.Deserialize<List<string>>(json, _jsonOptions);
+                
+                return customers ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching distinct customers from API");
+                return new List<string>();
+            }
+        }
     }
 }

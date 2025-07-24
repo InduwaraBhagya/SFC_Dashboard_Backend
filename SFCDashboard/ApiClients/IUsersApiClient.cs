@@ -23,5 +23,6 @@ namespace SFCDashboard.ApiClients
         Task<List<string>> GetUserAssignedCustomersAsync(int userId);
         Task<(List<string> salesWorkgroups, bool canViewAll)> GetUserSalesWorkgroupsAsync(string serviceId);
         Task<SystemUser?> GetUserAsync(int userId);
+        Task<List<SystemUser>> GetSalesUsersAsync();
     }
 }

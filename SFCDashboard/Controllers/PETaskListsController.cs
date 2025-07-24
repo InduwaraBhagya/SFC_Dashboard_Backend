@@ -4,8 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
 using SFCDashboard.Models;
 using SFCDashboard.ApiClients;
 
@@ -13,17 +11,20 @@ namespace SFCDashboard.Controllers
 {
     public class PETaskListsController : AdminControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPETaskListsApiClient _peTaskListsApi;
+        private readonly ILogger<PETaskListsController> _logger;
 
-        public PETaskListsController(ApplicationDbContext context, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
+        public PETaskListsController(IPETaskListsApiClient peTaskListsApi, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient, ILogger<PETaskListsController> logger) : base(permissionsApi, usersApiClient)
         {
-            _context = context;
+            _peTaskListsApi = peTaskListsApi;
+            _logger = logger;
         }
 
         // GET: PETaskLists
         public async Task<IActionResult> Index()
         {
-            return View(await _context.PETaskLists.ToListAsync());
+            var taskLists = await _peTaskListsApi.GetAllAsync();
+            return View(taskLists);
         }
 
         // GET: PETaskLists/Details/5
@@ -34,8 +35,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var pETaskList = await _context.PETaskLists
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var pETaskList = await _peTaskListsApi.GetByIdAsync(id.Value);
             if (pETaskList == null)
             {
                 return NotFound();
@@ -59,8 +59,7 @@ namespace SFCDashboard.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(pETaskList);
-                await _context.SaveChangesAsync();
+                await _peTaskListsApi.CreateAsync(pETaskList);
                 return RedirectToAction(nameof(Index));
             }
             return View(pETaskList);
@@ -74,7 +73,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var pETaskList = await _context.PETaskLists.FindAsync(id);
+            var pETaskList = await _peTaskListsApi.GetByIdAsync(id.Value);
             if (pETaskList == null)
             {
                 return NotFound();
@@ -98,12 +97,11 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    _context.Update(pETaskList);
-                    await _context.SaveChangesAsync();
+                    await _peTaskListsApi.UpdateAsync(pETaskList);
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (Exception)
                 {
-                    if (!PETaskListExists(pETaskList.Id))
+                    if (!(await PETaskListExists(pETaskList.Id)))
                     {
                         return NotFound();
                     }
@@ -125,8 +123,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var pETaskList = await _context.PETaskLists
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var pETaskList = await _peTaskListsApi.GetByIdAsync(id.Value);
             if (pETaskList == null)
             {
                 return NotFound();
@@ -140,19 +137,13 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var pETaskList = await _context.PETaskLists.FindAsync(id);
-            if (pETaskList != null)
-            {
-                _context.PETaskLists.Remove(pETaskList);
-            }
-
-            await _context.SaveChangesAsync();
+            await _peTaskListsApi.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
 
-        private bool PETaskListExists(int id)
+        private async Task<bool> PETaskListExists(int id)
         {
-            return _context.PETaskLists.Any(e => e.Id == id);
+            return await _peTaskListsApi.ExistsAsync(id);
         }
 
         // GET: PETaskLists/GetForPE
@@ -162,12 +153,13 @@ namespace SFCDashboard.Controllers
             try
             {
                 // Get all available task lists (not PE-specific based on the model structure)
-                var taskLists = await _context.PETaskLists
+                var taskLists = await _peTaskListsApi.GetAllAsync();
+                var result = taskLists
                     .OrderBy(tl => tl.TaskSeq)
                     .Select(tl => new { id = tl.Id, name = tl.Name })
-                    .ToListAsync();
+                    .ToList();
 
-                return Json(taskLists);
+                return Json(result);
             }
             catch (Exception)
             {

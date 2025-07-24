@@ -38,5 +38,8 @@ namespace SFCDashboard.ApiClients
         Task<int> GetInProgressCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
         Task<int> GetOLAViolateCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
         Task<int> GetHoldCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
+        
+        // Method for getting distinct customers
+        Task<List<string>> GetDistinctCustomersAsync();
     }
 }
