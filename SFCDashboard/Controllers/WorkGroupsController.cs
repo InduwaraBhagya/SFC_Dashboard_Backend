@@ -1,4 +1,5 @@
-﻿using ClosedXML.Excel;
+﻿using SFCDashboard.ApiClients;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
@@ -8,12 +9,14 @@ namespace SFCDashboard.Controllers
 {
     public class WorkGroupsController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly int _pageSize = 10;  // Add this line
+        private readonly IWorkGroupsApiClient _workGroupsApiClient;
+        private readonly IUsersApiClient _usersApiClient;
+        private readonly int _pageSize = 10;
 
-        public WorkGroupsController(ApplicationDbContext context)
+        public WorkGroupsController(IWorkGroupsApiClient workGroupsApiClient, IUsersApiClient usersApiClient)
         {
-            _context = context;
+            _workGroupsApiClient = workGroupsApiClient;
+            _usersApiClient = usersApiClient;
         }
 
         
@@ -21,25 +24,22 @@ namespace SFCDashboard.Controllers
         // GET: WorkGroups
         public async Task<IActionResult> Index(int? page, string searchTerm)
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
+            if (!await HasAdminPermissionAsync())
                 return RedirectToAction("Index", "PlannedEvents");
 
-            var query = _context.WorkGroups.AsQueryable();
-
+            var allWorkGroupsList = (await _workGroupsApiClient.GetAllAsync()).ToList();
             if (!string.IsNullOrEmpty(searchTerm))
             {
-                query = query.Where(w => w.Name.Contains(searchTerm));
+                allWorkGroupsList = allWorkGroupsList.Where(w => w.Name != null && w.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
             }
-
             var pageNumber = page ?? 1;
-            var totalItems = await query.CountAsync();
+            var totalItems = allWorkGroupsList.Count;
             var totalPages = (int)Math.Ceiling(totalItems / (double)_pageSize);
-
-            var workGroups = await query
+            var workGroups = allWorkGroupsList
                 .OrderBy(w => w.Name)
                 .Skip((pageNumber - 1) * _pageSize)
                 .Take(_pageSize)
-                .ToListAsync();
+                .ToList();
 
             ViewData["CurrentPage"] = pageNumber;
             ViewData["TotalPages"] = totalPages;
@@ -57,8 +57,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            var workGroup = await _context.WorkGroups
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var workGroup = await _workGroupsApiClient.GetByIdAsync(id.Value);
             if (workGroup == null)
             {
                 return NotFound();
@@ -66,13 +65,43 @@ namespace SFCDashboard.Controllers
 
             return View(workGroup);
         }
+        // Helper: API-based admin permission check using the new endpoint
+        private async Task<bool> HasAdminPermissionAsync()
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return false;
+
+            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+            var user = await _usersApiClient.GetByServiceIdAsync(serviceIdShort);
+            if (user == null)
+                return false;
+
+            // Get API base URL from configuration
+            var config = HttpContext.RequestServices.GetService(typeof(IConfiguration)) as IConfiguration;
+            var apiBaseUrl = config?["ApiSettings:BaseUrl"];
+            if (string.IsNullOrWhiteSpace(apiBaseUrl))
+                return false;
+
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);
+                var response = await httpClient.GetAsync($"api/users/{user.Id}/has-admin-permission");
+                if (response.IsSuccessStatusCode)
+                {
+                    var resultString = await response.Content.ReadAsStringAsync();
+                    if (bool.TryParse(resultString, out var isAdmin))
+                        return isAdmin;
+                }
+            }
+            return false;
+        }
 
         // GET: WorkGroups/Create
         public async Task<IActionResult> CreateAsync()
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
-
+            if (!await HasAdminPermissionAsync())
+                return RedirectToAction("Index", "PlannedEvents");
             return View();
         }
 
@@ -83,25 +112,22 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name")] WorkGroup workGroup)
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
+            if (!await HasAdminPermissionAsync())
+                return RedirectToAction("Index", "PlannedEvents");
 
             if (ModelState.IsValid)
             {
-                _context.Add(workGroup);
-                await _context.SaveChangesAsync();
+                await _workGroupsApiClient.CreateAsync(workGroup);
                 return RedirectToAction(nameof(Index));
             }
             return View(workGroup);
         }
         public async Task<IActionResult> ImportFromBackendAsync()
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
+            if (!await HasAdminPermissionAsync())
+                return RedirectToAction("Index", "PlannedEvents");
 
-            string filePath = @"wwwroot\assets\WORK_GROUPS.xlsx"; // Change this to your file path
-
-
+            string filePath = @"wwwroot\assets\WORK_GROUPS.xlsx";
             if (!System.IO.File.Exists(filePath))
             {
                 TempData["Message"] = "Excel file not found.";
@@ -112,46 +138,42 @@ namespace SFCDashboard.Controllers
             {
                 using (var workbook = new XLWorkbook(filePath))
                 {
-                    var worksheet = workbook.Worksheet(1); // Read the first worksheet
+                    var worksheet = workbook.Worksheet(1);
                     var rows = worksheet.RowsUsed();
-
                     List<WorkGroup> workGroups = new List<WorkGroup>();
-
-                    foreach (var row in rows.Skip(1)) // Skip header row
+                    foreach (var row in rows.Skip(1))
                     {
                         var workGroup = new WorkGroup
                         {
-                            Name = row.Cell(1).GetValue<string>() // Column A: WorkGroup Name
+                            Name = row.Cell(1).GetValue<string>()
                         };
-
                         workGroups.Add(workGroup);
                     }
-
-                    _context.WorkGroups.AddRange(workGroups);
-                    _context.SaveChanges();
+                    foreach (var wg in workGroups)
+                    {
+                        await _workGroupsApiClient.CreateAsync(wg);
+                    }
                 }
-
                 TempData["Message"] = "Excel data imported successfully!";
             }
             catch (Exception ex)
             {
                 TempData["Message"] = "Error: " + ex.Message;
             }
-
             return RedirectToAction("Index");
         }
         // GET: WorkGroups/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
+            if (!await HasAdminPermissionAsync())
+                return RedirectToAction("Index", "PlannedEvents");
 
             if (id == null)
             {
                 return NotFound();
             }
 
-            var workGroup = await _context.WorkGroups.FindAsync(id);
+            var workGroup = await _workGroupsApiClient.GetByIdAsync(id.Value);
             if (workGroup == null)
             {
                 return NotFound();
@@ -166,8 +188,8 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name")] WorkGroup workGroup)
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
+            if (!await HasAdminPermissionAsync())
+                return RedirectToAction("Index", "PlannedEvents");
 
             if (id != workGroup.Id)
             {
@@ -178,12 +200,11 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    _context.Update(workGroup);
-                    await _context.SaveChangesAsync();
+                    await _workGroupsApiClient.UpdateAsync(workGroup);
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (Exception)
                 {
-                    if (!WorkGroupExists(workGroup.Id))
+                    if (!await WorkGroupExists(workGroup.Id))
                     {
                         return NotFound();
                     }
@@ -200,16 +221,15 @@ namespace SFCDashboard.Controllers
         // GET: WorkGroups/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
+            if (!await HasAdminPermissionAsync())
+                return RedirectToAction("Index", "PlannedEvents");
 
             if (id == null)
             {
                 return NotFound();
             }
 
-            var workGroup = await _context.WorkGroups
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var workGroup = await _workGroupsApiClient.GetByIdAsync(id.Value);
             if (workGroup == null)
             {
                 return NotFound();
@@ -223,22 +243,17 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            if (!await HttpContext.HasAdminPermissionAsync(_context))
-            return RedirectToAction("Index", "PlannedEvents");
+            if (!await HasAdminPermissionAsync())
+                return RedirectToAction("Index", "PlannedEvents");
 
-            var workGroup = await _context.WorkGroups.FindAsync(id);
-            if (workGroup != null)
-            {
-                _context.WorkGroups.Remove(workGroup);
-            }
-
-            await _context.SaveChangesAsync();
+            await _workGroupsApiClient.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
 
-        private bool WorkGroupExists(int id)
+        private async Task<bool> WorkGroupExists(int id)
         {
-            return _context.WorkGroups.Any(e => e.Id == id);
+            var wg = await _workGroupsApiClient.GetByIdAsync(id);
+            return wg != null;
         }
     }
 }

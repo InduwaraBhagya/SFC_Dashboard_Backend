@@ -3,16 +3,17 @@ using SFCDashboard.Data;
 using OfficeOpenXml;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
     public class NetworkEngineerController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IAreaNetworkEngineersApiClient _areaNetworkEngineersApiClient;
 
-        public NetworkEngineerController(ApplicationDbContext context)
+        public NetworkEngineerController(IAreaNetworkEngineersApiClient areaNetworkEngineersApiClient)
         {
-            _context = context;
+            _areaNetworkEngineersApiClient = areaNetworkEngineersApiClient;
         }
 
         [HttpPost]
@@ -31,52 +32,34 @@ namespace SFCDashboard.Controllers
                 return RedirectToAction("ImportExcel");
             }
 
-            var tempFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "temp");
-            if (!Directory.Exists(tempFolder))
-                Directory.CreateDirectory(tempFolder);
-
-            var fileName = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()) + ".xlsx";
-            var fullPath = Path.Combine(tempFolder, fileName);
-
             try
             {
-                // Save file to disk
-                using (var fileStream = new FileStream(fullPath, FileMode.Create))
+                using (var httpClient = new HttpClient())
+                using (var content = new MultipartFormDataContent())
+                using (var stream = excelFile.OpenReadStream())
                 {
-                    await excelFile.CopyToAsync(fileStream);
-                }
+                    var fileContent = new StreamContent(stream);
+                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                    content.Add(fileContent, "excelFile", excelFile.FileName);
 
-                int imported = 0;
-                using (var workbook = new XLWorkbook(fullPath))
-                {
-                    var worksheet = workbook.Worksheet(1); // First worksheet
-                    var rows = worksheet.RowsUsed().Skip(1); // Skip header
-
-                    foreach (var row in rows)
+                    // Adjust the API URL as needed
+                    var apiUrl = "/api/areanetworkengineers/import-excel";
+                    var baseUrl = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host;
+                    var response = await httpClient.PostAsync(baseUrl + apiUrl, content);
+                    if (response.IsSuccessStatusCode)
                     {
-                        var area = row.Cell(1).GetValue<string>()?.Trim();
-                        var engineer = row.Cell(2).GetValue<string>()?.Trim();
-                        if (!string.IsNullOrEmpty(area) && !string.IsNullOrEmpty(engineer))
-                        {
-                            var mapping = new AreaNetworkEngineer { Area = area, EngineerName = engineer };
-                            _context.AreaNetworkEngineers.Add(mapping);
-                            imported++;
-                        }
+                        var result = await response.Content.ReadAsStringAsync();
+                        TempData["Message"] = $"Import successful: {result}";
                     }
-                    await _context.SaveChangesAsync();
+                    else
+                    {
+                        TempData["Message"] = $"Import failed: {response.ReasonPhrase}";
+                    }
                 }
-
-                // Delete temp file
-                if (System.IO.File.Exists(fullPath))
-                    System.IO.File.Delete(fullPath);
-
-                TempData["Message"] = $"Successfully imported {imported} records.";
             }
             catch (Exception ex)
             {
                 TempData["Message"] = $"Error: {ex.Message}";
-                if (System.IO.File.Exists(fullPath))
-                    System.IO.File.Delete(fullPath);
             }
 
             return RedirectToAction("ImportExcel");
@@ -94,8 +77,7 @@ namespace SFCDashboard.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(model);
-                await _context.SaveChangesAsync();
+                await _areaNetworkEngineersApiClient.CreateAsync(model);
                 return RedirectToAction(nameof(Index));
             }
             return View(model);
@@ -103,7 +85,7 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
-            var mapping = await _context.AreaNetworkEngineers.FindAsync(id);
+            var mapping = await _areaNetworkEngineersApiClient.GetByIdAsync(id);
             if (mapping == null) return NotFound();
             return View(mapping);
         }
@@ -113,22 +95,21 @@ namespace SFCDashboard.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Update(model);
-                await _context.SaveChangesAsync();
+                await _areaNetworkEngineersApiClient.UpdateAsync(model);
             }
             return RedirectToAction("ImportExcel");
         }
 
         public async Task<IActionResult> List()
         {
-            var mappings = await _context.AreaNetworkEngineers.ToListAsync();
+            var mappings = (await _areaNetworkEngineersApiClient.GetAllAsync()).ToList();
             return View(mappings);
         }
 
         [HttpGet]
         public async Task<IActionResult> ImportExcel()
         {
-            var mappings = await _context.AreaNetworkEngineers.ToListAsync();
+            var mappings = (await _areaNetworkEngineersApiClient.GetAllAsync()).ToList();
             return View(mappings);
         }
     }

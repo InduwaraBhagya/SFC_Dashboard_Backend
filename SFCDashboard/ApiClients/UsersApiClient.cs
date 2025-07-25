@@ -6,6 +6,21 @@ namespace SFCDashboard.ApiClients
 {
     public class UsersApiClient : IUsersApiClient
     {
+        public async Task SetUserWorkGroupsAsync(int userId, List<int> workGroupIds)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(workGroupIds, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync($"api/users/{userId}/set-workgroups", content);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting workgroups for user {UserId}", userId);
+                throw;
+            }
+        }
         private readonly HttpClient _httpClient;
         private readonly ILogger<UsersApiClient> _logger;
         private readonly JsonSerializerOptions _jsonOptions;

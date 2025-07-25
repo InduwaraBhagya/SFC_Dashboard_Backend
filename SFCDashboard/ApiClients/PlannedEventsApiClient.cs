@@ -20,6 +20,24 @@ namespace SFCDashboard.ApiClients
             };
         }
 
+        public async Task<PlannedEvent> GetPlannedEventByPENumberAsync(string peNumber)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/penumber/{Uri.EscapeDataString(peNumber)}");
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return null;
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<PlannedEvent>(json, _jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching planned event by PE number {PENumber} from API", peNumber);
+                return null;
+            }
+        }
+
         public async Task<IEnumerable<PlannedEvent>> GetAllAsync()
         {
             try
@@ -234,11 +252,15 @@ namespace SFCDashboard.ApiClients
             try
             {
                 // Get PE numbers that have OLA violating tasks
-                var response = await _httpClient.GetAsync("api/petasksapi/ola-violating-pe-numbers");
+                var response = await _httpClient.GetAsync("api/petasksapi/ola-violations");
                 response.EnsureSuccessStatusCode();
-                
                 var json = await response.Content.ReadAsStringAsync();
-                var violatingPENumbers = JsonSerializer.Deserialize<IEnumerable<string>>(json, _jsonOptions) ?? new List<string>();
+                var violatingTasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
+                var violatingPENumbers = violatingTasks
+                    .Where(t => !string.IsNullOrEmpty(t.PENumber))
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToList();
 
                 // Get all planned events
                 var allEvents = await GetAllAsync();
@@ -300,11 +322,15 @@ namespace SFCDashboard.ApiClients
             try
             {
                 // Get PE numbers that have OLA violating tasks
-                var response = await _httpClient.GetAsync("api/petasksapi/ola-violating-pe-numbers");
+                var response = await _httpClient.GetAsync("api/petasksapi/ola-violations");
                 response.EnsureSuccessStatusCode();
-                
                 var json = await response.Content.ReadAsStringAsync();
-                var violatingPENumbers = JsonSerializer.Deserialize<IEnumerable<string>>(json, _jsonOptions) ?? new List<string>();
+                var violatingTasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
+                var violatingPENumbers = violatingTasks
+                    .Where(t => !string.IsNullOrEmpty(t.PENumber))
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToList();
 
                 // Get all planned events
                 var allEvents = await GetAllAsync();
@@ -394,11 +420,15 @@ namespace SFCDashboard.ApiClients
             try
             {
                 // Get PE numbers that have OLA violating tasks
-                var response = await _httpClient.GetAsync("api/petasksapi/ola-violating-pe-numbers");
+                var response = await _httpClient.GetAsync("api/petasksapi/ola-violations");
                 response.EnsureSuccessStatusCode();
-                
                 var json = await response.Content.ReadAsStringAsync();
-                var violatingPENumbers = JsonSerializer.Deserialize<IEnumerable<string>>(json, _jsonOptions) ?? new List<string>();
+                var violatingTasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
+                var violatingPENumbers = violatingTasks
+                    .Where(t => !string.IsNullOrEmpty(t.PENumber))
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToList();
 
                 // Get all planned events
                 var allEvents = await GetAllAsync();

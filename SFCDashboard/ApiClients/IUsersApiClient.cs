@@ -4,6 +4,7 @@ namespace SFCDashboard.ApiClients
 {
     public interface IUsersApiClient
     {
+        Task SetUserWorkGroupsAsync(int userId, List<int> workGroupIds);
         Task<IEnumerable<SystemUser>> GetAllAsync();
         Task<SystemUser?> GetByIdAsync(int id);
         Task<SystemUser?> GetByServiceIdAsync(string serviceId);

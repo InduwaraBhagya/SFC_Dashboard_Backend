@@ -12,6 +12,7 @@ namespace SFCDashboard.Api.Controllers
     [Route("api/workgroups")]
     [Produces("application/json")]
     public class WorkGroupsApiController : ControllerBase
+
     {
         private readonly IWorkGroupsApiService _workGroupsService;
         private readonly ILogger<WorkGroupsApiController> _logger;
@@ -56,7 +57,7 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogInformation("Getting workgroup with id: {id}", id);
                 var workGroup = await _workGroupsService.GetWorkGroupAsync(id);
-                
+
                 if (workGroup == null)
                 {
                     return NotFound($"WorkGroup with ID {id} not found");
@@ -81,9 +82,9 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Getting workgroups for user with IDs: {ids}, canViewAll: {canViewAll}", 
+                _logger.LogInformation("Getting workgroups for user with IDs: {ids}, canViewAll: {canViewAll}",
                     string.Join(", ", request.UserWorkgroupIds), request.CanViewAll);
-                
+
                 var workGroups = await _workGroupsService.GetWorkGroupsForUserAsync(request.UserWorkgroupIds, request.CanViewAll);
                 return Ok(workGroups);
             }
@@ -112,6 +113,28 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogError(ex, "Error getting workgroups by ids");
                 return StatusCode(500, "An error occurred while retrieving workgroups");
+            }
+        }
+        
+        /// <summary>
+        /// Get the name of a workgroup by ID
+        /// </summary>
+        [HttpGet("{id}/name")]
+        public async Task<IActionResult> GetWorkGroupName(int id)
+        {
+            try
+            {
+                var workGroup = await _workGroupsService.GetWorkGroupAsync(id);
+                if (workGroup == null)
+                {
+                    return NotFound();
+                }
+                return Ok(new { name = workGroup.Name });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting workgroup name for id: {id}", id);
+                return StatusCode(500, "An error occurred while retrieving the workgroup name");
             }
         }
     }

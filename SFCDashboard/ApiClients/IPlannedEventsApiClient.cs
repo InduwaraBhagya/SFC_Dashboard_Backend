@@ -14,6 +14,8 @@ namespace SFCDashboard.ApiClients
         Task<PaginatedList<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchString, string? workgroupName, bool hasDrawFiberAccess, int pageIndex, int pageSize);
         Task<IEnumerable<PlannedEvent>> GetPlannedEventsAsync();
         Task<PlannedEvent?> GetPlannedEventByIdAsync(int? id);
+        // Add this method to support EscalationController
+        Task<PlannedEvent> GetPlannedEventByPENumberAsync(string peNumber);
         Task<PlannedEvent> CreatePlannedEventAsync(PlannedEvent plannedEvent);
         Task<PlannedEvent> UpdatePlannedEventAsync(PlannedEvent plannedEvent);
         Task<bool> DeletePlannedEventAsync(int id);

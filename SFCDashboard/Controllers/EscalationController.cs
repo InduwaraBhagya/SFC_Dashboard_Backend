@@ -14,12 +14,25 @@ namespace SFCDashboard.Controllers
     public class EscalationController : BaseController
     {
         private readonly IEscalationsApiClient _escalationsApi;
-        private readonly ApplicationDbContext _context;
-        
-        public EscalationController(IEscalationsApiClient escalationsApi, ApplicationDbContext context, IUsersApiClient usersApiClient) : base(usersApiClient)
+        private readonly IPETasksApiClient _peTasksApiClient;
+        private readonly IPlannedEventsApiClient _plannedEventsApiClient;
+        private readonly IPEIssuesApiClient _peIssuesApiClient;
+        private readonly IPEIssueResolutionsApiClient _peIssueResolutionsApiClient;
+        // Removed obsolete constructor
+        public EscalationController(
+            IEscalationsApiClient escalationsApi,
+            IPETasksApiClient peTasksApiClient,
+            IPlannedEventsApiClient plannedEventsApiClient,
+            IPEIssuesApiClient peIssuesApiClient,
+            IPEIssueResolutionsApiClient peIssueResolutionsApiClient,
+            IUsersApiClient usersApiClient
+        ) : base(usersApiClient)
         {
             _escalationsApi = escalationsApi;
-            _context = context;
+            _peTasksApiClient = peTasksApiClient;
+            _plannedEventsApiClient = plannedEventsApiClient;
+            _peIssuesApiClient = peIssuesApiClient;
+            _peIssueResolutionsApiClient = peIssueResolutionsApiClient;
         }
         
         [HttpGet]
@@ -30,32 +43,20 @@ namespace SFCDashboard.Controllers
             if (userId == 0)
                 return Json(new { count = 0, escalations = new List<object>() });
             
-            // Get the current user with role information
-            var currentUser = await _context.Users
-                .Include(u => u.UserRole)
-                .FirstOrDefaultAsync(u => u.Id == userId);
-            
-            if (currentUser == null || currentUser.UserRoleId == 0)
+            // Get current user with role information via API client
+            var currentUser = await _usersApiClient.GetByIdAsync(userId);
+            if (currentUser == null || currentUser.UserRole == null)
                 return Json(new { count = 0, escalations = new List<object>() });
-            
-            // Get user's role level (0 for normal users, higher for management)
-            int userRoleLevel = currentUser.UserRole?.Level ?? 0;
-            
-            // Get user's workgroups
+
+            int userRoleLevel = currentUser.UserRole.Level;
             var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
-            
-            // Get escalations based on user role level and workgroups using the service
             var escalations = await _escalationsApi.GetEscalationsByUserRoleAsync(
-                userRoleLevel, 
+                userRoleLevel,
                 canViewAll ? null : userWorkgroupNames);
-            
-            // Apply filter
             if (filter == "unread")
             {
                 escalations = escalations.Where(e => !e.IsRead).ToList();
             }
-            
-            // Project to anonymous objects with all required fields
             var result = escalations.Select(e => new {
                 id = e.Id,
                 taskId = e.TaskId,
@@ -65,35 +66,34 @@ namespace SFCDashboard.Controllers
                 title = e.Title,
                 message = e.Message
             }).ToList();
-            
             return Json(new { count = result.Count, escalations = result });
         }        public async Task<IActionResult> Details(int id)
         {
-            var escalation = await _context.Escalations
-                .Include(e => e.PETask) // Fixed navigation property
-                .FirstOrDefaultAsync(e => e.Id == id);
-                
+            var escalation = await _escalationsApi.GetByIdAsync(id);
             if (escalation == null)
             {
                 return NotFound();
             }
-            
+
             // Mark as read when viewed
             if (!escalation.IsRead)
             {
                 await _escalationsApi.MarkAsReadAsync(id);
             }
-            
-            // Get the planned event ID
+
+            // Get the PETask and PlannedEvent using API clients
+            var task = escalation.PETask;
+            if (task == null && escalation.TaskId > 0)
+            {
+                task = await _peTasksApiClient.GetByIdAsync(escalation.TaskId);
+            }
             int? plannedEventId = null;
-            var task = await _context.PETasks.FirstOrDefaultAsync(t => t.Id == escalation.TaskId);
             if (task != null && !string.IsNullOrEmpty(task.PENumber))
             {
-                var plannedEvent = await _context.PlannedEvents
-                    .FirstOrDefaultAsync(pe => pe.PeNumber == task.PENumber);
+                var plannedEvent = await _plannedEventsApiClient.GetPlannedEventByPENumberAsync(task.PENumber);
                 plannedEventId = plannedEvent?.Id;
             }
-              // Create the view model from the entity
+
             var viewModel = new EscalationViewModel
             {
                 Id = escalation.Id,
@@ -102,14 +102,13 @@ namespace SFCDashboard.Controllers
                 CreatedAt = escalation.CreatedAt,
                 IsRead = escalation.IsRead,
                 TaskId = escalation.TaskId,
-                TaskName = escalation.PETask?.Task ?? "Unknown Task",  // Fixed navigation
-                PENumber = escalation.PETask?.PENumber ?? "Unknown",   // Fixed navigation
-                TaskStatus = escalation.PETask?.TaskStatus ?? "Unknown",            // Fixed navigation
+                TaskName = task?.Task ?? "Unknown Task",
+                PENumber = task?.PENumber ?? "Unknown",
+                TaskStatus = task?.TaskStatus ?? "Unknown",
                 Level = escalation.Level ?? 0,
             };
-            
+
             ViewData["PlannedEventId"] = plannedEventId;
-            
             return View(viewModel);
         }
         
@@ -135,32 +134,21 @@ namespace SFCDashboard.Controllers
             if (userId == 0)
                 return Json(new { success = false });
             
-            // Get current user with role information
-            var currentUser = await _context.Users
-                .Include(u => u.UserRole)
-                .FirstOrDefaultAsync(u => u.Id == userId);
-            
-            if (currentUser == null)
+            // Get current user with role information via API client
+            var currentUser = await _usersApiClient.GetByIdAsync(userId);
+            if (currentUser == null || currentUser.UserRole == null)
                 return Json(new { success = false });
-            
-            // Get user's role level
-            int userRoleLevel = currentUser.UserRole?.Level ?? 0;
-            
-            // Get user's workgroups
+
+            int userRoleLevel = currentUser.UserRole.Level;
             var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
-            
-            // Get all unread escalations for this user's role level and workgroups
             var escalations = await _escalationsApi.GetEscalationsByUserRoleAsync(
-                userRoleLevel, 
+                userRoleLevel,
                 canViewAll ? null : userWorkgroupNames);
             var unreadEscalations = escalations.Where(e => !e.IsRead).ToList();
-            
-            // Mark them all as read
             foreach (var escalation in unreadEscalations)
             {
                 await _escalationsApi.MarkAsReadAsync(escalation.Id);
             }
-            
             return Json(new { success = true });
         }
 
@@ -171,11 +159,8 @@ namespace SFCDashboard.Controllers
             if (string.IsNullOrEmpty(serviceId))
                 return 0;
 
-            // Extract the substring before the query
             var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceIdShort);
+            var user = await _usersApiClient.GetByServiceIdAsync(serviceIdShort);
             return user?.Id ?? 0;
         }
 
@@ -188,25 +173,16 @@ namespace SFCDashboard.Controllers
                 if (userId == 0)
                     return RedirectToAction("Index", "Home");
                 
-                // Get the current user with role information
-                var currentUser = await _context.Users
-                    .Include(u => u.UserRole)
-                    .FirstOrDefaultAsync(u => u.Id == userId);
-                
-                if (currentUser == null)
+                // Get current user with role information via API client
+                var currentUser = await _usersApiClient.GetByIdAsync(userId);
+                if (currentUser == null || currentUser.UserRole == null)
                     return RedirectToAction("Index", "Home");
-                
-                // Get user's role level
-                int userRoleLevel = currentUser.UserRole?.Level ?? 0;
-                
-                // Get user's workgroups
+
+                int userRoleLevel = currentUser.UserRole.Level;
                 var (_, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
-                
-                // Get escalations using the service with workgroup filtering
                 var escalations = await _escalationsApi.GetEscalationsByUserRoleAsync(
-                    userRoleLevel, 
+                    userRoleLevel,
                     canViewAll ? null : userWorkgroupNames);
-                  // Map to view models
                 var viewModels = escalations.Select(e => new EscalationViewModel
                 {
                     Id = e.Id,
@@ -219,11 +195,10 @@ namespace SFCDashboard.Controllers
                     PENumber = e.PETask?.PENumber ?? "Unknown",
                     TaskStatus = e.PETask?.TaskStatus ?? "Unknown",
                     Level = e.Level ?? 0,
-                    // Role-based display instead of recipient
                     RecipientRole = GetRoleNameByLevel(e.Level ?? 0)
                 }).ToList();
-
-                return View(viewModels);            }
+                return View(viewModels);
+            }
             catch (Exception)
             {
                 TempData["ErrorMessage"] = "An error occurred while retrieving escalations.";
@@ -249,40 +224,40 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var resolution = await _context.PEIssueResolutions.FindAsync(resolutionId);
+                // Get resolution, issue, and planned event via API clients
+                var resolution = await _peIssueResolutionsApiClient.GetByIdAsync(resolutionId);
                 if (resolution == null)
                 {
                     return Json(new { success = false, message = "Resolution request not found." });
                 }
 
-                var issue = await _context.PEIssues.FindAsync(resolution.IssueId);
+                var issue = await _peIssuesApiClient.GetByIdAsync(resolution.IssueId);
                 if (issue == null)
                 {
                     return Json(new { success = false, message = "Original issue not found." });
                 }
 
-                var pe = await _context.PlannedEvents.FindAsync(resolution.PlannedEventId);
+                var pe = await _plannedEventsApiClient.GetByIdAsync(resolution.PlannedEventId);
 
                 if (isConfirmed)
                 {
-                    // Update resolution status
+                    // Update resolution status via API client
                     resolution.IsConfirmed = true;
                     resolution.ConfirmedDate = DateTime.Now;
-                    _context.Update(resolution);                    // Mark issue as resolved
-                    if (issue != null)
-                    {
-                        issue.IsResolved = true;
-                        _context.Update(issue);
+                    await _peIssueResolutionsApiClient.UpdateAsync(resolution);
 
-                        // Find and mark the original issue as resolved if this is a reply
-                        if (issue.OriginalIssueId.HasValue)
+                    // Mark issue as resolved via API client
+                    issue.IsResolved = true;
+                    await _peIssuesApiClient.UpdateAsync(issue);
+
+                    // Find and mark the original issue as resolved if this is a reply
+                    if (issue.OriginalIssueId.HasValue)
+                    {
+                        var originalIssue = await _peIssuesApiClient.GetByIdAsync(issue.OriginalIssueId.Value);
+                        if (originalIssue != null && !originalIssue.IsResolved)
                         {
-                            var originalIssue = await _context.PEIssues.FindAsync(issue.OriginalIssueId);
-                            if (originalIssue != null && !originalIssue.IsResolved)
-                            {
-                                originalIssue.IsResolved = true;
-                                _context.Update(originalIssue);
-                            }
+                            originalIssue.IsResolved = true;
+                            await _peIssuesApiClient.UpdateAsync(originalIssue);
                         }
                     }
 
@@ -290,30 +265,26 @@ namespace SFCDashboard.Controllers
                     if (pe != null)
                     {
                         // Check if any unresolved root issues remain
-                        var hasOtherActiveIssues = await _context.PEIssues
-                            .AnyAsync(i => i.PlannedEventId == pe.Id &&
-                                      !i.IsResolved &&
-                                      i.OriginalIssueId == null);
-                        
-                        pe.IsHold = hasOtherActiveIssues; // Set IsHold to false if no active issues remain
-                        _context.Update(pe);
+                        var unresolvedIssues = await _peIssuesApiClient.GetByPlannedEventIdAsync(pe.Id);
+                        var hasOtherActiveIssues = unresolvedIssues.Any(i => !i.IsResolved && i.OriginalIssueId == null);
+                        pe.IsHold = hasOtherActiveIssues;
+                        await _plannedEventsApiClient.UpdateAsync(pe);
                     }
 
-                    await _context.SaveChangesAsync();
                     return Json(new { success = true, message = "Resolution confirmed and issue marked as resolved." });
                 }
                 else
                 {
-                    // If rejected, delete the resolution request and create a notification
-                    _context.Remove(resolution);
+                    // If rejected, delete the resolution request and create a notification via API client
+                    await _peIssueResolutionsApiClient.DeleteAsync(resolutionId);
 
                     // Notify the user who attempted to fix the issue
                     var notification = new PEIssue
                     {
                         PlannedEventId = resolution.PlannedEventId,
                         PETaskId = issue.PETaskId,
-                        SenderId = issue.SenderId, // Original reporter
-                        ReceiverId = issue.ReceiverId, // User who tried to fix it
+                        SenderId = issue.SenderId,
+                        ReceiverId = issue.ReceiverId,
                         IssueText = $"RESOLUTION REJECTED: The fix was not accepted. Please try again.",
                         CreatedAt = DateTime.Now,
                         IsRead = false,
@@ -321,10 +292,7 @@ namespace SFCDashboard.Controllers
                         IsReminder = false,
                         OriginalIssueId = issue.Id
                     };
-
-                    _context.PEIssues.Add(notification);
-                    await _context.SaveChangesAsync();
-                    
+                    await _peIssuesApiClient.CreateAsync(notification);
                     return Json(new { success = true, message = "Resolution rejected. The responder has been notified." });
                 }
             }
@@ -437,29 +405,13 @@ namespace SFCDashboard.Controllers
         private async Task<(List<int> workgroupIds, List<string> workgroupNames, bool canViewAll)> GetCurrentUserWorkGroupsAsync()
         {
             int currentUserId = await GetCurrentUserIdAsync();
-
-            var currentUser = await _context.Users
-                .Include(u => u.UserRole)
-                    .ThenInclude(r => r!.RolePermissions)
-                        .ThenInclude(rp => rp.Permission)
-                .Include(u => u.UserWorkGroups)
-                    .ThenInclude(uwg => uwg.WorkGroup)
-                .FirstOrDefaultAsync(u => u.Id == currentUserId);
-
+            var currentUser = await _usersApiClient.GetByIdAsync(currentUserId);
             if (currentUser == null)
                 return (new List<int>(), new List<string>(), false);
 
-            var workgroupIds = currentUser.UserWorkGroups?
-                .Select(uwg => uwg.WorkGroupId)
-                .ToList() ?? new List<int>();
-
-            var workgroupNames = currentUser.UserWorkGroups?
-                .Select(uwg => uwg.WorkGroup.Name)
-                .ToList() ?? new List<string>();
-
-            // Use the "ViewAll" permission instead of workgroup name
+            var workgroupIds = currentUser.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
+            var workgroupNames = currentUser.UserWorkGroups?.Select(uwg => uwg.WorkGroup.Name).ToList() ?? new List<string>();
             bool canViewAll = currentUser.UserRole?.HasPermission("ViewAll") == true;
-
             return (workgroupIds, workgroupNames, canViewAll);
         }
     }

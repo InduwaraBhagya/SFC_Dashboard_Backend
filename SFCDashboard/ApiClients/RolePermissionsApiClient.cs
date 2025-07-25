@@ -5,6 +5,37 @@ namespace SFCDashboard.ApiClients
 {
     public class RolePermissionsApiClient : IRolePermissionsApiClient
     {
+        public async Task<bool> HasPermissionAsync(string serviceId, string permissionName)
+        {
+            var response = await _httpClient.GetAsync($"api/rolepermissions/has-permission?serviceId={Uri.EscapeDataString(serviceId)}&permissionName={Uri.EscapeDataString(permissionName)}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<bool>(json, _jsonOptions);
+        }
+
+        public async Task<UserPermissionResult> GetUserPermissionsAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/rolepermissions/user-permissions/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<UserPermissionResult>(json, _jsonOptions)!;
+        }
+
+        public async Task<ApiResult> UpdateUserPermissionsAsync(int userId, bool manageProjects, bool canManageEstimatedTime)
+        {
+            var payload = new
+            {
+                userId,
+                manageProjects,
+                canManageEstimatedTime
+            };
+            var json = JsonSerializer.Serialize(payload, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("api/rolepermissions/update-user-permissions", content);
+            response.EnsureSuccessStatusCode();
+            var responseJson = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApiResult>(responseJson, _jsonOptions)!;
+        }
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
 

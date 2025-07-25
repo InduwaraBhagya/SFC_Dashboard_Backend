@@ -23,8 +23,31 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddMemoryCache();
 
 // Configure HttpClient for API calls
+
+
+
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5292";
+
 builder.Services.AddHttpClient<IPlannedEventsApiClient, PlannedEventsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IProjectsApiClient, ProjectsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+
+builder.Services.AddHttpClient<IRolePermissionsApiClient, RolePermissionsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+builder.Services.AddHttpClient<IUserRolesApiClient, UserRolesApiClient>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromMinutes(5);

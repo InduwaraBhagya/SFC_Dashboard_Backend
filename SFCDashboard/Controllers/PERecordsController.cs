@@ -16,16 +16,12 @@ namespace SFCDB.Controllers
 {
     public class PERecordsController : Controller
     {
-        private readonly ApplicationDbContext _context;
         private readonly ILogger<PERecordsController> _logger;
         private readonly IPERecordsApiClient _apiClient;
-
         public PERecordsController(
-            ApplicationDbContext context,
             ILogger<PERecordsController> logger,
             IPERecordsApiClient apiClient)
         {
-            _context = context;
             _logger = logger;
             _apiClient = apiClient;
         }
@@ -33,8 +29,14 @@ namespace SFCDB.Controllers
         // GET: PERecords
         public async Task<IActionResult> Index()
         {
-            _logger.LogInformation("Retrieving all PE Records");
-            return View(await _context.PERecords.ToListAsync());
+            _logger.LogInformation("Retrieving all PE Records via API client");
+            var response = await _apiClient.GetPERecordsAsync();
+            if (response.Success && response.Data != null)
+            {
+                return View(response.Data.Items);
+            }
+            TempData["Message"] = response.Message ?? "Failed to retrieve PE Records.";
+            return View(new List<PERecord>()); // Return empty list on failure
         }
 
         // GET: PERecords/ImportExcel

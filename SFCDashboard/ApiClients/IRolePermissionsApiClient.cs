@@ -12,5 +12,10 @@ namespace SFCDashboard.ApiClients
         Task<IEnumerable<RolePermission>> GetByRoleIdAsync(int roleId);
         Task DeleteByRoleIdAsync(int roleId);
         Task CreateMultipleAsync(IEnumerable<RolePermission> rolePermissions);
+
+        // Backend permission API integration
+        Task<bool> HasPermissionAsync(string serviceId, string permissionName);
+        Task<UserPermissionResult> GetUserPermissionsAsync(int userId);
+        Task<ApiResult> UpdateUserPermissionsAsync(int userId, bool manageProjects, bool canManageEstimatedTime);
     }
 }

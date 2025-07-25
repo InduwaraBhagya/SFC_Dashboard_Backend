@@ -311,11 +311,16 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync("api/petasksapi/ola-violating-pe-numbers");
+                var response = await _httpClient.GetAsync("api/petasksapi/ola-violations");
                 response.EnsureSuccessStatusCode();
-                
                 var json = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<List<string>>(json, _jsonOptions) ?? new List<string>();
+                var violatingTasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
+                var peNumbers = violatingTasks
+                    .Where(t => !string.IsNullOrEmpty(t.PENumber))
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToList();
+                return peNumbers;
             }
             catch (Exception ex)
             {

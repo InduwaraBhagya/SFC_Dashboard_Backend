@@ -459,5 +459,82 @@ namespace SFCDashboard.Api.Controllers
         {
             return _context.Users.Any(e => e.Id == id);
         }
+
+        /// <summary>
+        /// Check if the user's role has the 'Admin' permission
+        /// </summary>
+        [HttpGet("{id}/has-admin-permission")]
+        public async Task<ActionResult<bool>> HasAdminPermission(int id)
+        {
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserRole)
+                        .ThenInclude(ur => ur.RolePermissions)
+                            .ThenInclude(rp => rp.Permission)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null || user.UserRole == null)
+                {
+                    return NotFound();
+                }
+
+                var hasAdminPermission = user.UserRole.RolePermissions
+                    .Any(rp => rp.Permission != null && rp.Permission.Name == "Admin");
+
+                return Ok(hasAdminPermission);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking admin permission for user {Id}", id);
+                return StatusCode(500, "An error occurred while checking admin permission");
+            }
+        }
+
+        /// <summary>
+        /// Set user workgroups (replace all assignments)
+        /// </summary>
+        [HttpPost("{userId}/set-workgroups")]
+        public async Task<IActionResult> SetUserWorkGroups(int userId, [FromBody] List<int> workGroupIds)
+        {
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
+                {
+                    return NotFound($"User with ID {userId} not found");
+                }
+
+                // Remove all existing workgroup assignments
+                _context.UserWorkGroups.RemoveRange(user.UserWorkGroups);
+
+                // Add new assignments
+                if (workGroupIds != null && workGroupIds.Any())
+                {
+                    foreach (var wgId in workGroupIds.Distinct())
+                    {
+                _context.UserWorkGroups.Add(new UserWorkGroup
+                {
+                    SystemUserId = userId,
+                    WorkGroupId = wgId
+                });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting workgroups for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while setting user workgroups");
+            }
+        }
     }
 }
