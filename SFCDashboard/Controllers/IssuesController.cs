@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
 using System;
 using System.IO;
 using System.Linq;
@@ -15,13 +14,31 @@ namespace SFCDashboard.Controllers
 {
     public class IssuesController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPEIssuesApiClient _peIssuesApi;
+        private readonly IUsersApiClient _usersApi;
+        private readonly IPlannedEventsApiClient _plannedEventsApi;
+        private readonly IPETaskListsApiClient _peTaskListsApi;
+        private readonly ISubTaskListsApiClient _subTaskListsApi;
+        private readonly IPEIssueResolutionsApiClient _peIssueResolutionsApi;
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<IssuesController> _logger;
 
-        public IssuesController(ApplicationDbContext context, IWebHostEnvironment env, ILogger<IssuesController> logger)
+        public IssuesController(
+            IPEIssuesApiClient peIssuesApi,
+            IUsersApiClient usersApi,
+            IPlannedEventsApiClient plannedEventsApi,
+            IPETaskListsApiClient peTaskListsApi,
+            ISubTaskListsApiClient subTaskListsApi,
+            IPEIssueResolutionsApiClient peIssueResolutionsApi,
+            IWebHostEnvironment env,
+            ILogger<IssuesController> logger)
         {
-            _context = context;
+            _peIssuesApi = peIssuesApi;
+            _usersApi = usersApi;
+            _plannedEventsApi = plannedEventsApi;
+            _peTaskListsApi = peTaskListsApi;
+            _subTaskListsApi = subTaskListsApi;
+            _peIssueResolutionsApi = peIssueResolutionsApi;
             _env = env;
             _logger = logger;
         }
@@ -34,20 +51,11 @@ namespace SFCDashboard.Controllers
             var currentUser = await GetCurrentUserAsync();
             if (currentUser == null) return RedirectToAction("Index", "Home");
 
-            var received = await _context.PEIssues
-                .Include(i => i.SenderId)
-                .Where(i => i.ReceiverId == currentUser.Id)
-                .OrderByDescending(i => i.CreatedAt)
-                .ToListAsync();
+            var received = await _peIssuesApi.GetReceivedIssuesAsync(currentUser.Id);
+            var sent = await _peIssuesApi.GetSentIssuesAsync(currentUser.Id);
 
-            var sent = await _context.PEIssues
-                .Include(i => i.ReceiverId)
-                .Where(i => i.SenderId == currentUser.Id)
-                .OrderByDescending(i => i.CreatedAt)
-                .ToListAsync();
-
-            ViewBag.ReceivedIssues = received;
-            ViewBag.SentIssues = sent;
+            ViewBag.ReceivedIssues = received.ToList();
+            ViewBag.SentIssues = sent.ToList();
             ViewBag.UnreadCount = received.Count(i => !i.IsRead);
 
             return View();
@@ -56,10 +64,8 @@ namespace SFCDashboard.Controllers
         // GET: Issues/Create - General issue creation form
         public async Task<IActionResult> Create()
         {
-            var users = await _context.Users
-                .Select(u => new { u.Id, Name = $"{u.Name} ({u.ServiceId})" })
-                .ToListAsync();
-            ViewBag.Users = users;
+            var users = await _usersApi.GetAllAsync();
+            ViewBag.Users = users.Select(u => new { u.Id, Name = $"{u.Name} ({u.ServiceId})" }).ToList();
             return View(new IssueCreateViewModel());
         }
 
@@ -87,7 +93,7 @@ namespace SFCDashboard.Controllers
                 PETaskId = model.PETaskId,
                 SenderId = currentUser.Id,
                 ReceiverId = model.ReceiverId,
-                IssueText = model.IssueText,
+                IssueText = model.IssueText!,
                 CreatedAt = DateTime.Now,
                 IsRead = false,
                 IsReminder= false
@@ -108,8 +114,7 @@ namespace SFCDashboard.Controllers
 
             try
             {
-                _context.PEIssues.Add(issue);
-                await _context.SaveChangesAsync();
+                await _peIssuesApi.CreateAsync(issue);
                 _logger.LogInformation("Issue created by user {UserName} ({UserId}) for receiver {ReceiverId}",
                     currentUser.Name, currentUser.Id, model.ReceiverId);
 
@@ -127,10 +132,7 @@ namespace SFCDashboard.Controllers
         // GET: Issues/Details/5
         public async Task<IActionResult> Details(int id)
         {
-            var issue = await _context.PEIssues
-                .Include(i => i.SenderId)
-                .Include(i => i.ReceiverId)
-                .FirstOrDefaultAsync(i => i.Id == id);
+            var issue = await _peIssuesApi.GetByIdAsync(id);
 
             if (issue == null) return NotFound();
 
@@ -139,7 +141,7 @@ namespace SFCDashboard.Controllers
             if (currentUser != null && issue.ReceiverId == currentUser.Id && !issue.IsRead)
             {
                 issue.IsRead = true;
-                await _context.SaveChangesAsync();
+                await _peIssuesApi.UpdateAsync(issue);
             }
 
             return View(issue);
@@ -151,32 +153,9 @@ namespace SFCDashboard.Controllers
             var currentUser = await GetCurrentUserAsync();
             if (currentUser == null) return RedirectToAction("Index", "Home");
 
-            var issues = await _context.PEIssues
-.Where(i => i.ReceiverId == currentUser.Id && !i.IsHiddenFromInbox && !i.IsResolved).Select(i => new PEIssueViewModel
-{
-    Id = i.Id,
-    SenderId = i.SenderId,
-    SenderName = _context.Users
-                        .Where(u => u.Id == i.SenderId)
-                        .Select(u => u.Name)
-                        .FirstOrDefault() ?? "Unknown",
-    ReceiverId = i.ReceiverId,
-    ReceiverName = currentUser.Name,
-    IssueText = i.IssueText,
-    AttachmentPath = i.AttachmentPath,
-    CreatedAt = i.CreatedAt,
-    PlannedEventId = i.PlannedEventId,
-    IsRead = i.IsRead,
-    IsReply = i.IsReply,
-    OriginalIssueId = i.OriginalIssueId,
-    IsResolved = i.IsResolved,
-    IsResolutionRequest = i.IsResolutionRequest,
-    PETaskId = i.PETaskId
-})
-                .OrderByDescending(i => i.CreatedAt)
-                .ToListAsync();
+            var issues = await _peIssuesApi.GetInboxViewModelsAsync(currentUser.Id);
 
-            return View(issues);
+            return View(issues.ToList());
         }
 
         // GET: Issues/MySent
@@ -185,33 +164,9 @@ namespace SFCDashboard.Controllers
             var currentUser = await GetCurrentUserAsync();
             if (currentUser == null) return RedirectToAction("Index", "Home");
 
-            var issues = await _context.PEIssues
-                .Where(i => i.SenderId == currentUser.Id)
-                .Select(i => new PEIssueViewModel
-                {
-                    Id = i.Id,
-                    SenderId = currentUser.Id,
-                    SenderName = currentUser.Name,
-                    ReceiverId = i.ReceiverId,
-                    ReceiverName = _context.Users
-                        .Where(u => u.Id == i.ReceiverId)
-                        .Select(u => u.Name)
-                        .FirstOrDefault() ?? "Unknown",
-                    IssueText = i.IssueText,
-                    AttachmentPath = i.AttachmentPath,
-                    CreatedAt = i.CreatedAt,
-                    PlannedEventId = i.PlannedEventId,
-                    IsRead = i.IsRead,
-                    IsReply = i.IsReply,
-                    OriginalIssueId = i.OriginalIssueId,
-                    IsResolved = i.IsResolved,
-                    IsResolutionRequest = i.IsResolutionRequest,
-                    PETaskId = i.PETaskId
-                })
-                .OrderByDescending(i => i.CreatedAt)
-                .ToListAsync();
+            var issues = await _peIssuesApi.GetSentViewModelsAsync(currentUser.Id);
 
-            return View(issues);
+            return View(issues.ToList());
         }
 
         // POST: Issues/ReplyToIssue
@@ -219,7 +174,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> ReplyToIssue(int issueId, string replyText)
         {
             // Get the original issue
-            var originalIssue = await _context.PEIssues.FindAsync(issueId);
+            var originalIssue = await _peIssuesApi.GetByIdAsync(issueId);
             if (originalIssue == null)
             {
                 return NotFound();
@@ -243,8 +198,7 @@ namespace SFCDashboard.Controllers
                 OriginalIssueId = issueId                   // Link to the original issue
             };
 
-            _context.PEIssues.Add(reply);
-            await _context.SaveChangesAsync();
+            await _peIssuesApi.CreateAsync(reply);
 
             return RedirectToAction("Details", "PlannedEvents", new { id = originalIssue.PlannedEventId });
         }
@@ -321,37 +275,31 @@ namespace SFCDashboard.Controllers
                     model.SenderId = currentUser.Id;
                 }
 
-                // Add the issue
-                _context.PEIssues.Add(model);
-
                 // Set the PE on hold
-                var pe = await _context.PlannedEvents.FindAsync(model.PlannedEventId);
+                var pe = await _plannedEventsApi.GetByIdAsync(model.PlannedEventId);
                 if (pe != null)
                 {
                     pe.IsHold = true;
-                    _context.Update(pe);
+                    await _plannedEventsApi.UpdateAsync(pe);
                 }
 
                 // Find the matching PETaskList ID based on the task name from the PE record
-                var taskListId = await _context.PETaskLists
-                    .Where(tl => tl.Name == pe.TaskName)  // Changed from plannedEvent.TaskName to pe.TaskName
-                    .Select(tl => tl.Id)
-                    .FirstOrDefaultAsync();
+                var taskLists = await _peTaskListsApi.GetAllAsync();
+                var taskList = pe != null ? taskLists.FirstOrDefault(tl => tl.Name == pe.TaskName) : null;
+                var taskListId = taskList?.Id ?? 0;
 
                 // Override the PETaskId with the correct value
                 model.PETaskId = taskListId;
 
                 // NEW: Check if this issue text already exists in SubTaskList
-                var existingSubTask = await _context.SubTaskLists
-                    .Where(s => s.PETaskListId == taskListId && s.SubTaskName == model.IssueText)
-                    .FirstOrDefaultAsync();
+                var existingSubTask = await _subTaskListsApi.GetByTaskListIdAndNameAsync(taskListId, model.IssueText);
 
                 if (existingSubTask != null)
                 {
                     // Update frequency and last reported date
                     existingSubTask.Frequency += 1;
                     existingSubTask.LastReported = DateTime.Now;
-                    _context.Update(existingSubTask);
+                    await _subTaskListsApi.UpdateAsync(existingSubTask);
                     _logger.LogInformation($"Updated existing subtask frequency: {existingSubTask.SubTaskName}, new count: {existingSubTask.Frequency}");
                 }
                 else
@@ -366,12 +314,12 @@ namespace SFCDashboard.Controllers
                         LastReported = DateTime.Now
                     };
 
-                    _context.SubTaskLists.Add(newSubTask);
-                    await _context.SaveChangesAsync();  // Try saving immediately to isolate any issues
+                    await _subTaskListsApi.AddAsync(newSubTask);
                     _logger.LogInformation($"Successfully added new subtask: {newSubTask.SubTaskName} for task ID: {taskListId}");
                 }
 
-                await _context.SaveChangesAsync();
+                // Add the issue
+                await _peIssuesApi.CreateAsync(model);
 
                 TempData["SuccessMessage"] = "Issue reported successfully!";
                 return RedirectToAction("Details", "PlannedEvents", new { id = model.PlannedEventId });
@@ -390,40 +338,37 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                // First, get suggestions from SubTaskList table (more reliable)
-                var subTaskSuggestions = await _context.SubTaskLists
-                    .Where(s => s.PETaskListId == taskId)
-                    .OrderByDescending(s => s.Frequency) // Most common issues first
-                    .ThenByDescending(s => s.LastReported) // Then most recent
-                    .Take(10) // Increased to show more options
+                // Get suggestions from SubTaskListsApiClient
+                var subTasks = await _subTaskListsApi.GetByTaskListIdAsync(taskId);
+                var subTaskSuggestions = subTasks
+                    .OrderByDescending(s => s.Frequency)
+                    .ThenByDescending(s => s.LastReported)
+                    .Take(10)
                     .Select(s => new
                     {
                         IssueText = s.SubTaskName,
                         Frequency = s.Frequency,
                         LastReported = s.LastReported,
-                        Source = "common" // Indicate this comes from common issues
+                        Source = "common"
                     })
-                    .ToListAsync();
+                    .ToList();
 
-                // Then, get previous issues for this task (as before)
-                var recentIssueSuggestions = await _context.PEIssues
-                    .Where(i => i.PETaskId == taskId && !i.IsReply && !i.IsResolutionRequest)
+                // Get previous issues for this task from PEIssuesApiClient
+                var allIssues = await _peIssuesApi.GetByTaskIdAsync(taskId);
+                var recentIssueSuggestions = allIssues
+                    .Where(i => !i.IsReply && !i.IsResolutionRequest)
                     .OrderByDescending(i => i.CreatedAt)
                     .Take(5)
                     .Select(i => new
                     {
                         IssueText = i.IssueText,
-                        ReportedBy = _context.Users
-                            .Where(u => u.Id == i.SenderId)
-                            .Select(u => u.Name)
-                            .FirstOrDefault() ?? "Unknown",
+                        ReportedBy = i.SenderId.ToString(), // Use SenderId as fallback
                         CreatedAt = i.CreatedAt,
                         IsResolved = i.IsResolved,
-                        Source = "recent" // Indicate this is from recent issues
+                        Source = "recent"
                     })
-                    .ToListAsync();
+                    .ToList();
 
-                // Combine and return both types of suggestions
                 var combinedSuggestions = new
                 {
                     CommonIssues = subTaskSuggestions,
@@ -445,7 +390,7 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var issue = await _context.PEIssues.FindAsync(id);
+                var issue = await _peIssuesApi.GetByIdAsync(id);
                 if (issue == null)
                 {
                     return NotFound();
@@ -455,8 +400,7 @@ namespace SFCDashboard.Controllers
                 if (!issue.IsRead)
                 {
                     issue.IsRead = true;
-                    _context.Update(issue);
-                    await _context.SaveChangesAsync();
+                    await _peIssuesApi.UpdateAsync(issue);
                 }
 
                 return Ok();
@@ -481,11 +425,15 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
                 }
 
+                // Get the original issue to get PETaskId
+                var originalIssue = await _peIssuesApi.GetByIdAsync(issueId);
+                int peTaskId = originalIssue?.PETaskId ?? 0;
+
                 // Create the reply with the current user as the sender
                 var reply = new PEIssue
                 {
                     PlannedEventId = plannedEventId,
-                    PETaskId = (await _context.PEIssues.FindAsync(issueId))?.PETaskId ?? 0,
+                    PETaskId = peTaskId,
                     SenderId = currentUser.Id, // Use the current user's ID
                     ReceiverId = receiverId,
                     IssueText = replyText,
@@ -513,8 +461,7 @@ namespace SFCDashboard.Controllers
                     reply.AttachmentPath = $"/uploads/issues/{plannedEventId}/{uniqueFileName}";
                 }
 
-                _context.PEIssues.Add(reply);
-                await _context.SaveChangesAsync();
+                await _peIssuesApi.CreateAsync(reply);
 
                 TempData["SuccessMessage"] = "Reply sent successfully.";
                 return RedirectToAction("Details", "PlannedEvents", new { id = plannedEventId });
@@ -536,7 +483,7 @@ namespace SFCDashboard.Controllers
                 _logger.LogInformation("MarkAsFixed called with issueId: {IssueId}, PE: {PlannedEventId}, details: {Details}",
                     issueId, plannedEventId, resolutionDetails);
 
-                var issue = await _context.PEIssues.FindAsync(issueId);
+                var issue = await _peIssuesApi.GetByIdAsync(issueId);
                 if (issue == null)
                 {
                     TempData["ErrorMessage"] = "Issue not found.";
@@ -554,7 +501,7 @@ namespace SFCDashboard.Controllers
                     PlannedEventId = plannedEventId
                 };
 
-                _context.PEIssueResolutions.Add(resolutionRequest);
+                await _peIssueResolutionsApi.CreateAsync(resolutionRequest);
 
                 // Send a notification to the original reporter
                 var notification = new PEIssue
@@ -572,8 +519,7 @@ namespace SFCDashboard.Controllers
                     IsResolutionRequest = true
                 };
 
-                _context.PEIssues.Add(notification);
-                await _context.SaveChangesAsync();
+                await _peIssuesApi.CreateAsync(notification);
 
                 TempData["SuccessMessage"] = "Issue marked as fixed. A confirmation request has been sent to the reporter.";
 
@@ -601,7 +547,7 @@ namespace SFCDashboard.Controllers
 
             try
             {
-                var resolution = await _context.PEIssueResolutions.FindAsync(resolutionId);
+                var resolution = await _peIssueResolutionsApi.GetByIdAsync(resolutionId);
                 if (resolution == null)
                 {
                     _logger.LogWarning($"Resolution not found for id: {resolutionId}");
@@ -609,7 +555,7 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Index", "PlannedEvents");
                 }
 
-                var issue = await _context.PEIssues.FindAsync(resolution.IssueId);
+                var issue = await _peIssuesApi.GetByIdAsync(resolution.IssueId);
                 if (issue == null)
                 {
                     _logger.LogWarning($"Issue not found for resolution id: {resolutionId}");
@@ -617,43 +563,41 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Index", "PlannedEvents");
                 }
 
-                var pe = await _context.PlannedEvents.FindAsync(resolution.PlannedEventId);
+                var pe = await _plannedEventsApi.GetByIdAsync(resolution.PlannedEventId);
 
                 if (isConfirmed)
                 {
                     // Update resolution status
                     resolution.IsConfirmed = true;
                     resolution.ConfirmedDate = DateTime.Now;
-                    _context.Update(resolution);
+                    await _peIssueResolutionsApi.UpdateAsync(resolution);
 
                     // Mark issue as resolved
                     if (issue != null)
                     {
                         issue.IsResolved = true;
-                        _context.Update(issue);
+                        await _peIssuesApi.UpdateAsync(issue);
                         _logger.LogInformation($"Issue {issue.Id} marked as resolved");
 
                         // Find and mark the original issue as resolved if this is a reply
                         if (issue.OriginalIssueId.HasValue)
                         {
-                            var originalIssue = await _context.PEIssues.FindAsync(issue.OriginalIssueId);
+                            var originalIssue = await _peIssuesApi.GetByIdAsync(issue.OriginalIssueId.Value);
                             if (originalIssue != null && !originalIssue.IsResolved)
                             {
                                 originalIssue.IsResolved = true;
-                                _context.Update(originalIssue);
+                                await _peIssuesApi.UpdateAsync(originalIssue);
                                 _logger.LogInformation($"Original issue {originalIssue.Id} also marked as resolved");
                             }
                         }
 
                         // Find the resolution request message and hide it from inbox
-                        var resolutionRequestMessage = await _context.PEIssues
-                            .FirstOrDefaultAsync(i => i.IsResolutionRequest &&
-                                            i.OriginalIssueId == issue.Id);
-
+                        var allIssues = pe != null ? await _peIssuesApi.GetByPlannedEventIdAsync(pe.Id) : new List<PEIssue>();
+                        var resolutionRequestMessage = allIssues.FirstOrDefault(i => i.IsResolutionRequest && i.OriginalIssueId == issue.Id);
                         if (resolutionRequestMessage != null)
                         {
                             resolutionRequestMessage.IsHiddenFromInbox = true;
-                            _context.Update(resolutionRequestMessage);
+                            await _peIssuesApi.UpdateAsync(resolutionRequestMessage);
                             _logger.LogInformation($"Resolution request message {resolutionRequestMessage.Id} hidden from inbox");
                         }
                     }
@@ -665,16 +609,14 @@ namespace SFCDashboard.Controllers
                     // Update planned event - ONLY if no other active issues remain
                     if (pe != null)
                     {
-                        // Check if any unresolved root issues remain (improved query)
-                        var hasOtherActiveIssues = await _context.PEIssues
-                            .AnyAsync(i => i.PlannedEventId == pe.Id &&
-                                      !i.IsResolved &&
-                                      i.OriginalIssueId == null);  // Only consider root issues
+                        // Check if any unresolved root issues remain
+                        var allIssues = await _peIssuesApi.GetByPlannedEventIdAsync(pe.Id);
+                        var hasOtherActiveIssues = allIssues.Any(i => !i.IsResolved && i.OriginalIssueId == null);
                         pe.IsHold = false;
                         if (!hasOtherActiveIssues)
                         {
-                            pe.IsHold = false;  // Set IsHold to false
-                            _context.Update(pe);
+                            pe.IsHold = false;
+                            await _plannedEventsApi.UpdateAsync(pe);
                             _logger.LogInformation($"PE {pe.Id} removed from hold status as all issues are resolved");
                         }
                         else
@@ -687,13 +629,12 @@ namespace SFCDashboard.Controllers
                         _logger.LogWarning($"PE not found for resolution id: {resolutionId}");
                     }
 
-                    await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Resolution confirmed and issue marked as resolved.";
                 }
                 else
                 {
                     // If rejected, delete the resolution request and create a notification
-                    _context.Remove(resolution);
+                    await _peIssueResolutionsApi.RemoveAsync(resolutionId);
 
                     // Notify the user who attempted to fix the issue
                     var notification = new PEIssue
@@ -710,8 +651,7 @@ namespace SFCDashboard.Controllers
                         OriginalIssueId = issue.Id
                     };
 
-                    _context.PEIssues.Add(notification);
-                    await _context.SaveChangesAsync();
+                    await _peIssuesApi.CreateAsync(notification);
 
                     TempData["SuccessMessage"] = "Resolution rejected. The responder has been notified.";
                 }
@@ -732,14 +672,12 @@ namespace SFCDashboard.Controllers
             try
             {
                 // Try by direct ID first
-                var resolution = await _context.PEIssueResolutions
-                    .FirstOrDefaultAsync(r => r.Id == id && !r.IsConfirmed);
+                var resolution = await _peIssueResolutionsApi.GetByIdAsync(id);
 
                 // If not found, try by issue ID
                 if (resolution == null)
                 {
-                    resolution = await _context.PEIssueResolutions
-                        .FirstOrDefaultAsync(r => r.IssueId == id && !r.IsConfirmed);
+                    resolution = await _peIssueResolutionsApi.GetByIssueIdAsync(id);
                 }
 
                 if (resolution == null)
@@ -770,7 +708,7 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var resolution = await _context.PEIssueResolutions.FindAsync(id);
+                var resolution = await _peIssueResolutionsApi.GetByIdAsync(id);
 
                 if (resolution == null)
                 {
@@ -810,7 +748,8 @@ namespace SFCDashboard.Controllers
                 return null;
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.ServiceId == ExtractServiceId(email));
+            var users = await _usersApi.GetAllAsync();
+            var user = users.FirstOrDefault(u => u.ServiceId == ExtractServiceId(email));
             return user;
         }
 
@@ -822,10 +761,8 @@ namespace SFCDashboard.Controllers
 
         private async Task PopulateUsersAsync()
         {
-            var users = await _context.Users
-                .Select(u => new { u.Id, Name = $"{u.Name} ({u.ServiceId})" })
-                .ToListAsync();
-            ViewBag.Users = users;
+            var users = await _usersApi.GetAllAsync();
+            ViewBag.Users = users.Select(u => new { u.Id, Name = $"{u.Name} ({u.ServiceId})" }).ToList();
         }
 
         private string ExtractServiceId(string email)
@@ -854,7 +791,7 @@ namespace SFCDashboard.Controllers
 
         [Required]
         [Display(Name = "Issue Description")]
-        public string IssueText { get; set; }
+        public string? IssueText { get; set; }
 
         [Display(Name = "Attachment")]
         [FileExtensions(Extensions = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png")]

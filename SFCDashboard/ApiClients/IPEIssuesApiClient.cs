@@ -24,5 +24,8 @@ namespace SFCDashboard.ApiClients
         Task<IEnumerable<PEIssue>> GetUnreadInboxIssuesAsync(int userId);
         Task<IEnumerable<PEIssueViewModel>> GetInboxViewModelsAsync(int userId);
         Task<IEnumerable<PEIssueViewModel>> GetSentViewModelsAsync(int userId);
+
+        Task<IEnumerable<PEIssue>> GetByTaskIdAsync(int taskId);
+        Task<IEnumerable<PEIssue>> GetByPlannedEventIdAsync(int plannedEventId);
     }
 }

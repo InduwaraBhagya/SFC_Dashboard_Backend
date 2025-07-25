@@ -77,5 +77,21 @@ namespace SFCDashboard.ApiClients
             var json = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<Dictionary<int, PEIssueResolution>>(json, _jsonOptions) ?? new Dictionary<int, PEIssueResolution>();
         }
+
+        public async Task RemoveAsync(int id)
+        {
+            var response = await _httpClient.DeleteAsync($"api/peissueresolutions/{id}");
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<PEIssueResolution?> GetByIssueIdAsync(int issueId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissueresolutions/byissue/{issueId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return null;
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<PEIssueResolution>(json, _jsonOptions);
+        }
     }
 }

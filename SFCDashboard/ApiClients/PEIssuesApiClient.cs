@@ -7,6 +7,21 @@ namespace SFCDashboard.ApiClients
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
+        public async Task<IEnumerable<PEIssue>> GetByTaskIdAsync(int taskId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/bytask/{taskId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetByPlannedEventIdAsync(int plannedEventId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/byplannedevent/{plannedEventId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
 
         public PEIssuesApiClient(HttpClient httpClient)
         {
