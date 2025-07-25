@@ -237,26 +237,54 @@ namespace SFCDashboard.Api.Controllers
                 var violatingTasks = await _context.PETasks
                     .Include(t => t.PlannedEvent)
                     .Where(t => t.TaskStatus != "COMPLETED" &&
-                               t.TaskCompleteDate.Date < currentDate)
+                               t.TaskCompleteDate < currentDate)
                     .OrderBy(t => t.TaskCompleteDate)
                     .ToListAsync();
 
                 // Update PE status for OLA violations
+                var hasUpdates = false;
                 foreach (var task in violatingTasks)
                 {
                     if (task.PlannedEvent != null && task.PlannedEvent.PEStatus != "ola-violated")
                     {
                         task.PlannedEvent.PEStatus = "ola-violated";
                         _context.Update(task.PlannedEvent);
+                        hasUpdates = true;
                     }
                 }
 
-                if (violatingTasks.Any(t => t.PlannedEvent != null))
+                if (hasUpdates)
                 {
                     await _context.SaveChangesAsync();
                 }
 
-                return Ok(violatingTasks);
+                // Return tasks without the PlannedEvent navigation property to avoid serialization issues
+                var result = violatingTasks.Select(t => new PETask
+                {
+                    Id = t.Id,
+                    PENumber = t.PENumber,
+                    TaskSeq = t.TaskSeq,
+                    Task = t.Task,
+                    TaskWorkGroup = t.TaskWorkGroup,
+                    OLA = t.OLA,
+                    TaskStatus = t.TaskStatus,
+                    TaskCreatedDate = t.TaskCreatedDate,
+                    TaskCompleteDate = t.TaskCompleteDate,
+                    ActualTaskCreatedDate = t.ActualTaskCreatedDate,
+                    ACtualTaskCompleteDate = t.ACtualTaskCompleteDate,
+                    IsUrgent = t.IsUrgent,
+                    UrgentMarkedDate = t.UrgentMarkedDate,
+                    UrgentRequested = t.UrgentRequested,
+                    Priority = t.Priority,
+                    EstimatedTime = t.EstimatedTime,
+                    IsOLAViolate = t.IsOLAViolate,
+                    OLADateTime = t.OLADateTime,
+                    ViolationStartTime = t.ViolationStartTime,
+                    EscalationsDisabled = t.EscalationsDisabled
+                    // Intentionally excluding PlannedEvent to avoid circular references
+                }).ToList();
+
+                return Ok(result);
             }
             catch (Exception ex)
             {

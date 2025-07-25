@@ -6,7 +6,7 @@ using SFCDashboard.Models;
 namespace SFCDashboard.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/rolepermissions")]
     public class RolePermissionsApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -18,13 +18,12 @@ namespace SFCDashboard.Api.Controllers
             _logger = logger;
         }
 
-        // GET: api/rolepermissions/has-permission/{permissionName}
-        [HttpGet("has-permission/{permissionName}")]
-        public async Task<IActionResult> HasPermission(string permissionName)
+        // GET: api/rolepermissions/has-permission/{serviceId}/{permissionName}
+        [HttpGet("has-permission/{serviceId}/{permissionName}")]
+        public async Task<IActionResult> HasPermission(string serviceId, string permissionName)
         {
-            var serviceId = User.Identity?.Name;
             if (string.IsNullOrEmpty(serviceId))
-                return Unauthorized();
+                return BadRequest("ServiceId is required");
 
             serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
 

@@ -7,7 +7,7 @@ namespace SFCDashboard.ApiClients
     {
         public async Task<bool> HasPermissionAsync(string serviceId, string permissionName)
         {
-            var response = await _httpClient.GetAsync($"api/rolepermissions/has-permission?serviceId={Uri.EscapeDataString(serviceId)}&permissionName={Uri.EscapeDataString(permissionName)}");
+            var response = await _httpClient.GetAsync($"api/rolepermissions/has-permission/{Uri.EscapeDataString(serviceId)}/{Uri.EscapeDataString(permissionName)}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<bool>(json, _jsonOptions);
