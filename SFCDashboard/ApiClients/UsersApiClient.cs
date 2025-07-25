@@ -120,19 +120,48 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var json = JsonSerializer.Serialize(user, _jsonOptions);
+                // Create a simplified object with only the properties we want to update
+                var updateRequest = new
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    ServiceId = user.ServiceId,
+                    UserRoleId = user.UserRoleId
+                };
+                
+                var json = JsonSerializer.Serialize(updateRequest, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
                 var response = await _httpClient.PutAsync($"api/users/{user.Id}", content);
                 response.EnsureSuccessStatusCode();
                 
-                var responseJson = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<SystemUser>(responseJson, _jsonOptions) ?? user;
+                // Return the original user object since the API returns NoContent (204)
+                return user;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating user {Id} via API", user.Id);
                 throw;
+            }
+        }
+
+        public async Task<ApiResult> EditSystemUserAsync(int id, EditSystemUserRequest request)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(request, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PutAsync($"api/users/{id}/edit-system-user", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<ApiResult>(responseJson, _jsonOptions) ?? new ApiResult { Success = true };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error editing system user {Id} via API", id);
+                return new ApiResult { Success = false, Message = ex.Message };
             }
         }
 

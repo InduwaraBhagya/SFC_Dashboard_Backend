@@ -44,6 +44,9 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 var users = await _context.Users
+                    .Include(u => u.UserRole)
+                    .Include(u => u.UserWorkGroups)
+                        .ThenInclude(uwg => uwg.WorkGroup)
                     .ToListAsync();
                 return Ok(users);
             }
@@ -424,6 +427,63 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Edit system user with workgroups and role
+        /// </summary>
+        [HttpPut("{id}/edit-system-user")]
+        public async Task<IActionResult> EditSystemUser(int id, [FromBody] EditSystemUserRequest request)
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    return NotFound($"User with ID {id} not found");
+                }
+
+                // Update basic user properties
+                user.Name = request.Name;
+                user.ServiceId = request.ServiceId;
+                user.UserRoleId = request.UserRoleId;
+
+                // Update workgroups - remove existing and add new ones
+                _context.UserWorkGroups.RemoveRange(user.UserWorkGroups);
+
+                if (request.WorkGroupIds != null && request.WorkGroupIds.Any())
+                {
+                    foreach (var workGroupId in request.WorkGroupIds.Distinct())
+                    {
+                        _context.UserWorkGroups.Add(new UserWorkGroup
+                        {
+                            SystemUserId = id,
+                            WorkGroupId = workGroupId
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated user {Id} with {WorkGroupCount} workgroups", 
+                    id, request.WorkGroupIds?.Count ?? 0);
+
+                return Ok(new { success = true, message = "User updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating system user {Id}", id);
+                return StatusCode(500, "An error occurred while updating the system user");
+            }
+        }
+
+        /// <summary>
         /// Delete a user
         /// </summary>
         [HttpDelete("{id}")]
@@ -536,5 +596,16 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while setting user workgroups");
             }
         }
+    }
+
+    /// <summary>
+    /// Request model for editing system user
+    /// </summary>
+    public class EditSystemUserRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string ServiceId { get; set; } = string.Empty;
+        public int? UserRoleId { get; set; }
+        public List<int> WorkGroupIds { get; set; } = new List<int>();
     }
 }

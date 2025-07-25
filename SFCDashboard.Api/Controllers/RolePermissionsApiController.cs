@@ -39,6 +39,45 @@ namespace SFCDashboard.Api.Controllers
             return Ok(hasPermission);
         }
 
+        // GET: api/rolepermissions/user-permissions/{userId}
+        [HttpGet("user-permissions/{userId}")]
+        public async Task<IActionResult> GetUserPermissions(int userId)
+        {
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserRole)
+                        .ThenInclude(r => r.RolePermissions)
+                            .ThenInclude(rp => rp.Permission)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                {
+                    return NotFound($"User with ID {userId} not found");
+                }
+
+                // Check specific permissions
+                var hasManageProjects = user.UserRole?.RolePermissions
+                    .Any(rp => rp.Permission.Name == "ManageProjects") ?? false;
+
+                var hasCanManageEstimatedTime = user.UserRole?.RolePermissions
+                    .Any(rp => rp.Permission.Name == "CanManageEstimatedTime") ?? false;
+
+                var result = new
+                {
+                    HasManageProjects = hasManageProjects,
+                    HasCanManageEstimatedTime = hasCanManageEstimatedTime
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user permissions for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving user permissions");
+            }
+        }
+
         // POST: api/rolepermissions/update-user-permissions
         [HttpPost("update-user-permissions")]
         public async Task<IActionResult> UpdateUserPermissions([FromBody] UpdateUserPermissionsRequest request)

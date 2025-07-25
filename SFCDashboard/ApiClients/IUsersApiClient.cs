@@ -10,6 +10,7 @@ namespace SFCDashboard.ApiClients
         Task<SystemUser?> GetByServiceIdAsync(string serviceId);
         Task<SystemUser> CreateAsync(SystemUser user);
         Task<SystemUser> UpdateAsync(SystemUser user);
+        Task<ApiResult> EditSystemUserAsync(int id, EditSystemUserRequest request);
         Task DeleteAsync(int id);
         Task<int> GetCurrentUserIdAsync(string serviceId);
         Task<SystemUser?> GetUserWithRoleAndWorkGroupsAsync(int userId);
