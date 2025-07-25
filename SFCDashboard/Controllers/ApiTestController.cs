@@ -4,7 +4,7 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class ApiTestController : Controller
+    public class ApiTestController : BaseController
     {
         private readonly IPlannedEventsApiClient _plannedEventsApi;
         private readonly IPETasksApiClient _peTasksApi;
@@ -15,7 +15,7 @@ namespace SFCDashboard.Controllers
             IPlannedEventsApiClient plannedEventsApi,
             IPETasksApiClient peTasksApi,
             IUsersApiClient usersApi,
-            ILogger<ApiTestController> logger)
+            ILogger<ApiTestController> logger) : base(usersApi)
         {
             _plannedEventsApi = plannedEventsApi;
             _peTasksApi = peTasksApi;

@@ -5,7 +5,7 @@ using SFCDashboard.Models;
 namespace SFCDashboard.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/areanetworkengineers")]
     public class AreaNetworkEngineersApiController : ControllerBase
     {
         private readonly IAreaNetworkEngineersApiService _service;

@@ -7,9 +7,9 @@ using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public class SystemUsersController : Controller
+    public class SystemUsersController : BaseController
     {
-        private readonly IUsersApiClient _usersApiClient;
+        // Remove the redundant IUsersApiClient since it's inherited from BaseController
         private readonly IUserRolesApiClient _userRolesApiClient;
         private readonly IWorkGroupsApiClient _workGroupsApiClient;
 
@@ -17,8 +17,8 @@ namespace SFCDashboard.Controllers
             IUsersApiClient usersApiClient,
             IUserRolesApiClient userRolesApiClient,
             IWorkGroupsApiClient workGroupsApiClient)
+            : base(usersApiClient)
         {
-            _usersApiClient = usersApiClient;
             _userRolesApiClient = userRolesApiClient;
             _workGroupsApiClient = workGroupsApiClient;
         }

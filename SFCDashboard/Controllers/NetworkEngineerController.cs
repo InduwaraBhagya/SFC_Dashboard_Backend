@@ -7,11 +7,11 @@ using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public class NetworkEngineerController : Controller
+    public class NetworkEngineerController : BaseController
     {
         private readonly IAreaNetworkEngineersApiClient _areaNetworkEngineersApiClient;
 
-        public NetworkEngineerController(IAreaNetworkEngineersApiClient areaNetworkEngineersApiClient)
+        public NetworkEngineerController(IAreaNetworkEngineersApiClient areaNetworkEngineersApiClient, IUsersApiClient usersApiClient) : base(usersApiClient)
         {
             _areaNetworkEngineersApiClient = areaNetworkEngineersApiClient;
         }
@@ -102,15 +102,31 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> List()
         {
-            var mappings = (await _areaNetworkEngineersApiClient.GetAllAsync()).ToList();
-            return View(mappings);
+            try
+            {
+                var mappings = (await _areaNetworkEngineersApiClient.GetAllAsync()).ToList();
+                return View(mappings);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Failed to load network engineers: {ex.Message}";
+                return View(new List<AreaNetworkEngineer>());
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> ImportExcel()
         {
-            var mappings = (await _areaNetworkEngineersApiClient.GetAllAsync()).ToList();
-            return View(mappings);
+            try
+            {
+                var mappings = (await _areaNetworkEngineersApiClient.GetAllAsync()).ToList();
+                return View(mappings);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Failed to load network engineers: {ex.Message}";
+                return View(new List<AreaNetworkEngineer>());
+            }
         }
     }
 }
