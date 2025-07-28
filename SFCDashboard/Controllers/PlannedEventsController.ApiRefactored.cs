@@ -200,7 +200,7 @@ namespace SFCDashboard.Controllers
             }
 
             // Load issues for this PE
-            var issues = await _peIssuesApi.GetPEIssuesByPlannedEventAsync(plannedEvent.Id);
+            var issues = await _peIssuesApi.GetPEIssueViewModelsByPlannedEventAsync(plannedEvent.Id);
             ViewBag.PEReportedIssues = issues;
 
             // Get escalations for PE tasks

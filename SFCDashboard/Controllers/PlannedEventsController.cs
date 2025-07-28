@@ -810,7 +810,7 @@ namespace SFCDashboard.Controllers
             ViewBag.CurrentTaskListId = taskList?.Id;
 
             // Load issues/subtasks for this PE (assuming you use PEIssue or Subtask table)
-            var issues = await _peIssuesApi.GetPEIssuesByPlannedEventAsync(plannedEvent.Id);
+            var issues = await _peIssuesApi.GetPEIssueViewModelsByPlannedEventAsync(plannedEvent.Id);
 
             ViewBag.PEReportedIssues = issues;
 
