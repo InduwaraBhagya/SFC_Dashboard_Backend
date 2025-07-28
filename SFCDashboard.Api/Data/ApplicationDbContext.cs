@@ -85,6 +85,20 @@ namespace SFCDashboard.Data
             // Add other permissions here
             );
 
+            // Seed admin role and user for development
+            modelBuilder.Entity<UserRole>().HasData(
+                new UserRole { Id = 1, Name = "Admin", Level = 3 }
+            );
+
+            modelBuilder.Entity<SystemUser>().HasData(
+                new SystemUser { Id = 1, Name = "Development Admin", ServiceId = "123456", UserRoleId = 1 }
+            );
+
+            modelBuilder.Entity<RolePermission>().HasData(
+                new RolePermission { Id = 1, RoleId = 1, PermissionId = 5 }, // Admin permission
+                new RolePermission { Id = 2, RoleId = 1, PermissionId = 6 }  // ViewAll permission
+            );
+
             modelBuilder.Entity<ProjectPEMapping>()
                 .HasOne(pp => pp.Project)
                 .WithMany(p => p.ProjectPEs)

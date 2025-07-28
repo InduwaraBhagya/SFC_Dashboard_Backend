@@ -138,17 +138,19 @@ namespace SFCDashboard.Controllers
                         });
                         await _rolePermissionsApiClient.CreateMultipleAsync(newRolePermissions);
                     }
+                    TempData["SuccessMessage"] = "Role updated successfully!";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    _logger.LogError($"Error updating role: {ex.Message}");
                     if (!await _userRolesApiClient.ExistsAsync(userRole.Id))
                     {
                         return NotFound();
                     }
                     else
                     {
-                        throw;
+                        ModelState.AddModelError("", "Error updating role: " + ex.Message);
                     }
                 }
             }
@@ -177,8 +179,18 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _userRolesApiClient.DeleteAsync(id);
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                await _userRolesApiClient.DeleteAsync(id);
+                TempData["SuccessMessage"] = "Role deleted successfully!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error deleting role: {ex.Message}");
+                TempData["ErrorMessage"] = "Error deleting role: " + ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         private async Task<bool> UserRoleExists(int id)

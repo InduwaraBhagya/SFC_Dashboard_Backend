@@ -29,23 +29,14 @@ namespace SFCDashboard.Controllers
                 var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
                 if (!string.IsNullOrEmpty(serviceId))
                 {
-                    // First get the user ID by service ID
-                    var userId = await _usersApiClient.GetCurrentUserIdAsync(serviceId);
-                    if (userId > 0)
+                    // Get all user layout data in a single API call
+                    var layoutData = await _usersApiClient.GetUserLayoutDataAsync(serviceId);
+                    if (layoutData != null)
                     {
-                        // Then get the user with role and permissions included
-                        var currentUser = await _usersApiClient.GetUserWithRoleAndWorkGroupsAsync(userId);
-                        if (currentUser != null)
-                        {
-                            ViewData["CurrentUserName"] = currentUser.Name ?? "Guest";
-                            ViewData["IsAdmin"] = currentUser.UserRole?.HasPermission("Admin") == true;
-                            ViewData["CanManageCustomerAssignments"] = currentUser.UserRole?.HasPermission("ManageCustomerAssignments") == true;
-                            ViewData["CanManageDrawFiberPerms"] = currentUser.UserRole?.HasPermission("ManageDrawFiberPerms") == true;
-                        }
-                        else
-                        {
-                            SetDefaultViewData();
-                        }
+                        ViewData["CurrentUserName"] = layoutData.UserName;
+                        ViewData["IsAdmin"] = layoutData.IsAdmin;
+                        ViewData["CanManageCustomerAssignments"] = layoutData.CanManageCustomerAssignments;
+                        ViewData["CanManageDrawFiberPerms"] = layoutData.CanManageDrawFiberPerms;
                     }
                     else
                     {

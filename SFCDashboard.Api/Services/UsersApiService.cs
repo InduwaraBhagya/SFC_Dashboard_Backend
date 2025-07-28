@@ -335,6 +335,68 @@ namespace SFCDashboard.Services
             }
         }
 
+        public async Task<UserLayoutDataDto?> GetUserLayoutDataAsync(string serviceId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(serviceId))
+                    return null;
+
+                var serviceIdShort = ExtractServiceId(serviceId);
+                var userId = await GetCurrentUserIdAsync(serviceId);
+                
+                if (userId <= 0)
+                    return null;
+
+                var user = await GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                    return null;
+
+                return new UserLayoutDataDto
+                {
+                    UserName = user.Name ?? "Guest",
+                    IsAdmin = user.UserRole?.HasPermission("Admin") == true,
+                    CanManageCustomerAssignments = user.UserRole?.HasPermission("ManageCustomerAssignments") == true,
+                    CanManageDrawFiberPerms = user.UserRole?.HasPermission("ManageDrawFiberPerms") == true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user layout data for service ID {ServiceId}", serviceId);
+                return null;
+            }
+        }
+
+        public async Task<ProjectUserPermissionsDto?> GetProjectUserPermissionsAsync(string serviceId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(serviceId))
+                    return null;
+
+                var userId = await GetCurrentUserIdAsync(serviceId);
+                if (userId <= 0)
+                    return null;
+
+                var user = await GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                    return null;
+
+                var canManageProjects = user.UserRole?.HasPermission("ManageProjects") == true;
+
+                return new ProjectUserPermissionsDto
+                {
+                    CurrentUser = user,
+                    CanManageProjects = canManageProjects
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting project user permissions for service ID {ServiceId}", serviceId);
+                return null;
+            }
+        }
+
         private string ExtractServiceId(string email)
         {
             if (string.IsNullOrEmpty(email))

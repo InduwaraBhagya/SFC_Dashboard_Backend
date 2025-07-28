@@ -18,6 +18,11 @@ public class ProjectsApiClient : IProjectsApiClient
         return await _httpClient.GetFromJsonAsync<Project>($"/api/projects/{id}");
     }
 
+    public async Task<ProjectDetailsDto?> GetProjectDetailsAsync(int id)
+    {
+        return await _httpClient.GetFromJsonAsync<ProjectDetailsDto>($"/api/projects/{id}/details");
+    }
+
     public async Task<List<PlannedEventDto>> SearchPlannedEventsAsync(string searchTerm, int projectId)
     {
         var response = await _httpClient.GetAsync($"/api/projects/search?searchTerm={searchTerm}&projectId={projectId}");

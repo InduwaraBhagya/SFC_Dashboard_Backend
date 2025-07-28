@@ -7,41 +7,26 @@ using SFCDashboard.Controllers;
 public class ProjectController : BaseController
 {
     private readonly IProjectsApiClient _projectsApiClient;
-    private readonly IPETasksApiClient _peTasksApiClient;
 
-    public ProjectController(IProjectsApiClient projectsApiClient, IUsersApiClient usersApiClient, IPETasksApiClient peTasksApiClient) : base(usersApiClient)
+    public ProjectController(IProjectsApiClient projectsApiClient, IUsersApiClient usersApiClient) : base(usersApiClient)
     {
         _projectsApiClient = projectsApiClient;
-        _peTasksApiClient = peTasksApiClient;
     }
 
     public async Task<IActionResult> Index()
     {
         var projects = await _projectsApiClient.GetAllProjectsAsync();
 
-        // Get current user info
+        // Get current user permissions from backend
         var userName = User?.Identity?.Name;
         var serviceId = !string.IsNullOrEmpty(userName) && userName.Length >= 6
             ? userName.Substring(0, 6)
             : string.Empty;
 
-        SystemUser? currentUser = null;
-        bool canManageProjects = false;
-        if (!string.IsNullOrEmpty(serviceId))
-        {
-            var userId = await _usersApiClient.GetCurrentUserIdAsync(serviceId);
-            if (userId > 0)
-            {
-                currentUser = await _usersApiClient.GetUserWithRoleAndWorkGroupsAsync(userId);
-                if (currentUser?.UserRole != null)
-                {
-                    canManageProjects = currentUser.UserRole.HasPermission("ManageProjects");
-                }
-            }
-        }
+        var permissions = await _usersApiClient.GetProjectUserPermissionsAsync(serviceId);
 
-        ViewBag.CanManageProjects = canManageProjects;
-        ViewBag.CurrentUser = currentUser;
+        ViewBag.CanManageProjects = permissions?.CanManageProjects ?? false;
+        ViewBag.CurrentUser = permissions?.CurrentUser;
 
         return View(projects);
     }
@@ -95,75 +80,26 @@ public class ProjectController : BaseController
     [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
-        var project = await _projectsApiClient.GetProjectByIdAsync(id);
-        if (project == null)
+        var projectDetails = await _projectsApiClient.GetProjectDetailsAsync(id);
+        if (projectDetails == null)
         {
             return NotFound();
         }
 
-
-        // Prepare PE numbers for all assigned PEs, filtering out nulls
-        var peNumbers = project.ProjectPEs
-            .Select(pe => pe.PlannedEvent?.PeNumber)
-            .Where(peNum => !string.IsNullOrEmpty(peNum))
-            .Cast<string>()
-            .ToList();
-        var peTasksDict = await _peTasksApiClient.GetTasksByPeNumbersAsync(peNumbers);
-
-        var peViewModels = new List<ProjectPEViewModel>();
-        foreach (var pe in project.ProjectPEs)
+        var vm = new ProjectDetailsViewModel
         {
-            var peNumber = pe.PlannedEvent?.PeNumber;
-            if (string.IsNullOrEmpty(peNumber)) continue;
-            var tasks = peTasksDict.TryGetValue(peNumber, out var tlist) && tlist != null ? tlist.ToList() : new List<PETask>();
-
-            // Get current task (first not completed by TaskSeq)
-            var currentTask = tasks
-                .Where(t => !string.Equals(t.TaskStatus, "completed", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(t => t.TaskSeq)
-                .FirstOrDefault();
-
-            // Progress calculation
-            decimal totalOLA = tasks.Sum(t => decimal.TryParse(t.OLA, out var ola) ? ola : 0);
-            decimal completedOLA = tasks
-                .Where(t => string.Equals(t.TaskStatus, "completed", StringComparison.OrdinalIgnoreCase))
-                .Sum(t => decimal.TryParse(t.OLA, out var ola) ? ola : 0);
-            var progressPercent = totalOLA > 0 ? Math.Round((completedOLA / totalOLA) * 100, 2) : 0;
-
-            // Exceeded OLA
-            var exceededOLA = tasks.Any(t =>
-                string.Equals(t.TaskStatus, "completed", StringComparison.OrdinalIgnoreCase) &&
-                t.ActualTaskCreatedDate.HasValue &&
-                t.ACtualTaskCompleteDate.HasValue &&
-                ((decimal)(t.ACtualTaskCompleteDate.Value - t.ActualTaskCreatedDate.Value).TotalDays) >
-                (decimal.TryParse(t.OLA, out var ola) ? ola : 0)
-            );
-
-            var progressClass = exceededOLA ? "bg-danger" : progressPercent switch
-            {
-                100 => "bg-success",
-                var p when p > 60 => "bg-info",
-                var p when p > 30 => "bg-warning",
-                _ => "bg-danger"
-            };
-
-            peViewModels.Add(new ProjectPEViewModel
+            Id = projectDetails.Id,
+            ProjectName = projectDetails.ProjectName,
+            CreatedDate = projectDetails.CreatedDate,
+            ProjectPEs = projectDetails.ProjectPEs.Select(pe => new ProjectPEViewModel
             {
                 Id = pe.Id,
                 PlannedEventId = pe.PlannedEventId,
-                PlannedEvent = pe.PlannedEvent!,
-                CurrentTask = currentTask?.Task,
-                ProgressPercent = progressPercent,
-                ProgressClass = progressClass
-            });
-        }
-
-        var vm = new ProjectDetailsViewModel
-        {
-            Id = project.Id,
-            ProjectName = project.ProjectName,
-            CreatedDate = project.CreatedDate,
-            ProjectPEs = peViewModels
+                PlannedEvent = pe.PlannedEvent,
+                CurrentTask = pe.CurrentTask,
+                ProgressPercent = pe.ProgressPercent,
+                ProgressClass = pe.ProgressClass
+            }).ToList()
         };
 
         return View(vm);
