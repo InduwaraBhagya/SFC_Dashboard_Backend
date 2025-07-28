@@ -940,58 +940,15 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> InProgressRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
             try
             {
-                // Get PE numbers with OLA violation
-                var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
+                // Use new backend endpoint for in-progress records by userId
+                var records = await _plannedEventsApi.GetInProgressPlannedEventsByUserIdAsync(currentUserId);
 
-                bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-                IEnumerable<PlannedEvent> records;
-
-                if (canViewAll)
-                {
-                    // If admin, filter by selected workgroup if provided
-                    if (workgroupId.HasValue)
-                    {
-                        var workgroup = await _workGroupsApi.GetWorkGroupAsync(workgroupId.Value);
-                        if (workgroup != null)
-                        {
-                            records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(new List<string> { workgroup.Name }, hasDrawFiberAccess, canViewAll);
-                            ViewData["FilteredWorkgroup"] = workgroup.Name;
-                            ViewData["SelectedWorkgroupId"] = workgroupId;
-                        }
-                        else
-                        {
-                            records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                        }
-                    }
-                    else
-                    {
-                        records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                    }
-                }
-                else
-                {
-                    // Regular user: show all records for ALL their workgroups
-                    if (userWorkgroupNames.Any())
-                    {
-                        records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(userWorkgroupNames, hasDrawFiberAccess, canViewAll);
-                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                        ViewData["SelectedWorkgroupId"] = workgroupId;
-                    }
-                    else
-                    {
-                        records = new List<PlannedEvent>();
-                    }
-                }
-
-                // Set ViewData
-                ViewData["CanViewAll"] = canViewAll;
+                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
+                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
-
                 ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
 
                 return View(records.ToList());

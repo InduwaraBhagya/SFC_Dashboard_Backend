@@ -247,6 +247,26 @@ namespace SFCDashboard.ApiClients
         }
 
         // Implementation for filtered planned events methods
+
+        /// <summary>
+        /// Gets in-progress planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/inprogress/user/{userId}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var events = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                return events ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching in-progress planned events for user {UserId} via API", userId);
+                return new List<PlannedEvent>();
+            }
+        }
         public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try

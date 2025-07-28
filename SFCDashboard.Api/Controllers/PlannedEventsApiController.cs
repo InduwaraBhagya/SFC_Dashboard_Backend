@@ -19,15 +19,35 @@ namespace SFCDashboard.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PlannedEventsApiController> _logger;
         private readonly IPlannedEventsApiService _plannedEventsService;
+        private readonly IUsersApiService _usersApiService;
 
         public PlannedEventsApiController(
             ApplicationDbContext context,
             ILogger<PlannedEventsApiController> logger,
-            IPlannedEventsApiService plannedEventsService)
+            IPlannedEventsApiService plannedEventsService,
+            IUsersApiService usersApiService)
         {
             _context = context;
             _logger = logger;
             _plannedEventsService = plannedEventsService;
+            _usersApiService = usersApiService;
+        }
+        /// <summary>
+        /// Get in-progress planned events for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("inprogress/user/{userId}")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetInProgressPlannedEventsByUserId(int userId)
+        {
+            try
+            {
+                var events = await _plannedEventsService.GetInProgressPlannedEventsByUserIdAsync(userId);
+                return Ok(events);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving in-progress planned events for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving in-progress planned events for the user");
+            }
         }
 
         /// <summary>

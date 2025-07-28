@@ -8,11 +8,81 @@ namespace SFCDashboard.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PlannedEventsApiService> _logger;
+        private readonly IUsersApiService _usersApiService;
 
-        public PlannedEventsApiService(ApplicationDbContext context, ILogger<PlannedEventsApiService> logger)
+        public PlannedEventsApiService(ApplicationDbContext context, ILogger<PlannedEventsApiService> logger, IUsersApiService usersApiService)
         {
             _context = context;
             _logger = logger;
+            _usersApiService = usersApiService;
+        }
+        /// <summary>
+        /// Gets in-progress planned events for a specific user (filters by workgroups and permissions)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsByUserIdAsync(int userId)
+        {
+            // Get user with workgroups and role/permissions
+            var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("User not found for in-progress planned events: {UserId}", userId);
+                return new List<PlannedEvent>();
+            }
+            var workgroupNames = user.UserWorkGroups?.Select(uwg => uwg.WorkGroup.Name).ToList() ?? new List<string>();
+            bool canViewAll = user.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
+            bool hasDrawFiberAccess = user.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase)) == true;
+
+            // Use the same logic as GetInProgressPlannedEventsAsync
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.PlannedEvents
+                .Where(p =>
+                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                    !p.IsHold &&
+                    (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)))
+                .AsNoTracking();
+
+            if (!canViewAll && workgroupNames.Any())
+            {
+                if (hasDrawFiberAccess)
+                {
+                    query = query.Where(p =>
+                        p.TaskWg != null && (
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        )
+                    );
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+            else if (canViewAll && workgroupNames.Any())
+            {
+                // ViewAll users can still filter by specific workgroups if requested
+                if (hasDrawFiberAccess)
+                {
+                    query = query.Where(p =>
+                        p.TaskWg != null && (
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        )
+                    );
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<PlannedEvent?> GetPlannedEventAsync(int id)
