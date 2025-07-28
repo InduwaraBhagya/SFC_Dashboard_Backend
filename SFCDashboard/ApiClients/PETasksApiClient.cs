@@ -338,6 +338,11 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
+                if (peNumbers == null || !peNumbers.Any())
+                {
+                    return new List<PETask>();
+                }
+
                 var requestData = new { peNumbers };
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -346,7 +351,19 @@ namespace SFCDashboard.ApiClients
                 response.EnsureSuccessStatusCode();
                 
                 var responseJson = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new List<PETask>();
+                    
                 return JsonSerializer.Deserialize<IEnumerable<PETask>>(responseJson, _jsonOptions) ?? new List<PETask>();
+            }
+            catch (JsonException)
+            {
+                return new List<PETask>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<PETask>();
             }
             catch (Exception ex)
             {

@@ -148,6 +148,49 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get issues by multiple planned event IDs
+        /// </summary>
+        [HttpPost("by-plannedevent-ids")]
+        public async Task<ActionResult<Dictionary<int, IEnumerable<PEIssue>>>> GetIssuesByPlannedEventIds([FromBody] List<int> peIds)
+        {
+            try
+            {
+                _logger.LogInformation("Getting issues for {Count} planned events", peIds.Count);
+                
+                if (peIds == null || !peIds.Any())
+                {
+                    return Ok(new Dictionary<int, IEnumerable<PEIssue>>());
+                }
+
+                var issues = await _context.PEIssues
+                    .Where(i => peIds.Contains(i.PlannedEventId))
+                    .OrderByDescending(i => i.CreatedAt)
+                    .ToListAsync();
+
+                // Group issues by PlannedEventId
+                var groupedIssues = issues
+                    .GroupBy(i => i.PlannedEventId)
+                    .ToDictionary(g => g.Key, g => g.AsEnumerable());
+
+                // Ensure all requested PE IDs are in the result, even if they have no issues
+                foreach (var peId in peIds)
+                {
+                    if (!groupedIssues.ContainsKey(peId))
+                    {
+                        groupedIssues[peId] = Enumerable.Empty<PEIssue>();
+                    }
+                }
+
+                return Ok(groupedIssues);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting issues for planned events");
+                return StatusCode(500, "An error occurred while retrieving issues for planned events");
+            }
+        }
+
+        /// <summary>
         /// Create a new PE issue
         /// </summary>
         [HttpPost]

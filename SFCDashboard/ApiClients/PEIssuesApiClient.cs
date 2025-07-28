@@ -117,12 +117,32 @@ namespace SFCDashboard.ApiClients
 
         public async Task<Dictionary<int, IEnumerable<PEIssue>>> GetIssuesByPlannedEventIdsAsync(List<int> peIds)
         {
-            var idsJson = JsonSerializer.Serialize(peIds, _jsonOptions);
-            var content = new StringContent(idsJson, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("api/peissues/by-plannedevent-ids", content);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssue>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssue>>();
+            try
+            {
+                if (peIds == null || !peIds.Any())
+                {
+                    return new Dictionary<int, IEnumerable<PEIssue>>();
+                }
+
+                var idsJson = JsonSerializer.Serialize(peIds, _jsonOptions);
+                var content = new StringContent(idsJson, System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("api/peissues/by-plannedevent-ids", content);
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                    return new Dictionary<int, IEnumerable<PEIssue>>();
+                    
+                return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssue>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssue>>();
+            }
+            catch (JsonException)
+            {
+                return new Dictionary<int, IEnumerable<PEIssue>>();
+            }
+            catch (HttpRequestException)
+            {
+                return new Dictionary<int, IEnumerable<PEIssue>>();
+            }
         }
 
         public async Task<PEIssue?> GetPEIssueAsync(int id)
