@@ -1,0 +1,165 @@
+@{
+    ViewData["Title"] = "Workgroup Diagnostics";
+}
+
+<div class="container-fluid">
+    <h2>Workgroup Assignment Diagnostics</h2>
+    <p class="text-muted">This tool helps identify users with missing or invalid workgroup assignments that might cause dashboard warnings.</p>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <button id="runDiagnostics" class="btn btn-primary">Run Diagnostics</button>
+        </div>
+    </div>
+    
+    <div id="diagnosticsResults" class="mt-4" style="display: none;">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="summaryContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Users Without Workgroups</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="usersWithoutWorkgroups"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Users With Invalid Workgroups</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="usersWithInvalidWorkgroups"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Available Workgroups</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="availableWorkgroups"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $('#runDiagnostics').click(function() {
+        const button = $(this);
+        button.prop('disabled', true).text('Running...');
+        
+        $.get('@Url.Action("DiagnoseWorkgroupAssignments", "PlannedEvents")')
+            .done(function(data) {
+                displayDiagnostics(data);
+                $('#diagnosticsResults').show();
+            })
+            .fail(function() {
+                alert('Failed to run diagnostics');
+            })
+            .always(function() {
+                button.prop('disabled', false).text('Run Diagnostics');
+            });
+    });
+});
+
+function displayDiagnostics(data) {
+    // Summary
+    const summary = data.Summary;
+    $('#summaryContent').html(`
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4>${summary.TotalUsers}</h4>
+                    <small>Total Users</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4>${summary.TotalWorkgroups}</h4>
+                    <small>Total Workgroups</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="${summary.UsersWithoutWorkgroups > 0 ? 'text-warning' : 'text-success'}">${summary.UsersWithoutWorkgroups}</h4>
+                    <small>Users Without Workgroups</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="${summary.UsersWithInvalidWorkgroups > 0 ? 'text-danger' : 'text-success'}">${summary.UsersWithInvalidWorkgroups}</h4>
+                    <small>Users With Invalid Workgroups</small>
+                </div>
+            </div>
+        </div>
+    `);
+    
+    // Users without workgroups
+    if (data.UsersWithoutWorkgroups.length === 0) {
+        $('#usersWithoutWorkgroups').html('<p class="text-success">All users have workgroup assignments!</p>');
+    } else {
+        let html = '<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>ID</th><th>Name</th><th>Service ID</th><th>Role</th><th>Has ViewAll</th></tr></thead><tbody>';
+        data.UsersWithoutWorkgroups.forEach(user => {
+            html += `<tr>
+                <td>${user.UserId}</td>
+                <td>${user.Name || 'N/A'}</td>
+                <td>${user.ServiceId || 'N/A'}</td>
+                <td>${user.Role || 'N/A'}</td>
+                <td><span class="badge ${user.HasViewAll ? 'badge-success' : 'badge-secondary'}">${user.HasViewAll ? 'Yes' : 'No'}</span></td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        $('#usersWithoutWorkgroups').html(html);
+    }
+    
+    // Users with invalid workgroups
+    if (data.UsersWithInvalidWorkgroups.length === 0) {
+        $('#usersWithInvalidWorkgroups').html('<p class="text-success">All workgroup assignments are valid!</p>');
+    } else {
+        let html = '<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>ID</th><th>Name</th><th>Service ID</th><th>Invalid Workgroup IDs</th><th>Role</th></tr></thead><tbody>';
+        data.UsersWithInvalidWorkgroups.forEach(user => {
+            html += `<tr>
+                <td>${user.UserId}</td>
+                <td>${user.Name || 'N/A'}</td>
+                <td>${user.ServiceId || 'N/A'}</td>
+                <td>${user.WorkgroupIds ? user.WorkgroupIds.join(', ') : 'N/A'}</td>
+                <td>${user.Role || 'N/A'}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        $('#usersWithInvalidWorkgroups').html(html);
+    }
+    
+    // Available workgroups
+    let workgroupsHtml = '<div class="row">';
+    data.AllWorkgroups.forEach((wg, index) => {
+        if (index % 3 === 0 && index > 0) workgroupsHtml += '</div><div class="row">';
+        workgroupsHtml += `<div class="col-md-4"><span class="badge badge-info">${wg.Id}: ${wg.Name}</span></div>`;
+    });
+    workgroupsHtml += '</div>';
+    $('#availableWorkgroups').html(workgroupsHtml);
+}
+</script>

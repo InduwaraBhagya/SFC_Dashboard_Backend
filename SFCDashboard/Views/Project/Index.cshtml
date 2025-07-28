@@ -1,27 +1,9 @@
-@using Microsoft.EntityFrameworkCore
-@using SFCDashboard.Data
-@using Microsoft.AspNetCore.Http
-@inject ApplicationDbContext _context
-@inject IHttpContextAccessor HttpContextAccessor
 @model IEnumerable<Project>
-
 @{
     ViewData["Title"] = "Projects";
-    
-    var userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name;
-    var serviceId = !string.IsNullOrEmpty(userName) && userName.Length >= 6
-        ? userName.Substring(0, 6)
-        : null;
-
-    var currentUser = !string.IsNullOrEmpty(serviceId)
-        ? await _context.Users
-            .Include(u => u.UserRole)
-            .ThenInclude(r => r!.RolePermissions)
-            .ThenInclude(rp => rp.Permission)
-            .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
-        : null;
-
-    var canManageProjects = currentUser?.UserRole?.HasPermission("ManageProjects") == true;
+    // Assume controller provides canManageProjects and currentUser via ViewBag or ViewData
+    var canManageProjects = ViewBag.CanManageProjects as bool? ?? false;
+    var currentUser = ViewBag.CurrentUser; // Use as needed
 }
 
 <style>

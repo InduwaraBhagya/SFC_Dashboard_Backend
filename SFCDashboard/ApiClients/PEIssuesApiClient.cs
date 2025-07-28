@@ -1,0 +1,178 @@
+using SFCDashboard.Models;
+using System.Text.Json;
+
+namespace SFCDashboard.ApiClients
+{
+    public class PEIssuesApiClient : IPEIssuesApiClient
+    {
+        private readonly HttpClient _httpClient;
+        private readonly JsonSerializerOptions _jsonOptions;
+        public async Task<IEnumerable<PEIssue>> GetByTaskIdAsync(int taskId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/bytask/{taskId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetByPlannedEventIdAsync(int plannedEventId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/byplannedevent/{plannedEventId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public PEIssuesApiClient(HttpClient httpClient)
+        {
+            _httpClient = httpClient;
+            _jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetAllAsync()
+        {
+            var response = await _httpClient.GetAsync("api/peissues");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<PEIssue?> GetByIdAsync(int id)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/{id}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return null;
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<PEIssue>(json, _jsonOptions);
+        }
+
+        public async Task<PEIssue> CreateAsync(PEIssue peIssue)
+        {
+            var json = JsonSerializer.Serialize(peIssue, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("api/peissues", content);
+            response.EnsureSuccessStatusCode();
+            var responseJson = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<PEIssue>(responseJson, _jsonOptions)!;
+        }
+
+        public async Task<PEIssue> UpdateAsync(PEIssue peIssue)
+        {
+            var json = JsonSerializer.Serialize(peIssue, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"api/peissues/{peIssue.Id}", content);
+            response.EnsureSuccessStatusCode();
+            var responseJson = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<PEIssue>(responseJson, _jsonOptions)!;
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            var response = await _httpClient.DeleteAsync($"api/peissues/{id}");
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetInboxIssuesAsync(int userId, int limit = 10)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/inbox/{userId}?limit={limit}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetRemindersAsync(int userId, bool showAll = true)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/reminders/{userId}?showAll={showAll}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<int> GetReminderCountAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/reminders/{userId}/count");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<Dictionary<string, int>>(json, _jsonOptions);
+            return result?.GetValueOrDefault("count", 0) ?? 0;
+        }
+
+        public async Task<bool> MarkAllRemindersAsReadAsync(int userId)
+        {
+            var response = await _httpClient.PostAsync($"api/peissues/reminders/{userId}/markallread", null);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<Dictionary<string, bool>>(json, _jsonOptions);
+            return result?.GetValueOrDefault("success", false) ?? false;
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetPEIssuesByPlannedEventAsync(int plannedEventId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/plannedevent/{plannedEventId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<Dictionary<int, IEnumerable<PEIssue>>> GetIssuesByPlannedEventIdsAsync(List<int> peIds)
+        {
+            var idsJson = JsonSerializer.Serialize(peIds, _jsonOptions);
+            var content = new StringContent(idsJson, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("api/peissues/by-plannedevent-ids", content);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssue>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssue>>();
+        }
+
+        public async Task<PEIssue?> GetPEIssueAsync(int id)
+        {
+            return await GetByIdAsync(id);
+        }
+
+        public async Task<PEIssue> UpdatePEIssueAsync(PEIssue peIssue)
+        {
+            return await UpdateAsync(peIssue);
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetReceivedIssuesAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/received/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetSentIssuesAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/sent/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetUnreadInboxIssuesAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/unread-inbox/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+        }
+
+        public async Task<IEnumerable<PEIssueViewModel>> GetInboxViewModelsAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/inbox-viewmodels/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions) ?? new List<PEIssueViewModel>();
+        }
+
+        public async Task<IEnumerable<PEIssueViewModel>> GetSentViewModelsAsync(int userId)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/sent-viewmodels/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions) ?? new List<PEIssueViewModel>();
+        }
+    }
+}

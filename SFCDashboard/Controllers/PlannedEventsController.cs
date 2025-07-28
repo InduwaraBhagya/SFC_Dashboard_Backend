@@ -1,41 +1,39 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
+using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.Models;
-using SFCDashboard.Services;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public partial class PlannedEventsController : Controller
+    public partial class PlannedEventsController : BaseController
     {
-        private readonly IPlannedEventsApiService _plannedEventsApi;
-        private readonly IUsersApiService _usersApi;
-        private readonly IPETasksApiService _peTasksApi;
-        private readonly IPEIssuesApiService _peIssuesApi;
-        private readonly IWorkGroupsApiService _workGroupsApi;
-        private readonly IAreaNetworkEngineersApiService _areaNetworkEngineersApi;
-        private readonly IPETaskListsApiService _peTaskListsApi;
-        private readonly IEscalationsApiService _escalationsApi;
-        private readonly IPEIssueResolutionsApiService _peIssueResolutionsApi;
-        private readonly ICustomerUserAssignmentsApiService _customerUserAssignmentsApi;
+        private readonly IPlannedEventsApiClient _plannedEventsApi;
+        private readonly IUsersApiClient _usersApi;
+        private readonly IPETasksApiClient _peTasksApi;
+        private readonly IPEIssuesApiClient _peIssuesApi;
+        private readonly IWorkGroupsApiClient _workGroupsApi;
+        private readonly IAreaNetworkEngineersApiClient _areaNetworkEngineersApi;
+        private readonly IPETaskListsApiClient _peTaskListsApi;
+        private readonly IEscalationsApiClient _escalationsApi;
+        private readonly IPEIssueResolutionsApiClient _peIssueResolutionsApi;
+        private readonly ICustomerUserAssignmentsApiClient _customerUserAssignmentsApi;
         private readonly ILogger<PlannedEventsController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly ITaskQueueService _taskQueueService;
+        private readonly ITaskQueueApiClient _taskQueueApiClient;
 
         public PlannedEventsController(
-            IPlannedEventsApiService plannedEventsApi,
-            IUsersApiService usersApi,
-            IPETasksApiService peTasksApi,
-            IPEIssuesApiService peIssuesApi,
-            IWorkGroupsApiService workGroupsApi,
-            IAreaNetworkEngineersApiService areaNetworkEngineersApi,
-            IPETaskListsApiService peTaskListsApi,
-            IEscalationsApiService escalationsApi,
-            IPEIssueResolutionsApiService peIssueResolutionsApi,
-            ICustomerUserAssignmentsApiService customerUserAssignmentsApi,
+            IPlannedEventsApiClient plannedEventsApi,
+            IUsersApiClient usersApi,
+            IPETasksApiClient peTasksApi,
+            IPEIssuesApiClient peIssuesApi,
+            IWorkGroupsApiClient workGroupsApi,
+            IAreaNetworkEngineersApiClient areaNetworkEngineersApi,
+            IPETaskListsApiClient peTaskListsApi,
+            IEscalationsApiClient escalationsApi,
+            IPEIssueResolutionsApiClient peIssueResolutionsApi,
+            ICustomerUserAssignmentsApiClient customerUserAssignmentsApi,
             ILogger<PlannedEventsController> logger,
             IWebHostEnvironment webHostEnvironment,
-            ITaskQueueService taskQueueService)
+            ITaskQueueApiClient taskQueueApiClient) : base(usersApi)
         {
             _plannedEventsApi = plannedEventsApi;
             _usersApi = usersApi;
@@ -49,7 +47,7 @@ namespace SFCDashboard.Controllers
             _customerUserAssignmentsApi = customerUserAssignmentsApi;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _taskQueueService = taskQueueService;
+            _taskQueueApiClient = taskQueueApiClient;
         }
 
         private async Task<int> GetCurrentUserIdAsync()
@@ -203,7 +201,7 @@ namespace SFCDashboard.Controllers
             ViewBag.UserWorkgroupId = userWorkgroupId;
 
             // Pre-load next task instead of loading it directly in the view
-            var nextTaskList = await _taskQueueService.GetPrioritizedTasksAsync(
+            var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(
                 workgroupId: userWorkgroupId,
                 take: 1);
 
@@ -244,8 +242,8 @@ namespace SFCDashboard.Controllers
                     if (issue.IsResolutionRequest)
                     {
                         var resolution = await _peIssueResolutionsApi.GetPendingResolutionAsync(issue.OriginalIssueId ?? issue.Id);
-                        issue.ResolutionDetails = resolution?.ResolutionDetails ?? string.Empty;
-                        issue.ResolutionId = resolution?.Id;
+                        // Note: Resolution details are handled via ViewBag.ResolutionsByIssueId
+                        // The issue model doesn't contain ResolutionDetails/ResolutionId properties
                     }
                 }
             }
@@ -285,7 +283,7 @@ namespace SFCDashboard.Controllers
                 // Get PE tasks for the filtered results
                 if (searchResults.Any())
                 {
-                    var peNumbers = searchResults.Select(pe => pe.PeNumber).ToList();
+                    var peNumbers = searchResults.Select(pe => pe.PeNumber).Where(pn => pn != null).Cast<string>().ToList();
                     var peTasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
                     ViewBag.PETasksByPeNumber = peTasksByPeNumber ?? new Dictionary<string, IEnumerable<PETask>>();
                 }
@@ -389,7 +387,7 @@ namespace SFCDashboard.Controllers
             ViewBag.UserWorkgroupId = userWorkgroupId;
 
             // Pre-load next task instead of loading it directly in the view
-            var nextTaskList = await _taskQueueService.GetPrioritizedTasksAsync(
+            var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(
                 workgroupId: userWorkgroupId,
                 take: 1);
 
@@ -430,8 +428,8 @@ namespace SFCDashboard.Controllers
                     if (issue.IsResolutionRequest)
                     {
                         var resolution = await _peIssueResolutionsApi.GetPendingResolutionAsync(issue.OriginalIssueId ?? issue.Id);
-                        issue.ResolutionDetails = resolution?.ResolutionDetails ?? string.Empty;
-                        issue.ResolutionId = resolution?.Id;
+                        // Note: Resolution details are handled via ViewBag.ResolutionsByIssueId
+                        // The issue model doesn't contain ResolutionDetails/ResolutionId properties
                     }
                 }
             }
@@ -464,7 +462,7 @@ namespace SFCDashboard.Controllers
                 // Get PE tasks for the filtered results
                 if (searchResults.Any())
                 {
-                    var peNumbers = searchResults.Select(pe => pe.PeNumber).ToList();
+                    var peNumbers = searchResults.Select(pe => pe.PeNumber).Where(pn => pn != null).Cast<string>().ToList();
                     var peTasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
                     ViewBag.PETasksByPeNumber = peTasksByPeNumber ?? new Dictionary<string, IEnumerable<PETask>>();
                 }
@@ -559,7 +557,7 @@ namespace SFCDashboard.Controllers
             // Calculate OLA violation count using the same logic as SalesOLAViolateRecords
             var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
             var violatingEvents = allPlannedEvents
-                .Where(p => violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
+                .Where(p => p.PeNumber != null && violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
             var filteredOLAViolatingEvents = await ApplyCustomerFilteringAsync(violatingEvents.AsQueryable(), salesWorkgroups, canViewAll);
             var olaViolateCount = filteredOLAViolatingEvents.Count();
 
@@ -567,7 +565,7 @@ namespace SFCDashboard.Controllers
             var urgentEvents = allPlannedEvents
                 .Where(p => p.PEStatus == "urgent" &&
                        !p.IsHold &&
-                       !violatingPENumbers.Contains(p.PeNumber));
+                       (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)));
             var filteredUrgentEvents = await ApplyCustomerFilteringAsync(urgentEvents.AsQueryable(), salesWorkgroups, canViewAll);
             var urgentCount = filteredUrgentEvents.Count();
 
@@ -577,7 +575,7 @@ namespace SFCDashboard.Controllers
                 .Where(p =>
                     (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
                     !p.IsHold &&
-                    !violatingPENumbers.Contains(p.PeNumber));
+                    (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)));
             var inProgressCount = inProgressEvents.Count();
 
             // Calculate Hold count using the same logic as SalesHoldRecords
@@ -697,7 +695,7 @@ namespace SFCDashboard.Controllers
             ViewData["SalesWorkgroups"] = string.Join(", ", salesWorkgroups);
             ViewData["CanViewAll"] = canViewAll;
 
-            var peNumbers = paginatedList.Select(pe => pe.PeNumber).ToList();
+            var peNumbers = paginatedList.Select(pe => pe.PeNumber).Where(pn => pn != null).Cast<string>().ToList();
             var tasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
 
             ViewBag.PETasksByPeNumber = tasksByPeNumber;
@@ -1349,7 +1347,7 @@ namespace SFCDashboard.Controllers
                 }
 
                 // Exclude OLA violating records
-                allRecords = allRecords.Where(p => !violatingPENumbers.Contains(p.PeNumber)).ToList();
+                allRecords = allRecords.Where(p => p.PeNumber != null && !violatingPENumbers.Contains(p.PeNumber)).ToList();
 
                 // Order results
                 allRecords = allRecords.OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber).ToList();
@@ -1541,7 +1539,7 @@ namespace SFCDashboard.Controllers
                 }
 
                 // Exclude OLA violating records
-                allRecords = allRecords.Where(p => !violatingPENumbers.Contains(p.PeNumber)).ToList();
+                allRecords = allRecords.Where(p => p.PeNumber != null && !violatingPENumbers.Contains(p.PeNumber)).ToList();
 
                 // Order results
                 allRecords = allRecords.OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber).ToList();
@@ -1640,7 +1638,7 @@ namespace SFCDashboard.Controllers
                 allRecords = allRecords.OrderByDescending(p => p.PECreatedDate).ThenBy(p => p.PeNumber).ToList();
 
                 // Calculate violation details for display using API service
-                var peNumbers = allRecords.Select(pe => pe.PeNumber).ToList();
+                var peNumbers = allRecords.Select(pe => pe.PeNumber).Where(pn => pn != null).Cast<string>().ToList();
                 var allTasksByPe = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
 
                 // Filter to only OLA violating tasks
@@ -2035,7 +2033,7 @@ namespace SFCDashboard.Controllers
             var peTasksByPeNumber = allTasks
                 .GroupBy(t => t.PENumber)
                 .ToDictionary(g => g.Key, g => (IEnumerable<PETask>)g.ToList());
-            ViewBag.PETasksByPeNumber = peTasksByPeNumber;
+            ViewBag.PETasksByPeNumber = peTasksByPeNumber ?? new Dictionary<string, IEnumerable<PETask>>();
             // --- End PETasksByPeNumber block ---
 
 
@@ -2121,6 +2119,7 @@ namespace SFCDashboard.Controllers
                 .Where(p =>
                     (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
                     !p.IsHold &&
+                    p.PeNumber != null &&
                     !violatingPENumbers.Contains(p.PeNumber))
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToList();
@@ -2170,6 +2169,7 @@ namespace SFCDashboard.Controllers
             var urgentEvents = allPlannedEvents
                 .Where(p => p.PEStatus == "urgent" &&
                        !p.IsHold &&
+                       p.PeNumber != null &&
                        !violatingPENumbers.Contains(p.PeNumber));
 
             // Apply customer filtering with workgroup checks
@@ -2196,7 +2196,7 @@ namespace SFCDashboard.Controllers
             // Get all planned events and apply filtering
             var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
             var violatingEvents = allPlannedEvents
-                .Where(p => violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
+                .Where(p => p.PeNumber != null && violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
 
             // Apply customer filtering with workgroup checks
             var filteredEvents = await ApplyCustomerFilteringAsync(violatingEvents.AsQueryable(), salesWorkgroups, canViewAll);
@@ -2206,7 +2206,7 @@ namespace SFCDashboard.Controllers
                 .ToList();
 
             // Get violation details for view
-            var peNumbers = records.Select(p => p.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).ToList();
+            var peNumbers = records.Select(p => p.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).Cast<string>().ToList();
             var violatingTasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
 
             var currentDate = DateTime.Today;
@@ -2283,22 +2283,51 @@ namespace SFCDashboard.Controllers
                 workgroupIds = currentUser?.UserWorkGroups?
                     .Select(uwg => uwg.WorkGroupId)
                     .ToList() ?? new List<int>();
+                
+                var workgroupNames = workgroupIds.Any() && currentUser?.UserWorkGroups != null ? 
+                    string.Join(", ", currentUser.UserWorkGroups.Select(uwg => uwg.WorkGroup?.Name ?? uwg.WorkGroupId.ToString())) : 
+                    "NONE";
+                
+                _logger.LogInformation("User {userId} assigned workgroups: {workgroupNames} (IDs: {workgroupIds})", 
+                    currentUserId, workgroupNames, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
             }
 
             // For regular users, filter by their workgroups
             if (!canViewAll && workgroupIds != null && workgroupIds.Any())
             {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(w => w.Name).ToList();
+                try
+                {
+                    var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
+                    var workgroupNames = workgroups.Select(w => w.Name).ToList();
 
-                var count = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
-                _logger.LogInformation("Urgent count: {count} for workgroups: {workgroups}",
-                    count, workgroupIds != null ? string.Join(", ", workgroupIds) : "NULL");
-                return count;
+                    if (!workgroupNames.Any())
+                    {
+                        _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
+                            string.Join(", ", workgroupIds), currentUserId);
+                        return 0;
+                    }
+
+                    var count = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+                    _logger.LogInformation("Urgent count: {count} for workgroups: {workgroups}",
+                        count, string.Join(", ", workgroupNames));
+                    return count;
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogError(ex, "Failed to get workgroups by IDs {workgroupIds} for user {userId}. API may be unavailable.", 
+                        string.Join(", ", workgroupIds), currentUserId);
+                    return 0;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error getting urgent count for user {userId} and workgroups {workgroupIds}", 
+                        currentUserId, string.Join(", ", workgroupIds));
+                    return 0;
+                }
             }
 
-            // Fallback - no workgroups found
-            _logger.LogWarning("No workgroups found for urgent count calculation");
+            // Fallback - no workgroups found or no urgent events in assigned workgroups
+            _logger.LogWarning("No urgent events found for user {userId}. This could be because: 1) User has no workgroup assignments, 2) User's workgroups have no urgent events, or 3) User lacks ViewAll permission for broader access.", currentUserId);
             return 0;
         }
 
@@ -2347,6 +2376,9 @@ namespace SFCDashboard.Controllers
                 workgroupIds = currentUser.UserWorkGroups?
                     .Select(uwg => uwg.WorkGroupId)
                     .ToList() ?? new List<int>();
+                
+                _logger.LogInformation("User {userId} workgroups from UserWorkGroups: {workgroupIds}", 
+                    currentUserId, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
             }
 
             // For regular users, filter by their workgroups
@@ -2355,13 +2387,21 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
+                if (!workgroupNames.Any())
+                {
+                    _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
+                        string.Join(", ", workgroupIds), currentUserId);
+                    return 0;
+                }
+
                 var count = await _plannedEventsApi.GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
                 _logger.LogInformation("OLA violate count: {count} for workgroups: {workgroups}",
-                    count, string.Join(", ", workgroupIds ?? new List<int>()));
+                    count, string.Join(", ", workgroupNames));
                 return count;
             }
 
-            // Default return 0 if no matching events
+            // Fallback - no workgroups found
+            _logger.LogWarning("No workgroups found for OLA violate count calculation. User {userId} has no workgroup assignments and no ViewAll permission.", currentUserId);
             return 0;
         }
 
@@ -2409,6 +2449,9 @@ namespace SFCDashboard.Controllers
                 workgroupIds = currentUser.UserWorkGroups?
                     .Select(uwg => uwg.WorkGroupId)
                     .ToList() ?? new List<int>();
+                
+                _logger.LogInformation("User {userId} workgroups from UserWorkGroups: {workgroupIds}", 
+                    currentUserId, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
             }
 
             // For regular users, filter by their workgroups
@@ -2417,13 +2460,21 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
+                if (!workgroupNames.Any())
+                {
+                    _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
+                        string.Join(", ", workgroupIds), currentUserId);
+                    return 0;
+                }
+
                 var count = await _plannedEventsApi.GetHoldCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
                 _logger.LogInformation("Hold count: {count} for workgroups: {workgroups}",
-                    count, string.Join(", ", workgroupIds ?? new List<int>()));
+                    count, string.Join(", ", workgroupNames));
                 return count;
             }
 
-            // Default return 0 if no matching events
+            // Fallback - no workgroups found
+            _logger.LogWarning("No workgroups found for hold count calculation. User {userId} has no workgroup assignments and no ViewAll permission.", currentUserId);
             return 0;
         }
 
@@ -2471,6 +2522,9 @@ namespace SFCDashboard.Controllers
                 workgroupIds = currentUser.UserWorkGroups?
                     .Select(uwg => uwg.WorkGroupId)
                     .ToList() ?? new List<int>();
+                
+                _logger.LogInformation("User {userId} workgroups from UserWorkGroups: {workgroupIds}", 
+                    currentUserId, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
             }
 
             // For regular users, filter by their workgroups
@@ -2479,13 +2533,21 @@ namespace SFCDashboard.Controllers
                 var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
                 var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
 
+                if (!workgroupNames.Any())
+                {
+                    _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
+                        string.Join(", ", workgroupIds), currentUserId);
+                    return 0;
+                }
+
                 var count = await _plannedEventsApi.GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
                 _logger.LogInformation("In-progress count: {count} for workgroups: {workgroups}",
-                    count, string.Join(", ", workgroupIds ?? new List<int>()));
+                    count, string.Join(", ", workgroupNames));
                 return count;
             }
 
-            // Default return 0 if no matching events
+            // Fallback - no workgroups found
+            _logger.LogWarning("No workgroups found for in-progress count calculation. User {userId} has no workgroup assignments and no ViewAll permission.", currentUserId);
             return 0;
         }
 
@@ -2629,11 +2691,11 @@ namespace SFCDashboard.Controllers
                 ViewData["CanSwitchWorkgroup"] = canViewAll;
 
                 // Get years for the dropdown from actual PE numbers
-                var years = await _taskQueueService.GetAvailableYearsAsync();
+                var years = await _taskQueueApiClient.GetAvailableYearsAsync();
                 ViewData["AvailableYears"] = years;
 
                 // Get prioritized tasks from the queue service
-                var prioritizedTasks = await _taskQueueService.GetPrioritizedTasksAsync(
+                var prioritizedTasks = await _taskQueueApiClient.GetPrioritizedTasksAsync(
                     workgroupId: effectiveWorkgroupId,
                     year: year,
                     take: take);
@@ -2760,7 +2822,7 @@ namespace SFCDashboard.Controllers
             try
             {
                 var workgroupId = ViewBag.UserWorkgroupId;
-                var nextTask = await _taskQueueService.GetPrioritizedTasksAsync(workgroupId: workgroupId, take: 1);
+                var nextTask = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: workgroupId, take: 1);
                 var hasNextTask = nextTask?.Any() == true;
 
                 if (!hasNextTask)
@@ -2799,6 +2861,69 @@ namespace SFCDashboard.Controllers
             {
                 _logger.LogError(ex, "Error getting PE task lists for PE {PeId}", peId);
                 return Json(new List<object>());
+            }
+        }
+
+        /// <summary>
+        /// Diagnostic endpoint to check users without proper workgroup assignments
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> DiagnoseWorkgroupAssignments()
+        {
+            try
+            {
+                var allUsers = await _usersApi.GetAllAsync();
+                var allWorkgroups = await _workGroupsApi.GetAllAsync();
+                
+                var usersWithoutWorkgroups = allUsers
+                    .Where(u => u.UserWorkGroups == null || !u.UserWorkGroups.Any())
+                    .Select(u => new { 
+                        UserId = u.Id, 
+                        Name = u.Name, 
+                        ServiceId = u.ServiceId,
+                        Role = u.UserRole?.Name,
+                        HasViewAll = u.UserRole?.HasPermission("ViewAll") == true
+                    })
+                    .ToList();
+
+                var usersWithInvalidWorkgroups = allUsers
+                    .Where(u => u.UserWorkGroups != null && u.UserWorkGroups.Any())
+                    .Where(u => {
+                        var userWorkgroupIds = u.UserWorkGroups.Select(uwg => uwg.WorkGroupId).ToList();
+                        var validWorkgroupIds = allWorkgroups.Select(wg => wg.Id).ToList();
+                        return !userWorkgroupIds.All(id => validWorkgroupIds.Contains(id));
+                    })
+                    .Select(u => new { 
+                        UserId = u.Id, 
+                        Name = u.Name, 
+                        ServiceId = u.ServiceId,
+                        WorkgroupIds = u.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList(),
+                        Role = u.UserRole?.Name,
+                        HasViewAll = u.UserRole?.HasPermission("ViewAll") == true
+                    })
+                    .ToList();
+
+                var diagnosticsResult = new {
+                    Summary = new {
+                        TotalUsers = allUsers.Count(),
+                        TotalWorkgroups = allWorkgroups.Count(),
+                        UsersWithoutWorkgroups = usersWithoutWorkgroups.Count,
+                        UsersWithInvalidWorkgroups = usersWithInvalidWorkgroups.Count
+                    },
+                    UsersWithoutWorkgroups = usersWithoutWorkgroups,
+                    UsersWithInvalidWorkgroups = usersWithInvalidWorkgroups,
+                    AllWorkgroups = allWorkgroups.Select(wg => new { wg.Id, wg.Name }).ToList()
+                };
+
+                _logger.LogInformation("Workgroup diagnostics: {usersWithoutWorkgroups} users without workgroups, {usersWithInvalidWorkgroups} with invalid workgroups",
+                    usersWithoutWorkgroups.Count, usersWithInvalidWorkgroups.Count);
+
+                return Json(diagnosticsResult);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error running workgroup diagnostics");
+                return Json(new { error = "Failed to run diagnostics" });
             }
         }
     }

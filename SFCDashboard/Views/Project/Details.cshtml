@@ -1,27 +1,11 @@
-@using SFCDashboard.Data
-@using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Http
-@inject ApplicationDbContext _context
-@inject IHttpContextAccessor HttpContextAccessor
-@model Project
+@using SFCDashboard.Models
+@model ProjectDetailsViewModel
 
 @{
     ViewData["Title"] = Model.ProjectName;
-    
-    var userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name;
-    var serviceId = !string.IsNullOrEmpty(userName) && userName.Length >= 6
-        ? userName.Substring(0, 6)
-        : null;
-
-    var currentUser = !string.IsNullOrEmpty(serviceId)
-        ? await _context.Users
-            .Include(u => u.UserRole)
-            .ThenInclude(r => r!.RolePermissions)
-            .ThenInclude(rp => rp.Permission)
-            .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
-        : null;
-
-    var canManageProjects = currentUser?.UserRole?.HasPermission("ManageProjects") == true;
+    // Use controller-provided ViewBag values
+    var canManageProjects = ViewBag.CanManageProjects as bool? ?? false;
+    var currentUser = ViewBag.CurrentUser;
 }
 
 <div class="container-fluid mt-4">
@@ -70,7 +54,7 @@
             <h5 class="mb-0">Assigned PEs</h5>
         </div>
         <div class="card-body">
-            @if (Model.ProjectPEs.Any())
+            @if (Model.ProjectPEs != null && Model.ProjectPEs.Any())
             {
                 <div class="table-responsive">
                     <table class="table" id="assignedPEsTable">
@@ -89,41 +73,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var pe in Model.ProjectPEs) // Changed from assignedPEs to Model.ProjectPEs
+                            @foreach (var pe in Model.ProjectPEs)
                             {
-                                var tasks = _context.PETasks
-                                .Where(t => t.PENumber == pe.PlannedEvent.PeNumber)
-                                .ToList();
 
-                                // Get current task
-                                var currentTask = tasks
-                                .Where(t => t.TaskStatus?.ToLower() != "completed")
-                                .OrderBy(t => t.TaskSeq)
-                                .FirstOrDefault();
 
-                                decimal totalOLA = tasks.Sum(t => decimal.TryParse(t.OLA, out decimal ola) ? ola : 0);
-                                decimal completedOLA = tasks
-                                .Where(t => t.TaskStatus?.ToLower() == "completed")
-                                .Sum(t => decimal.TryParse(t.OLA, out decimal ola) ? ola : 0);
-
-                                var progressPercent = totalOLA > 0 ? Math.Round((completedOLA / totalOLA) * 100, 2) : 0;
-
-                                // Get exceeded OLA tasks
-                                var exceededOLA = tasks.Where(t =>
-                                t.TaskStatus?.ToLower() == "completed" &&
-                                t.ActualTaskCreatedDate.HasValue &&
-                                t.ACtualTaskCompleteDate.HasValue &&
-                                ((decimal)(t.ACtualTaskCompleteDate.Value - t.ActualTaskCreatedDate.Value).TotalDays) >
-                                (decimal.TryParse(t.OLA, out decimal ola) ? ola : 0)
-                                );
-
-                                var progressClass = exceededOLA.Any() ? "bg-danger" : progressPercent switch
-                                {
-                                    100 => "bg-success",
-                                    > 60 => "bg-info",
-                                    > 30 => "bg-warning",
-                                    _ => "bg-danger"
-                                };
 
                                 <tr>
                                     <td>@pe.PlannedEvent.PeNumber</td>
@@ -140,9 +93,9 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (currentTask != null)
+                                        @if (!string.IsNullOrEmpty(pe.CurrentTask))
                                         {
-                                            <span class="badge bg-info">@currentTask.Task</span>
+                                            <span class="badge bg-info">@pe.CurrentTask</span>
                                         }
                                         else
                                         {
@@ -152,12 +105,12 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="progress flex-grow-1" style="height: 8px;">
-                                                <div class="progress-bar @progressClass" role="progressbar"
-                                                     style="width: @progressPercent%;" aria-valuenow="@progressPercent"
+                                                <div class="progress-bar @pe.ProgressClass" role="progressbar"
+                                                     style="width: @pe.ProgressPercent%;" aria-valuenow="@pe.ProgressPercent"
                                                      aria-valuemin="0" aria-valuemax="100">
                                                 </div>
                                             </div>
-                                            <span class="ms-2 small">@progressPercent%</span>
+                                            <span class="ms-2 small">@pe.ProgressPercent%</span>
                                         </div>
                                     </td>
                                     @if (canManageProjects)

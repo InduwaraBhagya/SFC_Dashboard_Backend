@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+using SFCDashboard.ApiClients;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
 
@@ -7,44 +9,68 @@ namespace SFCDashboard.Controllers
 {
     public class DrawFiberPermsController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUsersApiClient _usersApiClient;
+        private readonly IUserRolesApiClient _userRolesApiClient;
+        private readonly IWorkGroupsApiClient _workGroupsApiClient;
+        private readonly IPermissionsApiClient _permissionsApiClient;
+        private readonly IRolePermissionsApiClient _rolePermissionsApiClient;
         private readonly ILogger<DrawFiberPermsController> _logger;
 
-        public DrawFiberPermsController(ApplicationDbContext context, ILogger<DrawFiberPermsController> logger)
+        public DrawFiberPermsController(
+            IUsersApiClient usersApiClient,
+            IUserRolesApiClient userRolesApiClient,
+            IWorkGroupsApiClient workGroupsApiClient,
+            IPermissionsApiClient permissionsApiClient,
+            IRolePermissionsApiClient rolePermissionsApiClient,
+            ILogger<DrawFiberPermsController> logger)
         {
-            _context = context;
+            _usersApiClient = usersApiClient;
+            _userRolesApiClient = userRolesApiClient;
+            _workGroupsApiClient = workGroupsApiClient;
+            _permissionsApiClient = permissionsApiClient;
+            _rolePermissionsApiClient = rolePermissionsApiClient;
             _logger = logger;
         }
 
         // GET: DrawFiberPerms
         public async Task<IActionResult> Index()
         {
-            // Check if user has ManageDrawFiberPerms permission
-            if (!await HasPermissionAsync("ManageDrawFiberPerms"))
+            // Call backend API to check permission
+            var serviceId = HttpContext.User?.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return RedirectToAction("Index", "PlannedEvents");
+
+            serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+
+            // Call backend API endpoint for permission check
+            var hasPerm = await _rolePermissionsApiClient.HasPermissionAsync(serviceId, "ManageDrawFiberPerms");
+            if (!hasPerm)
             {
                 return RedirectToAction("Index", "PlannedEvents");
             }
 
-            // Get all users in NET-PROJ-ACC-CABLE workgroup
-            var netProjAccCableUsers = await _context.Users
-                .Include(u => u.UserRole)
-                    .ThenInclude(r => r!.RolePermissions)
-                        .ThenInclude(rp => rp.Permission)
-                .Include(u => u.UserWorkGroups)
-                    .ThenInclude(uwg => uwg.WorkGroup)
-                .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE"))
+            // Get all users and filter for NET-PROJ-ACC-CABLE workgroup
+            var allUsers = await _usersApiClient.GetAllAsync();
+            var netProjAccCableUsers = allUsers
+                .Where(u => u.UserWorkGroups != null && u.UserWorkGroups.Any(uwg => uwg.WorkGroup != null && uwg.WorkGroup.Name == "NET-PROJ-ACC-CABLE"))
                 .OrderBy(u => u.Name)
-                .ToListAsync();
+                .ToList();
 
-            var viewModel = netProjAccCableUsers.Select(user => new DrawFiberPermsViewModel
+            // For each user, get permission info from backend API
+            var viewModel = new List<DrawFiberPermsViewModel>();
+            foreach (var user in netProjAccCableUsers)
             {
-                UserId = user.Id,
-                UserName = user.Name,
-                ServiceId = user.ServiceId,
-                RoleName = user.UserRole?.Name ?? "No Role",
-                HasManageProjects = user.UserRole?.HasPermission("ManageProjects") ?? false,
-                HasCanManageEstimatedTime = user.UserRole?.HasPermission("CanManageEstimatedTime") ?? false
-            }).ToList();
+                var permResult = await _rolePermissionsApiClient.GetUserPermissionsAsync(user.Id);
+                viewModel.Add(new DrawFiberPermsViewModel
+                {
+                    UserId = user.Id,
+                    UserName = user.Name,
+                    ServiceId = user.ServiceId,
+                    RoleName = user.UserRole?.Name ?? "No Role",
+                    HasManageProjects = permResult.HasManageProjects,
+                    HasCanManageEstimatedTime = permResult.HasCanManageEstimatedTime
+                });
+            }
 
             return View(viewModel);
         }
@@ -53,103 +79,25 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdatePermissions(int userId, bool manageProjects, bool canManageEstimatedTime)
         {
-            // Check if user has ManageDrawFiberPerms permission
-            if (!await HasPermissionAsync("ManageDrawFiberPerms"))
+            // Call backend API endpoint to update permissions
+            var serviceId = HttpContext.User?.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return Json(new { success = false, message = "Unauthorized access" });
+
+            serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+
+            var hasPerm = await _rolePermissionsApiClient.HasPermissionAsync(serviceId, "ManageDrawFiberPerms");
+            if (!hasPerm)
             {
                 return Json(new { success = false, message = "Unauthorized access" });
             }
 
-            try
-            {
-                var user = await _context.Users
-                    .Include(u => u.UserRole)
-                        .ThenInclude(r => r!.RolePermissions)
-                            .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(u => u.Id == userId);
-
-                if (user?.UserRole == null)
-                {
-                    return Json(new { success = false, message = "User or user role not found" });
-                }
-
-                // Get the permissions
-                var manageProjectsPermission = await _context.Permissions
-                    .FirstOrDefaultAsync(p => p.Name == "ManageProjects");
-                var canManageEstimatedTimePermission = await _context.Permissions
-                    .FirstOrDefaultAsync(p => p.Name == "CanManageEstimatedTime");
-
-                if (manageProjectsPermission == null || canManageEstimatedTimePermission == null)
-                {
-                    return Json(new { success = false, message = "Required permissions not found in database" });
-                }
-
-                // Handle ManageProjects permission
-                var existingManageProjects = user.UserRole.RolePermissions
-                    .FirstOrDefault(rp => rp.PermissionId == manageProjectsPermission.Id);
-
-                if (manageProjects && existingManageProjects == null)
-                {
-                    // Add permission
-                    _context.RolePermissions.Add(new RolePermission
-                    {
-                        RoleId = user.UserRole.Id,
-                        PermissionId = manageProjectsPermission.Id
-                    });
-                }
-                else if (!manageProjects && existingManageProjects != null)
-                {
-                    // Remove permission
-                    _context.RolePermissions.Remove(existingManageProjects);
-                }
-
-                // Handle CanManageEstimatedTime permission
-                var existingCanManageEstimatedTime = user.UserRole.RolePermissions
-                    .FirstOrDefault(rp => rp.PermissionId == canManageEstimatedTimePermission.Id);
-
-                if (canManageEstimatedTime && existingCanManageEstimatedTime == null)
-                {
-                    // Add permission
-                    _context.RolePermissions.Add(new RolePermission
-                    {
-                        RoleId = user.UserRole.Id,
-                        PermissionId = canManageEstimatedTimePermission.Id
-                    });
-                }
-                else if (!canManageEstimatedTime && existingCanManageEstimatedTime != null)
-                {
-                    // Remove permission
-                    _context.RolePermissions.Remove(existingCanManageEstimatedTime);
-                }
-
-                await _context.SaveChangesAsync();
-
-                return Json(new { success = true, message = "Permissions updated successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating permissions for user {UserId}", userId);
-                return Json(new { success = false, message = "An error occurred while updating permissions" });
-            }
+            // Call backend API to update permissions
+            var result = await _rolePermissionsApiClient.UpdateUserPermissionsAsync(userId, manageProjects, canManageEstimatedTime);
+            return Json(result);
         }
 
-        private async Task<bool> HasPermissionAsync(string permissionName)
-        {
-            var serviceId = HttpContext.User?.Identity?.Name;
-            if (string.IsNullOrEmpty(serviceId))
-                return false;
-
-            // Extract first 6 chars of service ID
-            serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-
-            var user = await _context.Users
-                .Include(u => u.UserRole)
-                    .ThenInclude(r => r!.RolePermissions)
-                        .ThenInclude(rp => rp.Permission)
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
-
-            return user?.UserRole?.RolePermissions
-                .Any(rp => rp.Permission.Name == permissionName) ?? false;
-        }
+        // Permission checks are now handled by backend API endpoints
     }
 
     public class DrawFiberPermsViewModel

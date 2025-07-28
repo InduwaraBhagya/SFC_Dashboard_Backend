@@ -1,6 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
-using SFCDashboard.Data;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Middleware
 {
@@ -13,17 +12,18 @@ namespace SFCDashboard.Middleware
             _next = next;
         }
 
-        public async Task InvokeAsync(HttpContext context, ApplicationDbContext dbContext)
+        public async Task InvokeAsync(HttpContext context)
         {
             if (context.User.Identity?.IsAuthenticated == true)
             {
                 var serviceId = ExtractServiceId(context.User.Identity.Name ?? string.Empty);
                 var azureAdName = context.User.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
 
-                // First check if user exists in database
-                var user = await dbContext.Users
-                    .Include(u => u.UserWorkGroups)
-                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+                // Get the Users API client from DI
+                var usersApiClient = context.RequestServices.GetRequiredService<IUsersApiClient>();
+
+                // First check if user exists via API
+                var user = await usersApiClient.GetByServiceIdAsync(serviceId);
 
                 if (user == null)
                 {
@@ -40,7 +40,7 @@ namespace SFCDashboard.Middleware
                     if (!string.IsNullOrEmpty(azureAdName) && user.Name != azureAdName)
                     {
                         user.Name = azureAdName;
-                        await dbContext.SaveChangesAsync();
+                        await usersApiClient.UpdateAsync(user);
                     }
 
                     // Check if registration is complete (must have at least one workgroup)

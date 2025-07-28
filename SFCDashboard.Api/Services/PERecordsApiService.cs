@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using SFCDashboard.Controllers.Api;
 
 namespace SFCDashboard.Services
 {
@@ -15,19 +14,16 @@ namespace SFCDashboard.Services
         private readonly HttpClient _httpClient;
         private readonly ILogger<PERecordsApiService> _logger;
         private readonly IConfiguration _configuration;
-        private readonly PERecordsApiController _apiController;
         private readonly bool _useInternalApi;
 
         public PERecordsApiService(
             HttpClient httpClient, 
             ILogger<PERecordsApiService> logger, 
-            IConfiguration configuration,
-            PERecordsApiController apiController)
+            IConfiguration configuration)
         {
             _httpClient = httpClient;
             _logger = logger;
             _configuration = configuration;
-            _apiController = apiController;
             _useInternalApi = _configuration.GetValue<bool>("ApiSettings:UseInternalApi", true);
         }
 
@@ -62,29 +58,13 @@ namespace SFCDashboard.Services
 
                 if (_useInternalApi)
                 {
-                    // Call the API controller directly (internal call)
-                    _logger.LogInformation("Using internal API call for import");
-                    var result = await _apiController.ImportPERecords(excelFile);
-                    
-                    if (result is OkObjectResult okResult)
-                    {
-                        var response = okResult.Value;
-                        return ParseApiResponse(response ?? new { success = false, message = "No response data" });
-                    }
-                    else if (result is BadRequestObjectResult badResult)
-                    {
-                        var response = badResult.Value;
-                        return ParseApiResponse(response ?? new { success = false, message = "Bad request" });
-                    }
-                    else if (result is ObjectResult objectResult)
-                    {
-                        var response = objectResult.Value;
-                        return ParseApiResponse(response ?? new { success = false, message = "Unknown response" });
-                    }
-                    else
-                    {
-                        return new ApiResponse { Success = false, Message = "Unknown error occurred" };
-                    }
+                    // Internal API call temporarily disabled due to refactoring
+                    _logger.LogWarning("Internal API call requested but temporarily disabled");
+                    return new ApiResponse 
+                    { 
+                        Success = false, 
+                        Message = "Internal API calls are temporarily disabled during refactoring" 
+                    };
                 }
                 else
                 {
@@ -113,20 +93,9 @@ namespace SFCDashboard.Services
             {
                 if (_useInternalApi)
                 {
-                    // Call the API controller directly (internal call)
-                    _logger.LogInformation("Using internal API call for stats");
-                    var result = await _apiController.GetDatabaseStats();
-                    
-                    if (result is OkObjectResult okResult)
-                    {
-                        var response = okResult.Value;
-                        return ParseStatsResponse(response ?? new { success = false, data = new DatabaseStats() });
-                    }
-                    else
-                    {
-                        _logger.LogError("Internal API call failed");
-                        return new DatabaseStats();
-                    }
+                    // Internal API call temporarily disabled due to refactoring
+                    _logger.LogWarning("Internal API call for stats requested but temporarily disabled");
+                    return new DatabaseStats(); // Return empty stats
                 }
                 else
                 {

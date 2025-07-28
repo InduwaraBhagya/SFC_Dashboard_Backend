@@ -1,7 +1,4 @@
-﻿@using Microsoft.EntityFrameworkCore
-@using SFCDashboard.Data
-@using Microsoft.AspNetCore.Http
-@inject ApplicationDbContext _context
+﻿@using Microsoft.AspNetCore.Http
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     var userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name;
@@ -9,15 +6,11 @@
     ? userName.Substring(0, 6)
     : null;
 
-    var currentUser = !string.IsNullOrEmpty(serviceId)
-    ? await _context.Users
-    .Include(u => u.UserRole)
-    .ThenInclude(r => r!.RolePermissions)
-    .ThenInclude(rp => rp.Permission)
-    .FirstOrDefaultAsync(u => u.ServiceId == serviceId)
-    : null;
-
-    var isAdmin = currentUser?.UserRole?.HasPermission("Admin") == true;
+    // Get user data from ViewData (should be set by controller)
+    var isAdmin = ViewData["IsAdmin"] as bool? ?? false;
+    var canManageCustomerAssignments = ViewData["CanManageCustomerAssignments"] as bool? ?? false;
+    var canManageDrawFiberPerms = ViewData["CanManageDrawFiberPerms"] as bool? ?? false;
+    var currentUserName = ViewData["CurrentUserName"] as string ?? "Guest";
     var isHomePage = ViewContext.RouteData.Values["controller"]?.ToString() == "Home" &&
     ViewContext.RouteData.Values["action"]?.ToString() == "Index";
 }
@@ -103,7 +96,7 @@
                                     <i class="bi bi-folder-fill me-2"></i>Projects
                                 </a>
                             </li>
-                            @if (currentUser?.UserRole?.HasPermission("ManageCustomerAssignments") == true)
+                            @if (canManageCustomerAssignments)
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment" asp-action="Index">
@@ -111,7 +104,7 @@
                                     </a>
                                 </li>
                             }
-                            @if (currentUser?.UserRole?.HasPermission("ManageDrawFiberPerms") == true)
+                            @if (canManageDrawFiberPerms)
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="DrawFiberPerms" asp-action="Index">
@@ -241,7 +234,7 @@
                         </div>
 
                         <span class="nav-link text-white" style="pointer-events:none;">
-                            @(currentUser?.Name ?? "Guest")
+                            @currentUserName
                         </span>
 
                         <partial name="_LoginPartial" />

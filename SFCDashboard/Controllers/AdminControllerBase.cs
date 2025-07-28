@@ -1,21 +1,32 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using SFCDashboard.Data;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public class AdminControllerBase : Controller
+    public class AdminControllerBase : BaseController
     {
-        private readonly ApplicationDbContext _context;
+        protected readonly IPermissionsApiClient _permissionsApi;
 
-        public AdminControllerBase(ApplicationDbContext context)
+        public AdminControllerBase(IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) 
+            : base(usersApiClient)
         {
-            _context = context;
+            _permissionsApi = permissionsApi;
         }
 
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            var isAdmin = await HttpContext.HasAdminPermissionAsync(_context);
+            // Get the current user's service ID
+            var serviceId = User.Identity?.Name;
+            
+            if (string.IsNullOrEmpty(serviceId))
+            {
+                context.Result = RedirectToAction("Index", "PlannedEvents");
+                return;
+            }
+
+            // Check admin permission via API call
+            var isAdmin = await _permissionsApi.IsUserAdminAsync(serviceId);
             
             if (!isAdmin)
             {
@@ -23,6 +34,7 @@ namespace SFCDashboard.Controllers
                 return;
             }
 
+            // If admin check passes, proceed with base controller logic (setting user data)
             await base.OnActionExecutionAsync(context, next);
         }
     }

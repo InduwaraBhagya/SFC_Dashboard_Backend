@@ -1,11 +1,16 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController : BaseController
     {
+        public HomeController(IUsersApiClient usersApiClient) : base(usersApiClient)
+        {
+        }
+
         public IActionResult Index()
         {
             return View();
@@ -27,14 +32,6 @@ namespace SFCDashboard.Controllers
             var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
             ViewData["ServiceId"] = serviceId;
             return View();
-        }
-
-        private static string ExtractServiceId(string email)
-        {
-            if (string.IsNullOrEmpty(email))
-                return string.Empty;
-
-            return email[..Math.Min(email.Length, 6)];
         }
     }
 }

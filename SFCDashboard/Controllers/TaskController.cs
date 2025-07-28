@@ -1,17 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
-using SFCDashboard.Data;
-using Microsoft.EntityFrameworkCore;
+using SFCDashboard.ApiClients;
 using System.Threading.Tasks;
 
 namespace SFCDashboard.Controllers
 {
     public class TaskController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPlannedEventsApiClient _plannedEventsApiClient;
 
-        public TaskController(ApplicationDbContext context)
+        public TaskController(IPlannedEventsApiClient plannedEventsApiClient)
         {
-            _context = context;
+            _plannedEventsApiClient = plannedEventsApiClient;
         }
 
         // GET: Task/Details/5
@@ -22,9 +21,8 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            // Find the PE Task
-            var peTask = await _context.PlannedEvents
-                .FirstOrDefaultAsync(m => m.Id == id);
+            // Find the PE Task using API client
+            var peTask = await _plannedEventsApiClient.GetByIdAsync(id.Value);
 
             if (peTask == null)
             {

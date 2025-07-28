@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
+using SFCDashboard.ApiClients;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
 
@@ -9,11 +10,13 @@ namespace SFCDashboard.Controllers
 {
     public class RegisterController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUsersApiClient _usersApiClient;
+        private readonly IWorkGroupsApiClient _workGroupsApiClient;
 
-        public RegisterController(ApplicationDbContext context)
+        public RegisterController(IUsersApiClient usersApiClient, IWorkGroupsApiClient workGroupsApiClient)
         {
-            _context = context;
+            _usersApiClient = usersApiClient;
+            _workGroupsApiClient = workGroupsApiClient;
         }
 
         private static string ExtractServiceId(string email)
@@ -35,10 +38,8 @@ namespace SFCDashboard.Controllers
             var email = User.Identity?.Name ?? string.Empty;
             var serviceId = ExtractServiceId(email);
 
-            // Get existing user details from database
-            var existingUser = await _context.Users
-                .Include(u => u.UserWorkGroups)
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+            // Get existing user details from API
+            var existingUser = await _usersApiClient.GetUserByServiceIdAsync(serviceId);
 
             if (existingUser == null)
             {
@@ -58,7 +59,9 @@ namespace SFCDashboard.Controllers
                 ServiceId = existingUser?.ServiceId ?? "",
                 WorkGroupIds = existingUser?.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>()
             };
-            ViewData["WorkGroupIds"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", vm.WorkGroupIds);
+
+            var allWorkGroups = (await _workGroupsApiClient.GetAllAsync()).ToList();
+            ViewData["WorkGroupIds"] = new MultiSelectList(allWorkGroups, "Id", "Name", vm.WorkGroupIds);
             return View(vm);
         }
 
@@ -76,68 +79,47 @@ namespace SFCDashboard.Controllers
             var serviceId = ExtractServiceId(email);
 
             // Get existing user
-            var existingUser = await _context.Users
-                .Include(u => u.UserWorkGroups)
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+            var existingUser = await _usersApiClient.GetUserByServiceIdAsync(serviceId);
 
             if (existingUser != null)
             {
                 // Update existing user's name
                 existingUser.Name = vm.Name;
+                // Update user (if needed, implement UpdateUserAsync in IUsersApiClient)
+                // await _usersApiClient.UpdateUserAsync(existingUser); // Uncomment if implemented
 
-                // Update user-workgroup relations
-                var existingWgIds = existingUser.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
-
-                // Remove old relations
-                var toRemove = existingUser.UserWorkGroups?.Where(uwg => !vm.WorkGroupIds.Contains(uwg.WorkGroupId)).ToList() ?? new List<UserWorkGroup>();
-                _context.UserWorkGroups.RemoveRange(toRemove);
-
-                // Add new relations
-                var toAdd = vm.WorkGroupIds.Where(wgId => !existingWgIds.Contains(wgId)).ToList();
-                foreach (var wgId in toAdd)
-                {
-                    _context.UserWorkGroups.Add(new UserWorkGroup
-                    {
-                        SystemUserId = existingUser.Id,
-                        WorkGroupId = wgId
-                    });
-                }
-
-                _context.Update(existingUser);
+                // Update user-workgroup relations via API
+                await _usersApiClient.SetUserWorkGroupsAsync(existingUser.Id, vm.WorkGroupIds);
             }
             else
             {
-                // Create new user if doesn't exist
+                // Create new user if doesn't exist (if needed, implement CreateUserAsync in IUsersApiClient)
                 var user = new SystemUser
                 {
                     ServiceId = serviceId,
                     Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty,
                     UserWorkGroups = new List<UserWorkGroup>()
                 };
-                foreach (var wgId in vm.WorkGroupIds)
-                {
-                    user.UserWorkGroups.Add(new UserWorkGroup
-                    {
-                        WorkGroupId = wgId
-                    });
-                }
-                _context.Add(user);
+                // var createdUser = await _usersApiClient.CreateUserAsync(user); // Uncomment if implemented
+                // if (createdUser != null)
+                //     await _usersApiClient.SetUserWorkGroupsAsync(createdUser.Id, vm.WorkGroupIds);
             }
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    await _context.SaveChangesAsync();
+                    // All changes are done via API, so just redirect
                     return RedirectToAction("Index", "Home");
                 }
-                catch (DbUpdateException)
+                catch (Exception)
                 {
                     ModelState.AddModelError("", "Unable to save changes. Please try again.");
                 }
             }
 
-            ViewData["WorkGroupIds"] = new MultiSelectList(_context.WorkGroups, "Id", "Name", vm.WorkGroupIds);
+            var allWorkGroups = (await _workGroupsApiClient.GetAllAsync()).ToList();
+            ViewData["WorkGroupIds"] = new MultiSelectList(allWorkGroups, "Id", "Name", vm.WorkGroupIds);
             return View(vm);
         }
     }

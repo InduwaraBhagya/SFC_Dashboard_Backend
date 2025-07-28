@@ -3,24 +3,34 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
     public class UserRolesController : AdminControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly ILogger<UserRolesController> _logger;
+        private readonly IUserRolesApiClient _userRolesApiClient;
+        private readonly IRolePermissionsApiClient _rolePermissionsApiClient;
 
-        public UserRolesController(ApplicationDbContext context, ILogger<UserRolesController> logger) : base(context)
+        public UserRolesController(
+            ILogger<UserRolesController> logger,
+            IPermissionsApiClient permissionsApi,
+            IUsersApiClient usersApiClient,
+            IUserRolesApiClient userRolesApiClient,
+            IRolePermissionsApiClient rolePermissionsApiClient)
+            : base(permissionsApi, usersApiClient)
         {
-            _context = context;
             _logger = logger;
+            _userRolesApiClient = userRolesApiClient;
+            _rolePermissionsApiClient = rolePermissionsApiClient;
         }
 
         // GET: UserRoles
         public async Task<IActionResult> Index()
         {
-            return View(await _context.UserRoles.ToListAsync());
+            var roles = await _userRolesApiClient.GetAllAsync();
+            return View(roles);
         }
 
         // GET: UserRoles/Details/5
@@ -30,21 +40,18 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-
-            var userRole = await _context.UserRoles
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var userRole = await _userRolesApiClient.GetWithRolePermissionsAsync(id.Value);
             if (userRole == null)
             {
                 return NotFound();
             }
-
             return View(userRole);
         }
 
         // GET: UserRoles/Create
         public async Task<IActionResult> Create()
         {
-            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
+            ViewData["Permissions"] = await _permissionsApi.GetAllPermissionsAsync();
             return View();
         }
 
@@ -59,23 +66,18 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    _context.UserRoles.Add(userRole);  // Changed from UserRole to UserRoles
-                    await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"Role created with ID: {userRole.Id}");
+                    // Create role
+                    var createdRole = await _userRolesApiClient.CreateAsync(userRole);
+                    _logger.LogInformation($"Role created with ID: {createdRole.Id}");
 
                     if (selectedPermissions != null && selectedPermissions.Any())
                     {
-                        foreach (var permissionId in selectedPermissions)
+                        var rolePermissions = selectedPermissions.Select(permissionId => new RolePermission
                         {
-                            var rolePermission = new RolePermission
-                            {
-                                RoleId = userRole.Id,
-                                PermissionId = permissionId
-                            };
-                            _context.RolePermissions.Add(rolePermission);
-                        }
-                        await _context.SaveChangesAsync();
+                            RoleId = createdRole.Id,
+                            PermissionId = permissionId
+                        });
+                        await _rolePermissionsApiClient.CreateMultipleAsync(rolePermissions);
                     }
 
                     TempData["SuccessMessage"] = "Role created successfully!";
@@ -88,7 +90,7 @@ namespace SFCDashboard.Controllers
                 }
             }
 
-            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
+            ViewData["Permissions"] = await _permissionsApi.GetAllPermissionsAsync();
             return View(userRole);
         }
 
@@ -99,18 +101,12 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-
-            var userRole = await _context.UserRoles
-                .Include(r => r.RolePermissions)
-                    .ThenInclude(rp => rp.Permission)
-                .FirstOrDefaultAsync(r => r.Id == id);
-
+            var userRole = await _userRolesApiClient.GetWithRolePermissionsAsync(id.Value);
             if (userRole == null)
             {
                 return NotFound();
             }
-
-            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
+            ViewData["Permissions"] = await _permissionsApi.GetAllPermissionsAsync();
             ViewData["SelectedPermissions"] = userRole.RolePermissions.Select(rp => rp.PermissionId).ToList();
             return View(userRole);
         }
@@ -131,42 +127,25 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
-                    // Get existing role with permissions
-                    var existingRole = await _context.UserRoles
-                        .Include(r => r.RolePermissions)
-                        .FirstOrDefaultAsync(r => r.Id == id);
-
-                    if (existingRole == null)
-                    {
-                        return NotFound();
-                    }
-
-                    // Update basic properties
-                    existingRole.Name = userRole.Name;
-                    existingRole.Level = userRole.Level;
-
+                    // Update role
+                    await _userRolesApiClient.UpdateAsync(userRole);
                     // Remove existing permissions
-                    _context.RolePermissions.RemoveRange(existingRole.RolePermissions);
-
+                    await _rolePermissionsApiClient.DeleteByRoleIdAsync(id);
                     // Add new permissions
-                    if (selectedPermissions != null)
+                    if (selectedPermissions != null && selectedPermissions.Any())
                     {
-                        foreach (var permissionId in selectedPermissions)
+                        var newRolePermissions = selectedPermissions.Select(pid => new RolePermission
                         {
-                            existingRole.RolePermissions.Add(new RolePermission
-                            {
-                                RoleId = id,
-                                PermissionId = permissionId
-                            });
-                        }
+                            RoleId = id,
+                            PermissionId = pid
+                        });
+                        await _rolePermissionsApiClient.CreateMultipleAsync(newRolePermissions);
                     }
-
-                    await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (Exception)
                 {
-                    if (!UserRoleExists(userRole.Id))
+                    if (!await _userRolesApiClient.ExistsAsync(userRole.Id))
                     {
                         return NotFound();
                     }
@@ -177,7 +156,7 @@ namespace SFCDashboard.Controllers
                 }
             }
 
-            ViewData["Permissions"] = await _context.Permissions.ToListAsync();
+            ViewData["Permissions"] = await _permissionsApi.GetAllPermissionsAsync();
             return View(userRole);
         }
 
@@ -188,14 +167,11 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-
-            var userRole = await _context.UserRoles
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var userRole = await _userRolesApiClient.GetByIdAsync(id.Value);
             if (userRole == null)
             {
                 return NotFound();
             }
-
             return View(userRole);
         }
 
@@ -204,19 +180,13 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var userRole = await _context.UserRoles.FindAsync(id);
-            if (userRole != null)
-            {
-                _context.UserRoles.Remove(userRole);
-            }
-
-            await _context.SaveChangesAsync();
+            await _userRolesApiClient.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
 
-        private bool UserRoleExists(int id)
+        private async Task<bool> UserRoleExists(int id)
         {
-            return _context.UserRoles.Any(e => e.Id == id);
+            return await _userRolesApiClient.ExistsAsync(id);
         }
 
     }

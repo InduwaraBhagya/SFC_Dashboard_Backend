@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SFCDashboard.Data;
-using SFCDB.Models;
+using SFCDashboard.Models;
 using SFCDashboard.Services;
 
 namespace SFCDashboard.Controllers.Api
