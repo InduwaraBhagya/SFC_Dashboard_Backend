@@ -51,6 +51,132 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get OLA violating planned events for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("ola-violating/user/{userId}")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetOLAViolatingPlannedEventsByUserId(int userId)
+        {
+            try
+            {
+                var events = await _plannedEventsService.GetOLAViolatingPlannedEventsByUserIdAsync(userId);
+                return Ok(events);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving OLA violating planned events for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving OLA violating planned events for the user");
+            }
+        }
+
+        /// <summary>
+        /// Get urgent planned events for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("urgent/user/{userId}")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetUrgentPlannedEventsByUserId(int userId)
+        {
+            try
+            {
+                var events = await _plannedEventsService.GetUrgentPlannedEventsByUserIdAsync(userId);
+                return Ok(events);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving urgent planned events for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving urgent planned events for the user");
+            }
+        }
+
+        /// <summary>
+        /// Get hold planned events for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("hold/user/{userId}")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetHoldPlannedEventsByUserId(int userId)
+        {
+            try
+            {
+                var events = await _plannedEventsService.GetHoldPlannedEventsByUserIdAsync(userId);
+                return Ok(events);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving hold planned events for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving hold planned events for the user");
+            }
+        }
+
+        /// <summary>
+        /// Get in-progress count for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("inprogress/user/{userId}/count")]
+        public async Task<ActionResult<int>> GetInProgressCountByUserId(int userId)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetInProgressCountByUserIdAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving in-progress count for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving in-progress count for the user");
+            }
+        }
+
+        /// <summary>
+        /// Get OLA violating count for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("ola-violating/user/{userId}/count")]
+        public async Task<ActionResult<int>> GetOLAViolatingCountByUserId(int userId)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetOLAViolatingCountByUserIdAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving OLA violating count for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving OLA violating count for the user");
+            }
+        }
+
+        /// <summary>
+        /// Get urgent count for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("urgent/user/{userId}/count")]
+        public async Task<ActionResult<int>> GetUrgentCountByUserId(int userId)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetUrgentCountByUserIdAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving urgent count for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving urgent count for the user");
+            }
+        }
+
+        /// <summary>
+        /// Get hold count for a specific user (filtered by backend)
+        /// </summary>
+        [HttpGet("hold/user/{userId}/count")]
+        public async Task<ActionResult<int>> GetHoldCountByUserId(int userId)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetHoldCountByUserIdAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving hold count for user {UserId}", userId);
+                return StatusCode(500, "An error occurred while retrieving hold count for the user");
+            }
+        }
+
+        /// <summary>
         /// Get all planned events
         /// </summary>
         [HttpGet]

@@ -85,6 +85,72 @@ namespace SFCDashboard.Services
             return await query.ToListAsync();
         }
 
+        /// <summary>
+        /// Gets OLA violating planned events for a specific user (filters by workgroups and permissions)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsByUserIdAsync(int userId)
+        {
+            // Get user with workgroups and role/permissions
+            var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("User not found for OLA violating planned events: {UserId}", userId);
+                return new List<PlannedEvent>();
+            }
+            var workgroupNames = user.UserWorkGroups?.Select(uwg => uwg.WorkGroup.Name).ToList() ?? new List<string>();
+            bool canViewAll = user.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
+            bool hasDrawFiberAccess = user.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase)) == true;
+
+            // Use the same logic as GetOLAViolatingPlannedEventsAsync
+            var violatingPENumbers = await _context.PETasks
+                .Where(t => t.IsOLAViolate)
+                .Select(t => t.PENumber)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.PlannedEvents
+                .Where(p => p.PeNumber != null && violatingPENumbers.Contains(p.PeNumber) && !p.IsHold)
+                .AsNoTracking();
+
+            if (!canViewAll && workgroupNames.Any())
+            {
+                if (hasDrawFiberAccess)
+                {
+                    query = query.Where(p =>
+                        p.TaskWg != null && (
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        )
+                    );
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+            else if (canViewAll && workgroupNames.Any())
+            {
+                // ViewAll users can still filter by specific workgroups if requested
+                if (hasDrawFiberAccess)
+                {
+                    query = query.Where(p =>
+                        p.TaskWg != null && (
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                        || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                        )
+                    );
+                }
+                else
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                }
+            }
+
+            return await query.ToListAsync();
+        }
+
         public async Task<PlannedEvent?> GetPlannedEventAsync(int id)
         {
             try
@@ -323,6 +389,82 @@ namespace SFCDashboard.Services
             }
         }
 
+        public async Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsByUserIdAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting urgent planned events for user {userId}", userId);
+
+                // Get user with workgroups and permissions
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {userId} not found", userId);
+                    return new List<PlannedEvent>();
+                }
+
+                // Check if user has ViewAll permission
+                bool canViewAll = user.UserRole?.RolePermissions
+                    ?.Any(rp => rp.Permission?.Name == "ViewAll") == true;
+
+                // Get user's workgroup names
+                var userWorkgroupNames = user.UserWorkGroups?.Select(uw => uw.WorkGroup?.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Cast<string>()
+                    .ToList() ?? new List<string>();
+
+                // Check if user has Draw Fiber access
+                bool hasDrawFiberAccess = userWorkgroupNames.Any(wg =>
+                    wg.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, Workgroups={workgroups}, DrawFiberAccess={drawFiberAccess}",
+                    userId, canViewAll, string.Join(", ", userWorkgroupNames), hasDrawFiberAccess);
+
+                // Get OLA violating PE numbers to exclude
+                var violatingPENumbers = await _context.PETasks
+                    .Where(t => t.IsOLAViolate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
+
+                var query = _context.PlannedEvents
+                    .Where(p =>
+                        p.PEStatus == "urgent" &&
+                        !p.IsHold &&
+                        (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)))
+                    .AsNoTracking();
+
+                // Apply workgroup filtering based on user permissions
+                if (!canViewAll && userWorkgroupNames.Any())
+                {
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                // If user has ViewAll permission, return all urgent records without workgroup filtering
+
+                var result = await query.ToListAsync();
+                _logger.LogInformation("Retrieved {count} urgent planned events for user {userId}", result.Count, userId);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting urgent planned events for user {userId}", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
         public async Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
@@ -373,6 +515,72 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting hold planned events");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsByUserIdAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting hold planned events for user {userId}", userId);
+
+                // Get user with workgroups and permissions
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {userId} not found", userId);
+                    return new List<PlannedEvent>();
+                }
+
+                // Check if user has ViewAll permission
+                bool canViewAll = user.UserRole?.RolePermissions
+                    ?.Any(rp => rp.Permission?.Name == "ViewAll") == true;
+
+                // Get user's workgroup names
+                var userWorkgroupNames = user.UserWorkGroups?.Select(uw => uw.WorkGroup?.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Cast<string>()
+                    .ToList() ?? new List<string>();
+
+                // Check if user has Draw Fiber access
+                bool hasDrawFiberAccess = userWorkgroupNames.Any(wg =>
+                    wg.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
+
+                _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, Workgroups={workgroups}, DrawFiberAccess={drawFiberAccess}",
+                    userId, canViewAll, string.Join(", ", userWorkgroupNames), hasDrawFiberAccess);
+
+                var query = _context.PlannedEvents
+                    .Where(p => p.IsHold)
+                    .AsNoTracking();
+
+                // Apply workgroup filtering based on user permissions
+                if (!canViewAll && userWorkgroupNames.Any())
+                {
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                            userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
+                            || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null &&
+                            userWorkgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
+                    }
+                }
+                // If user has ViewAll permission, return all hold records without workgroup filtering
+
+                var result = await query.ToListAsync();
+                _logger.LogInformation("Retrieved {count} hold planned events for user {userId}", result.Count, userId);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting hold planned events for user {userId}", userId);
                 return new List<PlannedEvent>();
             }
         }
@@ -769,6 +977,63 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting hold count for multi workgroup");
+                return 0;
+            }
+        }
+
+        // User-based count methods
+        public async Task<int> GetInProgressCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var events = await GetInProgressPlannedEventsByUserIdAsync(userId);
+                return events.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting in-progress count for user {userId}", userId);
+                return 0;
+            }
+        }
+
+        public async Task<int> GetOLAViolatingCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var events = await GetOLAViolatingPlannedEventsByUserIdAsync(userId);
+                return events.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violating count for user {userId}", userId);
+                return 0;
+            }
+        }
+
+        public async Task<int> GetUrgentCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var events = await GetUrgentPlannedEventsByUserIdAsync(userId);
+                return events.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting urgent count for user {userId}", userId);
+                return 0;
+            }
+        }
+
+        public async Task<int> GetHoldCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var events = await GetHoldPlannedEventsByUserIdAsync(userId);
+                return events.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting hold count for user {userId}", userId);
                 return 0;
             }
         }
