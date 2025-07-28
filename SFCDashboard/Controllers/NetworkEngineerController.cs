@@ -1,8 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using SFCDashboard.Data;
-using OfficeOpenXml;
-using Microsoft.EntityFrameworkCore;
-using ClosedXML.Excel;
 using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers

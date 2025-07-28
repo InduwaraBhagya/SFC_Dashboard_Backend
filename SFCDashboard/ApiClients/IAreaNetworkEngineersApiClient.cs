@@ -1,5 +1,3 @@
-using SFCDashboard.Models;
-
 namespace SFCDashboard.ApiClients
 {
     public interface IAreaNetworkEngineersApiClient

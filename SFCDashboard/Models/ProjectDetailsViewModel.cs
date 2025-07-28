@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace SFCDashboard.Models
 {
     public class ProjectDetailsViewModel

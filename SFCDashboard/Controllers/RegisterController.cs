@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Web;
 using SFCDashboard.ApiClients;
-using SFCDashboard.Data;
 using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers

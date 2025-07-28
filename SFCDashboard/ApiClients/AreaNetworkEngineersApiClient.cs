@@ -1,4 +1,3 @@
-using SFCDashboard.Models;
 using System.Text.Json;
 
 namespace SFCDashboard.ApiClients

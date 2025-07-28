@@ -1,7 +1,3 @@
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using SFCDashboard.Models;
 namespace SFCDashboard.Models
 {
     public class EscalationViewModel

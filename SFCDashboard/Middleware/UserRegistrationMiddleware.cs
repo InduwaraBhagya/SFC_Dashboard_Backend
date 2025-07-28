@@ -1,4 +1,3 @@
-using Microsoft.Identity.Web;
 using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Middleware

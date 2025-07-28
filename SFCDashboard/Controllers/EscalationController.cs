@@ -1,12 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.ApiClients;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
 using SFCDashboard.Models;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace SFCDashboard.Controllers
 {
