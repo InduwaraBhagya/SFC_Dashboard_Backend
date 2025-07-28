@@ -596,6 +596,31 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while setting user workgroups");
             }
         }
+
+        /// <summary>
+        /// Get users in sales workgroup
+        /// </summary>
+        [HttpGet("sales-users")]
+        public async Task<ActionResult<List<SystemUser>>> GetSalesUsers()
+        {
+            try
+            {
+                _logger.LogInformation("Getting sales users");
+                var salesUsers = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                    .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup != null && uwg.WorkGroup.Name.ToLower().Contains("sales")))
+                    .OrderBy(u => u.Name)
+                    .ToListAsync();
+
+                return Ok(salesUsers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving sales users");
+                return StatusCode(500, "An error occurred while retrieving sales users");
+            }
+        }
     }
 
     /// <summary>

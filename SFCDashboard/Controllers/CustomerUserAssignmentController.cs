@@ -13,9 +13,10 @@ namespace SFCDashboard.Controllers
         public CustomerUserAssignmentController(
             ICustomerUserAssignmentsApiClient customerUserAssignmentsApi,
             IPlannedEventsApiClient plannedEventsApi,
-            IPermissionsApiClient permissionsApi, 
-            IUsersApiClient usersApiClient, 
-            ILogger<CustomerUserAssignmentController> logger) : base(permissionsApi, usersApiClient)
+            IPermissionsApiClient permissionsApi,
+            IUsersApiClient usersApiClient,
+            IRolePermissionsApiClient rolePermissionsApi,
+            ILogger<CustomerUserAssignmentController> logger) : base(permissionsApi, usersApiClient, rolePermissionsApi)
         {
             _customerUserAssignmentsApi = customerUserAssignmentsApi;
             _plannedEventsApi = plannedEventsApi;
@@ -24,46 +25,55 @@ namespace SFCDashboard.Controllers
         // GET: CustomerUserAssignment
         public async Task<IActionResult> Index(string searchTerm = "")
         {
-            var viewModel = new CustomerUserAssignmentManageViewModel();
-
-            // Get all assignments with user details
-            IEnumerable<CustomerUserAssignment> assignments;
-            if (!string.IsNullOrEmpty(searchTerm))
+            try
             {
-                assignments = await _customerUserAssignmentsApi.SearchAssignmentsAsync(searchTerm);
-                viewModel.SearchTerm = searchTerm;
+                var viewModel = new CustomerUserAssignmentManageViewModel();
+
+                // Get all assignments with user details
+                IEnumerable<CustomerUserAssignment> assignments;
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    assignments = await _customerUserAssignmentsApi.SearchAssignmentsAsync(searchTerm);
+                    viewModel.SearchTerm = searchTerm;
+                }
+                else
+                {
+                    assignments = await _customerUserAssignmentsApi.GetAssignmentsWithUsersAsync();
+                }
+
+                // Convert to view model
+                var assignmentViewModels = assignments.Select(c => new CustomerUserAssignmentViewModel
+                {
+                    Id = c.Id,
+                    Customer = c.Customer,
+                    UserId = c.UserId,
+                    UserName = c.User?.Name ?? "",
+                    UserServiceId = c.User?.ServiceId ?? "",
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                }).OrderBy(c => c.Customer).ToList();
+
+                viewModel.Assignments = assignmentViewModels;
+
+                // Get all unique customers from PlannedEvents that don't have assignments yet
+                var assignedCustomers = assignmentViewModels.Select(a => a.Customer).ToList();
+                var availableCustomers = await _customerUserAssignmentsApi.GetAvailableCustomersAsync(assignedCustomers);
+
+                viewModel.AvailableCustomers = availableCustomers.ToList();
+
+                // Get users with SALES workgroup
+                var salesUsers = await _usersApiClient.GetSalesUsersAsync();
+
+                viewModel.SalesUsers = salesUsers;
+
+                return View(viewModel);
             }
-            else
+            catch (Exception ex)
             {
-                assignments = await _customerUserAssignmentsApi.GetAssignmentsWithUsersAsync();
+                // Log the error and return an error view or redirect
+                TempData["ErrorMessage"] = $"Error loading customer assignments: {ex.Message}";
+                return View(new CustomerUserAssignmentManageViewModel());
             }
-
-            // Convert to view model
-            var assignmentViewModels = assignments.Select(c => new CustomerUserAssignmentViewModel
-            {
-                Id = c.Id,
-                Customer = c.Customer,
-                UserId = c.UserId,
-                UserName = c.User?.Name ?? "",
-                UserServiceId = c.User?.ServiceId ?? "",
-                CreatedAt = c.CreatedAt,
-                UpdatedAt = c.UpdatedAt
-            }).OrderBy(c => c.Customer).ToList();
-
-            viewModel.Assignments = assignmentViewModels;
-
-            // Get all unique customers from PlannedEvents that don't have assignments yet
-            var assignedCustomers = assignmentViewModels.Select(a => a.Customer).ToList();
-            var availableCustomers = await _customerUserAssignmentsApi.GetAvailableCustomersAsync(assignedCustomers);
-
-            viewModel.AvailableCustomers = availableCustomers.ToList();
-
-            // Get users with SALES workgroup
-            var salesUsers = await _usersApiClient.GetSalesUsersAsync();
-
-            viewModel.SalesUsers = salesUsers;
-
-            return View(viewModel);
         }
 
         // POST: CustomerUserAssignment/Create
@@ -143,7 +153,7 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> GetSalesUsers()
         {
             var salesUsers = await _usersApiClient.GetSalesUsersAsync();
-            
+
             var result = salesUsers
                 .Select(u => new { u.Id, u.Name, u.ServiceId })
                 .OrderBy(u => u.Name)

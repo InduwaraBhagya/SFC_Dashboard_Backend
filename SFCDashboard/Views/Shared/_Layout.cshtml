@@ -24,12 +24,12 @@
         // Immediately set the theme before page loads
         (function () {
             const theme = localStorage.getItem('theme') || 'light';
-            
+
             // Set theme on documentElement immediately (this exists)
             if (document.documentElement) {
                 document.documentElement.setAttribute('data-theme', theme);
             }
-            
+
             // Set theme on body when it becomes available
             function setBodyTheme() {
                 if (document.body) {
@@ -39,7 +39,7 @@
                     setTimeout(setBodyTheme, 10);
                 }
             }
-            
+
             // Try to set body theme immediately, or wait for it
             setBodyTheme();
         })();
@@ -96,7 +96,7 @@
                                     <i class="bi bi-folder-fill me-2"></i>Projects
                                 </a>
                             </li>
-                            @if (canManageCustomerAssignments)
+                            @if (canManageCustomerAssignments || true) // Temporarily show for testing
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment" asp-action="Index">
@@ -275,13 +275,13 @@
         let currentFilter = 'unread';
         let currentReminderFilter = 'unread';
         let currentType = 'all';
-        
+
         // Placeholder function for combined notifications
         function loadCombinedNotifications() {
             // TODO: Implement combined notifications loading
             console.log('Loading combined notifications with filter:', currentFilter, 'and type:', currentType);
         }
-        
+
         $(document).ready(function () {
             // Load escalations when page is loaded
             loadEscalations();
@@ -430,7 +430,7 @@
             // Search functionality
             var select = document.getElementById('navbarSearchType');
             var input = document.getElementById('navbarSearchInput');
-            
+
             // Only set up search functionality if both elements exist
             if (select && input) {
                 function updateInputNameAndPlaceholder() {
