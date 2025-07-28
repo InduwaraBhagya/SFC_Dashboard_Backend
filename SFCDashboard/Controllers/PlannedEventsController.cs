@@ -175,11 +175,11 @@ namespace SFCDashboard.Controllers
                 }
             }
 
-            // Calculate dashboard counts based on current workgroup context
-            ViewData["UrgentCount"] = await GetUrgentCount(effectiveWorkgroupIds);
-            ViewData["InProgressCount"] = await GetInProgressCount(effectiveWorkgroupIds);
-            ViewData["OLAViolateCount"] = await GetOLAViolateCount(effectiveWorkgroupIds);
-            ViewData["HoldCount"] = await GetHoldCount(effectiveWorkgroupIds);
+            // Calculate dashboard counts using user-based endpoints
+            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
+            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
+            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
+            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
 
 
             ViewData["SearchType"] = searchType ?? "peNumber";
@@ -362,11 +362,11 @@ namespace SFCDashboard.Controllers
                 ViewData["SelectedWorkgroupNames"] = workgroupNamesList;
             }
 
-            // Calculate dashboard counts using multi-workgroup specific methods
-            ViewData["UrgentCount"] = await GetUrgentCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
-            ViewData["InProgressCount"] = await GetInProgressCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
-            ViewData["OLAViolateCount"] = await GetOLAViolateCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
-            ViewData["HoldCount"] = await GetHoldCountForMultiWorkgroup(workgroupIds ?? new List<int>(), userWorkgroupIds);
+            // Calculate dashboard counts using user-based endpoints
+            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
+            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
+            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
+            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
 
             ViewData["SearchType"] = searchType ?? "peNumber";
             ViewData["PENumberFilter"] = peNumber;
@@ -551,43 +551,14 @@ namespace SFCDashboard.Controllers
             // Get draw fiber access for the current user
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-            // Get PE numbers with OLA violation
-            var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
-
-            // Calculate OLA violation count using the same logic as SalesOLAViolateRecords
+            // Get all planned events for search functionality
             var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
-            var violatingEvents = allPlannedEvents
-                .Where(p => p.PeNumber != null && violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
-            var filteredOLAViolatingEvents = await ApplyCustomerFilteringAsync(violatingEvents.AsQueryable(), salesWorkgroups, canViewAll);
-            var olaViolateCount = filteredOLAViolatingEvents.Count();
 
-            // Calculate Urgent count using the same logic as SalesUrgentRecords
-            var urgentEvents = allPlannedEvents
-                .Where(p => p.PEStatus == "urgent" &&
-                       !p.IsHold &&
-                       (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)));
-            var filteredUrgentEvents = await ApplyCustomerFilteringAsync(urgentEvents.AsQueryable(), salesWorkgroups, canViewAll);
-            var urgentCount = filteredUrgentEvents.Count();
-
-            // Calculate InProgress count using the same logic as SalesInProgressRecords
-            var filteredAllEvents = await ApplyCustomerFilteringAsync(allPlannedEvents.AsQueryable(), salesWorkgroups, canViewAll);
-            var inProgressEvents = filteredAllEvents
-                .Where(p =>
-                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
-                    !p.IsHold &&
-                    (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)));
-            var inProgressCount = inProgressEvents.Count();
-
-            // Calculate Hold count using the same logic as SalesHoldRecords
-            var holdEvents = allPlannedEvents.Where(p => p.IsHold);
-            var filteredHoldEvents = await ApplyCustomerFilteringAsync(holdEvents.AsQueryable(), salesWorkgroups, canViewAll);
-            var holdCount = filteredHoldEvents.Count();
-
-            // Set dashboard counts using the calculated values that match the records methods
-            ViewData["UrgentCount"] = urgentCount;
-            ViewData["InProgressCount"] = inProgressCount;
-            ViewData["OLAViolateCount"] = olaViolateCount; // Already calculated above
-            ViewData["HoldCount"] = holdCount;
+            // Set dashboard counts using user-based endpoints
+            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
+            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
+            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
+            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
 
 
             // Get pending urgent requests
@@ -940,58 +911,15 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> InProgressRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
             try
             {
-                // Get PE numbers with OLA violation
-                var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
+                // Use new backend endpoint for in-progress records by userId
+                var records = await _plannedEventsApi.GetInProgressPlannedEventsByUserIdAsync(currentUserId);
 
-                bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-                IEnumerable<PlannedEvent> records;
-
-                if (canViewAll)
-                {
-                    // If admin, filter by selected workgroup if provided
-                    if (workgroupId.HasValue)
-                    {
-                        var workgroup = await _workGroupsApi.GetWorkGroupAsync(workgroupId.Value);
-                        if (workgroup != null)
-                        {
-                            records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(new List<string> { workgroup.Name }, hasDrawFiberAccess, canViewAll);
-                            ViewData["FilteredWorkgroup"] = workgroup.Name;
-                            ViewData["SelectedWorkgroupId"] = workgroupId;
-                        }
-                        else
-                        {
-                            records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                        }
-                    }
-                    else
-                    {
-                        records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                    }
-                }
-                else
-                {
-                    // Regular user: show all records for ALL their workgroups
-                    if (userWorkgroupNames.Any())
-                    {
-                        records = await _plannedEventsApi.GetInProgressPlannedEventsAsync(userWorkgroupNames, hasDrawFiberAccess, canViewAll);
-                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                        ViewData["SelectedWorkgroupId"] = workgroupId;
-                    }
-                    else
-                    {
-                        records = new List<PlannedEvent>();
-                    }
-                }
-
-                // Set ViewData
-                ViewData["CanViewAll"] = canViewAll;
+                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
+                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
-
                 ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
 
                 return View(records.ToList());
@@ -1008,56 +936,14 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> OLAViolateRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
             try
             {
-                // Get PE numbers with OLA violation
-                var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
+                // Use new backend endpoint for OLA violating records by userId
+                var records = await _plannedEventsApi.GetOLAViolatingPlannedEventsByUserIdAsync(currentUserId);
 
-                bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-                IEnumerable<PlannedEvent> records;
-
-                if (canViewAll)
-                {
-                    // If admin, filter by selected workgroup if provided
-                    if (workgroupId.HasValue)
-                    {
-                        var workgroup = await _workGroupsApi.GetWorkGroupAsync(workgroupId.Value);
-                        if (workgroup != null)
-                        {
-                            records = await _plannedEventsApi.GetOLAViolatingPlannedEventsAsync(new List<string> { workgroup.Name }, hasDrawFiberAccess, canViewAll);
-                            ViewData["FilteredWorkgroup"] = workgroup.Name;
-                            ViewData["SelectedWorkgroupId"] = workgroupId;
-                        }
-                        else
-                        {
-                            records = await _plannedEventsApi.GetOLAViolatingPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                        }
-                    }
-                    else
-                    {
-                        records = await _plannedEventsApi.GetOLAViolatingPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                    }
-                }
-                else
-                {
-                    // Regular user: show all records for ALL their workgroups
-                    if (userWorkgroupNames.Any())
-                    {
-                        records = await _plannedEventsApi.GetOLAViolatingPlannedEventsAsync(userWorkgroupNames, hasDrawFiberAccess, canViewAll);
-                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                        ViewData["SelectedWorkgroupId"] = workgroupId;
-                    }
-                    else
-                    {
-                        records = new List<PlannedEvent>();
-                    }
-                }
-
-                // Set ViewData
-                ViewData["CanViewAll"] = canViewAll;
+                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
+                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 var recordsList = records.OrderBy(p => p.PeNumber).ToList();
@@ -1104,56 +990,14 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> HoldRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-            // Get current user's workgroup info
-            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
-
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
             try
             {
-                IEnumerable<PlannedEvent> records;
+                // Use new backend endpoint for hold records by userId
+                var records = await _plannedEventsApi.GetHoldPlannedEventsByUserIdAsync(currentUserId);
 
-                if (canViewAll)
-                {
-                    // If admin, filter by selected workgroup if provided
-                    if (workgroupId.HasValue)
-                    {
-                        var workgroup = await _workGroupsApi.GetWorkGroupAsync(workgroupId.Value);
-                        if (workgroup != null)
-                        {
-                            records = await _plannedEventsApi.GetHoldPlannedEventsAsync(new List<string> { workgroup.Name }, hasDrawFiberAccess, canViewAll);
-                            ViewData["FilteredWorkgroup"] = workgroup.Name;
-                            ViewData["SelectedWorkgroupId"] = workgroupId;
-                        }
-                        else
-                        {
-                            records = await _plannedEventsApi.GetHoldPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                        }
-                    }
-                    else
-                    {
-                        records = await _plannedEventsApi.GetHoldPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                    }
-                }
-                else
-                {
-                    // Regular user: show all records for ALL their workgroups
-                    if (userWorkgroupNames.Any())
-                    {
-                        records = await _plannedEventsApi.GetHoldPlannedEventsAsync(userWorkgroupNames, hasDrawFiberAccess, canViewAll);
-                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                        ViewData["SelectedWorkgroupId"] = workgroupId;
-                    }
-                    else
-                    {
-                        records = new List<PlannedEvent>();
-                    }
-                }
-
-                // Set ViewData
-                ViewData["CanViewAll"] = canViewAll;
+                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
+                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 return View(records.ToList());
@@ -1169,60 +1013,19 @@ namespace SFCDashboard.Controllers
         public async Task<IActionResult> UrgentRecords(int? workgroupId)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
-
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
             try
             {
-                IEnumerable<PlannedEvent> records;
+                // Use new backend endpoint for urgent records by userId
+                var records = await _plannedEventsApi.GetUrgentPlannedEventsByUserIdAsync(currentUserId);
 
-                if (canViewAll)
-                {
-                    // If admin, filter by selected workgroup if provided
-                    if (workgroupId.HasValue)
-                    {
-                        var workgroup = await _workGroupsApi.GetWorkGroupAsync(workgroupId.Value);
-                        if (workgroup != null)
-                        {
-                            records = await _plannedEventsApi.GetUrgentPlannedEventsAsync(new List<string> { workgroup.Name }, hasDrawFiberAccess, canViewAll);
-                            ViewData["FilteredWorkgroup"] = workgroup.Name;
-                            ViewData["SelectedWorkgroupId"] = workgroupId;
-                        }
-                        else
-                        {
-                            records = await _plannedEventsApi.GetUrgentPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                        }
-                    }
-                    else
-                    {
-                        records = await _plannedEventsApi.GetUrgentPlannedEventsAsync(new List<string>(), hasDrawFiberAccess, canViewAll);
-                    }
-                }
-                else
-                {
-                    // Regular user: show all records for ALL their workgroups
-                    if (userWorkgroupNames.Any())
-                    {
-                        records = await _plannedEventsApi.GetUrgentPlannedEventsAsync(userWorkgroupNames, hasDrawFiberAccess, canViewAll);
-                        ViewData["FilteredWorkgroup"] = string.Join(", ", userWorkgroupNames);
-                        ViewData["SelectedWorkgroupId"] = workgroupId;
-                    }
-                    else
-                    {
-                        records = new List<PlannedEvent>();
-                    }
-                }
+                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
+                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
+                ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 // Only display urgent PE records, not urgent tasks
                 // Remove urgent tasks from the view to comply with business requirements
                 ViewData["UrgentTasks"] = new List<PETask>();
-
-                // Set ViewData
-                ViewData["CanViewAll"] = canViewAll;
-                ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 return View(records.ToList());
             }
@@ -2243,314 +2046,6 @@ namespace SFCDashboard.Controllers
             ViewData["CanViewAll"] = canViewAll;
             return View(records);
         }
-
-
-        private async Task<int> GetUrgentCount(List<int>? workgroupIds)
-        {
-            int currentUserId = await GetCurrentUserIdAsync();
-            _logger.LogInformation("Getting urgent count for workgroup: {workgroupId}",
-                workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
-
-            // Get current user and check permissions
-            var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-
-            bool canViewAll = currentUser?.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-            // If user has ViewAll and no specific workgroup selected, show ALL records
-            if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                var countAll = await _plannedEventsApi.GetUrgentCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("Urgent count (ViewAll): {count}", countAll);
-                return countAll;
-            }
-
-            // If user has ViewAll and selected specific workgroup(s), filter by those workgroup(s)
-            if (canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(w => w.Name).ToList();
-
-                var countFiltered = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("Urgent count (ViewAll + filter): {count} for workgroups: {workgroups}",
-                    countFiltered, string.Join(", ", workgroupIds));
-                return countFiltered;
-            }
-
-            // For regular users (non-ViewAll), get their workgroups if not provided
-            if (!canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                workgroupIds = currentUser?.UserWorkGroups?
-                    .Select(uwg => uwg.WorkGroupId)
-                    .ToList() ?? new List<int>();
-                
-                var workgroupNames = workgroupIds.Any() && currentUser?.UserWorkGroups != null ? 
-                    string.Join(", ", currentUser.UserWorkGroups.Select(uwg => uwg.WorkGroup?.Name ?? uwg.WorkGroupId.ToString())) : 
-                    "NONE";
-                
-                _logger.LogInformation("User {userId} assigned workgroups: {workgroupNames} (IDs: {workgroupIds})", 
-                    currentUserId, workgroupNames, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
-            }
-
-            // For regular users, filter by their workgroups
-            if (!canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                try
-                {
-                    var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                    var workgroupNames = workgroups.Select(w => w.Name).ToList();
-
-                    if (!workgroupNames.Any())
-                    {
-                        _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
-                            string.Join(", ", workgroupIds), currentUserId);
-                        return 0;
-                    }
-
-                    var count = await _plannedEventsApi.GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
-                    _logger.LogInformation("Urgent count: {count} for workgroups: {workgroups}",
-                        count, string.Join(", ", workgroupNames));
-                    return count;
-                }
-                catch (HttpRequestException ex)
-                {
-                    _logger.LogError(ex, "Failed to get workgroups by IDs {workgroupIds} for user {userId}. API may be unavailable.", 
-                        string.Join(", ", workgroupIds), currentUserId);
-                    return 0;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Unexpected error getting urgent count for user {userId} and workgroups {workgroupIds}", 
-                        currentUserId, string.Join(", ", workgroupIds));
-                    return 0;
-                }
-            }
-
-            // Fallback - no workgroups found or no urgent events in assigned workgroups
-            _logger.LogWarning("No urgent events found for user {userId}. This could be because: 1) User has no workgroup assignments, 2) User's workgroups have no urgent events, or 3) User lacks ViewAll permission for broader access.", currentUserId);
-            return 0;
-        }
-
-
-
-        private async Task<int> GetOLAViolateCount(List<int>? workgroupIds)
-        {
-            int currentUserId = await GetCurrentUserIdAsync();
-            _logger.LogInformation("Getting OLA violate count for workgroup: {workgroupId}",
-                workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
-
-            // Get current user and check ViewAll permission
-            var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-            if (currentUser == null)
-            {
-                _logger.LogWarning("Current user not found: {userId}", currentUserId);
-                return 0;
-            }
-
-            bool canViewAll = currentUser.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-            // If user has ViewAll and no specific workgroup selected, show ALL records
-            if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                var countAll = await _plannedEventsApi.GetOLAViolateCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("OLA violate count (ViewAll): {count}", countAll);
-                return countAll;
-            }
-
-            // If user has ViewAll and selected specific workgroup(s), filter by those workgroup(s)
-            if (canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(w => w.Name).ToList();
-
-                var countFiltered = await _plannedEventsApi.GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("OLA violate count (ViewAll + filter): {count} for workgroups: {workgroups}",
-                    countFiltered, string.Join(", ", workgroupIds));
-                return countFiltered;
-            }
-
-            // For regular users (non-ViewAll), get their workgroups if not provided
-            if (!canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                workgroupIds = currentUser.UserWorkGroups?
-                    .Select(uwg => uwg.WorkGroupId)
-                    .ToList() ?? new List<int>();
-                
-                _logger.LogInformation("User {userId} workgroups from UserWorkGroups: {workgroupIds}", 
-                    currentUserId, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
-            }
-
-            // For regular users, filter by their workgroups
-            if (!canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
-
-                if (!workgroupNames.Any())
-                {
-                    _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
-                        string.Join(", ", workgroupIds), currentUserId);
-                    return 0;
-                }
-
-                var count = await _plannedEventsApi.GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
-                _logger.LogInformation("OLA violate count: {count} for workgroups: {workgroups}",
-                    count, string.Join(", ", workgroupNames));
-                return count;
-            }
-
-            // Fallback - no workgroups found
-            _logger.LogWarning("No workgroups found for OLA violate count calculation. User {userId} has no workgroup assignments and no ViewAll permission.", currentUserId);
-            return 0;
-        }
-
-
-        private async Task<int> GetHoldCount(List<int>? workgroupIds)
-        {
-            int currentUserId = await GetCurrentUserIdAsync();
-            _logger.LogInformation("Getting hold count for workgroup: {workgroupId}",
-                workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
-
-            // Get current user and check permissions
-            var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-            if (currentUser == null)
-            {
-                _logger.LogWarning("Current user not found: {userId}", currentUserId);
-                return 0;
-            }
-
-            bool canViewAll = currentUser.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-            // If user has ViewAll and no specific workgroup selected, show ALL records
-            if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                var countAll = await _plannedEventsApi.GetHoldCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("Hold count (ViewAll): {count}", countAll);
-                return countAll;
-            }
-
-            // If user has ViewAll and selected specific workgroup(s), filter by those workgroup(s)
-            if (canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
-
-                var countFiltered = await _plannedEventsApi.GetHoldCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("Hold count (ViewAll + filter): {count} for workgroups: {workgroups}",
-                    countFiltered, string.Join(", ", workgroupIds));
-                return countFiltered;
-            }
-
-            // For regular users (non-ViewAll), get their workgroups if not provided
-            if (!canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                workgroupIds = currentUser.UserWorkGroups?
-                    .Select(uwg => uwg.WorkGroupId)
-                    .ToList() ?? new List<int>();
-                
-                _logger.LogInformation("User {userId} workgroups from UserWorkGroups: {workgroupIds}", 
-                    currentUserId, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
-            }
-
-            // For regular users, filter by their workgroups
-            if (!canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
-
-                if (!workgroupNames.Any())
-                {
-                    _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
-                        string.Join(", ", workgroupIds), currentUserId);
-                    return 0;
-                }
-
-                var count = await _plannedEventsApi.GetHoldCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
-                _logger.LogInformation("Hold count: {count} for workgroups: {workgroups}",
-                    count, string.Join(", ", workgroupNames));
-                return count;
-            }
-
-            // Fallback - no workgroups found
-            _logger.LogWarning("No workgroups found for hold count calculation. User {userId} has no workgroup assignments and no ViewAll permission.", currentUserId);
-            return 0;
-        }
-
-
-        private async Task<int> GetInProgressCount(List<int>? workgroupIds)
-        {
-            int currentUserId = await GetCurrentUserIdAsync();
-            _logger.LogInformation("Getting in-progress count for workgroup: {workgroupId}",
-                workgroupIds != null && workgroupIds.Any() ? string.Join(", ", workgroupIds) : "ALL");
-
-            // Get current user and check ViewAll permission
-            var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-            if (currentUser == null)
-            {
-                _logger.LogWarning("Current user not found: {userId}", currentUserId);
-                return 0;
-            }
-
-            bool canViewAll = currentUser.UserRole?.HasPermission("ViewAll") == true;
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-            // If user has ViewAll and no specific workgroup selected, show ALL records
-            if (canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                var countAll = await _plannedEventsApi.GetInProgressCountAsync(new List<string>(), hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("In-progress count (ViewAll): {count}", countAll);
-                return countAll;
-            }
-
-            // If user has ViewAll and selected specific workgroup(s), filter by those workgroup(s)
-            if (canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
-
-                var countFiltered = await _plannedEventsApi.GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: true);
-                _logger.LogInformation("In-progress count (ViewAll + filter): {count} for workgroups: {workgroups}",
-                    countFiltered, string.Join(", ", workgroupIds));
-                return countFiltered;
-            }
-
-            // For regular users (non-ViewAll), get their workgroups if not provided
-            if (!canViewAll && (workgroupIds == null || !workgroupIds.Any()))
-            {
-                workgroupIds = currentUser.UserWorkGroups?
-                    .Select(uwg => uwg.WorkGroupId)
-                    .ToList() ?? new List<int>();
-                
-                _logger.LogInformation("User {userId} workgroups from UserWorkGroups: {workgroupIds}", 
-                    currentUserId, workgroupIds.Any() ? string.Join(", ", workgroupIds) : "NONE");
-            }
-
-            // For regular users, filter by their workgroups
-            if (!canViewAll && workgroupIds != null && workgroupIds.Any())
-            {
-                var workgroups = await _workGroupsApi.GetWorkGroupsByIdsAsync(workgroupIds);
-                var workgroupNames = workgroups.Select(wg => wg.Name).ToList();
-
-                if (!workgroupNames.Any())
-                {
-                    _logger.LogWarning("No valid workgroups found for workgroup IDs: {workgroupIds}. User {userId} may have invalid workgroup assignments.", 
-                        string.Join(", ", workgroupIds), currentUserId);
-                    return 0;
-                }
-
-                var count = await _plannedEventsApi.GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
-                _logger.LogInformation("In-progress count: {count} for workgroups: {workgroups}",
-                    count, string.Join(", ", workgroupNames));
-                return count;
-            }
-
-            // Fallback - no workgroups found
-            _logger.LogWarning("No workgroups found for in-progress count calculation. User {userId} has no workgroup assignments and no ViewAll permission.", currentUserId);
-            return 0;
-        }
-
 
 
         // Helper to extract date from PE number

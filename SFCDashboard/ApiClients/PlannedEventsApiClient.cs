@@ -247,6 +247,167 @@ namespace SFCDashboard.ApiClients
         }
 
         // Implementation for filtered planned events methods
+
+        /// <summary>
+        /// Gets in-progress planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/inprogress/user/{userId}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var events = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                return events ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching in-progress planned events for user {UserId} via API", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Gets OLA violating planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/ola-violating/user/{userId}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var events = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                return events ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching OLA violating planned events for user {UserId} via API", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Gets urgent planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/urgent/user/{userId}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var events = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                return events ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching urgent planned events for user {UserId} via API", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Gets hold planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/hold/user/{userId}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var events = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                return events ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching hold planned events for user {UserId} via API", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Gets in-progress count for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<int> GetInProgressCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/inprogress/user/{userId}/count");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching in-progress count for user {UserId} via API", userId);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets OLA violating count for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<int> GetOLAViolatingCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/ola-violating/user/{userId}/count");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching OLA violating count for user {UserId} via API", userId);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets urgent count for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<int> GetUrgentCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/urgent/user/{userId}/count");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching urgent count for user {UserId} via API", userId);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets hold count for a specific user by userId (filtered in backend)
+        /// </summary>
+        public async Task<int> GetHoldCountByUserIdAsync(int userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/plannedeventsapi/hold/user/{userId}/count");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching hold count for user {UserId} via API", userId);
+                return 0;
+            }
+        }
+
         public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false)
         {
             try
