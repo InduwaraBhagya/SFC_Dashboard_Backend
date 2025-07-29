@@ -78,9 +78,29 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                _context.Entry(userRole).State = EntityState.Modified;
+                _logger.LogInformation("UpdateUserRoleAsync called for ID: {Id}, Name: {Name}, Level: {Level}", 
+                    userRole.Id, userRole.Name, userRole.Level);
+                    
+                // First check if the role exists
+                var existingRole = await _context.UserRoles.FindAsync(userRole.Id);
+                if (existingRole == null)
+                {
+                    _logger.LogWarning("UpdateUserRoleAsync: User role {Id} not found in database", userRole.Id);
+                    return null;
+                }
+
+                _logger.LogInformation("UpdateUserRoleAsync: Found existing role {Id} with name '{ExistingName}'", 
+                    existingRole.Id, existingRole.Name);
+
+                // Update the properties
+                existingRole.Name = userRole.Name;
+                existingRole.Level = userRole.Level;
+
+                _logger.LogInformation("UpdateUserRoleAsync: Saving changes for role {Id}", userRole.Id);
                 await _context.SaveChangesAsync();
-                return userRole;
+                
+                _logger.LogInformation("UpdateUserRoleAsync: Successfully updated role {Id}", userRole.Id);
+                return existingRole;
             }
             catch (Exception ex)
             {
@@ -150,6 +170,22 @@ namespace SFCDashboard.Api.Services
             {
                 _logger.LogError(ex, "Error checking admin status for user {ServiceId}", serviceId);
                 return false;
+            }
+        }
+
+        public async Task<IEnumerable<int>> GetRolePermissionIdsAsync(int roleId)
+        {
+            try
+            {
+                return await _context.RolePermissions
+                    .Where(rp => rp.RoleId == roleId)
+                    .Select(rp => rp.PermissionId)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting permission IDs for role {RoleId}", roleId);
+                return Enumerable.Empty<int>();
             }
         }
     }

@@ -40,11 +40,16 @@ namespace SFCDashboard.Api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<UserRole>> GetUserRole(int id)
         {
+            _logger.LogInformation("GetUserRole called with ID: {Id}", id);
             try
             {
                 var role = await _userRolesService.GetUserRoleAsync(id);
                 if (role == null)
+                {
+                    _logger.LogWarning("GetUserRole: Role {Id} not found", id);
                     return NotFound();
+                }
+                _logger.LogInformation("GetUserRole: Found role {Id} with name '{Name}'", role.Id, role.Name);
                 return Ok(role);
             }
             catch (Exception ex)
@@ -78,25 +83,40 @@ namespace SFCDashboard.Api.Controllers
 
         // PUT: api/userroles/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UserRole userRole)
+        public async Task<ActionResult<UserRole>> UpdateUserRole(int id, [FromBody] UserRole userRole)
         {
+            _logger.LogInformation("UpdateUserRole called with ID: {Id}, UserRole ID: {UserRoleId}, UserRole Name: {UserRoleName}", 
+                id, userRole?.Id, userRole?.Name);
+                
             try
             {
+                if (userRole == null)
+                {
+                    _logger.LogWarning("UpdateUserRole: UserRole is null");
+                    return BadRequest("UserRole cannot be null");
+                }
+                
                 if (id != userRole.Id)
+                {
+                    _logger.LogWarning("UpdateUserRole: ID mismatch - URL ID: {UrlId}, Body ID: {BodyId}", id, userRole.Id);
                     return BadRequest("ID mismatch");
+                }
                     
                 if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("UpdateUserRole: ModelState is invalid");
                     return BadRequest(ModelState);
-
-                // Check if the role exists
-                if (!await _userRolesService.UserRoleExistsAsync(id))
-                    return NotFound();
+                }
                     
                 var updatedRole = await _userRolesService.UpdateUserRoleAsync(userRole);
                 if (updatedRole == null)
-                    return StatusCode(500, "Failed to update user role");
+                {
+                    _logger.LogWarning("UpdateUserRole: Service returned null for ID: {Id}", id);
+                    return NotFound($"User role with ID {id} not found");
+                }
                     
-                return NoContent();
+                _logger.LogInformation("UpdateUserRole: Successfully updated role {Id}", id);
+                return Ok(updatedRole);
             }
             catch (Exception ex)
             {
@@ -173,6 +193,22 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogError(ex, "Error checking admin status for user {ServiceId}", serviceId);
                 return StatusCode(500, "An error occurred while checking admin status");
+            }
+        }
+
+        // GET: api/userroles/{id}/permission-ids
+        [HttpGet("{id}/permission-ids")]
+        public async Task<ActionResult<IEnumerable<int>>> GetRolePermissionIds(int id)
+        {
+            try
+            {
+                var permissionIds = await _userRolesService.GetRolePermissionIdsAsync(id);
+                return Ok(permissionIds);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting permission IDs for role {Id}", id);
+                return StatusCode(500, "An error occurred while retrieving role permission IDs");
             }
         }
 

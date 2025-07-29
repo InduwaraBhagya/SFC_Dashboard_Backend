@@ -12,5 +12,6 @@ namespace SFCDashboard.ApiClients
         Task<bool> ExistsAsync(int id);
         Task<UserRole?> GetWithPermissionsAsync(int id);
         Task<bool> IsUserAdminAsync(string serviceId);
+        Task<IEnumerable<int>> GetRolePermissionIdsAsync(int roleId);
     }
 }

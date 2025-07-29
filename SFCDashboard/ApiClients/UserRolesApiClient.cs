@@ -84,5 +84,13 @@ namespace SFCDashboard.ApiClients
             var json = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<bool>(json, _jsonOptions);
         }
+
+        public async Task<IEnumerable<int>> GetRolePermissionIdsAsync(int roleId)
+        {
+            var response = await _httpClient.GetAsync($"api/userroles/{roleId}/permission-ids");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<int>>(json, _jsonOptions) ?? new List<int>();
+        }
     }
 }

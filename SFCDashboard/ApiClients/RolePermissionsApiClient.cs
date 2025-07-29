@@ -105,7 +105,14 @@ namespace SFCDashboard.ApiClients
 
         public async Task CreateMultipleAsync(IEnumerable<RolePermission> rolePermissions)
         {
-            var json = JsonSerializer.Serialize(rolePermissions, _jsonOptions);
+            // Convert to simple DTOs to avoid navigation property validation issues
+            var simplifiedRolePermissions = rolePermissions.Select(rp => new 
+            {
+                roleId = rp.RoleId,
+                permissionId = rp.PermissionId
+            });
+
+            var json = JsonSerializer.Serialize(simplifiedRolePermissions, _jsonOptions);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync("api/rolepermissions/multiple", content);
             response.EnsureSuccessStatusCode();

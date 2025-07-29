@@ -203,5 +203,62 @@ namespace SFCDashboard.Api.Services
                 return false;
             }
         }
+
+        public async Task<IEnumerable<RolePermission>> GetByRoleIdAsync(int roleId)
+        {
+            try
+            {
+                return await _context.RolePermissions
+                    .Include(rp => rp.Permission)
+                    .Where(rp => rp.RoleId == roleId)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting role permissions for role {RoleId}", roleId);
+                return Enumerable.Empty<RolePermission>();
+            }
+        }
+
+        public async Task<bool> DeleteByRoleIdAsync(int roleId)
+        {
+            try
+            {
+                var rolePermissions = await _context.RolePermissions
+                    .Where(rp => rp.RoleId == roleId)
+                    .ToListAsync();
+
+                if (rolePermissions.Any())
+                {
+                    _context.RolePermissions.RemoveRange(rolePermissions);
+                    await _context.SaveChangesAsync();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting role permissions for role {RoleId}", roleId);
+                return false;
+            }
+        }
+
+        public async Task<bool> CreateMultipleAsync(IEnumerable<RolePermission> rolePermissions)
+        {
+            try
+            {
+                if (rolePermissions?.Any() == true)
+                {
+                    await _context.RolePermissions.AddRangeAsync(rolePermissions);
+                    await _context.SaveChangesAsync();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating multiple role permissions");
+                return false;
+            }
+        }
     }
 }

@@ -104,7 +104,7 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
             ViewData["Permissions"] = await _permissionsApi.GetAllPermissionsAsync();
-            ViewData["SelectedPermissions"] = userRole.RolePermissions.Select(rp => rp.PermissionId).ToList();
+            ViewData["SelectedPermissions"] = await _userRolesApiClient.GetRolePermissionIdsAsync(id.Value);
             return View(userRole);
         }
 
@@ -115,8 +115,11 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Level")] UserRole userRole, int[] selectedPermissions)
         {
+            _logger.LogInformation("Edit POST called with ID: {Id}, UserRole: {@UserRole}", id, userRole);
+            
             if (id != userRole.Id)
             {
+                _logger.LogWarning("ID mismatch: URL ID {UrlId} != UserRole ID {UserRoleId}", id, userRole.Id);
                 return NotFound();
             }
 
@@ -124,13 +127,23 @@ namespace SFCDashboard.Controllers
             {
                 try
                 {
+                    _logger.LogInformation("Attempting to update role {Id} with name '{Name}' and level {Level}", 
+                        userRole.Id, userRole.Name, userRole.Level);
+                    
                     // Update role
-                    await _userRolesApiClient.UpdateAsync(userRole);
+                    var updatedRole = await _userRolesApiClient.UpdateAsync(userRole);
+                    _logger.LogInformation("Successfully updated role {Id}", userRole.Id);
+                    
                     // Remove existing permissions
+                    _logger.LogInformation("Removing existing permissions for role {Id}", id);
                     await _rolePermissionsApiClient.DeleteByRoleIdAsync(id);
+                    
                     // Add new permissions
                     if (selectedPermissions != null && selectedPermissions.Any())
                     {
+                        _logger.LogInformation("Adding {Count} new permissions for role {Id}: [{Permissions}]", 
+                            selectedPermissions.Length, id, string.Join(", ", selectedPermissions));
+                        
                         var newRolePermissions = selectedPermissions.Select(pid => new RolePermission
                         {
                             RoleId = id,
@@ -138,21 +151,42 @@ namespace SFCDashboard.Controllers
                         });
                         await _rolePermissionsApiClient.CreateMultipleAsync(newRolePermissions);
                     }
+                    else
+                    {
+                        _logger.LogInformation("No permissions selected for role {Id}", id);
+                    }
+                    
                     TempData["SuccessMessage"] = "Role updated successfully!";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"Error updating role: {ex.Message}");
-                    if (!await _userRolesApiClient.ExistsAsync(userRole.Id))
+                    _logger.LogError(ex, "Error updating role {Id}: {Message}", id, ex.Message);
+                    
+                    // Check if role still exists
+                    try
                     {
-                        return NotFound();
+                        var exists = await _userRolesApiClient.ExistsAsync(userRole.Id);
+                        _logger.LogInformation("Role {Id} exists check: {Exists}", userRole.Id, exists);
+                        
+                        if (!exists)
+                        {
+                            return NotFound();
+                        }
                     }
-                    else
+                    catch (Exception checkEx)
                     {
-                        ModelState.AddModelError("", "Error updating role: " + ex.Message);
+                        _logger.LogError(checkEx, "Error checking if role {Id} exists", userRole.Id);
                     }
+                    
+                    ModelState.AddModelError("", "Error updating role: " + ex.Message);
                 }
+            }
+            else
+            {
+                _logger.LogWarning("ModelState is invalid for role {Id}. Errors: {Errors}", 
+                    userRole.Id, 
+                    string.Join("; ", ModelState.SelectMany(x => x.Value.Errors).Select(e => e.ErrorMessage)));
             }
 
             ViewData["Permissions"] = await _permissionsApi.GetAllPermissionsAsync();
@@ -181,6 +215,13 @@ namespace SFCDashboard.Controllers
         {
             try
             {
+                // Check if role exists before attempting deletion
+                if (!await _userRolesApiClient.ExistsAsync(id))
+                {
+                    TempData["ErrorMessage"] = "Role not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 await _userRolesApiClient.DeleteAsync(id);
                 TempData["SuccessMessage"] = "Role deleted successfully!";
                 return RedirectToAction(nameof(Index));
@@ -191,11 +232,6 @@ namespace SFCDashboard.Controllers
                 TempData["ErrorMessage"] = "Error deleting role: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
-        }
-
-        private async Task<bool> UserRoleExists(int id)
-        {
-            return await _userRolesApiClient.ExistsAsync(id);
         }
 
     }

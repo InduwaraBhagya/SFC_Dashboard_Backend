@@ -8,6 +8,9 @@ namespace SFCDashboard.Api.Services
         Task<object> GetUserPermissionsAsync(int userId);
         Task<bool> UpdateUserPermissionsAsync(UpdateUserPermissionsRequest request);
         Task<bool> CanUserManagePermissions(string serviceId);
+        Task<IEnumerable<RolePermission>> GetByRoleIdAsync(int roleId);
+        Task<bool> DeleteByRoleIdAsync(int roleId);
+        Task<bool> CreateMultipleAsync(IEnumerable<RolePermission> rolePermissions);
     }
 
     public class UpdateUserPermissionsRequest

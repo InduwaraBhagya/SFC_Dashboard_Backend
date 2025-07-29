@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.Api.Services;
+using SFCDashboard.Api.Models;
 
 namespace SFCDashboard.Api.Controllers
 {
@@ -61,6 +62,70 @@ namespace SFCDashboard.Api.Controllers
                 return Ok(new { success = true, message = "Permissions updated successfully" });
             else
                 return BadRequest(new { success = false, message = "Failed to update permissions" });
+        }
+
+        // GET: api/rolepermissions/by-role/{roleId}
+        [HttpGet("by-role/{roleId}")]
+        public async Task<IActionResult> GetByRoleId(int roleId)
+        {
+            try
+            {
+                var rolePermissions = await _rolePermissionsService.GetByRoleIdAsync(roleId);
+                return Ok(rolePermissions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting role permissions for role {RoleId}", roleId);
+                return StatusCode(500, "An error occurred while retrieving role permissions");
+            }
+        }
+
+        // DELETE: api/rolepermissions/by-role/{roleId}
+        [HttpDelete("by-role/{roleId}")]
+        public async Task<IActionResult> DeleteByRoleId(int roleId)
+        {
+            try
+            {
+                var success = await _rolePermissionsService.DeleteByRoleIdAsync(roleId);
+                if (success)
+                    return NoContent();
+                else
+                    return NotFound();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting role permissions for role {RoleId}", roleId);
+                return StatusCode(500, "An error occurred while deleting role permissions");
+            }
+        }
+
+        // POST: api/rolepermissions/multiple
+        [HttpPost("multiple")]
+        public async Task<IActionResult> CreateMultiple([FromBody] IEnumerable<CreateRolePermissionRequest> rolePermissionRequests)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                // Convert DTOs to entities
+                var rolePermissions = rolePermissionRequests.Select(rpr => new RolePermission
+                {
+                    RoleId = rpr.RoleId,
+                    PermissionId = rpr.PermissionId
+                });
+
+                var success = await _rolePermissionsService.CreateMultipleAsync(rolePermissions);
+                if (success)
+                    return Ok();
+                else
+                    return StatusCode(500, "Failed to create role permissions");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating multiple role permissions");
+                return StatusCode(500, "An error occurred while creating role permissions");
+            }
         }
     }
 }

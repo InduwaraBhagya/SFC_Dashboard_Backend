@@ -9,7 +9,7 @@ namespace SFCDashboard.Api.Controllers
     /// API Controller for Permissions management
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/permissions")]
     [Produces("application/json")]
     // [Authorize] // Temporarily disabled for testing
     public class PermissionsApiController : ControllerBase

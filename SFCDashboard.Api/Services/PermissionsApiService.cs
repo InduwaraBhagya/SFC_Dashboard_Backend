@@ -22,22 +22,22 @@ namespace SFCDashboard.Api.Services
                 if (string.IsNullOrWhiteSpace(serviceId) || string.IsNullOrWhiteSpace(permissionName))
                     return false;
 
-                // First, check if user exists and get role info
-                var user = await _context.Users
-                    .Where(u => u.ServiceId == serviceId)
-                    .Select(u => new { u.Id, u.UserRoleId })
-                    .FirstOrDefaultAsync();
+                // Truncate serviceId to 6 characters if longer (following pattern from other services)
+                serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
 
-                if (user == null || user.UserRoleId == null)
+                // Get user with role and permissions in a single query with proper includes
+                var user = await _context.Users
+                    .Include(u => u.UserRole)
+                        .ThenInclude(r => r != null ? r.RolePermissions : null!)
+                            .ThenInclude(rp => rp.Permission)
+                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+
+                if (user?.UserRole == null)
                     return false;
 
                 // Check if user's role has the specific permission (case-insensitive)
-                var hasPermission = await _context.RolePermissions
-                    .Where(rp => rp.RoleId == user.UserRoleId && 
-                                rp.Permission.Name.ToUpper() == permissionName.ToUpper())
-                    .AnyAsync();
-
-                return hasPermission;
+                return user.UserRole.RolePermissions
+                    .Any(rp => rp.Permission.Name.Equals(permissionName, StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception ex)
             {
