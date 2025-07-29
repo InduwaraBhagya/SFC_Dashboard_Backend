@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using SFCDashboard.Models;
-using SFCDashboard.Services;
+using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 
 [ApiController]
 [Route("api/projects")]
@@ -88,3 +88,4 @@ public class ProjectsApiController : ControllerBase
         public int PlannedEventId { get; set; }
     }
 }
+

@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class WorkGroup
     {
@@ -16,3 +16,5 @@ namespace SFCDashboard.Models
         public virtual ICollection<UserWorkGroup>? UserWorkGroups { get; set; }
     }
 }
+
+

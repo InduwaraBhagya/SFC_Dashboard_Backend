@@ -1,4 +1,4 @@
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class UserLayoutDataDto
     {
@@ -8,3 +8,5 @@ namespace SFCDashboard.Models
         public bool CanManageDrawFiberPerms { get; set; }
     }
 }
+
+

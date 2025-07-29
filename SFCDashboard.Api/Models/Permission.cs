@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class Permission
     {
@@ -15,4 +15,6 @@ namespace SFCDashboard.Models
         public string? Description { get; set; }
     }
 }
+
+
 

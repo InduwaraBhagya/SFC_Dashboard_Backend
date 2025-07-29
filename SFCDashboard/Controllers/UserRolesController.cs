@@ -37,7 +37,7 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-            var userRole = await _userRolesApiClient.GetWithRolePermissionsAsync(id.Value);
+            var userRole = await _userRolesApiClient.GetWithPermissionsAsync(id.Value);
             if (userRole == null)
             {
                 return NotFound();
@@ -98,7 +98,7 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-            var userRole = await _userRolesApiClient.GetWithRolePermissionsAsync(id.Value);
+            var userRole = await _userRolesApiClient.GetWithPermissionsAsync(id.Value);
             if (userRole == null)
             {
                 return NotFound();

@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
   public class PlannedEvent
   {
@@ -187,3 +187,4 @@ namespace SFCDashboard.Models
     public int? UrgentRequestedById { get; internal set; }
   }
 }
+

@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
 public class SystemUser
 {
@@ -33,3 +33,4 @@ public class SystemUser
         UserWorkGroups = new HashSet<UserWorkGroup>();
     }
 }
+

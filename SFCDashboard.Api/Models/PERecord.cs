@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     [Table("PERecords")]
     public class PERecord
@@ -172,3 +172,5 @@ namespace SFCDashboard.Models
         public string? WO_COMMENTS { get; set; }
     }
 }
+
+

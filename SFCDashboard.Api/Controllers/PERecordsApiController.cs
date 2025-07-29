@@ -10,9 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
-using SFCDashboard.Services;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 
 namespace SFCDashboard.Controllers.Api
 {
@@ -646,3 +646,4 @@ namespace SFCDashboard.Controllers.Api
         public bool HasPreviousPage { get; set; }
     }
 }
+

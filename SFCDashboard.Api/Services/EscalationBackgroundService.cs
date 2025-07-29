@@ -5,7 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class EscalationBackgroundService : BackgroundService
     {
@@ -46,3 +46,4 @@ namespace SFCDashboard.Services
         }
     }
 }
+

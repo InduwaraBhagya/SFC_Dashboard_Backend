@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using SFCDashboard.Models;
-using SFCDashboard.Services;
+using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 using System.Text.Json;
 
 namespace SFCDashboard.Api.Controllers
@@ -156,3 +156,4 @@ namespace SFCDashboard.Api.Controllers
         public List<int> WorkgroupIds { get; set; } = new();
     }
 }
+

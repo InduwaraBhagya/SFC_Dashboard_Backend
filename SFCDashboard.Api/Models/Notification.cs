@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class Notification
     {
@@ -35,3 +35,5 @@ namespace SFCDashboard.Models
         public virtual required PlannedEvent PlannedEvent { get; set; }
     }
 }
+
+

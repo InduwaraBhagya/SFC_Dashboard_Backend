@@ -2,10 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class HoldTaskReminderService : BackgroundService
     {
@@ -81,3 +81,4 @@ namespace SFCDashboard.Services
         }
     }
 }
+

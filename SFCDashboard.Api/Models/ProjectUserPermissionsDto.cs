@@ -1,4 +1,4 @@
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class ProjectUserPermissionsDto
     {
@@ -6,3 +6,5 @@ namespace SFCDashboard.Models
         public bool CanManageProjects { get; set; }
     }
 }
+
+

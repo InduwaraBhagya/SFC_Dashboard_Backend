@@ -9,15 +9,18 @@ namespace SFCDashboard.Controllers
         // Remove the redundant IUsersApiClient since it's inherited from BaseController
         private readonly IUserRolesApiClient _userRolesApiClient;
         private readonly IWorkGroupsApiClient _workGroupsApiClient;
+        private readonly IPermissionsApiClient _permissionsApiClient;
 
         public SystemUsersController(
             IUsersApiClient usersApiClient,
             IUserRolesApiClient userRolesApiClient,
-            IWorkGroupsApiClient workGroupsApiClient)
+            IWorkGroupsApiClient workGroupsApiClient,
+            IPermissionsApiClient permissionsApiClient)
             : base(usersApiClient)
         {
             _userRolesApiClient = userRolesApiClient;
             _workGroupsApiClient = workGroupsApiClient;
+            _permissionsApiClient = permissionsApiClient;
         }
 
         // GET: SystemUsers
@@ -202,28 +205,7 @@ namespace SFCDashboard.Controllers
                 return false;
 
             var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-            var user = await _usersApiClient.GetByServiceIdAsync(serviceIdShort);
-            if (user == null)
-                return false;
-
-            // Get API base URL from configuration
-            var config = HttpContext.RequestServices.GetService(typeof(IConfiguration)) as IConfiguration;
-            var apiBaseUrl = config?["ApiSettings:BaseUrl"];
-            if (string.IsNullOrWhiteSpace(apiBaseUrl))
-                return false;
-
-            using (var httpClient = new HttpClient())
-            {
-                httpClient.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);
-                var response = await httpClient.GetAsync($"api/users/{user.Id}/has-admin-permission");
-                if (response.IsSuccessStatusCode)
-                {
-                    var resultString = await response.Content.ReadAsStringAsync();
-                    if (bool.TryParse(resultString, out var isAdmin))
-                        return isAdmin;
-                }
-            }
-            return false;
+            return await _permissionsApiClient.IsUserAdminAsync(serviceIdShort);
         }
 
         private async Task<bool> SystemUserExists(int id)

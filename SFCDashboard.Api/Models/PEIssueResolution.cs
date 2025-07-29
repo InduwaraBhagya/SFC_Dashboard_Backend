@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class PEIssueResolution
     {
@@ -35,3 +35,4 @@ namespace SFCDashboard.Models
         public virtual PlannedEvent PlannedEvent { get; set; }
     }
 }
+

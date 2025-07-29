@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class PETaskList
     {
@@ -18,3 +18,5 @@ namespace SFCDashboard.Models
 
     }
 }
+
+

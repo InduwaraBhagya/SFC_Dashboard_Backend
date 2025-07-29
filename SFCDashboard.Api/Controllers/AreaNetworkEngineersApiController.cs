@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using SFCDashboard.Services;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Services;
+using SFCDashboard.Api.Models;
 using ClosedXML.Excel;
 
 namespace SFCDashboard.Api.Controllers
@@ -139,3 +139,4 @@ namespace SFCDashboard.Api.Controllers
         }
     }
 }
+

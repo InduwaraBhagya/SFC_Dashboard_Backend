@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class UserRole
     {
@@ -24,3 +24,5 @@ namespace SFCDashboard.Models
         public virtual ICollection<RolePermission> RolePermissions { get; set; }
     }
 }
+
+

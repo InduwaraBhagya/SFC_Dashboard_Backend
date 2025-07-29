@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Identity.Web;
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Services;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Services;
 using SFCDashboard.Middleware;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,6 +91,7 @@ builder.Services.AddScoped<IPETaskListsApiService, PETaskListsApiService>();
 builder.Services.AddScoped<IEscalationsApiService, EscalationsApiService>();
 builder.Services.AddScoped<IPEIssueResolutionsApiService, PEIssueResolutionsApiService>();
 builder.Services.AddScoped<ICustomerUserAssignmentsApiService, CustomerUserAssignmentsApiService>();
+builder.Services.AddScoped<IRolePermissionsApiService, RolePermissionsApiService>();
 
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -176,3 +177,4 @@ app.Use(async (context, next) =>
 });
 
 app.Run();
+

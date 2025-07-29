@@ -1,4 +1,4 @@
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     /// <summary>
     /// Configuration options for the EscalationService to help prevent timeouts and optimize performance.
@@ -40,3 +40,5 @@ namespace SFCDashboard.Services
         public TimeSpan CacheExpiration { get; set; } = TimeSpan.FromMinutes(5);
     }
 }
+
+

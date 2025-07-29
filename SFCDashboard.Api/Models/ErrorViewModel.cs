@@ -1,4 +1,4 @@
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class ErrorViewModel
     {
@@ -7,3 +7,5 @@ namespace SFCDashboard.Models
         public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
     }
 }
+
+

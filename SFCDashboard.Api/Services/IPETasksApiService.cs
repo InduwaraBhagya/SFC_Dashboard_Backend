@@ -1,6 +1,6 @@
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public interface IPETasksApiService
     {
@@ -17,3 +17,5 @@ namespace SFCDashboard.Services
         Task<IEnumerable<PETask>> GetUrgentTasksAsync();
     }
 }
+
+

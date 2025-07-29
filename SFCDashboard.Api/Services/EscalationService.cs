@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class EscalationService
     {
@@ -540,3 +540,4 @@ namespace SFCDashboard.Services
         }
     }
 }
+

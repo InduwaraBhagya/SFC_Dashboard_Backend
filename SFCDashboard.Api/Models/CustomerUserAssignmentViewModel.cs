@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class CustomerUserAssignmentViewModel
     {
@@ -46,3 +46,5 @@ namespace SFCDashboard.Models
         public string SearchTerm { get; set; } = string.Empty;
     }
 }
+
+

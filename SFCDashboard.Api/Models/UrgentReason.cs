@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     [Table("UrgentReasons")]
     public class UrgentReason
@@ -25,3 +25,4 @@ namespace SFCDashboard.Models
         public DateTime RequestedDate { get; set; }
     }
 }
+

@@ -17,12 +17,28 @@ namespace SFCDashboard.ApiClients
 
         public async Task<bool> IsUserAdminAsync(string serviceId)
         {
+            if (string.IsNullOrWhiteSpace(serviceId))
+            {
+                _logger.LogWarning("IsUserAdminAsync called with null or empty serviceId");
+                return false;
+            }
+
             try
             {
-                var response = await _httpClient.GetAsync($"api/permissions/is-admin/{Uri.EscapeDataString(serviceId)}");
+                var response = await _httpClient.GetAsync($"api/userroles/is-admin/{Uri.EscapeDataString(serviceId)}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("User {ServiceId} not found for admin check", serviceId);
                     return false;
+                }
+
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Bad request for admin check: {ErrorMessage}", errorMessage);
+                    return false;
+                }
                     
                 response.EnsureSuccessStatusCode();
                 
@@ -38,12 +54,34 @@ namespace SFCDashboard.ApiClients
 
         public async Task<bool> HasPermissionAsync(string serviceId, string permissionName)
         {
+            if (string.IsNullOrWhiteSpace(serviceId))
+            {
+                _logger.LogWarning("HasPermissionAsync called with null or empty serviceId");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(permissionName))
+            {
+                _logger.LogWarning("HasPermissionAsync called with null or empty permissionName");
+                return false;
+            }
+
             try
             {
                 var response = await _httpClient.GetAsync($"api/permissions/has-permission/{Uri.EscapeDataString(serviceId)}/{Uri.EscapeDataString(permissionName)}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("User {ServiceId} not found for permission check: {Permission}", serviceId, permissionName);
                     return false;
+                }
+
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Bad request for permission check: {ErrorMessage}", errorMessage);
+                    return false;
+                }
                     
                 response.EnsureSuccessStatusCode();
                 

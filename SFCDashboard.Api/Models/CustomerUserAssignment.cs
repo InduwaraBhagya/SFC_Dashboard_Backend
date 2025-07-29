@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class CustomerUserAssignment
     {
@@ -22,3 +22,5 @@ namespace SFCDashboard.Models
         public DateTime? UpdatedAt { get; set; }
     }
 }
+
+

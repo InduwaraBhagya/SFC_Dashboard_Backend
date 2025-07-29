@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class RolePermission
     {
@@ -21,3 +21,4 @@ namespace SFCDashboard.Models
         public virtual Permission Permission { get; set; }
     }
 }
+

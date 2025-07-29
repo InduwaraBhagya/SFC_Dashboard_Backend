@@ -1,4 +1,4 @@
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class ProjectDetailsDto
     {
@@ -18,3 +18,5 @@ namespace SFCDashboard.Models
         public string ProgressClass { get; set; } = string.Empty;
     }
 }
+
+

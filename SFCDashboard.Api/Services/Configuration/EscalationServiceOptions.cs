@@ -1,4 +1,4 @@
-namespace SFCDashboard.Services.Configuration
+namespace SFCDashboard.Api.Services.Configuration
 {
     /// <summary>
     /// Configuration options for the EscalationService
@@ -58,3 +58,5 @@ namespace SFCDashboard.Services.Configuration
         public bool EnablePerformanceLogging { get; set; } = false;
     }
 }
+
+

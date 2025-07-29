@@ -1,6 +1,6 @@
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public interface IEscalationsApiService
     {
@@ -12,3 +12,5 @@ namespace SFCDashboard.Services
         Task<bool> DeleteEscalationAsync(int id);
     }
 }
+
+

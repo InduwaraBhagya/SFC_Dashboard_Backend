@@ -1,8 +1,8 @@
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class WorkGroupsApiService : IWorkGroupsApiService
     {
@@ -171,3 +171,5 @@ namespace SFCDashboard.Services
         }
     }
 }
+
+

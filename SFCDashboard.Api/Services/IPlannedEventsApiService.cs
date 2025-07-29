@@ -1,6 +1,6 @@
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public interface IPlannedEventsApiService
     {
@@ -46,3 +46,5 @@ namespace SFCDashboard.Services
         Task<PaginatedList<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, List<string> salesWorkgroups, bool hasDrawFiberAccess, int pageIndex, int pageSize);
     }
 }
+
+

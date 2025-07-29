@@ -1,6 +1,6 @@
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Models
 {
     public class TaskQueueItem
     {
@@ -83,3 +83,5 @@ namespace SFCDashboard.Services
         }
     }
 }
+
+

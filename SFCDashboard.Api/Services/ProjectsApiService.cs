@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class ProjectsApiService : IProjectsApiService
     {
@@ -262,3 +262,5 @@ namespace SFCDashboard.Services
         }
     }
 }
+
+

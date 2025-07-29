@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using SFCDashboard.Data;
+using SFCDashboard.Api.Data;
 using SFCDashboard.Enums;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class TaskQueueingService : ITaskQueueService
     {
@@ -148,7 +148,7 @@ namespace SFCDashboard.Services
             }
         }
 
-        public async Task<TaskQueueItem> GetNextTaskAsync(int? workgroupId = null, int? year = null)
+        public async Task<TaskQueueItem?> GetNextTaskAsync(int? workgroupId = null, int? year = null)
         {
             var prioritizedTasks = await GetPrioritizedTasksAsync(workgroupId, year, take: 1);
             return prioritizedTasks.Count > 0 ? prioritizedTasks[0] : null;
@@ -347,3 +347,4 @@ namespace SFCDashboard.Services
         }
     }
 }
+

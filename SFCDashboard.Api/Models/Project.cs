@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
 [Table("Projects")]
 public class Project
@@ -34,3 +34,4 @@ public class ProjectPEMapping
     [ForeignKey("PlannedEventId")]
     public virtual PlannedEvent PlannedEvent { get; set; }
 }
+

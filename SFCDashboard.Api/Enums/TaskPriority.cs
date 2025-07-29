@@ -9,3 +9,4 @@ namespace SFCDashboard.Enums
         Regular = 1
     }
 }
+

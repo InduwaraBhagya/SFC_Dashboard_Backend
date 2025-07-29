@@ -1,4 +1,4 @@
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
 public static class UserRoleExtensions
 {

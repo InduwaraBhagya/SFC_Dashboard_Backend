@@ -76,14 +76,13 @@ namespace SFCDashboard.ApiClients
             return JsonSerializer.Deserialize<UserRole>(json, _jsonOptions);
         }
 
-        public async Task<UserRole?> GetWithRolePermissionsAsync(int id)
+
+        public async Task<bool> IsUserAdminAsync(string serviceId)
         {
-            var response = await _httpClient.GetAsync($"api/userroles/{id}/with-rolepermissions");
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                return null;
+            var response = await _httpClient.GetAsync($"api/userroles/is-admin/{serviceId}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<UserRole>(json, _jsonOptions);
+            return JsonSerializer.Deserialize<bool>(json, _jsonOptions);
         }
     }
 }

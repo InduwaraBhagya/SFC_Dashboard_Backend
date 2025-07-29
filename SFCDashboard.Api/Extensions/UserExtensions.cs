@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http;
-using SFCDashboard.Data;
+using SFCDashboard.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 public static class UserExtensions

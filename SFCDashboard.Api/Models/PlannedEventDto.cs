@@ -1,4 +1,4 @@
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class PlannedEventDto
     {
@@ -11,3 +11,5 @@ namespace SFCDashboard.Models
         public string Priority { get; set; } = string.Empty;
     }
 }
+
+

@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class TaskEstimationHistory
     {
@@ -19,3 +19,4 @@ namespace SFCDashboard.Models
         public virtual PETask Task { get; set; }
     }
 }
+

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
 
 namespace SFCDashboard.Api.Controllers
 {
@@ -309,3 +309,4 @@ namespace SFCDashboard.Api.Controllers
         }
     }
 }
+

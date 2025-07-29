@@ -1,6 +1,6 @@
 using System;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class PEIssueViewModel
     {
@@ -28,3 +28,4 @@ namespace SFCDashboard.Models
         public bool IsHiddenFromInbox { get; set; }
     }
 }
+

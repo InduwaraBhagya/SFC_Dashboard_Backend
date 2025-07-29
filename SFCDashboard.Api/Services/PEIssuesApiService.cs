@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class PEIssuesApiService : IPEIssuesApiService
     {
@@ -60,47 +60,6 @@ namespace SFCDashboard.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting PE issues for planned event {PlannedEventId}", plannedEventId);
-                return new List<PEIssueViewModel>();
-            }
-        }
-
-        public async Task<IEnumerable<PEIssueViewModel>> GetInboxIssuesAsync(int userId)
-        {
-            try
-            {
-                return await _context.PEIssues
-                    .Where(i => i.ReceiverId == userId && !i.IsHiddenFromInbox && (i.IsReminder != true))
-                    .OrderByDescending(i => i.CreatedAt)
-                    .Take(10)
-                    .Select(i => new PEIssueViewModel
-                    {
-                        Id = i.Id,
-                        SenderId = i.SenderId,
-                        SenderName = _context.Users
-                            .Where(u => u.Id == i.SenderId)
-                            .Select(u => u.Name)
-                            .FirstOrDefault() ?? "Unknown Sender",
-                        ReceiverId = i.ReceiverId,
-                        ReceiverName = _context.Users
-                            .Where(u => u.Id == i.ReceiverId)
-                            .Select(u => u.Name)
-                            .FirstOrDefault() ?? "Unknown Receiver",
-                        IssueText = i.IssueText,
-                        AttachmentPath = i.AttachmentPath,
-                        CreatedAt = i.CreatedAt,
-                        PlannedEventId = i.PlannedEventId,
-                        IsRead = i.IsRead,
-                        IsReply = i.IsReply,
-                        OriginalIssueId = i.OriginalIssueId,
-                        IsResolved = i.IsResolved,
-                        IsResolutionRequest = i.IsResolutionRequest,
-                        PETaskId = i.PETaskId
-                    })
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting inbox issues for user {UserId}", userId);
                 return new List<PEIssueViewModel>();
             }
         }
@@ -307,3 +266,5 @@ namespace SFCDashboard.Services
         }
     }
 }
+
+

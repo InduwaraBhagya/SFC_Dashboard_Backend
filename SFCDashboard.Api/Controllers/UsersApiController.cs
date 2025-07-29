@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
-using SFCDashboard.Services;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace SFCDashboard.Api.Controllers
@@ -524,37 +524,6 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
-        /// Check if the user's role has the 'Admin' permission
-        /// </summary>
-        [HttpGet("{id}/has-admin-permission")]
-        public async Task<ActionResult<bool>> HasAdminPermission(int id)
-        {
-            try
-            {
-                var user = await _context.Users
-                    .Include(u => u.UserRole)
-                        .ThenInclude(ur => ur.RolePermissions)
-                            .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(u => u.Id == id);
-
-                if (user == null || user.UserRole == null)
-                {
-                    return NotFound();
-                }
-
-                var hasAdminPermission = user.UserRole.RolePermissions
-                    .Any(rp => rp.Permission != null && rp.Permission.Name == "Admin");
-
-                return Ok(hasAdminPermission);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking admin permission for user {Id}", id);
-                return StatusCode(500, "An error occurred while checking admin permission");
-            }
-        }
-
-        /// <summary>
         /// Set user workgroups (replace all assignments)
         /// </summary>
         [HttpPost("{userId}/set-workgroups")]
@@ -695,3 +664,4 @@ namespace SFCDashboard.Api.Controllers
         public List<int> WorkGroupIds { get; set; } = new List<int>();
     }
 }
+

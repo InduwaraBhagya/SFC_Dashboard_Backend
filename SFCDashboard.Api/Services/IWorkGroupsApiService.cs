@@ -1,6 +1,6 @@
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public interface IWorkGroupsApiService
     {
@@ -15,3 +15,5 @@ namespace SFCDashboard.Services
         Task<string?> GetWorkGroupNameAsync(int workgroupId);
     }
 }
+
+

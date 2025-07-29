@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
@@ -23,3 +23,4 @@ public class DummyAuthenticationHandler : AuthenticationHandler<AuthenticationSc
         return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }
+

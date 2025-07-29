@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public class PERecordsApiService
     {
@@ -274,3 +274,5 @@ namespace SFCDashboard.Services
         public int TaskTemplatesCount { get; set; }
     }
 }
+
+

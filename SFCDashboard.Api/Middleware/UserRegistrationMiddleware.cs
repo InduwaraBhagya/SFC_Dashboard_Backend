@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
-using SFCDashboard.Data;
+using SFCDashboard.Api.Data;
 
 namespace SFCDashboard.Middleware
 {

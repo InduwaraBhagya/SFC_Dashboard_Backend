@@ -1,9 +1,9 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 using static Project;
 
-namespace SFCDashboard.Data
+namespace SFCDashboard.Api.Data
 {
     public class ApplicationDbContext : DbContext
     {
@@ -128,3 +128,5 @@ namespace SFCDashboard.Data
     }
 
 }
+
+

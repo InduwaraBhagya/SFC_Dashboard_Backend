@@ -6,3 +6,4 @@ public class SystemUserViewModel
     public int? UserRoleId { get; set; }
     public List<int> WorkGroupIds { get; set; } = new();
 }
+

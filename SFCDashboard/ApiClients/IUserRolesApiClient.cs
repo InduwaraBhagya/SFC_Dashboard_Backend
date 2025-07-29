@@ -11,6 +11,6 @@ namespace SFCDashboard.ApiClients
         Task DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
         Task<UserRole?> GetWithPermissionsAsync(int id);
-        Task<UserRole?> GetWithRolePermissionsAsync(int id);
+        Task<bool> IsUserAdminAsync(string serviceId);
     }
 }

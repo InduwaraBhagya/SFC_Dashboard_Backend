@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public class SystemConfiguration
     {
@@ -19,3 +19,5 @@ namespace SFCDashboard.Models
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 }
+
+

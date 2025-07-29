@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Data;
+using SFCDashboard.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 
 namespace SFCDashboard.Api.Controllers
@@ -27,60 +27,45 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
-        /// Check if a user has admin privileges
-        /// </summary>
-        [HttpGet("is-admin/{serviceId}")]
-        public async Task<ActionResult<bool>> IsUserAdmin(string serviceId)
-        {
-            try
-            {
-                var user = await _context.Users
-                    .Include(u => u.UserRole)
-                    .ThenInclude(r => r.RolePermissions)
-                    .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
-
-                if (user == null)
-                {
-                    return NotFound();
-                }
-
-                // Check if user has admin role (Level 3) or has admin permission
-                var isAdmin = user.UserRole?.Level == 3 || 
-                             user.UserRole?.RolePermissions?.Any(rp => 
-                                 rp.Permission.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase)) == true;
-
-                return Ok(isAdmin);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking admin status for user {ServiceId}", serviceId);
-                return StatusCode(500, "An error occurred while checking admin status");
-            }
-        }
-
-        /// <summary>
         /// Check if a user has a specific permission
         /// </summary>
         [HttpGet("has-permission/{serviceId}/{permissionName}")]
         public async Task<ActionResult<bool>> HasPermission(string serviceId, string permissionName)
         {
+            if (string.IsNullOrWhiteSpace(serviceId))
+            {
+                return BadRequest("ServiceId cannot be null or empty");
+            }
+
+            if (string.IsNullOrWhiteSpace(permissionName))
+            {
+                return BadRequest("PermissionName cannot be null or empty");
+            }
+
             try
             {
+                // First, check if user exists and get role info
                 var user = await _context.Users
-                    .Include(u => u.UserRole)
-                    .ThenInclude(r => r.RolePermissions)
-                    .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
+                    .Where(u => u.ServiceId == serviceId)
+                    .Select(u => new { u.Id, u.UserRoleId })
+                    .FirstOrDefaultAsync();
 
                 if (user == null)
                 {
-                    return NotFound();
+                    return NotFound($"User with ServiceId '{serviceId}' not found");
                 }
 
-                // Check if user has the specific permission
-                var hasPermission = user.UserRole?.RolePermissions?.Any(rp => 
-                    rp.Permission.Name.Equals(permissionName, StringComparison.OrdinalIgnoreCase)) == true;
+                // If user has no role, they have no permissions
+                if (user.UserRoleId == null)
+                {
+                    return Ok(false);
+                }
+
+                // Check if user's role has the specific permission (case-insensitive)
+                var hasPermission = await _context.RolePermissions
+                    .Where(rp => rp.RoleId == user.UserRoleId && 
+                                rp.Permission.Name.ToUpper() == permissionName.ToUpper())
+                    .AnyAsync();
 
                 return Ok(hasPermission);
             }
@@ -226,3 +211,4 @@ namespace SFCDashboard.Api.Controllers
         }
     }
 }
+

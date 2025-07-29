@@ -1,6 +1,6 @@
-using SFCDashboard.Models;
+using SFCDashboard.Api.Models;
 
-namespace SFCDashboard.Services
+namespace SFCDashboard.Api.Services
 {
     public interface IAreaNetworkEngineersApiService
     {
@@ -13,3 +13,5 @@ namespace SFCDashboard.Services
         Task<bool> DeleteAreaNetworkEngineerAsync(int id);
     }
 }
+
+

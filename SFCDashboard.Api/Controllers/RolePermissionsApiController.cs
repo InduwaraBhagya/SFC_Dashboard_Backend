@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
+using SFCDashboard.Api.Services;
 
 namespace SFCDashboard.Api.Controllers
 {
@@ -9,12 +7,14 @@ namespace SFCDashboard.Api.Controllers
     [Route("api/rolepermissions")]
     public class RolePermissionsApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IRolePermissionsApiService _rolePermissionsService;
         private readonly ILogger<RolePermissionsApiController> _logger;
 
-        public RolePermissionsApiController(ApplicationDbContext context, ILogger<RolePermissionsApiController> logger)
+        public RolePermissionsApiController(
+            IRolePermissionsApiService rolePermissionsService, 
+            ILogger<RolePermissionsApiController> logger)
         {
-            _context = context;
+            _rolePermissionsService = rolePermissionsService;
             _logger = logger;
         }
 
@@ -25,17 +25,7 @@ namespace SFCDashboard.Api.Controllers
             if (string.IsNullOrEmpty(serviceId))
                 return BadRequest("ServiceId is required");
 
-            serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-
-            var user = await _context.Users
-                .Include(u => u.UserRole)
-                    .ThenInclude(r => r.RolePermissions)
-                        .ThenInclude(rp => rp.Permission)
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
-
-            var hasPermission = user?.UserRole?.RolePermissions
-                .Any(rp => rp.Permission.Name == permissionName) ?? false;
-
+            var hasPermission = await _rolePermissionsService.HasPermissionAsync(serviceId, permissionName);
             return Ok(hasPermission);
         }
 
@@ -43,39 +33,14 @@ namespace SFCDashboard.Api.Controllers
         [HttpGet("user-permissions/{userId}")]
         public async Task<IActionResult> GetUserPermissions(int userId)
         {
-            try
+            var result = await _rolePermissionsService.GetUserPermissionsAsync(userId);
+            
+            if (result is object obj && obj.GetType().GetProperty("error") != null)
             {
-                var user = await _context.Users
-                    .Include(u => u.UserRole)
-                        .ThenInclude(r => r.RolePermissions)
-                            .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(u => u.Id == userId);
-
-                if (user == null)
-                {
-                    return NotFound($"User with ID {userId} not found");
-                }
-
-                // Check specific permissions
-                var hasManageProjects = user.UserRole?.RolePermissions
-                    .Any(rp => rp.Permission.Name == "ManageProjects") ?? false;
-
-                var hasCanManageEstimatedTime = user.UserRole?.RolePermissions
-                    .Any(rp => rp.Permission.Name == "CanManageEstimatedTime") ?? false;
-
-                var result = new
-                {
-                    HasManageProjects = hasManageProjects,
-                    HasCanManageEstimatedTime = hasCanManageEstimatedTime
-                };
-
-                return Ok(result);
+                return NotFound(result);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving user permissions for user {UserId}", userId);
-                return StatusCode(500, "An error occurred while retrieving user permissions");
-            }
+            
+            return Ok(result);
         }
 
         // POST: api/rolepermissions/update-user-permissions
@@ -86,87 +51,16 @@ namespace SFCDashboard.Api.Controllers
             if (string.IsNullOrEmpty(serviceId))
                 return Unauthorized();
 
-            serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-
-            var currentUser = await _context.Users
-                .Include(u => u.UserRole)
-                    .ThenInclude(r => r.RolePermissions)
-                        .ThenInclude(rp => rp.Permission)
-                .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
-
-            var canManage = currentUser?.UserRole?.RolePermissions
-                .Any(rp => rp.Permission.Name == "ManageDrawFiberPerms") ?? false;
-
+            var canManage = await _rolePermissionsService.CanUserManagePermissions(serviceId);
             if (!canManage)
                 return Forbid();
 
-            try
-            {
-                var user = await _context.Users
-                    .Include(u => u.UserRole)
-                        .ThenInclude(r => r.RolePermissions)
-                    .FirstOrDefaultAsync(u => u.Id == request.UserId);
-
-                if (user?.UserRole == null)
-                    return NotFound(new { success = false, message = "User or user role not found" });
-
-                // Get the permissions
-                var manageProjectsPermission = await _context.Permissions.FirstOrDefaultAsync(p => p.Name == "ManageProjects");
-                var canManageEstimatedTimePermission = await _context.Permissions.FirstOrDefaultAsync(p => p.Name == "CanManageEstimatedTime");
-
-                if (manageProjectsPermission == null || canManageEstimatedTimePermission == null)
-                    return BadRequest(new { success = false, message = "Required permissions not found in database" });
-
-                // Handle ManageProjects permission
-                var existingManageProjects = user.UserRole.RolePermissions
-                    .FirstOrDefault(rp => rp.PermissionId == manageProjectsPermission.Id);
-
-                if (request.ManageProjects && existingManageProjects == null)
-                {
-                    _context.RolePermissions.Add(new RolePermission
-                    {
-                        RoleId = user.UserRole.Id,
-                        PermissionId = manageProjectsPermission.Id
-                    });
-                }
-                else if (!request.ManageProjects && existingManageProjects != null)
-                {
-                    _context.RolePermissions.Remove(existingManageProjects);
-                }
-
-                // Handle CanManageEstimatedTime permission
-                var existingCanManageEstimatedTime = user.UserRole.RolePermissions
-                    .FirstOrDefault(rp => rp.PermissionId == canManageEstimatedTimePermission.Id);
-
-                if (request.CanManageEstimatedTime && existingCanManageEstimatedTime == null)
-                {
-                    _context.RolePermissions.Add(new RolePermission
-                    {
-                        RoleId = user.UserRole.Id,
-                        PermissionId = canManageEstimatedTimePermission.Id
-                    });
-                }
-                else if (!request.CanManageEstimatedTime && existingCanManageEstimatedTime != null)
-                {
-                    _context.RolePermissions.Remove(existingCanManageEstimatedTime);
-                }
-
-                await _context.SaveChangesAsync();
-
+            var success = await _rolePermissionsService.UpdateUserPermissionsAsync(request);
+            
+            if (success)
                 return Ok(new { success = true, message = "Permissions updated successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating permissions for user {UserId}", request.UserId);
-                return StatusCode(500, new { success = false, message = "An error occurred while updating permissions" });
-            }
+            else
+                return BadRequest(new { success = false, message = "Failed to update permissions" });
         }
-    }
-
-    public class UpdateUserPermissionsRequest
-    {
-        public int UserId { get; set; }
-        public bool ManageProjects { get; set; }
-        public bool CanManageEstimatedTime { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace SFCDashboard.Models
+namespace SFCDashboard.Api.Models
 {
     public enum TaskStatus
     {
@@ -11,3 +11,5 @@
         Escalated
     }
 }
+
+
