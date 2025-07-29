@@ -181,10 +181,6 @@
                             showResultModal('Error', response.message, 'error');
                         }
                     },
-            // Refresh Permissions button handler
-            $('#refreshPermissionsBtn').click(function() {
-                window.location.reload();
-            });
                     error: function() {
                         showResultModal('Error', 'An unexpected error occurred while updating permissions.', 'error');
                     },
@@ -195,6 +191,11 @@
                             .prop('disabled', false);
                     }
                 });
+            });
+            
+            // Refresh Permissions button handler
+            $('#refreshPermissionsBtn').click(function() {
+                window.location.reload();
             });
             
             function updatePermissionIcons(userId, manageProjects, canManageEstimatedTime) {

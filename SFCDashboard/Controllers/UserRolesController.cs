@@ -16,7 +16,7 @@ namespace SFCDashboard.Controllers
             IUsersApiClient usersApiClient,
             IUserRolesApiClient userRolesApiClient,
             IRolePermissionsApiClient rolePermissionsApiClient)
-            : base(permissionsApi, usersApiClient)
+            : base(permissionsApi, usersApiClient, rolePermissionsApiClient)
         {
             _logger = logger;
             _userRolesApiClient = userRolesApiClient;

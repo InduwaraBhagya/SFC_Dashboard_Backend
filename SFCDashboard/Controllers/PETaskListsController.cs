@@ -9,7 +9,7 @@ namespace SFCDashboard.Controllers
         private readonly IPETaskListsApiClient _peTaskListsApi;
         private readonly ILogger<PETaskListsController> _logger;
 
-        public PETaskListsController(IPETaskListsApiClient peTaskListsApi, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient, ILogger<PETaskListsController> logger) : base(permissionsApi, usersApiClient)
+        public PETaskListsController(IPETaskListsApiClient peTaskListsApi, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient, IRolePermissionsApiClient rolePermissionsApi, ILogger<PETaskListsController> logger) : base(permissionsApi, usersApiClient, rolePermissionsApi)
         {
             _peTaskListsApi = peTaskListsApi;
             _logger = logger;

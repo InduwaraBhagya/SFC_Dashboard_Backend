@@ -8,7 +8,7 @@ namespace SFCDashboard.Controllers
     {
         private readonly ILogger<PermissionsController> _logger;
 
-        public PermissionsController(ILogger<PermissionsController> logger, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
+        public PermissionsController(ILogger<PermissionsController> logger, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient, IRolePermissionsApiClient rolePermissionsApi) : base(permissionsApi, usersApiClient, rolePermissionsApi)
         {
             _logger = logger;
         }

@@ -25,9 +25,9 @@ namespace SFCDashboard.ApiClients
         {
             var payload = new
             {
-                userId,
-                manageProjects,
-                canManageEstimatedTime
+                UserId = userId,
+                ManageProjects = manageProjects,
+                CanManageEstimatedTime = canManageEstimatedTime
             };
             var json = JsonSerializer.Serialize(payload, _jsonOptions);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
