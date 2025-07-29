@@ -1,15 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 using SFCDashboard.ApiClients;
-using SFCDashboard.Data;
-using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class DrawFiberPermsController : Controller
+    public class DrawFiberPermsController : BaseController
     {
-        private readonly IUsersApiClient _usersApiClient;
+        // Remove the redundant IUsersApiClient since it's inherited from BaseController
         private readonly IUserRolesApiClient _userRolesApiClient;
         private readonly IWorkGroupsApiClient _workGroupsApiClient;
         private readonly IPermissionsApiClient _permissionsApiClient;
@@ -23,8 +20,8 @@ namespace SFCDashboard.Controllers
             IPermissionsApiClient permissionsApiClient,
             IRolePermissionsApiClient rolePermissionsApiClient,
             ILogger<DrawFiberPermsController> logger)
+            : base(usersApiClient)
         {
-            _usersApiClient = usersApiClient;
             _userRolesApiClient = userRolesApiClient;
             _workGroupsApiClient = workGroupsApiClient;
             _permissionsApiClient = permissionsApiClient;

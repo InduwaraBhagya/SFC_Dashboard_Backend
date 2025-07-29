@@ -2,7 +2,7 @@
 @model SFCDashboard.Models.UserRole
 @{
     ViewData["Title"] = "Edit Role";
-    var permissions = (IEnumerable<Permission>)ViewData["Permissions"];
+    var permissions = (IEnumerable<Permission>)ViewData["Permissions"] ?? Enumerable.Empty<Permission>();
     var selectedPermissions = (List<int>)ViewData["SelectedPermissions"] ?? new List<int>();
 }
 
@@ -46,7 +46,16 @@
                 <div class="mb-4">
                     <label class="form-label fw-semibold">Permissions</label>
                     <div class="border rounded-3 p-4 bg-light">
-                        <div class="row g-3">
+                        @if (!permissions.Any())
+                        {
+                            <div class="alert alert-warning border-0 shadow-sm">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                No permissions available
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row g-3">
                             @foreach (var permission in permissions)
                             {
                                 <div class="col-md-6 col-lg-4">
@@ -59,7 +68,9 @@
                                                        class="form-check-input" 
                                                        id="perm_@permission.Id"
                                                        @(selectedPermissions.Contains(permission.Id) ? "checked" : "") />
-                    
+                                                <label class="form-check-label fw-medium" for="perm_@permission.Id">
+                                                    @permission.Name
+                                                </label>
                                                 @if (!string.IsNullOrEmpty(permission.Description))
                                                 {
                                                     <small class="text-muted d-block mt-1">@permission.Description</small>
@@ -69,7 +80,8 @@
                                     </div>
                                 </div>
                             }
-                        </div>
+                            </div>
+                        }
                     </div>
                 </div>
 

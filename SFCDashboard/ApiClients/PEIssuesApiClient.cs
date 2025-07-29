@@ -109,20 +109,98 @@ namespace SFCDashboard.ApiClients
 
         public async Task<IEnumerable<PEIssue>> GetPEIssuesByPlannedEventAsync(int plannedEventId)
         {
-            var response = await _httpClient.GetAsync($"api/peissues/plannedevent/{plannedEventId}");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/peissues/plannedevent/{plannedEventId}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return new List<PEIssue>();
+                }
+                
+                var result = JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions);
+                return result ?? new List<PEIssue>();
+            }
+            catch (JsonException ex)
+            {
+                // Log JSON parsing error but return empty list to prevent crashes
+                return new List<PEIssue>();
+            }
+            catch (HttpRequestException ex)
+            {
+                // Log HTTP error but return empty list for graceful degradation
+                return new List<PEIssue>();
+            }
+            catch (Exception ex)
+            {
+                // Log unexpected error but return empty list
+                return new List<PEIssue>();
+            }
+        }
+
+        public async Task<IEnumerable<PEIssueViewModel>> GetPEIssueViewModelsByPlannedEventAsync(int plannedEventId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/peissues/plannedevent/{plannedEventId}/viewmodels");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return new List<PEIssueViewModel>();
+                }
+                
+                var result = JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions);
+                return result ?? new List<PEIssueViewModel>();
+            }
+            catch (JsonException ex)
+            {
+                // Log JSON parsing error but return empty list to prevent crashes
+                return new List<PEIssueViewModel>();
+            }
+            catch (HttpRequestException ex)
+            {
+                // Log HTTP error but return empty list for graceful degradation
+                return new List<PEIssueViewModel>();
+            }
+            catch (Exception ex)
+            {
+                // Log unexpected error but return empty list
+                return new List<PEIssueViewModel>();
+            }
         }
 
         public async Task<Dictionary<int, IEnumerable<PEIssue>>> GetIssuesByPlannedEventIdsAsync(List<int> peIds)
         {
-            var idsJson = JsonSerializer.Serialize(peIds, _jsonOptions);
-            var content = new StringContent(idsJson, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("api/peissues/by-plannedevent-ids", content);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssue>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssue>>();
+            try
+            {
+                if (peIds == null || !peIds.Any())
+                {
+                    return new Dictionary<int, IEnumerable<PEIssue>>();
+                }
+
+                var idsJson = JsonSerializer.Serialize(peIds, _jsonOptions);
+                var content = new StringContent(idsJson, System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("api/peissues/by-plannedevent-ids", content);
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                    return new Dictionary<int, IEnumerable<PEIssue>>();
+                    
+                return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssue>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssue>>();
+            }
+            catch (JsonException)
+            {
+                return new Dictionary<int, IEnumerable<PEIssue>>();
+            }
+            catch (HttpRequestException)
+            {
+                return new Dictionary<int, IEnumerable<PEIssue>>();
+            }
         }
 
         public async Task<PEIssue?> GetPEIssueAsync(int id)

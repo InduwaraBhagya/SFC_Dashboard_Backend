@@ -138,6 +138,12 @@ namespace SFCDashboard.ApiClients
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
                 var response = await _httpClient.PutAsync($"api/permissions/{permission.Id}", content);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    throw new InvalidOperationException($"Permission with ID {permission.Id} not found");
+                }
+                
                 response.EnsureSuccessStatusCode();
                 
                 var responseJson = await response.Content.ReadAsStringAsync();

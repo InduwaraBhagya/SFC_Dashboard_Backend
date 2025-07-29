@@ -119,6 +119,43 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get PE tasks by multiple PE numbers
+        /// </summary>
+        [HttpPost("pe-tasks-by-pe-numbers")]
+        public async Task<ActionResult<IEnumerable<PETask>>> GetPETasksByPENumbers([FromBody] PENumbersRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Getting PE tasks for {Count} PE numbers", request.PeNumbers?.Count ?? 0);
+                
+                if (request.PeNumbers == null || !request.PeNumbers.Any())
+                {
+                    return Ok(new List<PETask>());
+                }
+
+                var tasks = await _context.PETasks
+                    .Where(t => request.PeNumbers.Contains(t.PENumber))
+                    .OrderByDescending(t => t.TaskCreatedDate)
+                    .ToListAsync();
+
+                return Ok(tasks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PE tasks by PE numbers");
+                return StatusCode(500, "An error occurred while retrieving PE tasks by PE numbers");
+            }
+        }
+
+        /// <summary>
+        /// Request model for PE numbers
+        /// </summary>
+        public class PENumbersRequest
+        {
+            public List<string> PeNumbers { get; set; } = new List<string>();
+        }
+
+        /// <summary>
         /// Update an existing PE task
         /// </summary>
         [HttpPut("{id}")]

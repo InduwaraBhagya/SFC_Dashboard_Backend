@@ -1,22 +1,19 @@
 ﻿using SFCDashboard.ApiClients;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
 using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class WorkGroupsController : Controller
+    public class WorkGroupsController : BaseController
     {
         private readonly IWorkGroupsApiClient _workGroupsApiClient;
-        private readonly IUsersApiClient _usersApiClient;
         private readonly int _pageSize = 10;
 
         public WorkGroupsController(IWorkGroupsApiClient workGroupsApiClient, IUsersApiClient usersApiClient)
+            : base(usersApiClient)
         {
             _workGroupsApiClient = workGroupsApiClient;
-            _usersApiClient = usersApiClient;
         }
 
         

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.ApiClients;
-using System.Threading.Tasks;
 
 namespace SFCDashboard.Controllers
 {

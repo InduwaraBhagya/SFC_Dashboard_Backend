@@ -1,0 +1,123 @@
+@{
+    ViewData["Title"] = ViewBag.Title ?? "API Test Results";
+    var results = ViewBag.TestResults as List<string> ?? new List<string>();
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-flask mr-2"></i>
+                        @ViewData["Title"]
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (results.Any())
+                    {
+                        <div class="alert alert-info">
+                            <strong>Test Results:</strong>
+                        </div>
+                        
+                        <div class="bg-dark text-light p-3 rounded" style="font-family: 'Courier New', monospace;">
+                            @foreach (var result in results)
+                            {
+                                @if (string.IsNullOrWhiteSpace(result))
+                                {
+                                    <br />
+                                }
+                                else if (result.Contains("✅"))
+                                {
+                                    <div class="text-success">@result</div>
+                                }
+                                else if (result.Contains("❌"))
+                                {
+                                    <div class="text-danger">@result</div>
+                                }
+                                else if (result.Contains("🔍"))
+                                {
+                                    <div class="text-warning">@result</div>
+                                }
+                                else if (result.StartsWith("---"))
+                                {
+                                    <div class="text-info font-weight-bold mt-2">@result</div>
+                                }
+                                else
+                                {
+                                    <div>@result</div>
+                                }
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            No test results available.
+                        </div>
+                    }
+                    
+                    <div class="mt-4">
+                        <a href="@Url.Action("Index", "ApiTest")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back to API Tests
+                        </a>
+                        
+                        <a href="@Url.Action("Permissions", "ApiTest")" class="btn btn-primary">
+                            <i class="fas fa-redo mr-2"></i>
+                            Run Permissions Test Again
+                        </a>
+                        
+                        <button type="button" class="btn btn-info" onclick="testApiHealth()">
+                            <i class="fas fa-heartbeat mr-2"></i>
+                            Quick Health Check
+                        </button>
+                    </div>
+                    
+                    <div id="healthCheckResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function testApiHealth() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking...';
+    button.disabled = true;
+    
+    fetch('@Url.Action("HealthCheck", "ApiTest")')
+        .then(response => response.json())
+        .then(data => {
+            const resultDiv = document.getElementById('healthCheckResult');
+            const alertClass = data.success ? 'alert-success' : 'alert-danger';
+            const icon = data.success ? 'check-circle' : 'exclamation-circle';
+            
+            resultDiv.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <i class="fas fa-${icon} mr-2"></i>
+                    <strong>${data.success ? 'Success' : 'Error'}:</strong> ${data.message}
+                    ${data.permissionCount ? `<br><small>Permissions found: ${data.permissionCount}</small>` : ''}
+                    <br><small>Timestamp: ${data.timestamp}</small>
+                </div>
+            `;
+        })
+        .catch(error => {
+            const resultDiv = document.getElementById('healthCheckResult');
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <strong>Network Error:</strong> ${error.message}
+                </div>
+            `;
+        })
+        .finally(() => {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+}
+</script>

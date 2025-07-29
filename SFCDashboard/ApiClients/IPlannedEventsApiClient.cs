@@ -23,6 +23,38 @@ namespace SFCDashboard.ApiClients
         
         // Additional methods for filtered planned events
         Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
+        /// <summary>
+        /// Gets in-progress planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsByUserIdAsync(int userId);
+        /// <summary>
+        /// Gets OLA violating planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsByUserIdAsync(int userId);
+        /// <summary>
+        /// Gets urgent planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsByUserIdAsync(int userId);
+        /// <summary>
+        /// Gets hold planned events for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsByUserIdAsync(int userId);
+        /// <summary>
+        /// Gets in-progress count for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<int> GetInProgressCountByUserIdAsync(int userId);
+        /// <summary>
+        /// Gets OLA violating count for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<int> GetOLAViolatingCountByUserIdAsync(int userId);
+        /// <summary>
+        /// Gets urgent count for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<int> GetUrgentCountByUserIdAsync(int userId);
+        /// <summary>
+        /// Gets hold count for a specific user by userId (filtered in backend)
+        /// </summary>
+        Task<int> GetHoldCountByUserIdAsync(int userId);
         Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);

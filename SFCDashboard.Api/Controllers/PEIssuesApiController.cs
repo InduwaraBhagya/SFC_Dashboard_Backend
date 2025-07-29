@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Data;
 using SFCDashboard.Models;
+using SFCDashboard.Services;
 
 namespace SFCDashboard.Api.Controllers
 {
@@ -15,13 +16,16 @@ namespace SFCDashboard.Api.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PEIssuesApiController> _logger;
+        private readonly IPEIssuesApiService _peIssuesService;
 
         public PEIssuesApiController(
             ApplicationDbContext context,
-            ILogger<PEIssuesApiController> logger)
+            ILogger<PEIssuesApiController> logger,
+            IPEIssuesApiService peIssuesService)
         {
             _context = context;
             _logger = logger;
+            _peIssuesService = peIssuesService;
         }
 
         /// <summary>
@@ -144,6 +148,97 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogError(ex, "Error getting reminder count for user {userId}", userId);
                 return StatusCode(500, "An error occurred while retrieving reminder count");
+            }
+        }
+
+        /// <summary>
+        /// Get issues by multiple planned event IDs
+        /// </summary>
+        [HttpPost("by-plannedevent-ids")]
+        public async Task<ActionResult<Dictionary<int, IEnumerable<PEIssue>>>> GetIssuesByPlannedEventIds([FromBody] List<int> peIds)
+        {
+            try
+            {
+                _logger.LogInformation("Getting issues for {Count} planned events", peIds.Count);
+                
+                if (peIds == null || !peIds.Any())
+                {
+                    return Ok(new Dictionary<int, IEnumerable<PEIssue>>());
+                }
+
+                var issues = await _context.PEIssues
+                    .Where(i => peIds.Contains(i.PlannedEventId))
+                    .OrderByDescending(i => i.CreatedAt)
+                    .ToListAsync();
+
+                // Group issues by PlannedEventId
+                var groupedIssues = issues
+                    .GroupBy(i => i.PlannedEventId)
+                    .ToDictionary(g => g.Key, g => g.AsEnumerable());
+
+                // Ensure all requested PE IDs are in the result, even if they have no issues
+                foreach (var peId in peIds)
+                {
+                    if (!groupedIssues.ContainsKey(peId))
+                    {
+                        groupedIssues[peId] = Enumerable.Empty<PEIssue>();
+                    }
+                }
+
+                return Ok(groupedIssues);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting issues for planned events");
+                return StatusCode(500, "An error occurred while retrieving issues for planned events");
+            }
+        }
+
+        /// <summary>
+        /// Get PE issues by planned event ID
+        /// </summary>
+        [HttpGet("plannedevent/{plannedEventId}")]
+        public async Task<ActionResult<IEnumerable<PEIssue>>> GetPEIssuesByPlannedEvent(int plannedEventId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting PE issues for planned event {plannedEventId}", plannedEventId);
+
+                var issues = await _context.PEIssues
+                    .Where(i => i.PlannedEventId == plannedEventId)
+                    .OrderBy(i => i.CreatedAt)
+                    .ToListAsync();
+
+                _logger.LogInformation("Found {count} PE issues for planned event {plannedEventId}", issues.Count, plannedEventId);
+                return Ok(issues);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PE issues for planned event {plannedEventId}", plannedEventId);
+                return StatusCode(500, "An error occurred while retrieving PE issues for the planned event");
+            }
+        }
+
+        /// <summary>
+        /// Get PE issue view models by planned event ID (includes sender/receiver names)
+        /// </summary>
+        [HttpGet("plannedevent/{plannedEventId}/viewmodels")]
+        public async Task<ActionResult<IEnumerable<PEIssueViewModel>>> GetPEIssueViewModelsByPlannedEvent(int plannedEventId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting PE issue view models for planned event {plannedEventId}", plannedEventId);
+
+                var issueViewModels = await _peIssuesService.GetPEIssuesByPlannedEventAsync(plannedEventId);
+
+                _logger.LogInformation("Found {count} PE issue view models for planned event {plannedEventId}", 
+                    issueViewModels.Count(), plannedEventId);
+                return Ok(issueViewModels);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PE issue view models for planned event {plannedEventId}", plannedEventId);
+                return StatusCode(500, "An error occurred while retrieving PE issue view models for the planned event");
             }
         }
 

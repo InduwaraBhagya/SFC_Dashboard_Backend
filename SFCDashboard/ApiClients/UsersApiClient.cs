@@ -417,5 +417,43 @@ namespace SFCDashboard.ApiClients
                 return new List<SystemUser>();
             }
         }
+
+        public async Task<UserLayoutDataDto?> GetUserLayoutDataAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/layout-data/{serviceId}");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var layoutData = JsonSerializer.Deserialize<UserLayoutDataDto>(json, _jsonOptions);
+                
+                return layoutData;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching user layout data for service ID {ServiceId} from API", serviceId);
+                return null;
+            }
+        }
+
+        public async Task<ProjectUserPermissionsDto?> GetProjectUserPermissionsAsync(string serviceId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/users/project-permissions/{serviceId}");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var permissions = JsonSerializer.Deserialize<ProjectUserPermissionsDto>(json, _jsonOptions);
+                
+                return permissions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching project user permissions for service ID {ServiceId} from API", serviceId);
+                return null;
+            }
+        }
     }
 }

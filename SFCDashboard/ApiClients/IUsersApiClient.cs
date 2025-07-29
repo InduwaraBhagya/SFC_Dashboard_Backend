@@ -26,5 +26,7 @@ namespace SFCDashboard.ApiClients
         Task<(List<string> salesWorkgroups, bool canViewAll)> GetUserSalesWorkgroupsAsync(string serviceId);
         Task<SystemUser?> GetUserAsync(int userId);
         Task<List<SystemUser>> GetSalesUsersAsync();
+        Task<UserLayoutDataDto?> GetUserLayoutDataAsync(string serviceId);
+        Task<ProjectUserPermissionsDto?> GetProjectUserPermissionsAsync(string serviceId);
     }
 }

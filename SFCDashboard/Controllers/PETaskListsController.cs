@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc;
 using SFCDashboard.Models;
 using SFCDashboard.ApiClients;
 
@@ -14,7 +9,7 @@ namespace SFCDashboard.Controllers
         private readonly IPETaskListsApiClient _peTaskListsApi;
         private readonly ILogger<PETaskListsController> _logger;
 
-        public PETaskListsController(IPETaskListsApiClient peTaskListsApi, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient, ILogger<PETaskListsController> logger) : base(permissionsApi, usersApiClient)
+        public PETaskListsController(IPETaskListsApiClient peTaskListsApi, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient, IRolePermissionsApiClient rolePermissionsApi, ILogger<PETaskListsController> logger) : base(permissionsApi, usersApiClient, rolePermissionsApi)
         {
             _peTaskListsApi = peTaskListsApi;
             _logger = logger;

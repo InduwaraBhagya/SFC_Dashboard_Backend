@@ -1,15 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SFCDashboard.Models;
 using SFCDashboard.ApiClients;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SFCDashboard.Controllers
 {
-    public class PETasksController : Controller
+    public class PETasksController : BaseController
     {
         private readonly IPETasksApiClient _peTasksApiClient;
         private readonly IPlannedEventsApiClient _plannedEventsApiClient;
@@ -18,7 +13,9 @@ namespace SFCDashboard.Controllers
         public PETasksController(
             IPETasksApiClient peTasksApiClient, 
             IPlannedEventsApiClient plannedEventsApiClient,
+            IUsersApiClient usersApiClient,
             ILogger<PETasksController> logger)
+            : base(usersApiClient)
         {
             _peTasksApiClient = peTasksApiClient;
             _plannedEventsApiClient = plannedEventsApiClient;

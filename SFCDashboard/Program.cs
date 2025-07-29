@@ -4,14 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Data;
-using SFCDashboard.Controllers;
 using SFCDashboard.Middleware;
 using SFCDashboard.ApiClients;
-using Microsoft.Extensions.DependencyInjection;
-using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
-using OfficeOpenXml; // Add EPPlus namespace
 
 var builder = WebApplication.CreateBuilder(args);
 

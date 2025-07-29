@@ -18,15 +18,18 @@ namespace SFCDashboard.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UsersApiController> _logger;
         private readonly IWebHostEnvironment _environment;
+        private readonly IUsersApiService _usersApiService;
 
         public UsersApiController(
             ApplicationDbContext context,
             ILogger<UsersApiController> logger,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            IUsersApiService usersApiService)
         {
             _context = context;
             _logger = logger;
             _environment = environment;
+            _usersApiService = usersApiService;
         }
 
         /// <summary>
@@ -594,6 +597,89 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogError(ex, "Error setting workgroups for user {UserId}", userId);
                 return StatusCode(500, "An error occurred while setting user workgroups");
+            }
+        }
+
+        /// <summary>
+        /// Get user layout data by service ID
+        /// </summary>
+        [HttpGet("layout-data/{serviceId}")]
+        public async Task<ActionResult<UserLayoutDataDto>> GetUserLayoutData(string serviceId)
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var layoutData = await _usersApiService.GetUserLayoutDataAsync(serviceId);
+                if (layoutData == null)
+                {
+                    return NotFound($"User layout data not found for service ID: {serviceId}");
+                }
+
+                return Ok(layoutData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user layout data for service ID {ServiceId}", serviceId);
+                return StatusCode(500, "An error occurred while retrieving user layout data");
+            }
+        }
+
+        /// <summary>
+        /// Get project user permissions by service ID
+        /// </summary>
+        [HttpGet("project-permissions/{serviceId}")]
+        public async Task<ActionResult<ProjectUserPermissionsDto>> GetProjectUserPermissions(string serviceId)
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var permissions = await _usersApiService.GetProjectUserPermissionsAsync(serviceId);
+                if (permissions == null)
+                {
+                    return NotFound($"User permissions not found for service ID: {serviceId}");
+                }
+
+                return Ok(permissions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving project user permissions for service ID {ServiceId}", serviceId);
+                return StatusCode(500, "An error occurred while retrieving project user permissions");
+            }
+        }
+
+        /// <summary>
+        /// Get users in sales workgroup
+        /// </summary>
+        [HttpGet("sales-users")]
+        public async Task<ActionResult<List<SystemUser>>> GetSalesUsers()
+        {
+            try
+            {
+                _logger.LogInformation("Getting sales users");
+                var salesUsers = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                    .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup != null && uwg.WorkGroup.Name.ToLower().Contains("sales")))
+                    .OrderBy(u => u.Name)
+                    .ToListAsync();
+
+                return Ok(salesUsers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving sales users");
+                return StatusCode(500, "An error occurred while retrieving sales users");
             }
         }
     }

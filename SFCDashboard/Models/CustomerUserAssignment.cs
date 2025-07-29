@@ -16,7 +16,7 @@ namespace SFCDashboard.Models
         public int UserId { get; set; }
 
         [ForeignKey("UserId")]
-        public virtual SystemUser User { get; set; } = null!;
+        public virtual SystemUser? User { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }

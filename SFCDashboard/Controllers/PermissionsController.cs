@@ -8,7 +8,7 @@ namespace SFCDashboard.Controllers
     {
         private readonly ILogger<PermissionsController> _logger;
 
-        public PermissionsController(ILogger<PermissionsController> logger, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient) : base(permissionsApi, usersApiClient)
+        public PermissionsController(ILogger<PermissionsController> logger, IPermissionsApiClient permissionsApi, IUsersApiClient usersApiClient, IRolePermissionsApiClient rolePermissionsApi) : base(permissionsApi, usersApiClient, rolePermissionsApi)
         {
             _logger = logger;
         }
@@ -85,6 +85,49 @@ namespace SFCDashboard.Controllers
                 }
             }
             return View(permission);
+        }
+
+        // GET: Permissions/Delete/5
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var permission = await _permissionsApi.GetPermissionByIdAsync(id.Value);
+            if (permission == null)
+            {
+                return NotFound();
+            }
+
+            return View(permission);
+        }
+
+        // POST: Permissions/Delete/5
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            try
+            {
+                var result = await _permissionsApi.DeletePermissionAsync(id);
+                if (result)
+                {
+                    TempData["SuccessMessage"] = "Permission deleted successfully.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Failed to delete permission. It may not exist.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting permission {Id}", id);
+                TempData["ErrorMessage"] = "An error occurred while deleting the permission.";
+            }
+
+            return RedirectToAction(nameof(Index));
         }
 
         private async Task<bool> PermissionExists(int id)

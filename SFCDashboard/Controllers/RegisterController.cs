@@ -1,30 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Web;
 using SFCDashboard.ApiClients;
-using SFCDashboard.Data;
 using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    public class RegisterController : Controller
+    public class RegisterController : BaseController
     {
-        private readonly IUsersApiClient _usersApiClient;
         private readonly IWorkGroupsApiClient _workGroupsApiClient;
 
         public RegisterController(IUsersApiClient usersApiClient, IWorkGroupsApiClient workGroupsApiClient)
+            : base(usersApiClient)
         {
-            _usersApiClient = usersApiClient;
             _workGroupsApiClient = workGroupsApiClient;
-        }
-
-        private static string ExtractServiceId(string email)
-        {
-            if (string.IsNullOrEmpty(email)) 
-                return string.Empty;
-            
-            return email[..Math.Min(email.Length, 6)];
         }
 
         // GET

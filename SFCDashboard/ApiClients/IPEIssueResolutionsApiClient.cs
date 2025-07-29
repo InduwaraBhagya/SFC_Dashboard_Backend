@@ -12,6 +12,6 @@ namespace SFCDashboard.ApiClients
         Task<PEIssueResolution?> GetPendingResolutionAsync(int issueId);
         Task<Dictionary<int, PEIssueResolution>> GetResolutionsByIssueIdsAsync(List<int> issueIds);
         Task RemoveAsync(int id);
-        Task<PEIssueResolution> GetByIssueIdAsync(int issueId);
+        Task<PEIssueResolution?> GetByIssueIdAsync(int issueId);
     }
 }

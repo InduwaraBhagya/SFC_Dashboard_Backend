@@ -1,26 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using SFCDashboard.Data;
+﻿using Microsoft.AspNetCore.Mvc;
 using SFCDB.Models;
 using SFCDashboard.ApiClients;
 
-namespace SFCDB.Controllers
+namespace SFCDashboard.Controllers
 {
-    public class PERecordsController : Controller
+    public class PERecordsController : BaseController
     {
         private readonly ILogger<PERecordsController> _logger;
         private readonly IPERecordsApiClient _apiClient;
         public PERecordsController(
             ILogger<PERecordsController> logger,
-            IPERecordsApiClient apiClient)
+            IPERecordsApiClient apiClient,
+            IUsersApiClient usersApiClient)
+            : base(usersApiClient)
         {
             _logger = logger;
             _apiClient = apiClient;

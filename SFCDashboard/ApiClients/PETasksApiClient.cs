@@ -118,13 +118,28 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/petasksapi/by-pe-number/{Uri.EscapeDataString(peNumber)}");
+                var response = await _httpClient.GetAsync($"api/petasksapi/by-pe/{Uri.EscapeDataString(peNumber)}");
                 response.EnsureSuccessStatusCode();
                 
                 var json = await response.Content.ReadAsStringAsync();
-                var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
                 
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return new List<PETask>();
+                }
+                
+                var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
                 return tasks ?? new List<PETask>();
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Error parsing JSON response for PE tasks by PE number {PENumber}", peNumber);
+                return new List<PETask>();
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error fetching PE tasks by PE number {PENumber} from API", peNumber);
+                return new List<PETask>();
             }
             catch (Exception ex)
             {
@@ -338,6 +353,11 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
+                if (peNumbers == null || !peNumbers.Any())
+                {
+                    return new List<PETask>();
+                }
+
                 var requestData = new { peNumbers };
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -346,7 +366,19 @@ namespace SFCDashboard.ApiClients
                 response.EnsureSuccessStatusCode();
                 
                 var responseJson = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new List<PETask>();
+                    
                 return JsonSerializer.Deserialize<IEnumerable<PETask>>(responseJson, _jsonOptions) ?? new List<PETask>();
+            }
+            catch (JsonException)
+            {
+                return new List<PETask>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<PETask>();
             }
             catch (Exception ex)
             {

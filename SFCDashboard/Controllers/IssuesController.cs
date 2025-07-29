@@ -1,18 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Hosting;
 using SFCDashboard.Models;
 using SFCDashboard.ApiClients;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.Extensions.Logging;
 
 namespace SFCDashboard.Controllers
 {
-    public class IssuesController : Controller
+    public class IssuesController : BaseController
     {
         private readonly IPEIssuesApiClient _peIssuesApi;
         private readonly IUsersApiClient _usersApi;
@@ -31,7 +24,7 @@ namespace SFCDashboard.Controllers
             ISubTaskListsApiClient subTaskListsApi,
             IPEIssueResolutionsApiClient peIssueResolutionsApi,
             IWebHostEnvironment env,
-            ILogger<IssuesController> logger)
+            ILogger<IssuesController> logger) : base(usersApi)
         {
             _peIssuesApi = peIssuesApi;
             _usersApi = usersApi;
@@ -763,15 +756,6 @@ namespace SFCDashboard.Controllers
         {
             var users = await _usersApi.GetAllAsync();
             ViewBag.Users = users.Select(u => new { u.Id, Name = $"{u.Name} ({u.ServiceId})" }).ToList();
-        }
-
-        private string ExtractServiceId(string email)
-        {
-            // Extract service ID from email (whatever logic you're using)
-            if (string.IsNullOrEmpty(email)) return string.Empty;
-
-            // Assuming email format is name@domain.com or serviceId@domain.com
-            return email.Split('@').FirstOrDefault() ?? string.Empty;
         }
 
         #endregion

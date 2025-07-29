@@ -21,6 +21,14 @@
                 </div>
             }
 
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
@@ -37,8 +45,11 @@
                                 <td>@item.Name</td>
                                 <td>@item.Description</td>
                                 <td>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-primary">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-primary me-1">
                                         <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i> Delete
                                     </a>
                                 </td>
                             </tr>

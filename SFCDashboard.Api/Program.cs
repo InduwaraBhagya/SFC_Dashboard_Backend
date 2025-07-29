@@ -81,6 +81,7 @@ builder.Services.AddScoped<ITaskQueueService, TaskQueueingService>();
 // });
 // builder.Services.AddScoped<PERecordsApiService>();
 builder.Services.AddScoped<IPlannedEventsApiService, PlannedEventsApiService>();
+builder.Services.AddScoped<IProjectsApiService, ProjectsApiService>();
 builder.Services.AddScoped<IUsersApiService, UsersApiService>();
 builder.Services.AddScoped<IPETasksApiService, PETasksApiService>();
 builder.Services.AddScoped<IPEIssuesApiService, PEIssuesApiService>();

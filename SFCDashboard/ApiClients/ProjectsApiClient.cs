@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
 using SFCDashboard.Models;
 
 public class ProjectsApiClient : IProjectsApiClient
@@ -20,6 +16,11 @@ public class ProjectsApiClient : IProjectsApiClient
     public async Task<Project> GetProjectByIdAsync(int id)
     {
         return await _httpClient.GetFromJsonAsync<Project>($"/api/projects/{id}");
+    }
+
+    public async Task<ProjectDetailsDto?> GetProjectDetailsAsync(int id)
+    {
+        return await _httpClient.GetFromJsonAsync<ProjectDetailsDto>($"/api/projects/{id}/details");
     }
 
     public async Task<List<PlannedEventDto>> SearchPlannedEventsAsync(string searchTerm, int projectId)

@@ -1,4 +1,3 @@
-using SFCDashboard.Models;
 using System.Text.Json;
 
 namespace SFCDashboard.ApiClients
@@ -16,57 +15,131 @@ namespace SFCDashboard.ApiClients
 
         public async Task<IEnumerable<AreaNetworkEngineer>> GetAllAsync()
         {
-            var response = await _httpClient.GetAsync("api/areanetworkengineers");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<IEnumerable<AreaNetworkEngineer>>(json, _jsonOptions) ?? new List<AreaNetworkEngineer>();
+            try
+            {
+                var response = await _httpClient.GetAsync("api/areanetworkengineers");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                    return new List<AreaNetworkEngineer>();
+                    
+                return JsonSerializer.Deserialize<IEnumerable<AreaNetworkEngineer>>(json, _jsonOptions) ?? new List<AreaNetworkEngineer>();
+            }
+            catch (JsonException)
+            {
+                return new List<AreaNetworkEngineer>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<AreaNetworkEngineer>();
+            }
         }
 
         public async Task<AreaNetworkEngineer?> GetByIdAsync(int id)
         {
-            var response = await _httpClient.GetAsync($"api/areanetworkengineers/{id}");
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/areanetworkengineers/{id}");
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return null;
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                    return null;
+                    
+                return JsonSerializer.Deserialize<AreaNetworkEngineer>(json, _jsonOptions);
+            }
+            catch (JsonException)
+            {
                 return null;
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<AreaNetworkEngineer>(json, _jsonOptions);
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
         }
 
         public async Task<AreaNetworkEngineer> CreateAsync(AreaNetworkEngineer areaNetworkEngineer)
         {
-            var json = JsonSerializer.Serialize(areaNetworkEngineer, _jsonOptions);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("api/areanetworkengineers", content);
-            response.EnsureSuccessStatusCode();
-            var responseJson = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<AreaNetworkEngineer>(responseJson, _jsonOptions)!;
+            try
+            {
+                var json = JsonSerializer.Serialize(areaNetworkEngineer, _jsonOptions);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("api/areanetworkengineers", content);
+                response.EnsureSuccessStatusCode();
+                var responseJson = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    throw new InvalidOperationException("Empty response from server");
+                    
+                return JsonSerializer.Deserialize<AreaNetworkEngineer>(responseJson, _jsonOptions)!;
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException("Failed to deserialize server response", ex);
+            }
         }
 
         public async Task<AreaNetworkEngineer> UpdateAsync(AreaNetworkEngineer areaNetworkEngineer)
         {
-            var json = JsonSerializer.Serialize(areaNetworkEngineer, _jsonOptions);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PutAsync($"api/areanetworkengineers/{areaNetworkEngineer.Id}", content);
-            response.EnsureSuccessStatusCode();
-            var responseJson = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<AreaNetworkEngineer>(responseJson, _jsonOptions)!;
+            try
+            {
+                var json = JsonSerializer.Serialize(areaNetworkEngineer, _jsonOptions);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PutAsync($"api/areanetworkengineers/{areaNetworkEngineer.Id}", content);
+                response.EnsureSuccessStatusCode();
+                var responseJson = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    throw new InvalidOperationException("Empty response from server");
+                    
+                return JsonSerializer.Deserialize<AreaNetworkEngineer>(responseJson, _jsonOptions)!;
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException("Failed to deserialize server response", ex);
+            }
         }
 
         public async Task DeleteAsync(int id)
         {
-            var response = await _httpClient.DeleteAsync($"api/areanetworkengineers/{id}");
-            response.EnsureSuccessStatusCode();
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/areanetworkengineers/{id}");
+                response.EnsureSuccessStatusCode();
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new InvalidOperationException($"Failed to delete engineer with ID {id}", ex);
+            }
         }
 
         public async Task<string?> GetEngineerNameByAreaAsync(string area)
         {
-            var response = await _httpClient.GetAsync($"api/areanetworkengineers/by-area/{area}");
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/areanetworkengineers/by-area/{area}");
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return null;
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                    return null;
+                    
+                var result = JsonSerializer.Deserialize<Dictionary<string, string>>(json, _jsonOptions);
+                return result?.GetValueOrDefault("engineerName");
+            }
+            catch (JsonException)
+            {
                 return null;
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<Dictionary<string, string>>(json, _jsonOptions);
-            return result?.GetValueOrDefault("engineerName");
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
         }
     }
 }
