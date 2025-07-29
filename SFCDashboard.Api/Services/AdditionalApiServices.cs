@@ -121,7 +121,9 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                return await _context.Escalations.FindAsync(id);
+                return await _context.Escalations
+                    .Include(e => e.PETask)
+                    .FirstOrDefaultAsync(e => e.Id == id);
             }
             catch (Exception ex)
             {
@@ -136,8 +138,8 @@ namespace SFCDashboard.Api.Services
             {
                 return await _context.Escalations
                     .Include(e => e.PETask)
-                    .Include(e => e.IgnoredBy)
                     .Where(e => taskIds.Contains(e.TaskId))
+                    .OrderByDescending(e => e.CreatedAt)
                     .ToListAsync();
             }
             catch (Exception ex)
@@ -153,7 +155,7 @@ namespace SFCDashboard.Api.Services
             {
                 return await _context.Escalations
                     .Include(e => e.PETask)
-                    .Include(e => e.IgnoredBy)
+                    .OrderByDescending(e => e.CreatedAt)
                     .ToListAsync();
             }
             catch (Exception ex)
@@ -163,11 +165,67 @@ namespace SFCDashboard.Api.Services
             }
         }
 
+        public async Task<IEnumerable<Escalation>> GetEscalationsByUserRoleAsync(EscalationsByUserRoleRequest request)
+        {
+            try
+            {
+                var query = _context.Escalations
+                    .Include(e => e.PETask)
+                    .AsQueryable();
+
+                // Filter by role level - implement specific business logic here
+                if (request.UserRoleLevel > 0)
+                {
+                    query = query.Where(e => e.Level <= request.UserRoleLevel);
+                }
+
+                // Filter by workgroups if provided
+                if (request.UserWorkgroupNames != null && request.UserWorkgroupNames.Any())
+                {
+                    // This would require additional navigation properties to filter by workgroups
+                    // For now, we'll include all escalations that match the role level
+                }
+
+                var escalations = await query
+                    .OrderByDescending(e => e.CreatedAt)
+                    .ToListAsync();
+
+                return escalations;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting escalations by user role");
+                return new List<Escalation>();
+            }
+        }
+
+        public async Task<bool> MarkAsReadAsync(int id)
+        {
+            try
+            {
+                var escalation = await _context.Escalations.FindAsync(id);
+                if (escalation == null)
+                {
+                    return false;
+                }
+
+                escalation.IsRead = true;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking escalation {Id} as read", id);
+                return false;
+            }
+        }
+
         public async Task<Escalation?> CreateEscalationAsync(Escalation escalation)
         {
             try
             {
-                _context.Add(escalation);
+                escalation.CreatedAt = DateTime.UtcNow;
+                _context.Escalations.Add(escalation);
                 await _context.SaveChangesAsync();
                 return escalation;
             }

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 
 namespace SFCDashboard.Api.Controllers
 {
@@ -13,16 +12,16 @@ namespace SFCDashboard.Api.Controllers
     [Produces("application/json")]
     public class EscalationsApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IEscalationsApiService _escalationsService;
         private readonly ILogger<EscalationsApiController> _logger;
         private readonly IWebHostEnvironment _environment;
 
         public EscalationsApiController(
-            ApplicationDbContext context,
+            IEscalationsApiService escalationsService,
             ILogger<EscalationsApiController> logger,
             IWebHostEnvironment environment)
         {
-            _context = context;
+            _escalationsService = escalationsService;
             _logger = logger;
             _environment = environment;
         }
@@ -34,17 +33,14 @@ namespace SFCDashboard.Api.Controllers
         public async Task<ActionResult<IEnumerable<Escalation>>> GetEscalations()
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
 
             try
             {
-                var escalations = await _context.Escalations
-                    .Include(e => e.PETask)
-                    .OrderByDescending(e => e.CreatedAt)
-                    .ToListAsync();
+                var escalations = await _escalationsService.GetEscalationsAsync();
                 return Ok(escalations);
             }
             catch (Exception ex)
@@ -61,16 +57,14 @@ namespace SFCDashboard.Api.Controllers
         public async Task<ActionResult<Escalation>> GetEscalation(int id)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
 
             try
             {
-                var escalation = await _context.Escalations
-                    .Include(e => e.PETask)
-                    .FirstOrDefaultAsync(e => e.Id == id);
+                var escalation = await _escalationsService.GetEscalationAsync(id);
 
                 if (escalation == null)
                 {
@@ -93,7 +87,7 @@ namespace SFCDashboard.Api.Controllers
         public async Task<ActionResult<IEnumerable<Escalation>>> GetEscalationsByTaskIds([FromBody] List<int> taskIds)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
@@ -101,12 +95,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting escalations for {Count} task IDs", taskIds.Count);
-                var escalations = await _context.Escalations
-                    .Include(e => e.PETask)
-                    .Where(e => taskIds.Contains(e.TaskId))
-                    .OrderByDescending(e => e.CreatedAt)
-                    .ToListAsync();
-
+                var escalations = await _escalationsService.GetEscalationsByTaskIdsAsync(taskIds);
                 return Ok(escalations);
             }
             catch (Exception ex)
@@ -123,7 +112,7 @@ namespace SFCDashboard.Api.Controllers
         public async Task<ActionResult<List<Escalation>>> GetEscalationsByUserRole([FromBody] EscalationsByUserRoleRequest request)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
@@ -131,28 +120,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting escalations for user role level {Level}", request.UserRoleLevel);
-                
-                var query = _context.Escalations
-                    .Include(e => e.PETask)
-                    .AsQueryable();
-
-                // Filter by role level - could implement specific business logic here
-                if (request.UserRoleLevel > 0)
-                {
-                    query = query.Where(e => e.Level <= request.UserRoleLevel);
-                }
-
-                // Filter by workgroups if provided
-                if (request.UserWorkgroupNames != null && request.UserWorkgroupNames.Any())
-                {
-                    // This would require additional navigation properties to filter by workgroups
-                    // For now, we'll include all escalations
-                }
-
-                var escalations = await query
-                    .OrderByDescending(e => e.CreatedAt)
-                    .ToListAsync();
-
+                var escalations = await _escalationsService.GetEscalationsByUserRoleAsync(request);
                 return Ok(escalations);
             }
             catch (Exception ex)
@@ -169,21 +137,18 @@ namespace SFCDashboard.Api.Controllers
         public async Task<IActionResult> MarkAsRead(int id)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
 
             try
             {
-                var escalation = await _context.Escalations.FindAsync(id);
-                if (escalation == null)
+                var success = await _escalationsService.MarkAsReadAsync(id);
+                if (!success)
                 {
                     return NotFound();
                 }
-
-                escalation.IsRead = true;
-                await _context.SaveChangesAsync();
 
                 return Ok();
             }
@@ -201,18 +166,20 @@ namespace SFCDashboard.Api.Controllers
         public async Task<ActionResult<Escalation>> CreateEscalation([FromBody] Escalation escalation)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
 
             try
             {
-                escalation.CreatedAt = DateTime.UtcNow;
-                _context.Escalations.Add(escalation);
-                await _context.SaveChangesAsync();
+                var createdEscalation = await _escalationsService.CreateEscalationAsync(escalation);
+                if (createdEscalation == null)
+                {
+                    return StatusCode(500, "An error occurred while creating the escalation");
+                }
 
-                return CreatedAtAction(nameof(GetEscalation), new { id = escalation.Id }, escalation);
+                return CreatedAtAction(nameof(GetEscalation), new { id = createdEscalation.Id }, createdEscalation);
             }
             catch (Exception ex)
             {
@@ -220,15 +187,6 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while creating the escalation");
             }
         }
-    }
-
-    /// <summary>
-    /// Request model for getting escalations by user role
-    /// </summary>
-    public class EscalationsByUserRoleRequest
-    {
-        public int UserRoleLevel { get; set; }
-        public List<string>? UserWorkgroupNames { get; set; }
     }
 }
 
