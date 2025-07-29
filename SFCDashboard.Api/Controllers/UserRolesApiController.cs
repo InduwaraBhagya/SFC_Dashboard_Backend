@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,12 +11,12 @@ namespace SFCDashboard.Api.Controllers
     [Produces("application/json")]
     public class UserRolesApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUserRolesApiService _userRolesService;
         private readonly ILogger<UserRolesApiController> _logger;
 
-        public UserRolesApiController(ApplicationDbContext context, ILogger<UserRolesApiController> logger)
+        public UserRolesApiController(IUserRolesApiService userRolesService, ILogger<UserRolesApiController> logger)
         {
-            _context = context;
+            _userRolesService = userRolesService;
             _logger = logger;
         }
 
@@ -27,7 +26,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var roles = await _context.UserRoles.Include(r => r.RolePermissions).ToListAsync();
+                var roles = await _userRolesService.GetUserRolesAsync();
                 return Ok(roles);
             }
             catch (Exception ex)
@@ -43,7 +42,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var role = await _context.UserRoles.Include(r => r.RolePermissions).FirstOrDefaultAsync(r => r.Id == id);
+                var role = await _userRolesService.GetUserRoleAsync(id);
                 if (role == null)
                     return NotFound();
                 return Ok(role);
@@ -64,9 +63,11 @@ namespace SFCDashboard.Api.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
                     
-                _context.UserRoles.Add(userRole);
-                await _context.SaveChangesAsync();
-                return CreatedAtAction(nameof(GetUserRole), new { id = userRole.Id }, userRole);
+                var createdRole = await _userRolesService.CreateUserRoleAsync(userRole);
+                if (createdRole == null)
+                    return StatusCode(500, "Failed to create user role");
+                    
+                return CreatedAtAction(nameof(GetUserRole), new { id = createdRole.Id }, createdRole);
             }
             catch (Exception ex)
             {
@@ -86,18 +87,16 @@ namespace SFCDashboard.Api.Controllers
                     
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
-                    
-                _context.Entry(userRole).State = EntityState.Modified;
-                
-                await _context.SaveChangesAsync();
-                return NoContent();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserRoleExists(id))
+
+                // Check if the role exists
+                if (!await _userRolesService.UserRoleExistsAsync(id))
                     return NotFound();
-                else
-                    throw;
+                    
+                var updatedRole = await _userRolesService.UpdateUserRoleAsync(userRole);
+                if (updatedRole == null)
+                    return StatusCode(500, "Failed to update user role");
+                    
+                return NoContent();
             }
             catch (Exception ex)
             {
@@ -112,12 +111,10 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var role = await _context.UserRoles.FindAsync(id);
-                if (role == null)
+                var deleted = await _userRolesService.DeleteUserRoleAsync(id);
+                if (!deleted)
                     return NotFound();
                     
-                _context.UserRoles.Remove(role);
-                await _context.SaveChangesAsync();
                 return NoContent();
             }
             catch (Exception ex)
@@ -133,7 +130,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                return await _context.UserRoles.AnyAsync(e => e.Id == id);
+                return await _userRolesService.UserRoleExistsAsync(id);
             }
             catch (Exception ex)
             {
@@ -148,9 +145,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var role = await _context.UserRoles.Include(r => r.RolePermissions)
-                                                   .ThenInclude(rp => rp.Permission)
-                                                   .FirstOrDefaultAsync(r => r.Id == id);
+                var role = await _userRolesService.GetUserRoleWithPermissionsAsync(id);
                 if (role == null)
                     return NotFound();
                 return Ok(role);
@@ -171,23 +166,8 @@ namespace SFCDashboard.Api.Controllers
                 if (string.IsNullOrWhiteSpace(serviceId))
                     return BadRequest("ServiceId cannot be null or empty");
 
-                // Truncate serviceId to 6 characters if longer (following pattern from other controllers)
-                serviceId = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-
-                var user = await _context.Users
-                    .Include(u => u.UserRole)
-                    .ThenInclude(r => r != null ? r.RolePermissions : null!)
-                    .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
-
-                if (user?.UserRole == null)
-                    return Ok(false);
-
-                // Check if user has Admin permission
-                var hasAdminPermission = user.UserRole.RolePermissions
-                    .Any(rp => rp.Permission.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase));
-
-                return Ok(hasAdminPermission);
+                var isAdmin = await _userRolesService.IsUserAdminAsync(serviceId);
+                return Ok(isAdmin);
             }
             catch (Exception ex)
             {
@@ -196,10 +176,6 @@ namespace SFCDashboard.Api.Controllers
             }
         }
 
-        private bool UserRoleExists(int id)
-        {
-            return _context.UserRoles.Any(e => e.Id == id);
-        }
     }
 }
 

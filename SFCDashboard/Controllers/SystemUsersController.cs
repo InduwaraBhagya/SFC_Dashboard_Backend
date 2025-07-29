@@ -4,31 +4,26 @@ using SFCDashboard.ApiClients;
 
 namespace SFCDashboard.Controllers
 {
-    public class SystemUsersController : BaseController
+    public class SystemUsersController : AdminControllerBase
     {
-        // Remove the redundant IUsersApiClient since it's inherited from BaseController
         private readonly IUserRolesApiClient _userRolesApiClient;
         private readonly IWorkGroupsApiClient _workGroupsApiClient;
-        private readonly IPermissionsApiClient _permissionsApiClient;
 
         public SystemUsersController(
+            IPermissionsApiClient permissionsApi,
             IUsersApiClient usersApiClient,
+            IRolePermissionsApiClient rolePermissionsApi,
             IUserRolesApiClient userRolesApiClient,
-            IWorkGroupsApiClient workGroupsApiClient,
-            IPermissionsApiClient permissionsApiClient)
-            : base(usersApiClient)
+            IWorkGroupsApiClient workGroupsApiClient)
+            : base(permissionsApi, usersApiClient, rolePermissionsApi)
         {
             _userRolesApiClient = userRolesApiClient;
             _workGroupsApiClient = workGroupsApiClient;
-            _permissionsApiClient = permissionsApiClient;
         }
 
         // GET: SystemUsers
         public async Task<IActionResult> Index()
         {
-            if (!await HasAdminPermissionAsync())
-                return RedirectToAction("Index", "PlannedEvents");
-
             var users = await _usersApiClient.GetAllAsync();
             return View(users);
         }
@@ -51,9 +46,6 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers/Create
         public async Task<IActionResult> CreateAsync()
         {
-            if (!await HasAdminPermissionAsync())
-                return RedirectToAction("Index", "PlannedEvents");
-
             var roles = await _userRolesApiClient.GetAllAsync();
             var workGroups = await _workGroupsApiClient.GetAllAsync();
             ViewData["UserRoleId"] = new SelectList(roles, "Id", "Name");
@@ -66,9 +58,6 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(SystemUserViewModel vm)
         {
-            if (!await HasAdminPermissionAsync())
-                return RedirectToAction("Index", "PlannedEvents");
-
             if (ModelState.IsValid)
             {
                 var systemUser = new SystemUser
@@ -97,9 +86,6 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (!await HasAdminPermissionAsync())
-                return RedirectToAction("Index", "PlannedEvents");
-
             if (id == null)
             {
                 return NotFound();
@@ -132,9 +118,6 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, SystemUserViewModel vm)
         {
-            if (!await HasAdminPermissionAsync())
-                return RedirectToAction("Index", "PlannedEvents");
-
             var existingUser = await _usersApiClient.GetUserWithRoleAndWorkGroupsAsync(id);
             if (existingUser == null)
             {
@@ -171,9 +154,6 @@ namespace SFCDashboard.Controllers
         // GET: SystemUsers/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (!await HasAdminPermissionAsync())
-                return RedirectToAction("Index", "PlannedEvents");
-
             if (id == null)
             {
                 return NotFound();
@@ -191,21 +171,8 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            if (!await HasAdminPermissionAsync())
-                return RedirectToAction("Index", "PlannedEvents");
-
             await _usersApiClient.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-        // Helper: API-based admin permission check using the new endpoint
-        private async Task<bool> HasAdminPermissionAsync()
-        {
-            var serviceId = User.Identity?.Name;
-            if (string.IsNullOrEmpty(serviceId))
-                return false;
-
-            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
-            return await _permissionsApiClient.IsUserAdminAsync(serviceIdShort);
         }
 
         private async Task<bool> SystemUserExists(int id)
