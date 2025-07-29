@@ -15,6 +15,23 @@ namespace SFCDashboard.Api.Services
             _logger = logger;
         }
 
+        public async Task<IEnumerable<SystemUser>> GetUsersAsync()
+        {
+            try
+            {
+                return await _context.Users
+                    .Include(u => u.UserRole)
+                    .Include(u => u.UserWorkGroups)
+                        .ThenInclude(uwg => uwg.WorkGroup)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all users");
+                throw;
+            }
+        }
+
         public async Task<SystemUser?> GetUserAsync(int id)
         {
             try
@@ -394,6 +411,107 @@ namespace SFCDashboard.Api.Services
             {
                 _logger.LogError(ex, "Error getting project user permissions for service ID {ServiceId}", serviceId);
                 return null;
+            }
+        }
+
+        public async Task<bool> EditSystemUserAsync(int id, string name, string serviceId, int? userRoleId, List<int> workGroupIds)
+        {
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    return false;
+                }
+
+                // Update basic user properties
+                user.Name = name;
+                user.ServiceId = serviceId;
+                user.UserRoleId = userRoleId;
+
+                // Update workgroups - remove existing and add new ones
+                _context.UserWorkGroups.RemoveRange(user.UserWorkGroups);
+
+                if (workGroupIds != null && workGroupIds.Any())
+                {
+                    foreach (var workGroupId in workGroupIds.Distinct())
+                    {
+                        _context.UserWorkGroups.Add(new UserWorkGroup
+                        {
+                            SystemUserId = id,
+                            WorkGroupId = workGroupId
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Successfully updated user {Id} with {WorkGroupCount} workgroups", id, workGroupIds?.Count ?? 0);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating system user {Id}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> SetUserWorkGroupsAsync(int userId, List<int> workGroupIds)
+        {
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                {
+                    return false;
+                }
+
+                // Remove all existing workgroup assignments
+                _context.UserWorkGroups.RemoveRange(user.UserWorkGroups);
+
+                // Add new assignments
+                if (workGroupIds != null && workGroupIds.Any())
+                {
+                    foreach (var wgId in workGroupIds.Distinct())
+                    {
+                        _context.UserWorkGroups.Add(new UserWorkGroup
+                        {
+                            SystemUserId = userId,
+                            WorkGroupId = wgId
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting workgroups for user {UserId}", userId);
+                return false;
+            }
+        }
+
+        public async Task<List<SystemUser>> GetSalesUsersAsync()
+        {
+            try
+            {
+                return await _context.Users
+                    .Include(u => u.UserWorkGroups)
+                    .ThenInclude(uwg => uwg.WorkGroup)
+                    .Where(u => u.UserWorkGroups.Any(uwg => uwg.WorkGroup != null && uwg.WorkGroup.Name.ToLower().Contains("sales")))
+                    .OrderBy(u => u.Name)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving sales users");
+                throw;
             }
         }
 

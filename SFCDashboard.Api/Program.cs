@@ -93,6 +93,7 @@ builder.Services.AddScoped<IPEIssueResolutionsApiService, PEIssueResolutionsApiS
 builder.Services.AddScoped<ICustomerUserAssignmentsApiService, CustomerUserAssignmentsApiService>();
 builder.Services.AddScoped<IRolePermissionsApiService, RolePermissionsApiService>();
 builder.Services.AddScoped<IUserRolesApiService, UserRolesApiService>();
+builder.Services.AddScoped<IPermissionsApiService, PermissionsApiService>();
 
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace SFCDashboard.Api.Controllers
@@ -15,14 +14,14 @@ namespace SFCDashboard.Api.Controllers
     // [Authorize] // Temporarily disabled for testing
     public class PermissionsApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPermissionsApiService _permissionsService;
         private readonly ILogger<PermissionsApiController> _logger;
 
         public PermissionsApiController(
-            ApplicationDbContext context,
+            IPermissionsApiService permissionsService,
             ILogger<PermissionsApiController> logger)
         {
-            _context = context;
+            _permissionsService = permissionsService;
             _logger = logger;
         }
 
@@ -44,29 +43,7 @@ namespace SFCDashboard.Api.Controllers
 
             try
             {
-                // First, check if user exists and get role info
-                var user = await _context.Users
-                    .Where(u => u.ServiceId == serviceId)
-                    .Select(u => new { u.Id, u.UserRoleId })
-                    .FirstOrDefaultAsync();
-
-                if (user == null)
-                {
-                    return NotFound($"User with ServiceId '{serviceId}' not found");
-                }
-
-                // If user has no role, they have no permissions
-                if (user.UserRoleId == null)
-                {
-                    return Ok(false);
-                }
-
-                // Check if user's role has the specific permission (case-insensitive)
-                var hasPermission = await _context.RolePermissions
-                    .Where(rp => rp.RoleId == user.UserRoleId && 
-                                rp.Permission.Name.ToUpper() == permissionName.ToUpper())
-                    .AnyAsync();
-
+                var hasPermission = await _permissionsService.HasPermissionAsync(serviceId, permissionName);
                 return Ok(hasPermission);
             }
             catch (Exception ex)
@@ -84,7 +61,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var permissions = await _context.Permissions.ToListAsync();
+                var permissions = await _permissionsService.GetAllPermissionsAsync();
                 return Ok(permissions);
             }
             catch (Exception ex)
@@ -102,7 +79,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var permission = await _context.Permissions.FindAsync(id);
+                var permission = await _permissionsService.GetPermissionByIdAsync(id);
                 if (permission == null)
                 {
                     return NotFound();
@@ -124,9 +101,14 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                _context.Permissions.Add(permission);
-                await _context.SaveChangesAsync();
-                return CreatedAtAction(nameof(GetPermissionById), new { id = permission.Id }, permission);
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var createdPermission = await _permissionsService.CreatePermissionAsync(permission);
+                if (createdPermission == null)
+                    return StatusCode(500, "Failed to create permission");
+
+                return CreatedAtAction(nameof(GetPermissionById), new { id = createdPermission.Id }, createdPermission);
             }
             catch (Exception ex)
             {
@@ -148,17 +130,18 @@ namespace SFCDashboard.Api.Controllers
                     return BadRequest("ID mismatch");
                 }
 
-                _context.Entry(permission).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-                return Ok(permission);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await _context.Permissions.AnyAsync(p => p.Id == id))
-                {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                // Check if permission exists
+                if (!await _permissionsService.PermissionExistsAsync(id))
                     return NotFound();
-                }
-                throw;
+
+                var updatedPermission = await _permissionsService.UpdatePermissionAsync(permission);
+                if (updatedPermission == null)
+                    return StatusCode(500, "Failed to update permission");
+
+                return Ok(updatedPermission);
             }
             catch (Exception ex)
             {
@@ -175,14 +158,10 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var permission = await _context.Permissions.FindAsync(id);
-                if (permission == null)
-                {
+                var deleted = await _permissionsService.DeletePermissionAsync(id);
+                if (!deleted)
                     return NotFound();
-                }
 
-                _context.Permissions.Remove(permission);
-                await _context.SaveChangesAsync();
                 return NoContent();
             }
             catch (Exception ex)
@@ -200,7 +179,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var exists = await _context.Permissions.AnyAsync(p => p.Id == id);
+                var exists = await _permissionsService.PermissionExistsAsync(id);
                 return Ok(exists);
             }
             catch (Exception ex)

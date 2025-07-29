@@ -4,6 +4,7 @@ namespace SFCDashboard.Api.Services
 {
     public interface IUsersApiService
     {
+        Task<IEnumerable<SystemUser>> GetUsersAsync();
         Task<SystemUser?> GetUserAsync(int id);
         Task<SystemUser?> GetUserWithRoleAndWorkGroupsAsync(int id);
         Task<SystemUser?> GetUserByServiceIdAsync(string serviceId);
@@ -21,6 +22,9 @@ namespace SFCDashboard.Api.Services
         Task<SystemUser?> CreateUserAsync(SystemUser user);
         Task<SystemUser?> UpdateUserAsync(SystemUser user);
         Task<bool> DeleteUserAsync(int id);
+        Task<bool> EditSystemUserAsync(int id, string name, string serviceId, int? userRoleId, List<int> workGroupIds);
+        Task<bool> SetUserWorkGroupsAsync(int userId, List<int> workGroupIds);
+        Task<List<SystemUser>> GetSalesUsersAsync();
     }
 }
 

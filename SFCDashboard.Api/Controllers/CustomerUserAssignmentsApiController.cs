@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 
 namespace SFCDashboard.Api.Controllers
 {
@@ -10,18 +9,18 @@ namespace SFCDashboard.Api.Controllers
     [Produces("application/json")]
     public class CustomerUserAssignmentsApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly ILogger<CustomerUserAssignmentsApiController> _logger;
         private readonly IWebHostEnvironment _environment;
+        private readonly ICustomerUserAssignmentsApiService _customerUserAssignmentsService;
 
         public CustomerUserAssignmentsApiController(
-            ApplicationDbContext context,
             ILogger<CustomerUserAssignmentsApiController> logger,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            ICustomerUserAssignmentsApiService customerUserAssignmentsService)
         {
-            _context = context;
             _logger = logger;
             _environment = environment;
+            _customerUserAssignmentsService = customerUserAssignmentsService;
         }
 
         /// <summary>
@@ -32,9 +31,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var assignments = await _context.CustomerUserAssignments
-                    .Include(c => c.User)
-                    .ToListAsync();
+                var assignments = await _customerUserAssignmentsService.GetAllCustomerUserAssignmentsAsync();
                 return Ok(assignments);
             }
             catch (Exception ex)
@@ -52,10 +49,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var assignment = await _context.CustomerUserAssignments
-                    .Include(c => c.User)
-                    .FirstOrDefaultAsync(c => c.Id == id);
-
+                var assignment = await _customerUserAssignmentsService.GetCustomerUserAssignmentAsync(id);
                 if (assignment == null)
                 {
                     return NotFound();
@@ -77,22 +71,21 @@ namespace SFCDashboard.Api.Controllers
         public async Task<ActionResult<CustomerUserAssignment>> CreateCustomerUserAssignment(CustomerUserAssignment assignment)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
 
             try
             {
-                _context.CustomerUserAssignments.Add(assignment);
-                await _context.SaveChangesAsync();
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-                // Load the user information
-                var createdAssignment = await _context.CustomerUserAssignments
-                    .Include(c => c.User)
-                    .FirstOrDefaultAsync(c => c.Id == assignment.Id);
+                var createdAssignment = await _customerUserAssignmentsService.CreateCustomerUserAssignmentAsync(assignment);
+                if (createdAssignment == null)
+                    return StatusCode(500, "Failed to create customer user assignment");
 
-                return CreatedAtAction(nameof(GetCustomerUserAssignment), new { id = assignment.Id }, createdAssignment);
+                return CreatedAtAction(nameof(GetCustomerUserAssignment), new { id = createdAssignment.Id }, createdAssignment);
             }
             catch (Exception ex)
             {
@@ -108,29 +101,26 @@ namespace SFCDashboard.Api.Controllers
         public async Task<IActionResult> UpdateCustomerUserAssignment(int id, CustomerUserAssignment assignment)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
 
             if (id != assignment.Id)
             {
-                return BadRequest();
+                return BadRequest("ID mismatch");
             }
 
             try
             {
-                _context.Entry(assignment).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-                return NoContent();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CustomerUserAssignmentExists(id))
-                {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var updatedAssignment = await _customerUserAssignmentsService.UpdateCustomerUserAssignmentAsync(assignment);
+                if (updatedAssignment == null)
                     return NotFound();
-                }
-                throw;
+
+                return NoContent();
             }
             catch (Exception ex)
             {
@@ -146,21 +136,16 @@ namespace SFCDashboard.Api.Controllers
         public async Task<IActionResult> DeleteCustomerUserAssignment(int id)
         {
             // Check authorization in production only
-            if (_environment.IsProduction() && !User.Identity.IsAuthenticated)
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
             {
                 return Unauthorized();
             }
 
             try
             {
-                var assignment = await _context.CustomerUserAssignments.FindAsync(id);
-                if (assignment == null)
-                {
+                var deleted = await _customerUserAssignmentsService.DeleteCustomerUserAssignmentAsync(id);
+                if (!deleted)
                     return NotFound();
-                }
-
-                _context.CustomerUserAssignments.Remove(assignment);
-                await _context.SaveChangesAsync();
 
                 return NoContent();
             }
@@ -179,17 +164,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(searchTerm))
-                {
-                    return await GetAllCustomerUserAssignments();
-                }
-
-                var assignments = await _context.CustomerUserAssignments
-                    .Include(c => c.User)
-                    .Where(c => c.Customer.Contains(searchTerm) ||
-                               (c.User != null && (c.User.Name.Contains(searchTerm) || c.User.ServiceId.Contains(searchTerm))))
-                    .ToListAsync();
-
+                var assignments = await _customerUserAssignmentsService.SearchAssignmentsAsync(searchTerm);
                 return Ok(assignments);
             }
             catch (Exception ex)
@@ -207,19 +182,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                // Get all unique customers from PlannedEvents
-                var allCustomers = await _context.PlannedEvents
-                    .Where(pe => !string.IsNullOrEmpty(pe.Customer))
-                    .Select(pe => pe.Customer)
-                    .Distinct()
-                    .ToListAsync();
-
-                // Filter out customers that are already assigned
-                var availableCustomers = allCustomers
-                    .Where(customer => !assignedCustomers.Contains(customer))
-                    .OrderBy(customer => customer)
-                    .ToList();
-
+                var availableCustomers = await _customerUserAssignmentsService.GetAvailableCustomersAsync(assignedCustomers);
                 return Ok(availableCustomers);
             }
             catch (Exception ex)
@@ -237,10 +200,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var assignment = await _context.CustomerUserAssignments
-                    .Include(c => c.User)
-                    .FirstOrDefaultAsync(c => c.Customer == customer && c.UserId == userId);
-
+                var assignment = await _customerUserAssignmentsService.GetExistingAssignmentAsync(customer, userId);
                 if (assignment == null)
                 {
                     return NotFound();
@@ -263,10 +223,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var assignment = await _context.CustomerUserAssignments
-                    .Include(c => c.User)
-                    .FirstOrDefaultAsync(c => c.Customer == customer);
-
+                var assignment = await _customerUserAssignmentsService.GetExistingAssignmentByCustomerAsync(customer);
                 if (assignment == null)
                 {
                     return NotFound();
@@ -289,11 +246,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var assignments = await _context.CustomerUserAssignments
-                    .Include(c => c.User)
-                    .OrderBy(c => c.Customer)
-                    .ToListAsync();
-
+                var assignments = await _customerUserAssignmentsService.GetAssignmentsWithUsersAsync();
                 return Ok(assignments);
             }
             catch (Exception ex)
@@ -303,9 +256,9 @@ namespace SFCDashboard.Api.Controllers
             }
         }
 
-        private bool CustomerUserAssignmentExists(int id)
+        private async Task<bool> CustomerUserAssignmentExists(int id)
         {
-            return _context.CustomerUserAssignments.Any(e => e.Id == id);
+            return await _customerUserAssignmentsService.CustomerUserAssignmentExistsAsync(id);
         }
     }
 }
