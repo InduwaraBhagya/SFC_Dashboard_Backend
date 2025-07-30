@@ -17,5 +17,21 @@ namespace SFCDashboard.ApiClients
         Task<bool> HasPermissionAsync(string serviceId, string permissionName);
         Task<UserPermissionResult> GetUserPermissionsAsync(int userId);
         Task<ApiResult> UpdateUserPermissionsAsync(int userId, bool manageProjects, bool canManageEstimatedTime);
+        Task<ApiResult> UpdateUserPermissionsAsync(UpdateUserPermissionsRequest request);
+    }
+
+    public class UpdateUserPermissionsRequest
+    {
+        public int UserId { get; set; }
+        public bool ManageProjects { get; set; }
+        public bool CanManageEstimatedTime { get; set; }
+        public bool ManageCustomerAssignments { get; set; }
+        public bool CanReportIssues { get; set; }
+        public bool ManageDrawFiberPerms { get; set; }
+        public bool CanSendPEUrgentRequests { get; set; }
+        public bool CanAcceptUrgentRequests { get; set; }
+        public bool CanMakeTasksUrgent { get; set; }
+        public bool Admin { get; set; }
+        public bool ViewAll { get; set; }
     }
 }

@@ -6,6 +6,13 @@ namespace SFCDashboard.Api.Models
         public bool IsAdmin { get; set; }
         public bool CanManageCustomerAssignments { get; set; }
         public bool CanManageDrawFiberPerms { get; set; }
+        public bool CanManageEstimatedTime { get; set; }
+        public bool CanSendPEUrgentRequests { get; set; }
+        public bool CanAcceptUrgentRequests { get; set; }
+        public bool CanMakeTasksUrgent { get; set; }
+        public bool CanViewAll { get; set; }
+        public bool CanReportIssues { get; set; }
+        public bool ManageProjects { get; set; }
     }
 }
 

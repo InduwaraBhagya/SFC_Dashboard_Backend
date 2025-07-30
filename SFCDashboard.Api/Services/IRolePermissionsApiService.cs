@@ -24,5 +24,7 @@ namespace SFCDashboard.Api.Services
         public bool CanSendPEUrgentRequests { get; set; }
         public bool CanAcceptUrgentRequests { get; set; }
         public bool CanMakeTasksUrgent { get; set; }
+        public bool Admin { get; set; }
+        public bool ViewAll { get; set; }
     }
 }

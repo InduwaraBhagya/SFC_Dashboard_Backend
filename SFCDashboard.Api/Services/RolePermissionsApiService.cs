@@ -134,6 +134,10 @@ namespace SFCDashboard.Api.Services
                     .FirstOrDefaultAsync(p => p.Name == "CanAcceptUrgentRequests");
                 var canMakeTasksUrgentPermission = await _context.Permissions
                     .FirstOrDefaultAsync(p => p.Name == "CanMakeTasksUrgent");
+                var adminPermission = await _context.Permissions
+                    .FirstOrDefaultAsync(p => p.Name == "Admin");
+                var viewAllPermission = await _context.Permissions
+                    .FirstOrDefaultAsync(p => p.Name == "ViewAll");
 
                 // Create a list of permissions to handle
                 var permissionsToHandle = new[]
@@ -145,7 +149,9 @@ namespace SFCDashboard.Api.Services
                     new { Permission = manageDrawFiberPermsPermission, RequestValue = request.ManageDrawFiberPerms },
                     new { Permission = canSendPEUrgentRequestsPermission, RequestValue = request.CanSendPEUrgentRequests },
                     new { Permission = canAcceptUrgentRequestsPermission, RequestValue = request.CanAcceptUrgentRequests },
-                    new { Permission = canMakeTasksUrgentPermission, RequestValue = request.CanMakeTasksUrgent }
+                    new { Permission = canMakeTasksUrgentPermission, RequestValue = request.CanMakeTasksUrgent },
+                    new { Permission = adminPermission, RequestValue = request.Admin },
+                    new { Permission = viewAllPermission, RequestValue = request.ViewAll }
                 };
 
                 // Process each permission

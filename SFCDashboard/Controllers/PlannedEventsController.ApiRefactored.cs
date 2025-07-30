@@ -157,9 +157,6 @@ namespace SFCDashboard.Controllers
                 return NotFound();
             }
 
-            ViewData["CanMakeTasksUrgent"] = currentUser.UserRole?.HasPermission("CanMakeTasksUrgent") == true;
-            ViewData["CanReportIssues"] = currentUser.UserRole?.HasPermission("CanReportIssues") == true;
-
             // Get the planned event
             var plannedEvent = await _plannedEventsApi.GetPlannedEventAsync(id.Value);
             if (plannedEvent == null)

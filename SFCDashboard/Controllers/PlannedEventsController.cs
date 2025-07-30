@@ -723,9 +723,6 @@ namespace SFCDashboard.Controllers
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
 
-            ViewData["CanMakeTasksUrgent"] = currentUser?.UserRole?.HasPermission("CanMakeTasksUrgent") == true;
-            ViewData["CanReportIssues"] = currentUser?.UserRole?.HasPermission("CanReportIssues") == true;
-
             // Get the planned event first
             var plannedEvent = await _plannedEventsApi.GetPlannedEventByIdAsync(id);
             if (plannedEvent == null)

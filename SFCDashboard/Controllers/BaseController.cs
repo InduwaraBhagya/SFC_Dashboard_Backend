@@ -37,6 +37,13 @@ namespace SFCDashboard.Controllers
                         ViewData["IsAdmin"] = layoutData.IsAdmin;
                         ViewData["CanManageCustomerAssignments"] = layoutData.CanManageCustomerAssignments;
                         ViewData["CanManageDrawFiberPerms"] = layoutData.CanManageDrawFiberPerms;
+                        ViewData["CanManageEstimatedTime"] = layoutData.CanManageEstimatedTime;
+                        ViewData["CanSendUrgentRequests"] = layoutData.CanSendPEUrgentRequests;
+                        ViewData["CanAcceptUrgentRequests"] = layoutData.CanAcceptUrgentRequests;
+                        ViewData["CanMakeTasksUrgent"] = layoutData.CanMakeTasksUrgent;
+                        ViewData["CanViewAll"] = layoutData.CanViewAll;
+                        ViewData["CanReportIssues"] = layoutData.CanReportIssues;
+                        ViewData["ManageProjects"] = layoutData.ManageProjects;
                     }
                     else
                     {
@@ -60,6 +67,13 @@ namespace SFCDashboard.Controllers
             ViewData["IsAdmin"] = false;
             ViewData["CanManageCustomerAssignments"] = false;
             ViewData["CanManageDrawFiberPerms"] = false;
+            ViewData["CanManageEstimatedTime"] = false;
+            ViewData["CanSendUrgentRequests"] = false;
+            ViewData["CanAcceptUrgentRequests"] = false;
+            ViewData["CanMakeTasksUrgent"] = false;
+            ViewData["CanViewAll"] = false;
+            ViewData["CanReportIssues"] = false;
+            ViewData["ManageProjects"] = false;
         }
 
         protected static string ExtractServiceId(string email)

@@ -36,6 +36,16 @@ namespace SFCDashboard.ApiClients
             var responseJson = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<ApiResult>(responseJson, _jsonOptions)!;
         }
+
+        public async Task<ApiResult> UpdateUserPermissionsAsync(UpdateUserPermissionsRequest request)
+        {
+            var json = JsonSerializer.Serialize(request, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("api/rolepermissions/update-user-permissions", content);
+            response.EnsureSuccessStatusCode();
+            var responseJson = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApiResult>(responseJson, _jsonOptions)!;
+        }
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
 

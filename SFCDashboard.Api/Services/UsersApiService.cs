@@ -374,7 +374,14 @@ namespace SFCDashboard.Api.Services
                     UserName = user.Name ?? "Guest",
                     IsAdmin = user.UserRole?.HasPermission("Admin") == true,
                     CanManageCustomerAssignments = user.UserRole?.HasPermission("ManageCustomerAssignments") == true,
-                    CanManageDrawFiberPerms = user.UserRole?.HasPermission("ManageDrawFiberPerms") == true
+                    CanManageDrawFiberPerms = user.UserRole?.HasPermission("ManageDrawFiberPerms") == true,
+                    CanManageEstimatedTime = user.UserRole?.HasPermission("CanManageEstimatedTime") == true,
+                    CanSendPEUrgentRequests = user.UserRole?.HasPermission("CanSendPEUrgentRequests") == true,
+                    CanAcceptUrgentRequests = user.UserRole?.HasPermission("CanAcceptUrgentRequests") == true,
+                    CanMakeTasksUrgent = user.UserRole?.HasPermission("CanMakeTasksUrgent") == true,
+                    CanViewAll = user.UserRole?.HasPermission("ViewAll") == true,
+                    CanReportIssues = user.UserRole?.HasPermission("CanReportIssues") == true,
+                    ManageProjects = user.UserRole?.HasPermission("ManageProjects") == true
                 };
             }
             catch (Exception ex)
