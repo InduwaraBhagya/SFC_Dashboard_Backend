@@ -26,8 +26,6 @@ namespace SFCDashboard.Controllers
                 var hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
                 // Set permissions
-                ViewData["CanSendUrgentRequests"] = currentUser.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
-                ViewData["CanViewAll"] = canViewAll;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 IEnumerable<PlannedEvent> records;
@@ -99,8 +97,6 @@ namespace SFCDashboard.Controllers
 
                 var hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-                ViewData["CanSendUrgentRequests"] = currentUser.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
-                ViewData["CanViewAll"] = canViewAll;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 IEnumerable<PlannedEvent> records;
@@ -169,8 +165,6 @@ namespace SFCDashboard.Controllers
 
                 var hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-                ViewData["CanSendUrgentRequests"] = currentUser.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
-                ViewData["CanViewAll"] = canViewAll;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 IEnumerable<PlannedEvent> records;
@@ -239,8 +233,6 @@ namespace SFCDashboard.Controllers
 
                 var hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-                ViewData["CanSendUrgentRequests"] = currentUser.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
-                ViewData["CanViewAll"] = canViewAll;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 IEnumerable<PlannedEvent> records;

@@ -120,7 +120,6 @@ namespace SFCDashboard.Controllers
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
             ViewData["HasDrawFiberAccess"] = hasDrawFiberAccess;
-            ViewData["CanAcceptUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanAcceptUrgentRequests") == true;
 
             // Trim all search parameters to remove leading/trailing spaces
             peNumber = string.IsNullOrEmpty(peNumber) ? peNumber : peNumber.Trim();
@@ -135,7 +134,6 @@ namespace SFCDashboard.Controllers
             ViewData["UserAssignedWorkgroupIds"] = userWorkgroupIds;
             ViewData["UserAssignedWorkgroupNames"] = userWorkgroupNames;
 
-            ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsForUserAsync(userWorkgroupIds, canViewAll);
 
             // Keep track of selected filter workgroup (separate from user's assigned workgroup)
@@ -319,7 +317,6 @@ namespace SFCDashboard.Controllers
                 wg.Name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
 
             ViewData["HasDrawFiberAccess"] = hasDrawFiberAccess;
-            ViewData["CanAcceptUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanAcceptUrgentRequests") == true;
 
             // Trim all search parameters to remove leading/trailing spaces
             peNumber = string.IsNullOrEmpty(peNumber) ? peNumber : peNumber.Trim();
@@ -343,7 +340,6 @@ namespace SFCDashboard.Controllers
                 });
             }
 
-            ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsByIdsAsync(userWorkgroupIds);
 
             // Keep track of selected workgroups
@@ -535,8 +531,6 @@ namespace SFCDashboard.Controllers
 
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
 
-            ViewData["CanAcceptUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanAcceptUrgentRequests") == true;
-
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
             if (!salesWorkgroups.Any() || canViewAll)
@@ -664,7 +658,6 @@ namespace SFCDashboard.Controllers
 
             ViewData["SearchType"] = searchType ?? "peNumber";
             ViewData["SalesWorkgroups"] = string.Join(", ", salesWorkgroups);
-            ViewData["CanViewAll"] = canViewAll;
 
             var peNumbers = paginatedList.Select(pe => pe.PeNumber).Where(pn => pn != null).Cast<string>().ToList();
             var tasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
@@ -915,9 +908,7 @@ namespace SFCDashboard.Controllers
                 var records = await _plannedEventsApi.GetInProgressPlannedEventsByUserIdAsync(currentUserId);
 
                 // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
-                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
-                ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
 
                 return View(records.ToList());
             }
@@ -940,7 +931,6 @@ namespace SFCDashboard.Controllers
                 var records = await _plannedEventsApi.GetOLAViolatingPlannedEventsByUserIdAsync(currentUserId);
 
                 // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
-                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 var recordsList = records.OrderBy(p => p.PeNumber).ToList();
@@ -994,7 +984,6 @@ namespace SFCDashboard.Controllers
                 var records = await _plannedEventsApi.GetHoldPlannedEventsByUserIdAsync(currentUserId);
 
                 // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
-                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 return View(records.ToList());
@@ -1017,7 +1006,6 @@ namespace SFCDashboard.Controllers
                 var records = await _plannedEventsApi.GetUrgentPlannedEventsByUserIdAsync(currentUserId);
 
                 // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
-                ViewData["CanViewAll"] = currentUser?.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
                 ViewData["SelectedWorkgroupId"] = workgroupId;
 
                 // Only display urgent PE records, not urgent tasks
@@ -1079,10 +1067,8 @@ namespace SFCDashboard.Controllers
 
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-            ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsByIdsAsync(userWorkgroupIds);
             ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
-            ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
 
             try
             {
@@ -1179,7 +1165,6 @@ namespace SFCDashboard.Controllers
 
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-            ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsByIdsAsync(userWorkgroupIds);
             ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
 
@@ -1272,7 +1257,6 @@ namespace SFCDashboard.Controllers
 
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-            ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsByIdsAsync(userWorkgroupIds);
             ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
 
@@ -1371,7 +1355,6 @@ namespace SFCDashboard.Controllers
 
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-            ViewData["CanViewAll"] = canViewAll;
             ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsByIdsAsync(userWorkgroupIds);
             ViewData["SelectedWorkgroupIds"] = workgroupIds ?? new List<int>();
 
@@ -1924,8 +1907,6 @@ namespace SFCDashboard.Controllers
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToList();
 
-            ViewData["CanViewAll"] = canViewAll;
-            ViewData["CanSendUrgentRequests"] = currentUser?.UserRole?.HasPermission("CanSendPEUrgentRequests") == true;
             return View(records);
 
         }
@@ -1950,7 +1931,6 @@ namespace SFCDashboard.Controllers
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToList();
 
-            ViewData["CanViewAll"] = canViewAll;
             return View(records);
         }
 
@@ -1979,7 +1959,6 @@ namespace SFCDashboard.Controllers
                 .OrderByDescending(p => p.ServiceRequiredDate)
                 .ToList();
 
-            ViewData["CanViewAll"] = canViewAll;
             return View(records);
         }
 
@@ -2040,7 +2019,6 @@ namespace SFCDashboard.Controllers
 
             ViewBag.ViolationDetails = violationDetails;
 
-            ViewData["CanViewAll"] = canViewAll;
             return View(records);
         }
 
@@ -2180,7 +2158,6 @@ namespace SFCDashboard.Controllers
                 ViewData["Workgroups"] = workgroups.OrderBy(w => w.Name).ToList();
                 ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
                 ViewData["SelectedYear"] = year;
-                ViewData["CanSwitchWorkgroup"] = canViewAll;
 
                 // Get years for the dropdown from actual PE numbers
                 var years = await _taskQueueApiClient.GetAvailableYearsAsync();

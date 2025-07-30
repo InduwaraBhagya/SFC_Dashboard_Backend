@@ -33,7 +33,6 @@ namespace SFCDashboard.Controllers
                 var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
                 var hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
-                ViewData["CanViewAll"] = canViewAll;
                 ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsByIdsAsync(userWorkgroupIds);
 
                 // Filter planned events using API service
