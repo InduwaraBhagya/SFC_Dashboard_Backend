@@ -80,6 +80,34 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get user with role and workgroups by ID
+        /// </summary>
+        [HttpGet("{id}/with-role-and-workgroups")]
+        public async Task<ActionResult<SystemUser>> GetUserWithRoleAndWorkGroups(int id)
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user with role and workgroups {Id}", id);
+                return StatusCode(500, "An error occurred while retrieving the user");
+            }
+        }
+
+        /// <summary>
         /// Get user by service ID
         /// </summary>
         [HttpGet("by-serviceid/{serviceId}")]
@@ -181,6 +209,25 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogError(ex, "Error checking draw fiber access for user ID: {id}", id);
                 return StatusCode(500, "An error occurred while checking draw fiber access");
+            }
+        }
+
+        /// <summary>
+        /// Check if user has multiple workgroups by service ID
+        /// </summary>
+        [HttpGet("has-multiple-workgroups/{serviceId}")]
+        public async Task<ActionResult<bool>> HasMultipleWorkgroups(string serviceId)
+        {
+            try
+            {
+                _logger.LogInformation("Checking if user with service ID {serviceId} has multiple workgroups", serviceId);
+                var hasMultiple = await _usersApiService.HasMultipleWorkgroupsAsync(serviceId);
+                return Ok(hasMultiple);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking multiple workgroups for user with service ID: {serviceId}", serviceId);
+                return StatusCode(500, "An error occurred while checking multiple workgroups");
             }
         }
 
