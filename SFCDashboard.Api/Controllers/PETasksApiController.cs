@@ -58,8 +58,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var peTask = await _context.PETasks
-                    .FirstOrDefaultAsync(t => t.Id == id);
+                var peTask = await _peTasksService.GetPETaskAsync(id);
 
                 if (peTask == null)
                 {
@@ -248,11 +247,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var pendingRequests = await _context.PETasks
-                    .Where(t => t.UrgentRequested && !t.IsUrgent)
-                    .Include(t => t.PlannedEvent)
-                    .OrderBy(t => t.PENumber)
-                    .ToListAsync();
+                var pendingRequests = await _peTasksService.GetPendingUrgentTaskRequestsAsync();
                 return Ok(pendingRequests);
             }
             catch (Exception ex)
@@ -338,12 +333,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var urgentTasks = await _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .Where(t => t.IsUrgent == true && t.TaskStatus != "COMPLETED")
-                    .OrderByDescending(t => t.UrgentMarkedDate)
-                    .ThenBy(t => t.TaskCompleteDate)
-                    .ToListAsync();
+                var urgentTasks = await _peTasksService.GetUrgentTasksAsync();
                 return Ok(urgentTasks);
             }
             catch (Exception ex)
@@ -361,37 +351,13 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var task = await _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .FirstOrDefaultAsync(t => t.Id == id);
-
-                if (task == null || task.TaskStatus?.ToUpper() != "ONGOING")
+                var result = await _peTasksService.MarkAsUrgentAsync(id);
+                
+                if (!result)
                 {
-                    return NotFound();
+                    return NotFound("Task not found or not in ONGOING status");
                 }
 
-                task.IsUrgent = true;
-                task.UrgentMarkedDate = DateTime.Now;
-                task.UrgentRequested = false;
-
-                if (task.PlannedEvent != null && !string.IsNullOrWhiteSpace(task.PlannedEvent.Priority))
-                {
-                    task.Priority = task.PlannedEvent.Priority;
-                }
-                else
-                {
-                    task.Priority = (task.Priority ?? "") + " [URGENT]";
-                }
-
-                _context.Update(task);
-
-                if (task.PlannedEvent != null)
-                {
-                    task.PlannedEvent.PEStatus = "urgent";
-                    _context.Update(task.PlannedEvent);
-                }
-
-                await _context.SaveChangesAsync();
                 return NoContent();
             }
             catch (Exception ex)
@@ -402,72 +368,50 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
-        /// Process urgent request
+        /// Process urgent request for a specific task only
         /// </summary>
         [HttpPost("{id}/process-urgent-request")]
         public async Task<IActionResult> ProcessUrgentRequest(int id, [FromBody] ProcessUrgentRequestDto request)
         {
             try
             {
-                var task = await _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .FirstOrDefaultAsync(t => t.Id == id);
-
-                if (task == null || task.TaskStatus == "COMPLETED")
+                var result = await _peTasksService.ProcessTaskUrgentRequestAsync(id, request.UrgentReason);
+                
+                if (!result)
                 {
-                    return NotFound();
+                    return NotFound("Task not found or already completed");
                 }
 
-                bool markAsUrgent = false;
-                string priorityMessage = "";
-                int priorityLevel = 0;
-
-                switch (request.UrgentReason)
-                {
-                    case "OpeningCeremony":
-                        markAsUrgent = true;
-                        task.IsUrgent = true;
-                        task.UrgentMarkedDate = DateTime.Now;
-                        priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
-                        priorityLevel = 1;
-                        task.Priority = priorityMessage;
-                        break;
-
-                    case "CriticalCustomer":
-                        markAsUrgent = true;
-                        task.IsUrgent = true;
-                        task.UrgentMarkedDate = DateTime.Now;
-                        priorityMessage = "[URGENT: Critical Customer - Priority 2]";
-                        priorityLevel = 2;
-                        task.Priority = priorityMessage;
-                        break;
-
-                    case "Reject":
-                        task.UrgentRequested = false;
-                        task.Priority = "Urgent Request Rejected";
-                        break;
-
-                    default:
-                        return BadRequest("Invalid urgent reason");
-                }
-
-                task.UrgentRequested = false;
-                _context.Update(task);
-
-                if (markAsUrgent && task.PlannedEvent != null)
-                {
-                    task.PlannedEvent.PEStatus = "URGENT";
-                    task.PlannedEvent.Priority = priorityMessage;
-                    _context.Update(task.PlannedEvent);
-                }
-
-                await _context.SaveChangesAsync();
                 return NoContent();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing urgent request for task {Id}", id);
                 return StatusCode(500, "An error occurred while processing urgent request");
+            }
+        }
+
+        /// <summary>
+        /// Process urgent request for entire PE (all tasks become urgent)
+        /// </summary>
+        [HttpPost("pe/{peNumber}/process-urgent-request")]
+        public async Task<IActionResult> ProcessPEUrgentRequest(string peNumber, [FromBody] ProcessUrgentRequestDto request)
+        {
+            try
+            {
+                var result = await _peTasksService.ProcessPEUrgentRequestAsync(peNumber, request.UrgentReason);
+                
+                if (!result)
+                {
+                    return NotFound("No active tasks found for PE");
+                }
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing PE urgent request for PE {PENumber}", peNumber);
+                return StatusCode(500, "An error occurred while processing PE urgent request");
             }
         }
 

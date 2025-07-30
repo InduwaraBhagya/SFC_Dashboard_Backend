@@ -153,6 +153,9 @@ app.UseGlobalExceptionHandler();
 
 app.UseHttpsRedirection();
 
+// Enable static files
+app.UseStaticFiles();
+
 // Enable CORS
 app.UseCors();
 

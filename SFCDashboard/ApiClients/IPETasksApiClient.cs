@@ -15,6 +15,7 @@ namespace SFCDashboard.ApiClients
         Task<IEnumerable<PETask>> GetUrgentTasksAsync();
         Task MarkAsUrgentAsync(int id);
         Task ProcessUrgentRequestAsync(int id, string urgentReason);
+        Task ProcessPEUrgentRequestAsync(string peNumber, string urgentReason);
         Task CompleteViolatedTaskAsync(int id);
         Task RemoveUrgentStatusAsync(int id);
         Task UpdateEstimatedTimeAsync(int id, DateTime estimatedTime);
