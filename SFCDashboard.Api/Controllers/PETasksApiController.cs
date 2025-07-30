@@ -170,7 +170,10 @@ namespace SFCDashboard.Api.Controllers
             {
                 _context.Entry(peTask).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
-                return NoContent();
+                
+                // Return the updated task instead of NoContent
+                var updatedTask = await _context.PETasks.FindAsync(id);
+                return Ok(updatedTask);
             }
             catch (DbUpdateConcurrencyException)
             {

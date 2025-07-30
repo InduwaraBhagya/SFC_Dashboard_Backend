@@ -1534,41 +1534,59 @@ namespace SFCDashboard.Controllers
 
                     // Get all tasks for this PE using API service
                     var tasks = await _peTasksApi.GetPETasksByPENumberAsync(peNumber);
-                    var tasksList = tasks.ToList();
+                    // Filter out completed tasks - only mark non-completed tasks as urgent
+                    var tasksList = tasks.Where(t => t.TaskStatus?.ToUpper() != "COMPLETED").ToList();
 
-                    _logger.LogInformation("Found {count} tasks to update", tasksList.Count);
+                    _logger.LogInformation("Found {totalCount} total tasks, {activeCount} non-completed tasks to update", 
+                        tasks.Count(), tasksList.Count);
 
                     // Process each task individually to ensure proper updates
                     foreach (var task in tasksList)
                     {
+                        _logger.LogInformation("Processing task {id} (Status: {status}) for PE {peNumber}", 
+                            task.Id, task.TaskStatus, task.PENumber);
+
                         task.IsUrgent = true;
                         task.UrgentMarkedDate = DateTime.Now;
                         task.UrgentRequested = false;
                         task.Priority = priorityMessage + " (Inherited from PE)";
 
                         // Update task using API service
-                        var updatedTask = await _peTasksApi.UpdatePETaskAsync(task);
-                        if (updatedTask != null)
+                        try
                         {
-                            _logger.LogInformation("Updated task {id} with priority: {priority}",
-                                task.Id, task.Priority);
+                            var updatedTask = await _peTasksApi.UpdatePETaskAsync(task);
+                            if (updatedTask != null)
+                            {
+                                _logger.LogInformation("Successfully updated task {id} with urgent status",
+                                    task.Id);
+                            }
+                            else
+                            {
+                                _logger.LogError("Failed to update task {id} - UpdatePETaskAsync returned null", task.Id);
+                            }
                         }
-                        else
+                        catch (Exception taskUpdateEx)
                         {
-                            _logger.LogWarning("Failed to update task {id}", task.Id);
+                            _logger.LogError(taskUpdateEx, "Exception occurred while updating task {id}", task.Id);
                         }
                     }
 
-                    // Verify the update by checking one task using API service
+                    // Verify the update by checking all tasks using API service
                     if (tasksList.Any())
                     {
                         var verifyTasks = await _peTasksApi.GetPETasksByPENumberAsync(peNumber);
-                        var verifyTask = verifyTasks.FirstOrDefault();
+                        var verifyTasksList = verifyTasks.Where(t => t.TaskStatus?.ToUpper() != "COMPLETED").ToList();
 
-                        if (verifyTask != null)
+                        var urgentTasksCount = verifyTasksList.Count(t => t.IsUrgent);
+                        var totalActiveTasksCount = verifyTasksList.Count;
+                        
+                        _logger.LogInformation("Verification: {urgentCount} out of {totalCount} non-completed tasks are marked as urgent",
+                            urgentTasksCount, totalActiveTasksCount);
+                        
+                        if (urgentTasksCount != totalActiveTasksCount)
                         {
-                            _logger.LogInformation("Verification - Task {id} has priority: {priority}",
-                                verifyTask.Id, verifyTask.Priority);
+                            _logger.LogWarning("Not all tasks were marked as urgent. Expected: {expected}, Actual: {actual}", 
+                                totalActiveTasksCount, urgentTasksCount);
                         }
                     }
                 }
@@ -1628,11 +1646,34 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-            plannedEvent.PECreatedDate = DateTime.Now; // Set the current date/time
+            
+            // Get current user information - use the service ID correctly
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+            {
+                _logger.LogError("No service ID found for current user when requesting urgent status for PE {id}", id);
+                TempData["ErrorMessage"] = "Unable to identify current user.";
+                return RedirectToAction("InProgressRecords");
+            }
 
-            var currentUser = await _usersApi.GetUserByServiceIdAsync(User.Identity?.Name ?? "");
-            plannedEvent.UrgentRequestedById = currentUser?.Id; // Add this property to your model/table if not present
-            plannedEvent.UrgentRequestedByName = currentUser?.Name; // Or just store the name if you prefer
+            // Extract service ID properly (first 6 characters)
+            var serviceIdShort = serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
+            _logger.LogInformation("Requesting urgent status for PE {id} by user with service ID: {serviceId}", id, serviceIdShort);
+
+            var currentUser = await _usersApi.GetByServiceIdAsync(serviceIdShort);
+            if (currentUser == null)
+            {
+                _logger.LogError("User not found with service ID {serviceId} when requesting urgent status for PE {id}", serviceIdShort, id);
+                TempData["ErrorMessage"] = "User information not found.";
+                return RedirectToAction("InProgressRecords");
+            }
+
+            _logger.LogInformation("Found user: {userName} (ID: {userId}) requesting urgent status for PE {id}", 
+                currentUser.Name, currentUser.Id, id);
+
+            // Set urgent request information
+            plannedEvent.UrgentRequestedById = currentUser.Id;
+            plannedEvent.UrgentRequestedByName = currentUser.Name;
 
             // Update PE status and priority based on the selected reason
             switch (urgentReason)
@@ -1652,9 +1693,16 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("InProgressRecords");
             }
 
-            await _plannedEventsApi.UpdatePlannedEventAsync(plannedEvent);
+            var updatedEvent = await _plannedEventsApi.UpdatePlannedEventAsync(plannedEvent);
+            if (updatedEvent == null)
+            {
+                _logger.LogError("Failed to update PE {id} with urgent request by user {userId}", id, currentUser.Id);
+                TempData["ErrorMessage"] = "Failed to submit urgent request.";
+                return RedirectToAction("InProgressRecords");
+            }
 
-            _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason}", id, urgentReason);
+            _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason} by user {userName} (ID: {userId})", 
+                id, urgentReason, currentUser.Name, currentUser.Id);
             TempData["SuccessMessage"] = "Urgent request submitted for approval.";
 
             return RedirectToAction("InProgressRecords");

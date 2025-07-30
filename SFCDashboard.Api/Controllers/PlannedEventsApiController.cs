@@ -226,6 +226,34 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while retrieving pending urgent requests");
             }
         }
+
+        /// <summary>
+        /// Update a planned event
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<ActionResult<PlannedEvent>> UpdatePlannedEvent(int id, [FromBody] PlannedEvent plannedEvent)
+        {
+            try
+            {
+                if (id != plannedEvent.Id)
+                {
+                    return BadRequest("ID in URL does not match ID in request body");
+                }
+
+                var updatedEvent = await _plannedEventsService.UpdatePlannedEventAsync(plannedEvent);
+                if (updatedEvent == null)
+                {
+                    return NotFound($"Planned event with ID {id} not found");
+                }
+
+                return Ok(updatedEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating planned event {Id}", id);
+                return StatusCode(500, "An error occurred while updating the planned event");
+            }
+        }
     }
 }
 
