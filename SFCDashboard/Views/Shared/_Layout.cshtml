@@ -96,7 +96,7 @@
                                     <i class="bi bi-folder-fill me-2"></i>Projects
                                 </a>
                             </li>
-                            @if (canManageCustomerAssignments || true) // Temporarily show for testing
+                            @if (canManageCustomerAssignments)
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment" asp-action="Index">

@@ -119,6 +119,12 @@ builder.Services.AddHttpClient<ITaskQueueApiClient, TaskQueueApiClient>(client =
     client.Timeout = TimeSpan.FromMinutes(5);
 });
 
+builder.Services.AddHttpClient<ISubTaskListsApiClient, SubTaskListsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
 // Load Azure AD Configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
 var isDevelopment = builder.Environment.IsDevelopment();
