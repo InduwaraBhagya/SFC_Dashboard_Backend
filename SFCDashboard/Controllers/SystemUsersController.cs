@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SFCDashboard.ApiClients;
+using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
