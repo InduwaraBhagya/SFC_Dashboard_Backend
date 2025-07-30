@@ -243,6 +243,38 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get issue view models by multiple planned event IDs (includes sender/receiver names)
+        /// </summary>
+        [HttpPost("viewmodels-by-plannedevent-ids")]
+        public async Task<ActionResult<Dictionary<int, IEnumerable<PEIssueViewModel>>>> GetPEIssueViewModelsByPlannedEventIds([FromBody] List<int> peIds)
+        {
+            try
+            {
+                _logger.LogInformation("Getting issue view models for {Count} planned events", peIds.Count);
+                
+                if (peIds == null || !peIds.Any())
+                {
+                    return Ok(new Dictionary<int, IEnumerable<PEIssueViewModel>>());
+                }
+
+                var result = new Dictionary<int, IEnumerable<PEIssueViewModel>>();
+
+                foreach (var peId in peIds)
+                {
+                    var issueViewModels = await _peIssuesService.GetPEIssuesByPlannedEventAsync(peId);
+                    result[peId] = issueViewModels;
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting issue view models for planned events");
+                return StatusCode(500, "An error occurred while retrieving issue view models for planned events");
+            }
+        }
+
+        /// <summary>
         /// Create a new PE issue
         /// </summary>
         [HttpPost]
