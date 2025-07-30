@@ -188,6 +188,65 @@ namespace SFCDashboard.Api.Services
             }
         }
 
+        public async Task<bool> UpdateDrawFiberPermissionsAsync(int userId, bool manageProjects, bool canManageEstimatedTime)
+        {
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserRole)
+                        .ThenInclude(r => r != null ? r.RolePermissions : null!)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user?.UserRole == null)
+                    return false;
+
+                // Get only the specific permissions we want to update
+                var manageProjectsPermission = await _context.Permissions
+                    .FirstOrDefaultAsync(p => p.Name == "ManageProjects");
+                var canManageEstimatedTimePermission = await _context.Permissions
+                    .FirstOrDefaultAsync(p => p.Name == "CanManageEstimatedTime");
+
+                // Create a list of only the permissions we want to update
+                var permissionsToHandle = new[]
+                {
+                    new { Permission = manageProjectsPermission, RequestValue = manageProjects },
+                    new { Permission = canManageEstimatedTimePermission, RequestValue = canManageEstimatedTime }
+                };
+
+                // Process only these specific permissions
+                foreach (var permissionData in permissionsToHandle)
+                {
+                    if (permissionData.Permission == null) continue;
+
+                    var existingRolePermission = user.UserRole.RolePermissions
+                        .FirstOrDefault(rp => rp.PermissionId == permissionData.Permission.Id);
+
+                    if (permissionData.RequestValue && existingRolePermission == null)
+                    {
+                        // Add permission
+                        _context.RolePermissions.Add(new RolePermission
+                        {
+                            RoleId = user.UserRole.Id,
+                            PermissionId = permissionData.Permission.Id
+                        });
+                    }
+                    else if (!permissionData.RequestValue && existingRolePermission != null)
+                    {
+                        // Remove permission
+                        _context.RolePermissions.Remove(existingRolePermission);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating draw fiber permissions for user {UserId}", userId);
+                return false;
+            }
+        }
+
         public async Task<bool> CanUserManagePermissions(string serviceId)
         {
             try

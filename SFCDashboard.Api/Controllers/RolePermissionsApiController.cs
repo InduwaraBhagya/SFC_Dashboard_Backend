@@ -64,6 +64,26 @@ namespace SFCDashboard.Api.Controllers
                 return BadRequest(new { success = false, message = "Failed to update permissions" });
         }
 
+        // POST: api/rolepermissions/update-draw-fiber-permissions
+        [HttpPost("update-draw-fiber-permissions")]
+        public async Task<IActionResult> UpdateDrawFiberPermissions([FromBody] UpdateDrawFiberPermissionsRequest request)
+        {
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return Unauthorized();
+
+            var canManage = await _rolePermissionsService.CanUserManagePermissions(serviceId);
+            if (!canManage)
+                return Forbid();
+
+            var success = await _rolePermissionsService.UpdateDrawFiberPermissionsAsync(request.UserId, request.ManageProjects, request.CanManageEstimatedTime);
+            
+            if (success)
+                return Ok(new { success = true, message = "Draw fiber permissions updated successfully" });
+            else
+                return BadRequest(new { success = false, message = "Failed to update draw fiber permissions" });
+        }
+
         // GET: api/rolepermissions/by-role/{roleId}
         [HttpGet("by-role/{roleId}")]
         public async Task<IActionResult> GetByRoleId(int roleId)
@@ -127,5 +147,12 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while creating role permissions");
             }
         }
+    }
+
+    public class UpdateDrawFiberPermissionsRequest
+    {
+        public int UserId { get; set; }
+        public bool ManageProjects { get; set; }
+        public bool CanManageEstimatedTime { get; set; }
     }
 }

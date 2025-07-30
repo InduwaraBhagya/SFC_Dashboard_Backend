@@ -57,15 +57,15 @@ namespace SFCDashboard.Controllers
             var viewModel = new List<DrawFiberPermsViewModel>();
             foreach (var user in netProjAccCableUsers)
             {
-                var permResult = await _rolePermissionsApiClient.GetUserPermissionsAsync(user.Id);
+                var permResult = await _rolePermissionsApiClient.GetUserPermissionDetailsAsync(user.Id);
                 viewModel.Add(new DrawFiberPermsViewModel
                 {
                     UserId = user.Id,
                     UserName = user.Name,
                     ServiceId = user.ServiceId,
                     RoleName = user.UserRole?.Name ?? "No Role",
-                    HasManageProjects = permResult.HasManageProjects,
-                    HasCanManageEstimatedTime = permResult.HasCanManageEstimatedTime
+                    HasManageProjects = permResult.Permissions.ManageProjects,
+                    HasCanManageEstimatedTime = permResult.Permissions.CanManageEstimatedTime
                 });
             }
 
@@ -90,7 +90,7 @@ namespace SFCDashboard.Controllers
             }
 
             // Call backend API to update permissions
-            var result = await _rolePermissionsApiClient.UpdateUserPermissionsAsync(userId, manageProjects, canManageEstimatedTime);
+            var result = await _rolePermissionsApiClient.UpdateDrawFiberPermissionsAsync(userId, manageProjects, canManageEstimatedTime);
             return Json(result);
         }
 

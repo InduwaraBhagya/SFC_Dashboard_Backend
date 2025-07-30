@@ -15,9 +15,10 @@ namespace SFCDashboard.ApiClients
 
         // Backend permission API integration
         Task<bool> HasPermissionAsync(string serviceId, string permissionName);
-        Task<UserPermissionResult> GetUserPermissionsAsync(int userId);
+        Task<UserPermissionDetails> GetUserPermissionDetailsAsync(int userId);
         Task<ApiResult> UpdateUserPermissionsAsync(int userId, bool manageProjects, bool canManageEstimatedTime);
         Task<ApiResult> UpdateUserPermissionsAsync(UpdateUserPermissionsRequest request);
+        Task<ApiResult> UpdateDrawFiberPermissionsAsync(int userId, bool manageProjects, bool canManageEstimatedTime);
     }
 
     public class UpdateUserPermissionsRequest
