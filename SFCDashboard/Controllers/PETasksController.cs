@@ -53,13 +53,23 @@ namespace SFCDashboard.Controllers
 
                 // Get the task to find the PlannedEvent ID for redirect
                 var task = await _peTasksApiClient.GetByIdAsync(id);
-                return RedirectToAction("Details", "PlannedEvents", new { id = task?.PlannedEvent?.Id });
+                
+                // Check if task and PlannedEvent exist before redirecting
+                if (task?.PlannedEvent?.Id != null && task.PlannedEvent.Id > 0)
+                {
+                    return RedirectToAction("Details", "PlannedEvents", new { id = task.PlannedEvent.Id });
+                }
+                else
+                {
+                    // If no valid PlannedEvent, redirect to urgent tasks list
+                    return RedirectToAction(nameof(UrgentTasks));
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error marking task {taskId} as urgent", id);
                 TempData["ErrorMessage"] = "Error marking task as urgent.";
-                return RedirectToAction("Details", "PlannedEvents");
+                return RedirectToAction(nameof(UrgentTasks));
             }
         }
 
@@ -92,7 +102,27 @@ namespace SFCDashboard.Controllers
 
                 // Get the task to find the PlannedEvent ID for redirect
                 var task = await _peTasksApiClient.GetByIdAsync(id);
-                return RedirectToAction("Details", "PlannedEvents", new { id = task?.PlannedEvent?.Id });
+                
+                _logger.LogInformation("Retrieved task {TaskId}: PENumber={PENumber}, PlannedEvent={PlannedEventId}", 
+                    id, task?.PENumber, task?.PlannedEvent?.Id);
+                
+                // Check if task and PlannedEvent exist before redirecting
+                if (task?.PlannedEvent?.Id != null && task.PlannedEvent.Id > 0)
+                {
+                    return RedirectToAction("Details", "PlannedEvents", new { id = task.PlannedEvent.Id });
+                }
+                else
+                {
+                    // If no valid PlannedEvent, redirect based on the action performed
+                    if (markAsUrgent)
+                    {
+                        return RedirectToAction(nameof(UrgentTasks));
+                    }
+                    else
+                    {
+                        return RedirectToAction(nameof(UrgentRequestsList));
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -213,7 +243,17 @@ namespace SFCDashboard.Controllers
                 {
                     await _peTasksApiClient.UpdateAsync(pETask);
                     TempData["SuccessMessage"] = "Task updated successfully.";
-                    return RedirectToAction("Details", new { id = pETask.Id });
+                    
+                    // Check if the task has a valid PlannedEvent for redirect
+                    var task = await _peTasksApiClient.GetByIdAsync(id);
+                    if (task?.PlannedEvent?.Id != null && task.PlannedEvent.Id > 0)
+                    {
+                        return RedirectToAction("Details", "PlannedEvents", new { id = task.PlannedEvent.Id });
+                    }
+                    else
+                    {
+                        return RedirectToAction("Details", new { id = pETask.Id });
+                    }
                 }
                 catch (Exception ex)
                 {

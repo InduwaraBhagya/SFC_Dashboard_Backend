@@ -15,6 +15,9 @@ namespace SFCDashboard.Api.Services
         Task<IEnumerable<PETask>> GetPendingTaskRequestsAsync(int take = 5);
         Task<Dictionary<string, IEnumerable<PETask>>> GetTasksByPeNumbersAsync(List<string?> peNumbers);
         Task<IEnumerable<PETask>> GetUrgentTasksAsync();
+        Task<bool> ProcessTaskUrgentRequestAsync(int taskId, string urgentReason);
+        Task<bool> ProcessPEUrgentRequestAsync(string peNumber, string urgentReason);
+        Task<bool> MarkAsUrgentAsync(int taskId);
     }
 }
 

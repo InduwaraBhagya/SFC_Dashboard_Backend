@@ -227,12 +227,30 @@ namespace SFCDashboard.ApiClients
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                var response = await _httpClient.PostAsync($"api/petasksapi/{id}/process-urgent", content);
+                var response = await _httpClient.PostAsync($"api/petasksapi/{id}/process-urgent-request", content);
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing urgent request for PE task {Id} via API", id);
+                throw;
+            }
+        }
+
+        public async Task ProcessPEUrgentRequestAsync(string peNumber, string urgentReason)
+        {
+            try
+            {
+                var requestData = new { urgentReason };
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync($"api/petasksapi/pe/{peNumber}/process-urgent-request", content);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing PE urgent request for PE {PENumber} via API", peNumber);
                 throw;
             }
         }

@@ -19,7 +19,9 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                return await _context.PETasks.FindAsync(id);
+                return await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(t => t.Id == id);
             }
             catch (Exception ex)
             {
@@ -208,6 +210,195 @@ namespace SFCDashboard.Api.Services
             {
                 _logger.LogError(ex, "Error getting urgent tasks");
                 return new List<PETask>();
+            }
+        }
+
+        public async Task<bool> ProcessTaskUrgentRequestAsync(int taskId, string urgentReason)
+        {
+            try
+            {
+                var task = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(t => t.Id == taskId);
+
+                if (task == null || task.TaskStatus == "COMPLETED")
+                {
+                    return false;
+                }
+
+                bool markAsUrgent = false;
+                string priorityMessage = "";
+
+                switch (urgentReason)
+                {
+                    case "OpeningCeremony":
+                        markAsUrgent = true;
+                        task.IsUrgent = true;
+                        task.UrgentMarkedDate = DateTime.Now;
+                        priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
+                        task.Priority = priorityMessage;
+                        break;
+
+                    case "CriticalCustomer":
+                        markAsUrgent = true;
+                        task.IsUrgent = true;
+                        task.UrgentMarkedDate = DateTime.Now;
+                        priorityMessage = "[URGENT: Critical Customer - Priority 2]";
+                        task.Priority = priorityMessage;
+                        break;
+
+                    case "Reject":
+                        task.UrgentRequested = false;
+                        task.Priority = "Urgent Request Rejected";
+                        break;
+
+                    default:
+                        return false;
+                }
+
+                task.UrgentRequested = false;
+                _context.Update(task);
+
+                // For task-level urgent, only update PE status if this is the first urgent task
+                if (markAsUrgent && task.PlannedEvent != null)
+                {
+                    var existingUrgentTasks = await _context.PETasks
+                        .Where(t => t.PENumber == task.PENumber && t.IsUrgent && t.Id != taskId)
+                        .CountAsync();
+
+                    if (existingUrgentTasks == 0)
+                    {
+                        task.PlannedEvent.PEStatus = "URGENT";
+                        task.PlannedEvent.Priority = priorityMessage;
+                        _context.Update(task.PlannedEvent);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing task urgent request for task {TaskId}", taskId);
+                return false;
+            }
+        }
+
+        public async Task<bool> ProcessPEUrgentRequestAsync(string peNumber, string urgentReason)
+        {
+            try
+            {
+                var tasks = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .Where(t => t.PENumber == peNumber && t.TaskStatus != "COMPLETED")
+                    .ToListAsync();
+
+                if (!tasks.Any())
+                {
+                    return false;
+                }
+
+                bool markAsUrgent = false;
+                string priorityMessage = "";
+
+                switch (urgentReason)
+                {
+                    case "OpeningCeremony":
+                        markAsUrgent = true;
+                        priorityMessage = "[URGENT: Opening Ceremony - Priority 1]";
+                        break;
+
+                    case "CriticalCustomer":
+                        markAsUrgent = true;
+                        priorityMessage = "[URGENT: Critical Customer - Priority 2]";
+                        break;
+
+                    case "Reject":
+                        foreach (var task in tasks)
+                        {
+                            task.UrgentRequested = false;
+                            task.Priority = "Urgent Request Rejected";
+                            _context.Update(task);
+                        }
+                        break;
+
+                    default:
+                        return false;
+                }
+
+                if (markAsUrgent)
+                {
+                    // Mark ALL tasks in the PE as urgent
+                    foreach (var task in tasks)
+                    {
+                        task.IsUrgent = true;
+                        task.UrgentMarkedDate = DateTime.Now;
+                        task.UrgentRequested = false;
+                        task.Priority = priorityMessage;
+                        _context.Update(task);
+                    }
+
+                    // Update PE status
+                    var plannedEvent = tasks.FirstOrDefault()?.PlannedEvent;
+                    if (plannedEvent != null)
+                    {
+                        plannedEvent.PEStatus = "URGENT";
+                        plannedEvent.Priority = priorityMessage;
+                        _context.Update(plannedEvent);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing PE urgent request for PE {PENumber}", peNumber);
+                return false;
+            }
+        }
+        
+        public async Task<bool> MarkAsUrgentAsync(int taskId)
+        {
+            try
+            {
+                var task = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(t => t.Id == taskId);
+
+                if (task == null || task.TaskStatus?.ToUpper() != "ONGOING")
+                {
+                    return false;
+                }
+
+                task.IsUrgent = true;
+                task.UrgentMarkedDate = DateTime.Now;
+                task.UrgentRequested = false;
+
+                if (task.PlannedEvent != null && !string.IsNullOrWhiteSpace(task.PlannedEvent.Priority))
+                {
+                    task.Priority = task.PlannedEvent.Priority;
+                }
+                else
+                {
+                    task.Priority = (task.Priority ?? "") + " [URGENT]";
+                }
+
+                _context.Update(task);
+
+                if (task.PlannedEvent != null)
+                {
+                    task.PlannedEvent.PEStatus = "URGENT";
+                    _context.Update(task.PlannedEvent);
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking task {TaskId} as urgent", taskId);
+                return false;
             }
         }
     }

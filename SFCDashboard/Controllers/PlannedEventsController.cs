@@ -2338,8 +2338,9 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var workgroupId = ViewBag.UserWorkgroupId;
-                var nextTask = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: workgroupId, take: 1);
+                // Get user's primary workgroup ID for the task queue
+                var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
+                var nextTask = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: userWorkgroupId, take: 1);
                 var hasNextTask = nextTask?.Any() == true;
 
                 if (!hasNextTask)
