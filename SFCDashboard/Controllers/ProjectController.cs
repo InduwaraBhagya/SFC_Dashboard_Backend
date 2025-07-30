@@ -86,6 +86,17 @@ public class ProjectController : BaseController
             return NotFound();
         }
 
+        // Get current user permissions from backend
+        var userName = User?.Identity?.Name;
+        var serviceId = !string.IsNullOrEmpty(userName) && userName.Length >= 6
+            ? userName.Substring(0, 6)
+            : string.Empty;
+
+        var permissions = await _usersApiClient.GetProjectUserPermissionsAsync(serviceId);
+
+        ViewBag.CanManageProjects = permissions?.CanManageProjects ?? false;
+        ViewBag.CurrentUser = permissions?.CurrentUser;
+
         var vm = new ProjectDetailsViewModel
         {
             Id = projectDetails.Id,
