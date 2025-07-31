@@ -126,7 +126,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting PE tasks for {Count} PE numbers", request.PeNumbers?.Count ?? 0);
-                
+
                 if (request.PeNumbers == null || !request.PeNumbers.Any())
                 {
                     return Ok(new List<PETask>());
@@ -169,7 +169,7 @@ namespace SFCDashboard.Api.Controllers
             {
                 _context.Entry(peTask).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
-                
+
                 // Return the updated task instead of NoContent
                 var updatedTask = await _context.PETasks.FindAsync(id);
                 return Ok(updatedTask);
@@ -355,7 +355,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 var result = await _peTasksService.MarkAsUrgentAsync(id);
-                
+
                 if (!result)
                 {
                     return NotFound("Task not found or not in ONGOING status");
@@ -379,7 +379,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 var result = await _peTasksService.ProcessTaskUrgentRequestAsync(id, request.UrgentReason);
-                
+
                 if (!result)
                 {
                     return NotFound("Task not found or already completed");
@@ -403,7 +403,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 var result = await _peTasksService.ProcessPEUrgentRequestAsync(peNumber, request.UrgentReason);
-                
+
                 if (!result)
                 {
                     return NotFound("No active tasks found for PE");
@@ -524,6 +524,7 @@ namespace SFCDashboard.Api.Controllers
         /// Update estimated time for task
         /// </summary>
         [HttpPost("{id}/update-estimated-time")]
+        [HttpPut("{id}/estimated-time")]
         public async Task<IActionResult> UpdateEstimatedTime(int id, [FromBody] UpdateEstimatedTimeDto request)
         {
             try
@@ -572,7 +573,7 @@ namespace SFCDashboard.Api.Controllers
 
                 int idx = allTasks.FindIndex(t => t.Id == id);
                 DateTime prevCompleteDate = request.EstimatedTime;
-                
+
                 for (int i = idx + 1; i < allTasks.Count; i++)
                 {
                     var currentTask = allTasks[i];

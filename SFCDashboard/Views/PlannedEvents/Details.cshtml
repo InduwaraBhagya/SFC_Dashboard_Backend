@@ -39,6 +39,7 @@
     <div class="card-body p-4">
         <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" 
               method="post" class="row g-3">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="taskId" value="@drawFiberTasks.First().Id" />
 
             <div class="col-md-8">
@@ -53,6 +54,7 @@
                            name="estimatedTime" 
                            id="estimatedTime" 
                            class="form-control border-start-0 shadow-none ps-0" 
+                           value="@(drawFiberTasks.First().EstimatedTime?.ToString("yyyy-MM-dd") ?? "")"
                            required />
                 </div>
             </div>
@@ -853,28 +855,50 @@
             });
 
             // AJAX for Estimated Time Save
-// In Details.cshtml where you handle the form submission:
 const estimatedTimeForm = document.getElementById('estimatedTimeForm');
 if (estimatedTimeForm) {
     estimatedTimeForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const formData = new FormData(estimatedTimeForm);
+        
+        const taskId = document.querySelector('input[name="taskId"]').value;
+        const estimatedTime = document.querySelector('input[name="estimatedTime"]').value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        
+        if (!estimatedTime) {
+            alert('Please select an estimated completion date.');
+            return;
+        }
+        
+        // Create the request data
+        const requestData = {
+            taskId: parseInt(taskId),
+            estimatedTime: estimatedTime,
+            __RequestVerificationToken: token
+        };
+        
         fetch(estimatedTimeForm.action, {
             method: 'POST',
-            body: formData,
             headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
                 'X-Requested-With': 'XMLHttpRequest'
-            }
+            },
+            body: new URLSearchParams(requestData)
         })
         .then(response => {
             if (response.ok) {
-                window.location.reload();
-                return;
+                return response.json();
             }
-            // Parse the error message from the response
             return response.text().then(text => {
                 throw new Error(text || 'Failed to save estimated time.');
             });
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Estimated time updated successfully!');
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to save estimated time.');
+            }
         })
         .catch((error) => {
             console.error('Error:', error);
