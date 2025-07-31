@@ -221,6 +221,17 @@
         color: #212529 !important;
     }
 
+    /* Estimation created at text styling */
+    .estimation-created-at {
+        color: #1a365d !important; /* Dark blue for light mode */
+    }
+
+    /* Estimation header text styling */
+    .estimation-header-text {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+    }
+
     /* Dark mode specific styling for estimation history */
     [data-theme="dark"] #estimationHistoryModal .text-dark {
         color: #ffffff !important;
@@ -241,6 +252,50 @@
     
     [data-theme="dark"] #estimationHistoryModal .table tbody td .text-dark {
         color: var(--text-color) !important;
+    }
+
+    /* Dark mode styling for estimation created at text */
+    [data-theme="dark"] .estimation-created-at {
+        color: #60a5fa !important; /* Light blue for dark mode */
+    }
+
+    /* Dark mode styling for estimation header text */
+    [data-theme="dark"] .estimation-header-text {
+        color: #60a5fa !important; /* Light blue for dark mode */
+        font-weight: 600 !important;
+    }
+
+    /* PETask table header styling for light mode */
+    .task-table thead.table-light th {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+        background-color: #76a7d8 !important;
+    }
+
+    /* Ensure PETask table column names are visible in light mode */
+    .table.task-table .table-light th {
+        color: #1a365d !important; /* Dark blue for better visibility */
+        font-weight: 600 !important;
+    }
+
+    /* Dark mode styling for PETask table headers */
+    [data-theme="dark"] .task-table thead.table-light th,
+    [data-theme="dark"] .table.task-table .table-light th {
+        color: var(--text-color) !important; /* Use theme text color for dark mode */
+        background-color: var(--hover-bg) !important;
+    }
+
+    /* Issue table header styling for light mode */
+    .table.table-bordered.table-striped thead th {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+        background-color: #e1c425 !important;
+    }
+
+    /* Dark mode styling for issue table headers */
+    [data-theme="dark"] .table.table-bordered.table-striped thead th {
+        color: var(--text-color) !important; /* Use theme text color for dark mode */
+        background-color: var(--hover-bg) !important;
     }
 </style>
 
@@ -778,11 +833,11 @@
                     <table class="table table-hover table-striped">
                         <thead class="table-light">
                             <tr>
-                                <th scope="col">
+                                <th scope="col" class="estimation-header-text">
                                     <i class="bi bi-calendar-date me-2"></i>
                                     Estimated Date
                                 </th>
-                                <th scope="col">
+                                <th scope="col" class="estimation-header-text">
                                     <i class="bi bi-clock me-2"></i>
                                     Created At
                                 </th>
@@ -1117,7 +1172,7 @@ if (estimatedTimeForm) {
                                 </span>
                             </td>
                             <td class="align-middle">
-                                <small class="text-dark fw-semibold">
+                                <small class="estimation-created-at fw-semibold">
                                     <i class="bi bi-clock-history me-1"></i>
                                     ${createdAt}
                                 </small>
