@@ -19,12 +19,13 @@ namespace SFCDashboard.ApiClients
         Task<Dictionary<int, IEnumerable<PEIssue>>> GetIssuesByPlannedEventIdsAsync(List<int> peIds);
         Task<PEIssue?> GetPEIssueAsync(int id);
         Task<PEIssue> UpdatePEIssueAsync(PEIssue peIssue);
-        
+
         // Additional methods for IssuesController
         Task<IEnumerable<PEIssue>> GetReceivedIssuesAsync(int userId);
         Task<IEnumerable<PEIssue>> GetSentIssuesAsync(int userId);
         Task<IEnumerable<PEIssue>> GetUnreadInboxIssuesAsync(int userId);
         Task<IEnumerable<PEIssueViewModel>> GetInboxViewModelsAsync(int userId);
+        Task<IEnumerable<PEIssueViewModel>> GetInboxViewModelsAsync(int userId, int limit);
         Task<IEnumerable<PEIssueViewModel>> GetSentViewModelsAsync(int userId);
 
         Task<IEnumerable<PEIssue>> GetByTaskIdAsync(int taskId);
