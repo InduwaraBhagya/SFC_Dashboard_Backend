@@ -163,7 +163,6 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseUserRegistration();
 
 // Map controllers
 app.MapControllers();
