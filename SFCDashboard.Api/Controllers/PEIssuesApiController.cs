@@ -95,6 +95,25 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get inbox issue view models for a user (includes sender/receiver names)
+        /// </summary>
+        [HttpGet("inbox-viewmodels/{userId}")]
+        public async Task<ActionResult<IEnumerable<PEIssueViewModel>>> GetInboxIssueViewModels(int userId, [FromQuery] int limit = 10)
+        {
+            try
+            {
+                _logger.LogInformation("Getting inbox issue view models for user {userId} with limit: {limit}", userId, limit);
+                var issueViewModels = await _peIssuesService.GetInboxIssuesAsync(userId, limit);
+                return Ok(issueViewModels);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting inbox issue view models for user {userId}", userId);
+                return StatusCode(500, "An error occurred while retrieving inbox issue view models");
+            }
+        }
+
+        /// <summary>
         /// Get reminders for user
         /// </summary>
         [HttpGet("reminders/{userId}")]
@@ -160,7 +179,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting issues for {Count} planned events", peIds.Count);
-                
+
                 if (peIds == null || !peIds.Any())
                 {
                     return Ok(new Dictionary<int, IEnumerable<PEIssue>>());
@@ -231,7 +250,7 @@ namespace SFCDashboard.Api.Controllers
 
                 var issueViewModels = await _peIssuesService.GetPEIssuesByPlannedEventAsync(plannedEventId);
 
-                _logger.LogInformation("Found {count} PE issue view models for planned event {plannedEventId}", 
+                _logger.LogInformation("Found {count} PE issue view models for planned event {plannedEventId}",
                     issueViewModels.Count(), plannedEventId);
                 return Ok(issueViewModels);
             }
@@ -251,7 +270,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting issue view models for {Count} planned events", peIds.Count);
-                
+
                 if (peIds == null || !peIds.Any())
                 {
                     return Ok(new Dictionary<int, IEnumerable<PEIssueViewModel>>());

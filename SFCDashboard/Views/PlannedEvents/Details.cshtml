@@ -39,6 +39,7 @@
     <div class="card-body p-4">
         <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" 
               method="post" class="row g-3">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="taskId" value="@drawFiberTasks.First().Id" />
 
             <div class="col-md-8">
@@ -53,6 +54,7 @@
                            name="estimatedTime" 
                            id="estimatedTime" 
                            class="form-control border-start-0 shadow-none ps-0" 
+                           value="@(drawFiberTasks.First().EstimatedTime?.ToString("yyyy-MM-dd") ?? "")"
                            required />
                 </div>
             </div>
@@ -198,6 +200,102 @@
 
     .btn-close-white {
         filter: brightness(0) invert(1);
+    }
+
+    /* Estimation History Modal Text Colors */
+    /* Light mode - ensure dark text is visible */
+    #estimationHistoryModal .text-dark {
+        color: #212529 !important;
+    }
+    
+    #estimationHistoryModal .table thead th {
+        color: #212529 !important;
+        background-color: #f8f9fa !important;
+    }
+    
+    #estimationHistoryModal .table tbody td {
+        color: #212529 !important;
+    }
+    
+    #estimationHistoryModal .table tbody td .text-dark {
+        color: #212529 !important;
+    }
+
+    /* Estimation created at text styling */
+    .estimation-created-at {
+        color: #1a365d !important; /* Dark blue for light mode */
+    }
+
+    /* Estimation header text styling */
+    .estimation-header-text {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+    }
+
+    /* Dark mode specific styling for estimation history */
+    [data-theme="dark"] #estimationHistoryModal .text-dark {
+        color: #ffffff !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table tbody td {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table thead th {
+        background-color: var(--hover-bg) !important;
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] #estimationHistoryModal .table tbody td .text-dark {
+        color: var(--text-color) !important;
+    }
+
+    /* Dark mode styling for estimation created at text */
+    [data-theme="dark"] .estimation-created-at {
+        color: #60a5fa !important; /* Light blue for dark mode */
+    }
+
+    /* Dark mode styling for estimation header text */
+    [data-theme="dark"] .estimation-header-text {
+        color: #60a5fa !important; /* Light blue for dark mode */
+        font-weight: 600 !important;
+    }
+
+    /* PETask table header styling for light mode */
+    .task-table thead.table-light th {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+        background-color: #76a7d8 !important;
+    }
+
+    /* Ensure PETask table column names are visible in light mode */
+    .table.task-table .table-light th {
+        color: #1a365d !important; /* Dark blue for better visibility */
+        font-weight: 600 !important;
+    }
+
+    /* Dark mode styling for PETask table headers */
+    [data-theme="dark"] .task-table thead.table-light th,
+    [data-theme="dark"] .table.task-table .table-light th {
+        color: var(--text-color) !important; /* Use theme text color for dark mode */
+        background-color: var(--hover-bg) !important;
+    }
+
+    /* Issue table header styling for light mode */
+    .table.table-bordered.table-striped thead th {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+        background-color: #e1c425 !important;
+    }
+
+    /* Dark mode styling for issue table headers */
+    [data-theme="dark"] .table.table-bordered.table-striped thead th {
+        color: var(--text-color) !important; /* Use theme text color for dark mode */
+        background-color: var(--hover-bg) !important;
     }
 </style>
 
@@ -735,11 +833,11 @@
                     <table class="table table-hover table-striped">
                         <thead class="table-light">
                             <tr>
-                                <th scope="col">
+                                <th scope="col" class="estimation-header-text">
                                     <i class="bi bi-calendar-date me-2"></i>
                                     Estimated Date
                                 </th>
-                                <th scope="col">
+                                <th scope="col" class="estimation-header-text">
                                     <i class="bi bi-clock me-2"></i>
                                     Created At
                                 </th>
@@ -853,28 +951,50 @@
             });
 
             // AJAX for Estimated Time Save
-// In Details.cshtml where you handle the form submission:
 const estimatedTimeForm = document.getElementById('estimatedTimeForm');
 if (estimatedTimeForm) {
     estimatedTimeForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const formData = new FormData(estimatedTimeForm);
+        
+        const taskId = document.querySelector('input[name="taskId"]').value;
+        const estimatedTime = document.querySelector('input[name="estimatedTime"]').value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        
+        if (!estimatedTime) {
+            alert('Please select an estimated completion date.');
+            return;
+        }
+        
+        // Create the request data
+        const requestData = {
+            taskId: parseInt(taskId),
+            estimatedTime: estimatedTime,
+            __RequestVerificationToken: token
+        };
+        
         fetch(estimatedTimeForm.action, {
             method: 'POST',
-            body: formData,
             headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
                 'X-Requested-With': 'XMLHttpRequest'
-            }
+            },
+            body: new URLSearchParams(requestData)
         })
         .then(response => {
             if (response.ok) {
-                window.location.reload();
-                return;
+                return response.json();
             }
-            // Parse the error message from the response
             return response.text().then(text => {
                 throw new Error(text || 'Failed to save estimated time.');
             });
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Estimated time updated successfully!');
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to save estimated time.');
+            }
         })
         .catch((error) => {
             console.error('Error:', error);
@@ -1046,13 +1166,13 @@ if (estimatedTimeForm) {
                         
                         row.innerHTML = `
                             <td class="align-middle">
-                                <span class="badge bg-primary">
+                                <span class="badge bg-primary text-white">
                                     <i class="bi bi-calendar2-check me-1"></i>
                                     ${estimatedDate}
                                 </span>
                             </td>
-                            <td class="align-middle text-muted">
-                                <small>
+                            <td class="align-middle">
+                                <small class="estimation-created-at fw-semibold">
                                     <i class="bi bi-clock-history me-1"></i>
                                     ${createdAt}
                                 </small>

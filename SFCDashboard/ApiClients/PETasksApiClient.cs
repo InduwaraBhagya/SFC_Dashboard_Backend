@@ -26,10 +26,10 @@ namespace SFCDashboard.ApiClients
             {
                 var response = await _httpClient.GetAsync("api/petasksapi");
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
-                
+
                 return tasks ?? new List<PETask>();
             }
             catch (Exception ex)
@@ -44,12 +44,12 @@ namespace SFCDashboard.ApiClients
             try
             {
                 var response = await _httpClient.GetAsync($"api/petasksapi/{id}");
-                
+
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return null;
-                    
+
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 return JsonSerializer.Deserialize<PETask>(json, _jsonOptions);
             }
@@ -66,10 +66,10 @@ namespace SFCDashboard.ApiClients
             {
                 var json = JsonSerializer.Serialize(peTask, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
                 var response = await _httpClient.PostAsync("api/petasksapi", content);
                 response.EnsureSuccessStatusCode();
-                
+
                 var responseJson = await response.Content.ReadAsStringAsync();
                 return JsonSerializer.Deserialize<PETask>(responseJson, _jsonOptions) ?? peTask;
             }
@@ -86,10 +86,10 @@ namespace SFCDashboard.ApiClients
             {
                 var json = JsonSerializer.Serialize(peTask, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
                 var response = await _httpClient.PutAsync($"api/petasksapi/{peTask.Id}", content);
                 response.EnsureSuccessStatusCode();
-                
+
                 var responseJson = await response.Content.ReadAsStringAsync();
                 return JsonSerializer.Deserialize<PETask>(responseJson, _jsonOptions) ?? peTask;
             }
@@ -120,14 +120,14 @@ namespace SFCDashboard.ApiClients
             {
                 var response = await _httpClient.GetAsync($"api/petasksapi/by-pe/{Uri.EscapeDataString(peNumber)}");
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
-                
+
                 if (string.IsNullOrWhiteSpace(json))
                 {
                     return new List<PETask>();
                 }
-                
+
                 var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
                 return tasks ?? new List<PETask>();
             }
@@ -154,10 +154,10 @@ namespace SFCDashboard.ApiClients
             {
                 var response = await _httpClient.GetAsync("api/petasksapi/urgent-requests");
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
-                
+
                 return tasks ?? new List<PETask>();
             }
             catch (Exception ex)
@@ -173,10 +173,10 @@ namespace SFCDashboard.ApiClients
             {
                 var response = await _httpClient.GetAsync("api/petasksapi/ola-violations");
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
-                
+
                 return tasks ?? new List<PETask>();
             }
             catch (Exception ex)
@@ -192,10 +192,10 @@ namespace SFCDashboard.ApiClients
             {
                 var response = await _httpClient.GetAsync("api/petasksapi/urgent-tasks");
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 var tasks = JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions);
-                
+
                 return tasks ?? new List<PETask>();
             }
             catch (Exception ex)
@@ -226,7 +226,7 @@ namespace SFCDashboard.ApiClients
                 var requestData = new { urgentReason };
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
                 var response = await _httpClient.PostAsync($"api/petasksapi/{id}/process-urgent-request", content);
                 response.EnsureSuccessStatusCode();
             }
@@ -244,7 +244,7 @@ namespace SFCDashboard.ApiClients
                 var requestData = new { urgentReason };
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
                 var response = await _httpClient.PostAsync($"api/petasksapi/pe/{peNumber}/process-urgent-request", content);
                 response.EnsureSuccessStatusCode();
             }
@@ -287,11 +287,11 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var requestData = new { estimatedTime };
+                var requestData = new { EstimatedTime = estimatedTime };
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
-                var response = await _httpClient.PutAsync($"api/petasksapi/{id}/estimated-time", content);
+
+                var response = await _httpClient.PostAsync($"api/petasksapi/{id}/update-estimated-time", content);
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
@@ -301,13 +301,31 @@ namespace SFCDashboard.ApiClients
             }
         }
 
+        public async Task<object> GetEstimationHistoryAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/petasksapi/{id}/estimation-history");
+                response.EnsureSuccessStatusCode();
+
+                var json = await response.Content.ReadAsStringAsync();
+                var history = JsonSerializer.Deserialize<object>(json, _jsonOptions);
+                return history ?? new List<object>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting estimation history for PE task {Id} via API", id);
+                return new List<object>();
+            }
+        }
+
         public async Task<IEnumerable<PETask>> GetPendingTaskRequestsAsync(int limit = 5)
         {
             try
             {
                 var response = await _httpClient.GetAsync($"api/petasksapi/pending-task-requests?limit={limit}");
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 return JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
             }
@@ -325,12 +343,12 @@ namespace SFCDashboard.ApiClients
                 var requestData = new { peNumbers };
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
                 var response = await _httpClient.PostAsync("api/petasksapi/tasks-by-pe-numbers", content);
                 response.EnsureSuccessStatusCode();
-                
+
                 var responseJson = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<Dictionary<string, IEnumerable<PETask>>>(responseJson, _jsonOptions) ?? 
+                return JsonSerializer.Deserialize<Dictionary<string, IEnumerable<PETask>>>(responseJson, _jsonOptions) ??
                        new Dictionary<string, IEnumerable<PETask>>();
             }
             catch (Exception ex)
@@ -379,15 +397,15 @@ namespace SFCDashboard.ApiClients
                 var requestData = new { peNumbers };
                 var json = JsonSerializer.Serialize(requestData, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
                 var response = await _httpClient.PostAsync("api/petasksapi/pe-tasks-by-pe-numbers", content);
                 response.EnsureSuccessStatusCode();
-                
+
                 var responseJson = await response.Content.ReadAsStringAsync();
-                
+
                 if (string.IsNullOrWhiteSpace(responseJson))
                     return new List<PETask>();
-                    
+
                 return JsonSerializer.Deserialize<IEnumerable<PETask>>(responseJson, _jsonOptions) ?? new List<PETask>();
             }
             catch (JsonException)
@@ -416,7 +434,7 @@ namespace SFCDashboard.ApiClients
             {
                 var response = await _httpClient.GetAsync($"api/petasksapi/pending-urgent-task-requests?limit={limit}");
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 return JsonSerializer.Deserialize<IEnumerable<PETask>>(json, _jsonOptions) ?? new List<PETask>();
             }

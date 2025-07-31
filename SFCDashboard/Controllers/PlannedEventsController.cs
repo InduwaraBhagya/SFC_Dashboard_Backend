@@ -214,7 +214,7 @@ namespace SFCDashboard.Controllers
             ViewData["PendingTaskRequests"] = pendingTaskRequests;
 
             // Get latest issues for the inbox
-            var inboxIssues = await _peIssuesApi.GetInboxIssuesAsync(currentUserId);
+            var inboxIssues = await _peIssuesApi.GetInboxViewModelsAsync(currentUserId);
 
             // Add unread count
             var unreadCount = inboxIssues?.Count(i => !i.IsRead) ?? 0;
@@ -398,7 +398,7 @@ namespace SFCDashboard.Controllers
             ViewData["PendingTaskRequests"] = pendingTaskRequests;
 
             // Get inbox issues
-            var inboxIssues = await _peIssuesApi.GetInboxIssuesAsync(currentUserId);
+            var inboxIssues = await _peIssuesApi.GetInboxViewModelsAsync(currentUserId);
 
             // Process inbox data
             var unreadCount = inboxIssues?.Count(i => !i.IsRead) ?? 0;
@@ -487,7 +487,7 @@ namespace SFCDashboard.Controllers
                 // Apply workgroup filtering first with case-insensitive matching
                 // Convert workgroups to lowercase for comparison
                 var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
-                
+
                 var beforeFilterCount = query.Count();
                 query = query.Where(p => lowerSalesWorkgroups.Any(wg =>
                     (p.TaskWg != null && (
@@ -500,10 +500,10 @@ namespace SFCDashboard.Controllers
                     ))
                 ));
                 var afterWorkgroupFilterCount = query.Count();
-                
-                _logger.LogInformation("ApplyCustomerFilteringAsync - Before workgroup filter: {before}, After: {after}", 
+
+                _logger.LogInformation("ApplyCustomerFilteringAsync - Before workgroup filter: {before}, After: {after}",
                     beforeFilterCount, afterWorkgroupFilterCount);
-                
+
                 // If user has assigned customers, further filter by those customers
                 if (assignedCustomers.Any())
                 {
@@ -564,7 +564,7 @@ namespace SFCDashboard.Controllers
             ViewData["PendingTaskRequests"] = pendingTaskRequests;
 
             // Get latest inbox issues
-            var inboxIssues = await _peIssuesApi.GetInboxIssuesAsync(currentUserId, 10);
+            var inboxIssues = await _peIssuesApi.GetInboxViewModelsAsync(currentUserId, 10);
 
             // Calculate unread count
             var unreadCount = inboxIssues.Count(i => !i.IsRead);
@@ -631,7 +631,7 @@ namespace SFCDashboard.Controllers
                 // Apply customer filtering with workgroup checks and ViewAll permission
                 var filteredSearchEvents = await ApplyCustomerFilteringAsync(allPlannedEvents.AsQueryable(), salesWorkgroups, canViewAll);
                 var materializedEvents = filteredSearchEvents.ToList();
-                
+
                 // Apply search filter
                 var searchResults = materializedEvents.Where(p =>
                 {
@@ -1537,13 +1537,13 @@ namespace SFCDashboard.Controllers
                     // Filter out completed tasks - only mark non-completed tasks as urgent
                     var tasksList = tasks.Where(t => t.TaskStatus?.ToUpper() != "COMPLETED").ToList();
 
-                    _logger.LogInformation("Found {totalCount} total tasks, {activeCount} non-completed tasks to update", 
+                    _logger.LogInformation("Found {totalCount} total tasks, {activeCount} non-completed tasks to update",
                         tasks.Count(), tasksList.Count);
 
                     // Process each task individually to ensure proper updates
                     foreach (var task in tasksList)
                     {
-                        _logger.LogInformation("Processing task {id} (Status: {status}) for PE {peNumber}", 
+                        _logger.LogInformation("Processing task {id} (Status: {status}) for PE {peNumber}",
                             task.Id, task.TaskStatus, task.PENumber);
 
                         task.IsUrgent = true;
@@ -1579,13 +1579,13 @@ namespace SFCDashboard.Controllers
 
                         var urgentTasksCount = verifyTasksList.Count(t => t.IsUrgent);
                         var totalActiveTasksCount = verifyTasksList.Count;
-                        
+
                         _logger.LogInformation("Verification: {urgentCount} out of {totalCount} non-completed tasks are marked as urgent",
                             urgentTasksCount, totalActiveTasksCount);
-                        
+
                         if (urgentTasksCount != totalActiveTasksCount)
                         {
-                            _logger.LogWarning("Not all tasks were marked as urgent. Expected: {expected}, Actual: {actual}", 
+                            _logger.LogWarning("Not all tasks were marked as urgent. Expected: {expected}, Actual: {actual}",
                                 totalActiveTasksCount, urgentTasksCount);
                         }
                     }
@@ -1646,7 +1646,7 @@ namespace SFCDashboard.Controllers
             {
                 return NotFound();
             }
-            
+
             // Get current user information - use the service ID correctly
             var serviceId = User.Identity?.Name;
             if (string.IsNullOrEmpty(serviceId))
@@ -1668,7 +1668,7 @@ namespace SFCDashboard.Controllers
                 return RedirectToAction("InProgressRecords");
             }
 
-            _logger.LogInformation("Found user: {userName} (ID: {userId}) requesting urgent status for PE {id}", 
+            _logger.LogInformation("Found user: {userName} (ID: {userId}) requesting urgent status for PE {id}",
                 currentUser.Name, currentUser.Id, id);
 
             // Set urgent request information
@@ -1701,7 +1701,7 @@ namespace SFCDashboard.Controllers
                 return RedirectToAction("InProgressRecords");
             }
 
-            _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason} by user {userName} (ID: {userId})", 
+            _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason} by user {userName} (ID: {userId})",
                 id, urgentReason, currentUser.Name, currentUser.Id);
             TempData["SuccessMessage"] = "Urgent request submitted for approval.";
 
@@ -2392,12 +2392,13 @@ namespace SFCDashboard.Controllers
             {
                 var allUsers = await _usersApi.GetAllAsync();
                 var allWorkgroups = await _workGroupsApi.GetAllAsync();
-                
+
                 var usersWithoutWorkgroups = allUsers
                     .Where(u => u.UserWorkGroups == null || !u.UserWorkGroups.Any())
-                    .Select(u => new { 
-                        UserId = u.Id, 
-                        Name = u.Name, 
+                    .Select(u => new
+                    {
+                        UserId = u.Id,
+                        Name = u.Name,
                         ServiceId = u.ServiceId,
                         Role = u.UserRole?.Name,
                         HasViewAll = u.UserRole?.HasPermission("ViewAll") == true
@@ -2406,14 +2407,16 @@ namespace SFCDashboard.Controllers
 
                 var usersWithInvalidWorkgroups = allUsers
                     .Where(u => u.UserWorkGroups != null && u.UserWorkGroups.Any())
-                    .Where(u => {
+                    .Where(u =>
+                    {
                         var userWorkgroupIds = u.UserWorkGroups.Select(uwg => uwg.WorkGroupId).ToList();
                         var validWorkgroupIds = allWorkgroups.Select(wg => wg.Id).ToList();
                         return !userWorkgroupIds.All(id => validWorkgroupIds.Contains(id));
                     })
-                    .Select(u => new { 
-                        UserId = u.Id, 
-                        Name = u.Name, 
+                    .Select(u => new
+                    {
+                        UserId = u.Id,
+                        Name = u.Name,
                         ServiceId = u.ServiceId,
                         WorkgroupIds = u.UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList(),
                         Role = u.UserRole?.Name,
@@ -2421,8 +2424,10 @@ namespace SFCDashboard.Controllers
                     })
                     .ToList();
 
-                var diagnosticsResult = new {
-                    Summary = new {
+                var diagnosticsResult = new
+                {
+                    Summary = new
+                    {
                         TotalUsers = allUsers.Count(),
                         TotalWorkgroups = allWorkgroups.Count(),
                         UsersWithoutWorkgroups = usersWithoutWorkgroups.Count,

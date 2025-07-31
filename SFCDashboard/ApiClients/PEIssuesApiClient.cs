@@ -114,12 +114,12 @@ namespace SFCDashboard.ApiClients
                 var response = await _httpClient.GetAsync($"api/peissues/plannedevent/{plannedEventId}");
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
-                
+
                 if (string.IsNullOrWhiteSpace(json))
                 {
                     return new List<PEIssue>();
                 }
-                
+
                 var result = JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions);
                 return result ?? new List<PEIssue>();
             }
@@ -147,12 +147,12 @@ namespace SFCDashboard.ApiClients
                 var response = await _httpClient.GetAsync($"api/peissues/plannedevent/{plannedEventId}/viewmodels");
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
-                
+
                 if (string.IsNullOrWhiteSpace(json))
                 {
                     return new List<PEIssueViewModel>();
                 }
-                
+
                 var result = JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions);
                 return result ?? new List<PEIssueViewModel>();
             }
@@ -187,10 +187,10 @@ namespace SFCDashboard.ApiClients
                 var response = await _httpClient.PostAsync("api/peissues/by-plannedevent-ids", content);
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
-                
+
                 if (string.IsNullOrWhiteSpace(json))
                     return new Dictionary<int, IEnumerable<PEIssue>>();
-                    
+
                 return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssue>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssue>>();
             }
             catch (JsonException)
@@ -217,10 +217,10 @@ namespace SFCDashboard.ApiClients
                 var response = await _httpClient.PostAsync("api/peissues/viewmodels-by-plannedevent-ids", content);
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
-                
+
                 if (string.IsNullOrWhiteSpace(json))
                     return new Dictionary<int, IEnumerable<PEIssueViewModel>>();
-                    
+
                 return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssueViewModel>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssueViewModel>>();
             }
             catch (JsonException)
@@ -270,6 +270,14 @@ namespace SFCDashboard.ApiClients
         public async Task<IEnumerable<PEIssueViewModel>> GetInboxViewModelsAsync(int userId)
         {
             var response = await _httpClient.GetAsync($"api/peissues/inbox-viewmodels/{userId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions) ?? new List<PEIssueViewModel>();
+        }
+
+        public async Task<IEnumerable<PEIssueViewModel>> GetInboxViewModelsAsync(int userId, int limit)
+        {
+            var response = await _httpClient.GetAsync($"api/peissues/inbox-viewmodels/{userId}?limit={limit}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions) ?? new List<PEIssueViewModel>();
