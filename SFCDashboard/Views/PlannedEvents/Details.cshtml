@@ -201,6 +201,47 @@
     .btn-close-white {
         filter: brightness(0) invert(1);
     }
+
+    /* Estimation History Modal Text Colors */
+    /* Light mode - ensure dark text is visible */
+    #estimationHistoryModal .text-dark {
+        color: #212529 !important;
+    }
+    
+    #estimationHistoryModal .table thead th {
+        color: #212529 !important;
+        background-color: #f8f9fa !important;
+    }
+    
+    #estimationHistoryModal .table tbody td {
+        color: #212529 !important;
+    }
+    
+    #estimationHistoryModal .table tbody td .text-dark {
+        color: #212529 !important;
+    }
+
+    /* Dark mode specific styling for estimation history */
+    [data-theme="dark"] #estimationHistoryModal .text-dark {
+        color: #ffffff !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table tbody td {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table thead th {
+        background-color: var(--hover-bg) !important;
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] #estimationHistoryModal .table tbody td .text-dark {
+        color: var(--text-color) !important;
+    }
 </style>
 
 <div class="container mt-4">
@@ -1070,13 +1111,13 @@ if (estimatedTimeForm) {
                         
                         row.innerHTML = `
                             <td class="align-middle">
-                                <span class="badge bg-primary">
+                                <span class="badge bg-primary text-white">
                                     <i class="bi bi-calendar2-check me-1"></i>
                                     ${estimatedDate}
                                 </span>
                             </td>
-                            <td class="align-middle text-muted">
-                                <small>
+                            <td class="align-middle">
+                                <small class="text-dark fw-semibold">
                                     <i class="bi bi-clock-history me-1"></i>
                                     ${createdAt}
                                 </small>
