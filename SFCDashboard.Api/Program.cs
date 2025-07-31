@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -9,11 +10,42 @@ using SFCDashboard.Api.Services;
 using SFCDashboard.Middleware;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.DependencyInjection;
+using SFCDashboard.Api.Configuration;
+using DotNetEnv;
+
+// Load environment variables from .env file
+Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure configuration to read from environment variables
+builder.Configuration.AddEnvironmentVariables();
+
+// Set Azure AD configuration from environment variables
+var azureAdSection = builder.Configuration.GetSection("AzureAd");
+azureAdSection["TenantId"] = Environment.GetEnvironmentVariable("AZURE_AD_TENANT_ID") ?? azureAdSection["TenantId"];
+azureAdSection["ClientId"] = Environment.GetEnvironmentVariable("AZURE_AD_CLIENT_ID") ?? azureAdSection["ClientId"];
+azureAdSection["ClientSecret"] = Environment.GetEnvironmentVariable("AZURE_AD_CLIENT_SECRET") ?? azureAdSection["ClientSecret"];
+azureAdSection["Audience"] = Environment.GetEnvironmentVariable("AZURE_AD_AUDIENCE") ?? azureAdSection["Audience"];
+
+// Set Connection String from environment variables
+var connectionString = Environment.GetEnvironmentVariable("DEFAULT_CONNECTION_STRING") ?? 
+                      builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Configuration.GetSection("ConnectionStrings")["DefaultConnection"] = connectionString;
+
+// Set API Settings from environment variables
+var apiSettingsSection = builder.Configuration.GetSection("ApiSettings");
+apiSettingsSection["BaseUrl"] = Environment.GetEnvironmentVariable("API_BASE_URL") ?? apiSettingsSection["BaseUrl"];
+
 // Add services to the container
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+{
+    // Add global authorization policy to protect all API endpoints
+    var policy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.Filters.Add(new AuthorizeFilter(policy));
+})
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -40,17 +72,28 @@ builder.Services.AddHostedService<EscalationBackgroundService>();
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
 var isDevelopment = builder.Environment.IsDevelopment();
 
+// Validate required configuration
+try
+{
+    ConfigurationValidator.ValidateRequiredConfiguration(builder.Configuration, isDevelopment);
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"Configuration Error: {ex.Message}");
+    Environment.Exit(1);
+}
+
 if (!isDevelopment && !string.IsNullOrEmpty(azureAdConfig["ClientId"]))
 {
-    // Use Azure AD authentication in production
-    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-        .AddMicrosoftIdentityWebApp(azureAdConfig);
+    // Use JWT Bearer authentication for API in production
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApi(azureAdConfig);
 }
 else
 {
     // Use a dummy authentication scheme in development
     builder.Services.AddAuthentication("DummyScheme")
-        .AddScheme<AuthenticationSchemeOptions, DummyAuthenticationHandler>("DummyScheme", options => { });
+        .AddScheme<AuthenticationSchemeOptions, SFCDashboard.Api.DummyAuthenticationHandler>("DummyScheme", options => { });
 }
 
 // Add authorization
@@ -107,33 +150,71 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API for SFC Dashboard backend operations"
     });
     
-    // Add JWT authentication to Swagger
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    if (!isDevelopment)
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-    
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
-    {
+        // Add Azure AD OAuth2 authentication to Swagger in production
+        c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
         {
-            new OpenApiSecurityScheme
+            Type = SecuritySchemeType.OAuth2,
+            Flows = new OpenApiOAuthFlows
             {
-                Reference = new OpenApiReference
+                Implicit = new OpenApiOAuthFlow
                 {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
+                    AuthorizationUrl = new Uri($"https://login.microsoftonline.com/{azureAdConfig["TenantId"]}/oauth2/v2.0/authorize"),
+                    TokenUrl = new Uri($"https://login.microsoftonline.com/{azureAdConfig["TenantId"]}/oauth2/v2.0/token"),
+                    Scopes = new Dictionary<string, string>
+                    {
+                        { $"api://{azureAdConfig["ClientId"]}/access_as_user", "Access API as user" }
+                    }
+                }
+            }
+        });
+        
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "oauth2"
+                    }
                 },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header,
-            },
-            new List<string>()
-        }
-    });
+                new[] { $"api://{azureAdConfig["ClientId"]}/access_as_user" }
+            }
+        });
+    }
+    else
+    {
+        // Add Bearer token authentication to Swagger in development
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer"
+        });
+        
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    },
+                    Scheme = "oauth2",
+                    Name = "Bearer",
+                    In = ParameterLocation.Header,
+                },
+                new List<string>()
+            }
+        });
+    }
 });
 
 var app = builder.Build();
@@ -163,13 +244,13 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseUserRegistration();
 
 // Map controllers
 app.MapControllers();
 
-// Health check endpoint
-app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
+// Health check endpoint - allow anonymous access
+app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }))
+   .AllowAnonymous();
 
 // Create uploads directory if it doesn't exist
 app.Use(async (context, next) =>
