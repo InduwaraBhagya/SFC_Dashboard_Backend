@@ -203,6 +203,36 @@ namespace SFCDashboard.ApiClients
             }
         }
 
+        public async Task<Dictionary<int, IEnumerable<PEIssueViewModel>>> GetPEIssueViewModelsByPlannedEventIdsAsync(List<int> peIds)
+        {
+            try
+            {
+                if (peIds == null || !peIds.Any())
+                {
+                    return new Dictionary<int, IEnumerable<PEIssueViewModel>>();
+                }
+
+                var idsJson = JsonSerializer.Serialize(peIds, _jsonOptions);
+                var content = new StringContent(idsJson, System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("api/peissues/viewmodels-by-plannedevent-ids", content);
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(json))
+                    return new Dictionary<int, IEnumerable<PEIssueViewModel>>();
+                    
+                return JsonSerializer.Deserialize<Dictionary<int, IEnumerable<PEIssueViewModel>>>(json, _jsonOptions) ?? new Dictionary<int, IEnumerable<PEIssueViewModel>>();
+            }
+            catch (JsonException)
+            {
+                return new Dictionary<int, IEnumerable<PEIssueViewModel>>();
+            }
+            catch (HttpRequestException)
+            {
+                return new Dictionary<int, IEnumerable<PEIssueViewModel>>();
+            }
+        }
+
         public async Task<PEIssue?> GetPEIssueAsync(int id)
         {
             return await GetByIdAsync(id);

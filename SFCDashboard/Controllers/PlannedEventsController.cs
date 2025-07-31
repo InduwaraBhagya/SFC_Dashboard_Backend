@@ -1870,7 +1870,7 @@ namespace SFCDashboard.Controllers
 
             // --- Provide PEReportedIssuesByPeId for the view ---
             var peIds = result.Select(pe => pe.Id).ToList();
-            var allIssues = await _peIssuesApi.GetIssuesByPlannedEventIdsAsync(peIds);
+            var allIssues = await _peIssuesApi.GetPEIssueViewModelsByPlannedEventIdsAsync(peIds);
 
             var issuesByPlannedEventId = allIssues
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
