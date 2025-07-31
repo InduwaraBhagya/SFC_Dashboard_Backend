@@ -137,6 +137,112 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while retrieving the workgroup name");
             }
         }
+
+        /// <summary>
+        /// Create a new workgroup
+        /// </summary>
+        /// <param name="workGroup">The workgroup to create</param>
+        /// <returns>The created workgroup</returns>
+        [HttpPost]
+        public async Task<ActionResult<WorkGroup>> CreateWorkGroup([FromBody] WorkGroup workGroup)
+        {
+            try
+            {
+                _logger.LogInformation("Creating new workgroup: {name}", workGroup.Name);
+                
+                if (string.IsNullOrWhiteSpace(workGroup.Name))
+                {
+                    return BadRequest(new { error = "WorkGroup name is required" });
+                }
+
+                var createdWorkGroup = await _workGroupsService.CreateWorkGroupAsync(workGroup);
+                
+                if (createdWorkGroup == null)
+                {
+                    return StatusCode(500, new { error = "Failed to create workgroup" });
+                }
+                
+                return CreatedAtAction(nameof(GetWorkGroup), new { id = createdWorkGroup.Id }, createdWorkGroup);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating workgroup");
+                return StatusCode(500, new { error = "An error occurred while creating the workgroup" });
+            }
+        }
+
+        /// <summary>
+        /// Update an existing workgroup
+        /// </summary>
+        /// <param name="id">The workgroup ID</param>
+        /// <param name="workGroup">The updated workgroup data</param>
+        /// <returns>The updated workgroup</returns>
+        [HttpPut("{id}")]
+        public async Task<ActionResult<WorkGroup>> UpdateWorkGroup(int id, [FromBody] WorkGroup workGroup)
+        {
+            try
+            {
+                _logger.LogInformation("Updating workgroup {id} with data: Name='{name}'", id, workGroup?.Name);
+                
+                if (id != workGroup.Id)
+                {
+                    _logger.LogWarning("ID mismatch: URL id={urlId}, Body id={bodyId}", id, workGroup.Id);
+                    return BadRequest(new { error = "WorkGroup ID mismatch" });
+                }
+
+                if (string.IsNullOrWhiteSpace(workGroup.Name))
+                {
+                    return BadRequest(new { error = "WorkGroup name is required" });
+                }
+
+                var existingWorkGroup = await _workGroupsService.GetWorkGroupAsync(id);
+                if (existingWorkGroup == null)
+                {
+                    return NotFound(new { error = "WorkGroup not found" });
+                }
+
+                var updatedWorkGroup = await _workGroupsService.UpdateWorkGroupAsync(workGroup);
+                return Ok(updatedWorkGroup);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation while updating workgroup {id}", id);
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating workgroup {id}: {message}", id, ex.Message);
+                return StatusCode(500, new { error = $"An error occurred while updating the workgroup: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Delete a workgroup
+        /// </summary>
+        /// <param name="id">The workgroup ID to delete</param>
+        /// <returns>Success status</returns>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteWorkGroup(int id)
+        {
+            try
+            {
+                _logger.LogInformation("Deleting workgroup {id}", id);
+                
+                var existingWorkGroup = await _workGroupsService.GetWorkGroupAsync(id);
+                if (existingWorkGroup == null)
+                {
+                    return NotFound(new { error = "WorkGroup not found" });
+                }
+
+                await _workGroupsService.DeleteWorkGroupAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting workgroup {id}", id);
+                return StatusCode(500, new { error = "An error occurred while deleting the workgroup" });
+            }
+        }
     }
 
     /// <summary>

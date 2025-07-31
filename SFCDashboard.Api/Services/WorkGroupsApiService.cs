@@ -97,15 +97,46 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                _logger.LogInformation("Updating workgroup: {id}", workGroup.Id);
-                _context.WorkGroups.Update(workGroup);
-                await _context.SaveChangesAsync();
-                return workGroup;
+                _logger.LogInformation("Updating workgroup: {id} with name: '{name}'", workGroup.Id, workGroup.Name);
+                
+                // Validate input
+                if (string.IsNullOrWhiteSpace(workGroup.Name))
+                {
+                    throw new ArgumentException("WorkGroup name cannot be empty");
+                }
+                
+                // Check for duplicate names (excluding the current workgroup)
+                var duplicateExists = await _context.WorkGroups
+                    .AnyAsync(wg => wg.Name.ToLower() == workGroup.Name.ToLower() && wg.Id != workGroup.Id);
+                
+                if (duplicateExists)
+                {
+                    throw new InvalidOperationException($"A workgroup with the name '{workGroup.Name}' already exists");
+                }
+                
+                // Find the existing workgroup in the database
+                var existingWorkGroup = await _context.WorkGroups.FindAsync(workGroup.Id);
+                if (existingWorkGroup == null)
+                {
+                    _logger.LogWarning("WorkGroup with id {id} not found for update", workGroup.Id);
+                    throw new InvalidOperationException($"WorkGroup with id {workGroup.Id} not found");
+                }
+
+                // Update only the properties we want to change
+                _logger.LogInformation("Changing workgroup {id} name from '{oldName}' to '{newName}'", 
+                    workGroup.Id, existingWorkGroup.Name, workGroup.Name);
+                existingWorkGroup.Name = workGroup.Name;
+                
+                // Save changes
+                var saveResult = await _context.SaveChangesAsync();
+                _logger.LogInformation("Successfully updated workgroup {id}, {saveResult} rows affected", workGroup.Id, saveResult);
+                
+                return existingWorkGroup;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating workgroup: {id}", workGroup.Id);
-                return null;
+                _logger.LogError(ex, "Error updating workgroup: {id}. Exception: {message}", workGroup.Id, ex.Message);
+                throw; // Re-throw the exception so the controller can handle it
             }
         }
 
