@@ -301,6 +301,24 @@ namespace SFCDashboard.ApiClients
             }
         }
 
+        public async Task<object> GetEstimationHistoryAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/petasksapi/{id}/estimation-history");
+                response.EnsureSuccessStatusCode();
+
+                var json = await response.Content.ReadAsStringAsync();
+                var history = JsonSerializer.Deserialize<object>(json, _jsonOptions);
+                return history ?? new List<object>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting estimation history for PE task {Id} via API", id);
+                return new List<object>();
+            }
+        }
+
         public async Task<IEnumerable<PETask>> GetPendingTaskRequestsAsync(int limit = 5)
         {
             try

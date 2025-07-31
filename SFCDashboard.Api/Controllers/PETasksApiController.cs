@@ -593,6 +593,35 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while updating estimated time");
             }
         }
+
+        /// <summary>
+        /// Get estimation history for a task
+        /// </summary>
+        [HttpGet("{id}/estimation-history")]
+        public async Task<IActionResult> GetEstimationHistory(int id)
+        {
+            try
+            {
+                var history = await _context.TaskEstimationHistory
+                    .Where(h => h.TaskId == id)
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Select(h => new
+                    {
+                        h.Id,
+                        h.TaskId,
+                        h.EstimatedDate,
+                        h.CreatedAt
+                    })
+                    .ToListAsync();
+
+                return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving estimation history for task {Id}", id);
+                return StatusCode(500, "An error occurred while retrieving estimation history");
+            }
+        }
     }
 
     public class ProcessUrgentRequestDto

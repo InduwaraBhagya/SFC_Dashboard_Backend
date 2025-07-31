@@ -11,7 +11,7 @@ namespace SFCDashboard.Controllers
         private readonly ILogger<PETasksController> _logger;
 
         public PETasksController(
-            IPETasksApiClient peTasksApiClient, 
+            IPETasksApiClient peTasksApiClient,
             IPlannedEventsApiClient plannedEventsApiClient,
             IUsersApiClient usersApiClient,
             ILogger<PETasksController> logger)
@@ -47,13 +47,13 @@ namespace SFCDashboard.Controllers
             try
             {
                 await _peTasksApiClient.MarkAsUrgentAsync(id);
-                
+
                 _logger.LogInformation("Task ID {taskId} marked as urgent directly", id);
                 TempData["SuccessMessage"] = "Task marked as urgent. This PE will now appear in the urgent records list.";
 
                 // Get the task to find the PlannedEvent ID for redirect
                 var task = await _peTasksApiClient.GetByIdAsync(id);
-                
+
                 // Check if task and PlannedEvent exist before redirecting
                 if (task?.PlannedEvent?.Id != null && task.PlannedEvent.Id > 0)
                 {
@@ -102,10 +102,10 @@ namespace SFCDashboard.Controllers
 
                 // Get the task to find the PlannedEvent ID for redirect
                 var task = await _peTasksApiClient.GetByIdAsync(id);
-                
-                _logger.LogInformation("Retrieved task {TaskId}: PENumber={PENumber}, PlannedEvent={PlannedEventId}", 
+
+                _logger.LogInformation("Retrieved task {TaskId}: PENumber={PENumber}, PlannedEvent={PlannedEventId}",
                     id, task?.PENumber, task?.PlannedEvent?.Id);
-                
+
                 // Check if task and PlannedEvent exist before redirecting
                 if (task?.PlannedEvent?.Id != null && task.PlannedEvent.Id > 0)
                 {
@@ -162,7 +162,7 @@ namespace SFCDashboard.Controllers
             try
             {
                 await _peTasksApiClient.CompleteViolatedTaskAsync(id);
-                
+
                 TempData["SuccessMessage"] = "Task marked as completed successfully.";
                 return RedirectToAction(nameof(OLAViolationsList));
             }
@@ -243,7 +243,7 @@ namespace SFCDashboard.Controllers
                 {
                     await _peTasksApiClient.UpdateAsync(pETask);
                     TempData["SuccessMessage"] = "Task updated successfully.";
-                    
+
                     // Check if the task has a valid PlannedEvent for redirect
                     var task = await _peTasksApiClient.GetByIdAsync(id);
                     if (task?.PlannedEvent?.Id != null && task.PlannedEvent.Id > 0)
@@ -272,12 +272,18 @@ namespace SFCDashboard.Controllers
         }
 
         [HttpGet]
-        public Task<IActionResult> GetEstimationHistory(int id)
+        public async Task<IActionResult> GetEstimationHistory(int id)
         {
-            // TODO: Implement API endpoint for estimation history
-            // For now, return empty list
-            var history = new List<object>();
-            return Task.FromResult<IActionResult>(Json(history));
+            try
+            {
+                var history = await _peTasksApiClient.GetEstimationHistoryAsync(id);
+                return Json(history);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting estimation history for task {id}", id);
+                return Json(new List<object>());
+            }
         }
 
         // GET: PETasks/UrgentTasks
@@ -297,7 +303,7 @@ namespace SFCDashboard.Controllers
             try
             {
                 await _peTasksApiClient.RemoveUrgentStatusAsync(id);
-                
+
                 _logger.LogInformation("Task {id} urgent status removed", id);
                 TempData["SuccessMessage"] = "Urgent status removed from task successfully.";
                 return RedirectToAction(nameof(UrgentTasks));

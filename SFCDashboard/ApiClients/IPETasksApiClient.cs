@@ -19,6 +19,7 @@ namespace SFCDashboard.ApiClients
         Task CompleteViolatedTaskAsync(int id);
         Task RemoveUrgentStatusAsync(int id);
         Task UpdateEstimatedTimeAsync(int id, DateTime estimatedTime);
+        Task<object> GetEstimationHistoryAsync(int id);
         Task<IEnumerable<PETask>> GetPendingTaskRequestsAsync(int limit = 5);
         Task<Dictionary<string, IEnumerable<PETask>>> GetTasksByPeNumbersAsync(List<string> peNumbers);
         Task<List<string>> GetOLAViolatingPENumbersAsync();
