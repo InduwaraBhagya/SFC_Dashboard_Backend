@@ -871,14 +871,8 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
-                var workgroupNames = await _context.WorkGroups
-                    .Where(w => workgroupIdsToUse.Contains(w.Id))
-                    .Select(w => w.Name)
-                    .ToListAsync();
-
-                // Multi-workgroup methods should never use ViewAll permission
-                return await GetUrgentCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+                var events = await GetUrgentPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                return events.Count();
             }
             catch (Exception ex)
             {
@@ -891,14 +885,8 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
-                var workgroupNames = await _context.WorkGroups
-                    .Where(w => workgroupIdsToUse.Contains(w.Id))
-                    .Select(w => w.Name)
-                    .ToListAsync();
-
-                // Multi-workgroup methods should never use ViewAll permission
-                return await GetInProgressCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+                var events = await GetInProgressPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                return events.Count();
             }
             catch (Exception ex)
             {
@@ -911,14 +899,8 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
-                var workgroupNames = await _context.WorkGroups
-                    .Where(w => workgroupIdsToUse.Contains(w.Id))
-                    .Select(w => w.Name)
-                    .ToListAsync();
-
-                // Multi-workgroup methods should never use ViewAll permission
-                return await GetOLAViolateCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+                var events = await GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                return events.Count();
             }
             catch (Exception ex)
             {
@@ -931,14 +913,8 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
-                var workgroupNames = await _context.WorkGroups
-                    .Where(w => workgroupIdsToUse.Contains(w.Id))
-                    .Select(w => w.Name)
-                    .ToListAsync();
-
-                // Multi-workgroup methods should never use ViewAll permission
-                return await GetHoldCountAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+                var events = await GetHoldPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                return events.Count();
             }
             catch (Exception ex)
             {

@@ -74,11 +74,14 @@ namespace SFCDashboard.Controllers
                     }
                 }
 
-                // Calculate dashboard counts using API services
-                ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountAsync(userWorkgroupNames, hasDrawFiberAccess);
-                ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountAsync(userWorkgroupNames, hasDrawFiberAccess);
-                ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolateCountAsync(userWorkgroupNames, hasDrawFiberAccess);
-                ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountAsync(userWorkgroupNames, hasDrawFiberAccess);
+                // Determine selected workgroup IDs for count calculations
+                var selectedWorkgroupIds = workgroupId.HasValue ? new List<int> { workgroupId.Value } : userWorkgroupIds;
+
+                // Calculate dashboard counts using multi-workgroup API methods
+                ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolateCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
 
                 // Get user's primary workgroup for task queue
                 var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
