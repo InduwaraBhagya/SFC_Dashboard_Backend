@@ -12,13 +12,11 @@ namespace SFCDashboard.Api.Services
         Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsByUserIdAsync(int userId);
         Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsByUserIdAsync(int userId);
         Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsByUserIdAsync(int userId);
-        Task<IEnumerable<PlannedEvent>> GetPlannedEventsByWorkgroupIdsAsync(List<int> workgroupIds, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
-        Task<IEnumerable<PlannedEvent>> GetPlannedEventsBySalesWorkgroupAsync(List<string> salesWorkgroups, List<string> assignedCustomers, bool canViewAll);
         Task<PlannedEvent?> CreatePlannedEventAsync(PlannedEvent plannedEvent);
         Task<PlannedEvent?> UpdatePlannedEventAsync(PlannedEvent plannedEvent);
         Task<bool> DeletePlannedEventAsync(int id);
@@ -56,10 +54,10 @@ namespace SFCDashboard.Api.Services
         Task<IEnumerable<PlannedEvent>> GetSalesOLAViolateRecordsAsync(int userId);
         
         // Sales count methods
-        Task<int> GetSalesInProgressCountAsync(int userId);
-        Task<int> GetSalesHoldCountAsync(int userId);
-        Task<int> GetSalesUrgentCountAsync(int userId);
-        Task<int> GetSalesOLAViolateCountAsync(int userId);
+        Task<int> GetSalesInProgressCountAsync();
+        Task<int> GetSalesHoldCountAsync();
+        Task<int> GetSalesUrgentCountAsync();
+        Task<int> GetSalesOLAViolateCountAsync();
     }
 }
 

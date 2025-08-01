@@ -3,7 +3,7 @@ using SFCDashboard.Models;
 
 namespace SFCDashboard.Controllers
 {
-    // This partial class contains refactored methods using API services
+    // This partial class contains refactored helper methods using API services
     public partial class PlannedEventsController
     {
         // Refactored helper methods using API services
@@ -63,150 +63,163 @@ namespace SFCDashboard.Controllers
             return await _usersApi.GetUserSalesWorkgroupsAsync(serviceId);
         }
 
-        // Refactored count methods using API services
-        private async Task<int> GetUrgentCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        private async Task<int> GetCurrentUserIdAsync()
         {
-            int currentUserId = await GetCurrentUserIdAsync();
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            return await _plannedEventsApi.GetUrgentCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+            var serviceId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(serviceId))
+                return 0;
+
+            return await _usersApi.GetCurrentUserIdAsync(serviceId);
         }
 
-        private async Task<int> GetInProgressCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
+        private async Task<IActionResult?> RedirectBasedOnUserType(string searchType, string peNumber, string customer,
+            string jobReference, string soNumber, List<int> workgroupIds, int pageIndex)
         {
             int currentUserId = await GetCurrentUserIdAsync();
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            return await _plannedEventsApi.GetInProgressCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
-        }
 
-        private async Task<int> GetOLAViolateCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
-        {
-            int currentUserId = await GetCurrentUserIdAsync();
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            return await _plannedEventsApi.GetOLAViolateCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
-        }
+            // Get current user's workgroup info first to check ViewAll permission
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
 
-        private async Task<int> GetHoldCountForMultiWorkgroup(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds)
-        {
-            int currentUserId = await GetCurrentUserIdAsync();
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            return await _plannedEventsApi.GetHoldCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
-        }
-
-        // Refactored CRUD operations using API services
-        public async Task<IActionResult> CreateRefactored([Bind("Id,Province,Region,Rtom,RtomDescription,JobReference,ContractorName,PeNumber,PeActivity,PeNature,PeTitle,PeObjective,PeArea,SoNumber,TaskSeq,TaskName,TaskWg,WoActualStartDate,RequestReferenceNo,SoId,Region1,Province1,Rtom1,Lea,CctId,ServiceCategory,ServiceType,SoCreateDate,OrderType,CrmOrder,WoId,PendingTaskName,PendingWg,PEStatus,StartDate,ServiceSpeed,ServiceRequiredDate,FiberPeNo,FiberSoId,ProductSoId,FiberPeTaskName,FiberPeTaskWg,WoComments,Customer,CusType,AccountManager,SectionHandledBy,LocationAAddress,LocationBAddress,NtuType,AccessMedium,AccessMediumAEnd,AccessMediumBEnd")] PlannedEvent plannedEvent)
-        {
-            if (ModelState.IsValid)
+            // Check for sales workgroup, but only redirect if user doesn't have ViewAll permission
+            if (await IsUserInSalesWorkgroup() && !canViewAll)
             {
-                var result = await _plannedEventsApi.CreatePlannedEventAsync(plannedEvent);
-                if (result != null)
+                return RedirectToAction(nameof(SalesView), new
                 {
-                    return RedirectToAction(nameof(Index));
-                }
-                ModelState.AddModelError("", "Failed to create planned event");
+                    searchType,
+                    peNumber,
+                    customer,
+                    jobReference,
+                    soNumber,
+                    pageIndex
+                });
             }
-            return View(plannedEvent);
+
+            // If user does NOT have ViewAll and has multiple workgroups, redirect to MultiWorkgroupView
+            if (!canViewAll && userWorkgroupIds.Count > 1)
+            {
+                return RedirectToAction(nameof(MultiWorkgroupView), new
+                {
+                    searchType,
+                    peNumber,
+                    customer,
+                    jobReference,
+                    soNumber,
+                    workgroupIds,
+                    pageIndex
+                });
+            }
+
+            // No redirect needed - user should see the regular Index view
+            return null;
         }
 
-        public async Task<IActionResult> EditRefactored(int id, [Bind("Id,Province,Region,Rtom,RtomDescription,JobReference,ContractorName,PeNumber,PeActivity,PeNature,PeTitle,PeObjective,PeArea,SoNumber,TaskSeq,TaskName,TaskWg,WoActualStartDate,RequestReferenceNo,SoId,Region1,Province1,Rtom1,Lea,CctId,ServiceCategory,ServiceType,SoCreateDate,OrderType,CrmOrder,WoId,PendingTaskName,PendingWg,PEStatus,StartDate,ServiceSpeed,ServiceRequiredDate,FiberPeNo,FiberSoId,ProductSoId,FiberPeTaskName,FiberPeTaskWg,WoComments,Customer,CusType,AccountManager,SectionHandledBy,LocationAAddress,LocationBAddress,NtuType,AccessMedium,AccessMediumAEnd,AccessMediumBEnd")] PlannedEvent plannedEvent)
+        private async Task<IQueryable<PlannedEvent>> ApplyCustomerFilteringAsync(IQueryable<PlannedEvent> query, List<string> salesWorkgroups, bool canViewAll)
         {
-            if (id != plannedEvent.Id)
+            // Get user's assigned customers
+            var assignedCustomers = await GetUserAssignedCustomersAsync();
+
+            if (!canViewAll)
             {
-                return NotFound();
+                // Apply workgroup filtering first with case-insensitive matching
+                // Convert workgroups to lowercase for comparison
+                var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
+
+                var beforeFilterCount = query.Count();
+                query = query.Where(p => lowerSalesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && (
+                        p.TaskWg.ToLower() == wg ||
+                        p.TaskWg.ToLower().Contains(wg)
+                    )) ||
+                    (p.SectionHandledBy != null && (
+                        p.SectionHandledBy.ToLower() == wg ||
+                        p.SectionHandledBy.ToLower().Contains(wg)
+                    ))
+                ));
+                var afterWorkgroupFilterCount = query.Count();
+
+                // If user has assigned customers, further filter by those customers
+                if (assignedCustomers.Any())
+                {
+                    query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
+                    var afterCustomerFilterCount = query.Count();
+                }
+            }
+            else
+            {
+                // For users with ViewAll permission, still apply customer filtering if they have assigned customers
+                if (assignedCustomers.Any())
+                {
+                    query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
+                }
             }
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var result = await _plannedEventsApi.UpdatePlannedEventAsync(plannedEvent);
-                    if (result != null)
-                    {
-                        return RedirectToAction(nameof(Index));
-                    }
-                    return NotFound();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error updating planned event");
-                    if (!await PlannedEventExists(plannedEvent.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("", "Failed to update planned event");
-                    }
-                }
-            }
-            return View(plannedEvent);
+            return query;
         }
 
-        // Refactored Details method using API services
-        public async Task<IActionResult> DetailsRefactored(int? id, string? returnUrl = null)
+        private async Task<bool> PlannedEventExists(int id)
         {
-            if (id == null)
+            return await _plannedEventsApi.PlannedEventExistsAsync(id);
+        }
+
+        private string? ExtractUrgentRequestReason(string? priority)
+        {
+            if (string.IsNullOrEmpty(priority))
+                return null;
+
+            if (priority.Contains("Opening Ceremony"))
+                return "Opening Ceremony - Priority 1";
+
+            if (priority.Contains("Critical Customer"))
+                return "Critical Customer - Priority 2";
+
+            return null;
+        }
+
+        // Helper to extract date from PE number
+        private DateTime? GetDateFromPeNumber(string peNumber)
+        {
+            // Expects format: PEYYYYMMDDxxxx
+            if (string.IsNullOrEmpty(peNumber) || peNumber.Length < 10)
+                return null;
+            try
             {
-                return NotFound();
+                var year = int.Parse(peNumber.Substring(2, 4));
+                var month = int.Parse(peNumber.Substring(6, 2));
+                var day = int.Parse(peNumber.Substring(8, 2));
+                return new DateTime(year, month, day);
             }
-
-            var currentUserId = await GetCurrentUserIdAsync();
-            var currentUser = await _usersApi.GetUserAsync(currentUserId);
-
-            if (currentUser == null)
+            catch
             {
-                return NotFound();
+                return null;
             }
+        }
 
-            // Get the planned event
-            var plannedEvent = await _plannedEventsApi.GetPlannedEventAsync(id.Value);
-            if (plannedEvent == null)
+        // Call this after loading tasks for a PE (e.g., in Details or when recalculating tasks)
+        private void SetTaskDatesFromPeNumber(string peNumber, List<PETask> tasks)
+        {
+            var peCreatedDate = GetDateFromPeNumber(peNumber) ?? DateTime.Today;
+            DateTime currentCreatedDate = peCreatedDate;
+
+            for (int i = 0; i < tasks.Count; i++)
             {
-                return NotFound();
+                var task = tasks[i];
+
+                // For "Draw Fiber", use EstimatedTime if set
+                if (task.Task?.Trim().ToLower() == "draw fiber" && task.EstimatedTime.HasValue)
+                {
+                    task.TaskCreatedDate = currentCreatedDate;
+                    task.TaskCompleteDate = task.EstimatedTime.Value;
+                    currentCreatedDate = task.TaskCompleteDate;
+                }
+                else
+                {
+                    task.TaskCreatedDate = currentCreatedDate;
+                    int olaDays = 0;
+                    int.TryParse(task.OLA, out olaDays);
+                    task.TaskCompleteDate = currentCreatedDate.AddDays(olaDays);
+                    currentCreatedDate = task.TaskCompleteDate;
+                }
             }
-
-            // Find the engineer by LEA code
-            string? engineerName = null;
-            if (!string.IsNullOrEmpty(plannedEvent.Lea))
-            {
-                engineerName = await _areaNetworkEngineersApi.GetEngineerNameByAreaAsync(plannedEvent.Lea);
-            }
-            ViewBag.NetworkEngineer = engineerName ?? "Not Assigned";
-
-            // Check if current task is "Draw Fiber"
-            bool isCurrentTaskDrawFiber = plannedEvent.TaskName?.Trim().ToLower() == "draw fiber";
-            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-
-            ViewData["CanManageEstimatedTime"] =
-                currentUser.UserRole?.HasPermission("CanManageEstimatedTime") == true &&
-                hasDrawFiberAccess &&
-                isCurrentTaskDrawFiber;
-
-            // Get related PE tasks for this event
-            var peTasks = (await _peTasksApi.GetPETasksByPENumberAsync(plannedEvent.PeNumber ?? "")).ToList();
-            if (!string.IsNullOrEmpty(plannedEvent.PeNumber))
-            {
-                SetTaskDatesFromPeNumber(plannedEvent.PeNumber, peTasks);
-            }
-            ViewBag.PETasks = peTasks;
-
-            // Find PETaskListId for the current task name
-            if (!string.IsNullOrEmpty(plannedEvent.TaskName))
-            {
-                var taskList = await _peTaskListsApi.GetPETaskListByNameAsync(plannedEvent.TaskName);
-                ViewBag.CurrentTaskListId = taskList?.Id;
-            }
-
-            // Load issues for this PE
-            var issues = await _peIssuesApi.GetPEIssueViewModelsByPlannedEventAsync(plannedEvent.Id);
-            ViewBag.PEReportedIssues = issues;
-
-            // Get escalations for PE tasks
-            var peTaskIds = peTasks.Select(t => t.Id).ToList();
-            var escalations = await _escalationsApi.GetEscalationsByTaskIdsAsync(peTaskIds);
-            plannedEvent.Escalations = escalations.ToList();
-
-            ViewBag.ReturnUrl = returnUrl;
-            return View(plannedEvent);
         }
     }
 }
