@@ -48,6 +48,18 @@ namespace SFCDashboard.Api.Services
         Task<IEnumerable<PlannedEvent>> GetPendingUrgentRequestsAsync(int take = 10);
         Task<PaginatedList<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, string? workgroupName, bool hasDrawFiberAccess, int pageIndex, int pageSize);
         Task<PaginatedList<PlannedEvent>> SearchPlannedEventsAsync(string searchType, string searchValue, List<string> salesWorkgroups, bool hasDrawFiberAccess, int pageIndex, int pageSize);
+
+        // Sales-specific methods
+        Task<IEnumerable<PlannedEvent>> GetSalesInProgressRecordsAsync(int userId);
+        Task<IEnumerable<PlannedEvent>> GetSalesHoldRecordsAsync(int userId);
+        Task<IEnumerable<PlannedEvent>> GetSalesUrgentRecordsAsync(int userId);
+        Task<IEnumerable<PlannedEvent>> GetSalesOLAViolateRecordsAsync(int userId);
+        
+        // Sales count methods
+        Task<int> GetSalesInProgressCountAsync(int userId);
+        Task<int> GetSalesHoldCountAsync(int userId);
+        Task<int> GetSalesUrgentCountAsync(int userId);
+        Task<int> GetSalesOLAViolateCountAsync(int userId);
     }
 }
 

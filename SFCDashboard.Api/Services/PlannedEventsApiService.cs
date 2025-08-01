@@ -1200,6 +1200,371 @@ namespace SFCDashboard.Api.Services
                 return new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, pageSize);
             }
         }
+
+        /// <summary>
+        /// Get sales in-progress records for a user (applies sales workgroup filtering)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetSalesInProgressRecordsAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting sales in-progress records for user {userId}", userId);
+
+                // Get user with workgroups and permissions
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {userId} not found", userId);
+                    return new List<PlannedEvent>();
+                }
+
+                // Check if user has ViewAll permission
+                bool canViewAll = user.UserRole?.RolePermissions
+                    ?.Any(rp => rp.Permission?.Name == "ViewAll") == true;
+
+                // Get user's sales workgroups (workgroups containing "SALES")
+                var salesWorkgroups = user.UserWorkGroups?
+                    .Where(uwg => uwg.WorkGroup?.Name?.Contains("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                    .Select(uwg => uwg.WorkGroup.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Cast<string>()
+                    .ToList() ?? new List<string>();
+
+                // Get user's assigned customers
+                var assignedCustomers = await _usersApiService.GetUserAssignedCustomersAsync(userId);
+
+                _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, SalesWorkgroups={salesWorkgroups}, AssignedCustomers={assignedCustomers}",
+                    userId, canViewAll, string.Join(", ", salesWorkgroups), assignedCustomers.Count);
+
+                // Get OLA violating PE numbers
+                var violatingPENumbers = await _context.PETasks
+                    .Where(t => t.IsOLAViolate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
+
+                var query = _context.PlannedEvents
+                    .Where(p =>
+                        (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
+                        !p.IsHold &&
+                        p.PeNumber != null &&
+                        !violatingPENumbers.Contains(p.PeNumber))
+                    .AsQueryable();
+
+                // Apply sales workgroup filtering
+                query = await ApplySalesWorkgroupFilteringAsync(query, salesWorkgroups, assignedCustomers, canViewAll);
+
+                var result = await query
+                    .OrderByDescending(p => p.ServiceRequiredDate)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {count} sales in-progress records for user {userId}", result.Count, userId);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales in-progress records for user {userId}", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Get sales hold records for a user (applies sales workgroup filtering)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetSalesHoldRecordsAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting sales hold records for user {userId}", userId);
+
+                // Get user with workgroups and permissions
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {userId} not found", userId);
+                    return new List<PlannedEvent>();
+                }
+
+                // Check if user has ViewAll permission
+                bool canViewAll = user.UserRole?.RolePermissions
+                    ?.Any(rp => rp.Permission?.Name == "ViewAll") == true;
+
+                // Get user's sales workgroups (workgroups containing "SALES")
+                var salesWorkgroups = user.UserWorkGroups?
+                    .Where(uwg => uwg.WorkGroup?.Name?.Contains("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                    .Select(uwg => uwg.WorkGroup.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Cast<string>()
+                    .ToList() ?? new List<string>();
+
+                // Get user's assigned customers
+                var assignedCustomers = await _usersApiService.GetUserAssignedCustomersAsync(userId);
+
+                _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, SalesWorkgroups={salesWorkgroups}, AssignedCustomers={assignedCustomers}",
+                    userId, canViewAll, string.Join(", ", salesWorkgroups), assignedCustomers.Count);
+
+                var query = _context.PlannedEvents
+                    .Where(p => p.IsHold)
+                    .AsQueryable();
+
+                // Apply sales workgroup filtering
+                query = await ApplySalesWorkgroupFilteringAsync(query, salesWorkgroups, assignedCustomers, canViewAll);
+
+                var result = await query
+                    .OrderByDescending(p => p.ServiceRequiredDate)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {count} sales hold records for user {userId}", result.Count, userId);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales hold records for user {userId}", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Get sales urgent records for a user (applies sales workgroup filtering)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetSalesUrgentRecordsAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting sales urgent records for user {userId}", userId);
+
+                // Get user with workgroups and permissions
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {userId} not found", userId);
+                    return new List<PlannedEvent>();
+                }
+
+                // Check if user has ViewAll permission
+                bool canViewAll = user.UserRole?.RolePermissions
+                    ?.Any(rp => rp.Permission?.Name == "ViewAll") == true;
+
+                // Get user's sales workgroups (workgroups containing "SALES")
+                var salesWorkgroups = user.UserWorkGroups?
+                    .Where(uwg => uwg.WorkGroup?.Name?.Contains("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                    .Select(uwg => uwg.WorkGroup.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Cast<string>()
+                    .ToList() ?? new List<string>();
+
+                // Get user's assigned customers
+                var assignedCustomers = await _usersApiService.GetUserAssignedCustomersAsync(userId);
+
+                _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, SalesWorkgroups={salesWorkgroups}, AssignedCustomers={assignedCustomers}",
+                    userId, canViewAll, string.Join(", ", salesWorkgroups), assignedCustomers.Count);
+
+                // Get OLA violating PE numbers
+                var violatingPENumbers = await _context.PETasks
+                    .Where(t => t.IsOLAViolate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
+
+                var query = _context.PlannedEvents
+                    .Where(p => p.PEStatus == "urgent" &&
+                           !p.IsHold &&
+                           p.PeNumber != null &&
+                           !violatingPENumbers.Contains(p.PeNumber))
+                    .AsQueryable();
+
+                // Apply sales workgroup filtering
+                query = await ApplySalesWorkgroupFilteringAsync(query, salesWorkgroups, assignedCustomers, canViewAll);
+
+                var result = await query
+                    .OrderByDescending(p => p.ServiceRequiredDate)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {count} sales urgent records for user {userId}", result.Count, userId);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales urgent records for user {userId}", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Get sales OLA violate records for a user (applies sales workgroup filtering)
+        /// </summary>
+        public async Task<IEnumerable<PlannedEvent>> GetSalesOLAViolateRecordsAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting sales OLA violate records for user {userId}", userId);
+
+                // Get user with workgroups and permissions
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {userId} not found", userId);
+                    return new List<PlannedEvent>();
+                }
+
+                // Check if user has ViewAll permission
+                bool canViewAll = user.UserRole?.RolePermissions
+                    ?.Any(rp => rp.Permission?.Name == "ViewAll") == true;
+
+                // Get user's sales workgroups (workgroups containing "SALES")
+                var salesWorkgroups = user.UserWorkGroups?
+                    .Where(uwg => uwg.WorkGroup?.Name?.Contains("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                    .Select(uwg => uwg.WorkGroup.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Cast<string>()
+                    .ToList() ?? new List<string>();
+
+                // Get user's assigned customers
+                var assignedCustomers = await _usersApiService.GetUserAssignedCustomersAsync(userId);
+
+                _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, SalesWorkgroups={salesWorkgroups}, AssignedCustomers={assignedCustomers}",
+                    userId, canViewAll, string.Join(", ", salesWorkgroups), assignedCustomers.Count);
+
+                // Get OLA violating PE numbers
+                var violatingPENumbers = await _context.PETasks
+                    .Where(t => t.IsOLAViolate)
+                    .Select(t => t.PENumber)
+                    .Distinct()
+                    .ToListAsync();
+
+                var query = _context.PlannedEvents
+                    .Where(p => p.PeNumber != null && violatingPENumbers.Contains(p.PeNumber) && !p.IsHold)
+                    .AsQueryable();
+
+                // Apply sales workgroup filtering
+                query = await ApplySalesWorkgroupFilteringAsync(query, salesWorkgroups, assignedCustomers, canViewAll);
+
+                var result = await query
+                    .OrderByDescending(p => p.ServiceRequiredDate)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {count} sales OLA violate records for user {userId}", result.Count, userId);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales OLA violate records for user {userId}", userId);
+                return new List<PlannedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Apply sales workgroup filtering to a query
+        /// </summary>
+        private Task<IQueryable<PlannedEvent>> ApplySalesWorkgroupFilteringAsync(IQueryable<PlannedEvent> query, List<string> salesWorkgroups, List<string> assignedCustomers, bool canViewAll)
+        {
+            if (!canViewAll)
+            {
+                // Apply workgroup filtering first with case-insensitive matching
+                // Convert workgroups to lowercase for comparison
+                var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
+
+                query = query.Where(p => lowerSalesWorkgroups.Any(wg =>
+                    (p.TaskWg != null && (
+                        p.TaskWg.ToLower() == wg ||
+                        p.TaskWg.ToLower().Contains(wg)
+                    )) ||
+                    (p.SectionHandledBy != null && (
+                        p.SectionHandledBy.ToLower() == wg ||
+                        p.SectionHandledBy.ToLower().Contains(wg)
+                    ))
+                ));
+
+                // If user has assigned customers, further filter by those customers
+                if (assignedCustomers.Any())
+                {
+                    query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
+                }
+            }
+            else
+            {
+                // For users with ViewAll permission, still apply customer filtering if they have assigned customers
+                if (assignedCustomers.Any())
+                {
+                    query = query.Where(p => p.Customer != null && assignedCustomers.Contains(p.Customer));
+                }
+            }
+
+            return Task.FromResult(query);
+        }
+
+        /// <summary>
+        /// Get sales in-progress count for a user
+        /// </summary>
+        public async Task<int> GetSalesInProgressCountAsync(int userId)
+        {
+            try
+            {
+                var records = await GetSalesInProgressRecordsAsync(userId);
+                return records.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales in-progress count for user {userId}", userId);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Get sales hold count for a user
+        /// </summary>
+        public async Task<int> GetSalesHoldCountAsync(int userId)
+        {
+            try
+            {
+                var records = await GetSalesHoldRecordsAsync(userId);
+                return records.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales hold count for user {userId}", userId);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Get sales urgent count for a user
+        /// </summary>
+        public async Task<int> GetSalesUrgentCountAsync(int userId)
+        {
+            try
+            {
+                var records = await GetSalesUrgentRecordsAsync(userId);
+                return records.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales urgent count for user {userId}", userId);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Get sales OLA violate count for a user
+        /// </summary>
+        public async Task<int> GetSalesOLAViolateCountAsync(int userId)
+        {
+            try
+            {
+                var records = await GetSalesOLAViolateRecordsAsync(userId);
+                return records.Count();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales OLA violate count for user {userId}", userId);
+                return 0;
+            }
+        }
+
     }
 }
 

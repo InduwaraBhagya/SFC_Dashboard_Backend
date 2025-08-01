@@ -16,13 +16,16 @@ namespace SFCDashboard.Api.Controllers
     {
         private readonly ILogger<PlannedEventsApiController> _logger;
         private readonly IPlannedEventsApiService _plannedEventsService;
+        private readonly IUsersApiService _usersApiService;
 
         public PlannedEventsApiController(
             ILogger<PlannedEventsApiController> logger,
-            IPlannedEventsApiService plannedEventsService)
+            IPlannedEventsApiService plannedEventsService,
+            IUsersApiService usersApiService)
         {
             _logger = logger;
             _plannedEventsService = plannedEventsService;
+            _usersApiService = usersApiService;
         }
         /// <summary>
         /// Get in-progress planned events for a specific user (filtered by backend)
@@ -420,6 +423,206 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogError(ex, "Error getting OLA violating records for multi workgroup");
                 return StatusCode(500, "An error occurred while retrieving OLA violating records for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get sales in-progress records for the current user
+        /// </summary>
+        [HttpGet("sales-inprogress-records")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetSalesInProgressRecords()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var records = await _plannedEventsService.GetSalesInProgressRecordsAsync(userId);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales in-progress records");
+                return StatusCode(500, "An error occurred while retrieving sales in-progress records");
+            }
+        }
+
+        /// <summary>
+        /// Get sales hold records for the current user
+        /// </summary>
+        [HttpGet("sales-hold-records")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetSalesHoldRecords()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var records = await _plannedEventsService.GetSalesHoldRecordsAsync(userId);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales hold records");
+                return StatusCode(500, "An error occurred while retrieving sales hold records");
+            }
+        }
+
+        /// <summary>
+        /// Get sales urgent records for the current user
+        /// </summary>
+        [HttpGet("sales-urgent-records")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetSalesUrgentRecords()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var records = await _plannedEventsService.GetSalesUrgentRecordsAsync(userId);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales urgent records");
+                return StatusCode(500, "An error occurred while retrieving sales urgent records");
+            }
+        }
+
+        /// <summary>
+        /// Get sales OLA violate records for the current user
+        /// </summary>
+        [HttpGet("sales-ola-violate-records")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetSalesOLAViolateRecords()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var records = await _plannedEventsService.GetSalesOLAViolateRecordsAsync(userId);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales OLA violate records");
+                return StatusCode(500, "An error occurred while retrieving sales OLA violate records");
+            }
+        }
+
+        /// <summary>
+        /// Get sales in-progress count for the current user
+        /// </summary>
+        [HttpGet("sales-inprogress-count")]
+        public async Task<ActionResult<int>> GetSalesInProgressCount()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var count = await _plannedEventsService.GetSalesInProgressCountAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales in-progress count");
+                return StatusCode(500, "An error occurred while retrieving sales in-progress count");
+            }
+        }
+
+        /// <summary>
+        /// Get sales hold count for the current user
+        /// </summary>
+        [HttpGet("sales-hold-count")]
+        public async Task<ActionResult<int>> GetSalesHoldCount()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var count = await _plannedEventsService.GetSalesHoldCountAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales hold count");
+                return StatusCode(500, "An error occurred while retrieving sales hold count");
+            }
+        }
+
+        /// <summary>
+        /// Get sales urgent count for the current user
+        /// </summary>
+        [HttpGet("sales-urgent-count")]
+        public async Task<ActionResult<int>> GetSalesUrgentCount()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var count = await _plannedEventsService.GetSalesUrgentCountAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales urgent count");
+                return StatusCode(500, "An error occurred while retrieving sales urgent count");
+            }
+        }
+
+        /// <summary>
+        /// Get sales OLA violate count for the current user
+        /// </summary>
+        [HttpGet("sales-ola-violate-count")]
+        public async Task<ActionResult<int>> GetSalesOLAViolateCount()
+        {
+            try
+            {
+                var userIdentity = User.Identity?.Name;
+                if (string.IsNullOrEmpty(userIdentity))
+                {
+                    return Unauthorized("User identity not found");
+                }
+
+                var userId = await _usersApiService.GetCurrentUserIdAsync(userIdentity);
+                var count = await _plannedEventsService.GetSalesOLAViolateCountAsync(userId);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales OLA violate count");
+                return StatusCode(500, "An error occurred while retrieving sales OLA violate count");
             }
         }
     }

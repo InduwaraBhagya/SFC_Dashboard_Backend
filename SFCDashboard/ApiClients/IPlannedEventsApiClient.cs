@@ -81,5 +81,17 @@ namespace SFCDashboard.ApiClients
         
         // Method for getting distinct customers
         Task<List<string>> GetDistinctCustomersAsync();
+
+        // Sales-specific methods
+        Task<IEnumerable<PlannedEvent>> GetSalesInProgressRecordsAsync();
+        Task<IEnumerable<PlannedEvent>> GetSalesHoldRecordsAsync();
+        Task<IEnumerable<PlannedEvent>> GetSalesUrgentRecordsAsync();
+        Task<IEnumerable<PlannedEvent>> GetSalesOLAViolateRecordsAsync();
+        
+        // Sales count methods
+        Task<int> GetSalesInProgressCountAsync();
+        Task<int> GetSalesHoldCountAsync();
+        Task<int> GetSalesUrgentCountAsync();
+        Task<int> GetSalesOLAViolateCountAsync();
     }
 }

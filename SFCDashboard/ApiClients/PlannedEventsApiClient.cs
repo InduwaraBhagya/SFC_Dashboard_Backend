@@ -1009,5 +1009,157 @@ namespace SFCDashboard.ApiClients
                 return new List<string>();
             }
         }
+
+        public async Task<IEnumerable<PlannedEvent>> GetSalesInProgressRecordsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-inprogress-records");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var records = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                
+                return records ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales in-progress records from API");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetSalesHoldRecordsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-hold-records");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var records = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                
+                return records ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales hold records from API");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetSalesUrgentRecordsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-urgent-records");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var records = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                
+                return records ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales urgent records from API");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetSalesOLAViolateRecordsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-ola-violate-records");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var records = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(json, _jsonOptions);
+                
+                return records ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales OLA violate records from API");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<int> GetSalesInProgressCountAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-inprogress-count");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales in-progress count from API");
+                return 0;
+            }
+        }
+
+        public async Task<int> GetSalesHoldCountAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-hold-count");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales hold count from API");
+                return 0;
+            }
+        }
+
+        public async Task<int> GetSalesUrgentCountAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-urgent-count");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales urgent count from API");
+                return 0;
+            }
+        }
+
+        public async Task<int> GetSalesOLAViolateCountAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/plannedeventsapi/sales-ola-violate-count");
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var count = JsonSerializer.Deserialize<int>(json, _jsonOptions);
+                
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sales OLA violate count from API");
+                return 0;
+            }
+        }
     }
 }

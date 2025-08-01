@@ -533,13 +533,21 @@ namespace SFCDashboard.Controllers
 
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any() || canViewAll)
+            
+            // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
+            // This should match the logic in RedirectBasedOnUserType to prevent redirect loops
+            bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
+            if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(Index), new { searchType, peNumber, customer, jobReference, soNumber, pageIndex });
             }
 
+            // Get user's ALL workgroups to include in filtering
+            var (userWorkgroupIds, userWorkgroupNames, _) = await GetCurrentUserWorkGroupsAsync();
+
             // Debug logging
             _logger.LogInformation("SalesView - User Sales Workgroups: {workgroups}", string.Join(", ", salesWorkgroups));
+            _logger.LogInformation("SalesView - User All Workgroups: {workgroups}", string.Join(", ", userWorkgroupNames));
             _logger.LogInformation("SalesView - CanViewAll: {canViewAll}", canViewAll);
 
             // Get draw fiber access for the current user
@@ -548,11 +556,11 @@ namespace SFCDashboard.Controllers
             // Get all planned events for search functionality
             var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
 
-            // Set dashboard counts using user-based endpoints
-            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
-            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
-            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
-            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
+            // Set dashboard counts using sales-specific endpoints
+            ViewData["UrgentCount"] = await _plannedEventsApi.GetSalesUrgentCountAsync();
+            ViewData["InProgressCount"] = await _plannedEventsApi.GetSalesInProgressCountAsync();
+            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetSalesOLAViolateCountAsync();
+            ViewData["HoldCount"] = await _plannedEventsApi.GetSalesHoldCountAsync();
 
 
             // Get pending urgent requests
@@ -1903,147 +1911,134 @@ namespace SFCDashboard.Controllers
 
         public async Task<IActionResult> SalesInProgressRecords(int? pageIndex = 1)
         {
-            int currentUserId = await GetCurrentUserIdAsync();
-            var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-
-            // Get user's sales workgroup
-            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any() || canViewAll)
+            // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
+            bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
+            var (_, canViewAll) = await GetUserSalesWorkgroups();
+            
+            if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(InProgressRecords));
             }
 
-            // Get PE numbers with OLA violation
-            var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
-
-            // Get all planned events and apply filtering
-            var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
-
-            // Apply customer filtering with workgroup checks
-            var filteredEvents = await ApplyCustomerFilteringAsync(allPlannedEvents.AsQueryable(), salesWorkgroups, canViewAll);
-
-            var records = filteredEvents
-                .Where(p =>
-                    (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
-                    !p.IsHold &&
-                    p.PeNumber != null &&
-                    !violatingPENumbers.Contains(p.PeNumber))
-                .OrderByDescending(p => p.ServiceRequiredDate)
-                .ToList();
-
-            return View(records);
-
+            try
+            {
+                // Use the new API endpoint that handles all filtering on the backend
+                var records = await _plannedEventsApi.GetSalesInProgressRecordsAsync();
+                return View(records.ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales in-progress records");
+                TempData["ErrorMessage"] = "An error occurred while retrieving sales in-progress records.";
+                return View(new List<PlannedEvent>());
+            }
         }
 
 
         public async Task<IActionResult> SalesHoldRecords(int? pageIndex = 1)
         {
-            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any() || canViewAll)
+            // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
+            bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
+            var (_, canViewAll) = await GetUserSalesWorkgroups();
+            
+            if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(HoldRecords));
             }
 
-            // Get all planned events and apply filtering
-            var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
-            var holdEvents = allPlannedEvents.Where(p => p.IsHold);
-
-            // Apply customer filtering with workgroup checks
-            var filteredEvents = await ApplyCustomerFilteringAsync(holdEvents.AsQueryable(), salesWorkgroups, canViewAll);
-
-            var records = filteredEvents
-                .OrderByDescending(p => p.ServiceRequiredDate)
-                .ToList();
-
-            return View(records);
+            try
+            {
+                // Use the new API endpoint that handles all filtering on the backend
+                var records = await _plannedEventsApi.GetSalesHoldRecordsAsync();
+                return View(records.ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales hold records");
+                TempData["ErrorMessage"] = "An error occurred while retrieving sales hold records.";
+                return View(new List<PlannedEvent>());
+            }
         }
 
         public async Task<IActionResult> SalesUrgentRecords(int? pageIndex = 1)
         {
-            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any() || canViewAll)
+            // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
+            bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
+            var (_, canViewAll) = await GetUserSalesWorkgroups();
+            
+            if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(UrgentRecords));
             }
 
-            var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
-
-            // Get all planned events and apply filtering
-            var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
-            var urgentEvents = allPlannedEvents
-                .Where(p => p.PEStatus == "urgent" &&
-                       !p.IsHold &&
-                       p.PeNumber != null &&
-                       !violatingPENumbers.Contains(p.PeNumber));
-
-            // Apply customer filtering with workgroup checks
-            var filteredEvents = await ApplyCustomerFilteringAsync(urgentEvents.AsQueryable(), salesWorkgroups, canViewAll);
-
-            var records = filteredEvents
-                .OrderByDescending(p => p.ServiceRequiredDate)
-                .ToList();
-
-            return View(records);
+            try
+            {
+                // Use the new API endpoint that handles all filtering on the backend
+                var records = await _plannedEventsApi.GetSalesUrgentRecordsAsync();
+                return View(records.ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales urgent records");
+                TempData["ErrorMessage"] = "An error occurred while retrieving sales urgent records.";
+                return View(new List<PlannedEvent>());
+            }
         }
 
         public async Task<IActionResult> SalesOLAViolateRecords(int? pageIndex = 1)
         {
-            var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            if (!salesWorkgroups.Any() || canViewAll)
+            // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
+            bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
+            var (_, canViewAll) = await GetUserSalesWorkgroups();
+            
+            if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(OLAViolateRecords));
             }
 
-            var violatingPENumbers = await _peTasksApi.GetOLAViolatingPENumbersAsync();
-
-            // Get all planned events and apply filtering
-            var allPlannedEvents = await _plannedEventsApi.GetPlannedEventsAsync();
-            var violatingEvents = allPlannedEvents
-                .Where(p => p.PeNumber != null && violatingPENumbers.Contains(p.PeNumber) && !p.IsHold);
-
-            // Apply customer filtering with workgroup checks
-            var filteredEvents = await ApplyCustomerFilteringAsync(violatingEvents.AsQueryable(), salesWorkgroups, canViewAll);
-
-            var records = filteredEvents
-                .OrderByDescending(p => p.ServiceRequiredDate)
-                .ToList();
-
-            // Get violation details for view
-            var peNumbers = records.Select(p => p.PeNumber).Where(pn => !string.IsNullOrEmpty(pn)).Cast<string>().ToList();
-            var violatingTasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
-
-            var currentDate = DateTime.Today;
-            var violationDetails = new Dictionary<string, object>();
-
-            foreach (var kvp in violatingTasksByPeNumber)
+            try
             {
-                var violatingTasks = kvp.Value.Where(t => t.IsOLAViolate).ToList();
-                if (violatingTasks.Any())
+                // Use the new API endpoint that handles all filtering on the backend
+                var records = await _plannedEventsApi.GetSalesOLAViolateRecordsAsync();
+
+                // Get PE tasks for the filtered results (for violation details)
+                var peNumbers = records.Select(pe => pe.PeNumber).Where(pn => pn != null).Cast<string>().ToList();
+                var violatingTasksByPeNumber = await _peTasksApi.GetTasksByPeNumbersAsync(peNumbers);
+
+                var currentDate = DateTime.Today;
+                var violationDetails = new Dictionary<string, object>();
+
+                foreach (var pe in records)
                 {
-                    violationDetails[kvp.Key] = new
+                    if (pe.PeNumber != null && violatingTasksByPeNumber.ContainsKey(pe.PeNumber))
                     {
-                        TasksCount = violatingTasks.Count(),
-                        MaxDaysOverdue = violatingTasks.Max(t =>
-                            t.EstimatedTime.HasValue
-                                ? (currentDate - t.EstimatedTime.Value).Days
-                                : (t.ActualTaskCreatedDate.HasValue && t.OLA != null &&
-                                   int.TryParse(t.OLA, out var olaDays))
-                                    ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays)).Days
-                                    : 0
-                        ),
-                        OldestViolation = violatingTasks.Min(t =>
-                            t.EstimatedTime ??
-                            (t.ActualTaskCreatedDate.HasValue && t.OLA != null &&
-                             int.TryParse(t.OLA, out var olaDays)
-                                ? t.ActualTaskCreatedDate.Value.AddDays(olaDays)
-                                : (DateTime?)null))
-                    };
+                        var violatingTasks = violatingTasksByPeNumber[pe.PeNumber].Where(t => t.IsOLAViolate);
+                        foreach (var task in violatingTasks)
+                        {
+                            var daysOverdue = task.ActualTaskCreatedDate.HasValue 
+                                ? (currentDate - task.ActualTaskCreatedDate.Value).Days 
+                                : 0;
+
+                            violationDetails[pe.PeNumber] = new
+                            {
+                                TaskName = task.Task,
+                                StartDate = task.ActualTaskCreatedDate,
+                                DaysOverdue = daysOverdue,
+                                Status = pe.PEStatus
+                            };
+                        }
+                    }
                 }
+
+                ViewBag.ViolationDetails = violationDetails;
+                return View(records.ToList());
             }
-
-            ViewBag.ViolationDetails = violationDetails;
-
-            return View(records);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sales OLA violate records");
+                TempData["ErrorMessage"] = "An error occurred while retrieving sales OLA violate records.";
+                return View(new List<PlannedEvent>());
+            }
         }
 
 

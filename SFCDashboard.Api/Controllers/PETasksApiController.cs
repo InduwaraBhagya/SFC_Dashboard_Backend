@@ -147,6 +147,31 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get PE tasks by multiple PE numbers grouped by PE number
+        /// </summary>
+        [HttpPost("tasks-by-pe-numbers")]
+        public async Task<ActionResult<Dictionary<string, IEnumerable<PETask>>>> GetTasksByPENumbers([FromBody] PENumbersRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Getting PE tasks grouped by PE numbers: {Count} numbers", request.PeNumbers?.Count ?? 0);
+
+                if (request.PeNumbers == null || !request.PeNumbers.Any())
+                {
+                    return Ok(new Dictionary<string, IEnumerable<PETask>>());
+                }
+
+                var tasksDictionary = await _peTasksService.GetTasksByPeNumbersAsync(request.PeNumbers.Cast<string?>().ToList());
+                return Ok(tasksDictionary);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PE tasks grouped by PE numbers");
+                return StatusCode(500, "An error occurred while retrieving PE tasks grouped by PE numbers");
+            }
+        }
+
+        /// <summary>
         /// Request model for PE numbers
         /// </summary>
         public class PENumbersRequest
