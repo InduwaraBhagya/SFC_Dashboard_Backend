@@ -73,6 +73,12 @@ namespace SFCDashboard.ApiClients
         Task<int> GetOLAViolateCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
         Task<int> GetHoldCountForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
         
+        // Missing methods for multi-workgroup record operations  
+        Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
+        Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
+        Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
+        Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess);
+        
         // Method for getting distinct customers
         Task<List<string>> GetDistinctCustomersAsync();
     }

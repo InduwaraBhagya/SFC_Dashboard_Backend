@@ -254,6 +254,184 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while updating the planned event");
             }
         }
+
+        /// <summary>
+        /// Get urgent count for multi-workgroup
+        /// </summary>
+        [HttpPost("urgent-count-multi-workgroup")]
+        public async Task<ActionResult<object>> GetUrgentCountForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetUrgentCountForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(new { count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting urgent count for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving urgent count for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get in-progress count for multi-workgroup
+        /// </summary>
+        [HttpPost("inprogress-count-multi-workgroup")]
+        public async Task<ActionResult<object>> GetInProgressCountForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetInProgressCountForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(new { count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting in-progress count for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving in-progress count for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get OLA violate count for multi-workgroup
+        /// </summary>
+        [HttpPost("ola-violate-count-multi-workgroup")]
+        public async Task<ActionResult<object>> GetOLAViolateCountForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetOLAViolateCountForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(new { count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violate count for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving OLA violate count for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get hold count for multi-workgroup
+        /// </summary>
+        [HttpPost("hold-count-multi-workgroup")]
+        public async Task<ActionResult<object>> GetHoldCountForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var count = await _plannedEventsService.GetHoldCountForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(new { count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting hold count for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving hold count for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get in-progress records for multi-workgroup
+        /// </summary>
+        [HttpPost("inprogress-records-multi-workgroup")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetInProgressRecordsForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var records = await _plannedEventsService.GetInProgressPlannedEventsForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting in-progress records for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving in-progress records for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get urgent records for multi-workgroup
+        /// </summary>
+        [HttpPost("urgent-records-multi-workgroup")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetUrgentRecordsForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var records = await _plannedEventsService.GetUrgentPlannedEventsForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting urgent records for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving urgent records for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get hold records for multi-workgroup
+        /// </summary>
+        [HttpPost("hold-records-multi-workgroup")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetHoldRecordsForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var records = await _plannedEventsService.GetHoldPlannedEventsForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting hold records for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving hold records for multi workgroup");
+            }
+        }
+
+        /// <summary>
+        /// Get OLA violating records for multi-workgroup
+        /// </summary>
+        [HttpPost("ola-violating-records-multi-workgroup")]
+        public async Task<ActionResult<IEnumerable<PlannedEvent>>> GetOLAViolatingRecordsForMultiWorkgroup([FromBody] MultiWorkgroupRequest request)
+        {
+            try
+            {
+                var records = await _plannedEventsService.GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(
+                    request.SelectedWorkgroupIds, 
+                    request.UserWorkgroupIds, 
+                    request.HasDrawFiberAccess);
+                return Ok(records);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violating records for multi workgroup");
+                return StatusCode(500, "An error occurred while retrieving OLA violating records for multi workgroup");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Request model for multi-workgroup operations
+    /// </summary>
+    public class MultiWorkgroupRequest
+    {
+        public List<int> SelectedWorkgroupIds { get; set; } = new();
+        public List<int> UserWorkgroupIds { get; set; } = new();
+        public bool HasDrawFiberAccess { get; set; }
     }
 }
 

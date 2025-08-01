@@ -947,6 +947,86 @@ namespace SFCDashboard.Api.Services
             }
         }
 
+        public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
+        {
+            try
+            {
+                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+                var workgroupNames = await _context.WorkGroups
+                    .Where(w => workgroupIdsToUse.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetInProgressPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting in-progress planned events for multi workgroup");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
+        {
+            try
+            {
+                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+                var workgroupNames = await _context.WorkGroups
+                    .Where(w => workgroupIdsToUse.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetUrgentPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting urgent planned events for multi workgroup");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
+        {
+            try
+            {
+                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+                var workgroupNames = await _context.WorkGroups
+                    .Where(w => workgroupIdsToUse.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetHoldPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting hold planned events for multi workgroup");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess = false)
+        {
+            try
+            {
+                var workgroupIdsToUse = (selectedWorkgroupIds != null && selectedWorkgroupIds.Count > 0) ? selectedWorkgroupIds : userWorkgroupIds;
+                var workgroupNames = await _context.WorkGroups
+                    .Where(w => workgroupIdsToUse.Contains(w.Id))
+                    .Select(w => w.Name)
+                    .ToListAsync();
+
+                // Multi-workgroup methods should never use ViewAll permission
+                return await GetOLAViolatingPlannedEventsAsync(workgroupNames, hasDrawFiberAccess, canViewAll: false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violating planned events for multi workgroup");
+                return new List<PlannedEvent>();
+            }
+        }
+
         // User-based count methods
         public async Task<int> GetInProgressCountByUserIdAsync(int userId)
         {

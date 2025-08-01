@@ -358,11 +358,11 @@ namespace SFCDashboard.Controllers
                 ViewData["SelectedWorkgroupNames"] = workgroupNamesList;
             }
 
-            // Calculate dashboard counts using user-based endpoints
-            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
-            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
-            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
-            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
+            // Calculate dashboard counts using new multi-workgroup count methods
+            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolateCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
 
             ViewData["SearchType"] = searchType ?? "peNumber";
             ViewData["PENumberFilter"] = peNumber;
@@ -1099,13 +1099,7 @@ namespace SFCDashboard.Controllers
                 var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
                 var selectedWorkgroupNames = await _workGroupsApi.GetWorkGroupsByIdsAsync(selectedWorkgroupIds);
 
-                var workgroupNamesList = selectedWorkgroupNames.Select(w => w.Name).ToList();
-
-                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                bool filterHasDrawFiberAccess = workgroupNamesList.Any(name =>
-                    name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
-
-                ViewData["FilteredWorkgroups"] = string.Join(", ", workgroupNamesList);
+                ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames.Select(w => w.Name));
 
                 // Apply search filters using API service
                 ViewData["SearchType"] = searchTypeValue;
@@ -1114,8 +1108,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get in-progress records using API service (MultiWorkgroup views should not use ViewAll permission)
-                var allRecords = await _plannedEventsApi.GetInProgressPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
+                // Get in-progress records using new multi-workgroup API method
+                var allRecords = await _plannedEventsApi.GetInProgressPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))
@@ -1194,13 +1188,7 @@ namespace SFCDashboard.Controllers
                 var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
                 var selectedWorkgroupNames = await _workGroupsApi.GetWorkGroupsByIdsAsync(selectedWorkgroupIds);
 
-                var workgroupNamesList = selectedWorkgroupNames.Select(w => w.Name).ToList();
-
-                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                bool filterHasDrawFiberAccess = workgroupNamesList.Any(name =>
-                    name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
-
-                ViewData["FilteredWorkgroups"] = string.Join(", ", workgroupNamesList);
+                ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames.Select(w => w.Name));
 
                 // Apply search filters using API service
                 ViewData["SearchType"] = searchTypeValue;
@@ -1209,8 +1197,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get hold records using API service (MultiWorkgroup views should not use ViewAll permission)
-                var allRecords = await _plannedEventsApi.GetHoldPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
+                // Get hold records using new multi-workgroup API method
+                var allRecords = await _plannedEventsApi.GetHoldPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))
@@ -1289,13 +1277,7 @@ namespace SFCDashboard.Controllers
                 var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
                 var selectedWorkgroupNames = await _workGroupsApi.GetWorkGroupsByIdsAsync(selectedWorkgroupIds);
 
-                var workgroupNamesList = selectedWorkgroupNames.Select(w => w.Name).ToList();
-
-                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                bool filterHasDrawFiberAccess = workgroupNamesList.Any(name =>
-                    string.Equals(name, "NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
-
-                ViewData["FilteredWorkgroups"] = string.Join(", ", workgroupNamesList);
+                ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames.Select(w => w.Name));
 
                 // Apply search filters using API service
                 ViewData["SearchType"] = searchTypeValue;
@@ -1304,8 +1286,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get urgent records using API service (MultiWorkgroup views should not use ViewAll permission)
-                var allRecords = await _plannedEventsApi.GetUrgentPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
+                // Get urgent records using new multi-workgroup API method
+                var allRecords = await _plannedEventsApi.GetUrgentPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))
@@ -1384,13 +1366,7 @@ namespace SFCDashboard.Controllers
                 var selectedWorkgroupIds = (workgroupIds != null && workgroupIds.Count > 0) ? workgroupIds : userWorkgroupIds;
                 var selectedWorkgroupNames = await _workGroupsApi.GetWorkGroupsByIdsAsync(selectedWorkgroupIds);
 
-                var workgroupNamesList = selectedWorkgroupNames.Select(w => w.Name).ToList();
-
-                // Check if filter contains NET-PROJ-ACC-CABLE workgroup for Draw Fiber access
-                bool filterHasDrawFiberAccess = workgroupNamesList.Any(name =>
-                    string.Equals(name, "NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase));
-
-                ViewData["FilteredWorkgroups"] = string.Join(", ", workgroupNamesList);
+                ViewData["FilteredWorkgroups"] = string.Join(", ", selectedWorkgroupNames.Select(w => w.Name));
 
                 // Apply search filters using API service
                 ViewData["SearchType"] = searchTypeValue;
@@ -1399,8 +1375,8 @@ namespace SFCDashboard.Controllers
                 ViewData["JobReferenceFilter"] = jobReference?.Trim();
                 ViewData["SONumberFilter"] = soNumber?.Trim();
 
-                // Get OLA violating records using API service (MultiWorkgroup views should not use ViewAll permission)
-                var allRecords = await _plannedEventsApi.GetOLAViolatingPlannedEventsAsync(workgroupNamesList, filterHasDrawFiberAccess, canViewAll: false);
+                // Get OLA violating records using new multi-workgroup API method
+                var allRecords = await _plannedEventsApi.GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchValue))

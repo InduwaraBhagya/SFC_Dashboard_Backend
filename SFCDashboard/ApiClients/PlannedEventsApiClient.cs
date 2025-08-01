@@ -879,6 +879,118 @@ namespace SFCDashboard.ApiClients
             }
         }
 
+        public async Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess)
+        {
+            try
+            {
+                var requestData = new 
+                {
+                    selectedWorkgroupIds,
+                    userWorkgroupIds,
+                    hasDrawFiberAccess
+                };
+
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("api/plannedeventsapi/inprogress-records-multi-workgroup", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(responseJson, _jsonOptions);
+                return result ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting in-progress records for multi workgroup via API");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetUrgentPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess)
+        {
+            try
+            {
+                var requestData = new 
+                {
+                    selectedWorkgroupIds,
+                    userWorkgroupIds,
+                    hasDrawFiberAccess
+                };
+
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("api/plannedeventsapi/urgent-records-multi-workgroup", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(responseJson, _jsonOptions);
+                return result ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting urgent records for multi workgroup via API");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetHoldPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess)
+        {
+            try
+            {
+                var requestData = new 
+                {
+                    selectedWorkgroupIds,
+                    userWorkgroupIds,
+                    hasDrawFiberAccess
+                };
+
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("api/plannedeventsapi/hold-records-multi-workgroup", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(responseJson, _jsonOptions);
+                return result ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting hold records for multi workgroup via API");
+                return new List<PlannedEvent>();
+            }
+        }
+
+        public async Task<IEnumerable<PlannedEvent>> GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(List<int> selectedWorkgroupIds, List<int> userWorkgroupIds, bool hasDrawFiberAccess)
+        {
+            try
+            {
+                var requestData = new 
+                {
+                    selectedWorkgroupIds,
+                    userWorkgroupIds,
+                    hasDrawFiberAccess
+                };
+
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("api/plannedeventsapi/ola-violating-records-multi-workgroup", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<IEnumerable<PlannedEvent>>(responseJson, _jsonOptions);
+                return result ?? new List<PlannedEvent>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violating records for multi workgroup via API");
+                return new List<PlannedEvent>();
+            }
+        }
+
         public async Task<List<string>> GetDistinctCustomersAsync()
         {
             try
