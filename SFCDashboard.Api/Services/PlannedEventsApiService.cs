@@ -63,24 +63,7 @@ namespace SFCDashboard.Api.Services
                         workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
                 }
             }
-            else if (canViewAll && workgroupNames.Any())
-            {
-                // ViewAll users can still filter by specific workgroups if requested
-                if (hasDrawFiberAccess)
-                {
-                    query = query.Where(p =>
-                        p.TaskWg != null && (
-                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
-                        || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                        )
-                    );
-                }
-                else
-                {
-                    query = query.Where(p => p.TaskWg != null &&
-                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
-                }
-            }
+            // If user has ViewAll permission, don't apply any workgroup filtering - return all records
 
             return await query.ToListAsync();
         }
@@ -129,24 +112,7 @@ namespace SFCDashboard.Api.Services
                         workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
                 }
             }
-            else if (canViewAll && workgroupNames.Any())
-            {
-                // ViewAll users can still filter by specific workgroups if requested
-                if (hasDrawFiberAccess)
-                {
-                    query = query.Where(p =>
-                        p.TaskWg != null && (
-                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName))
-                        || (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
-                        )
-                    );
-                }
-                else
-                {
-                    query = query.Where(p => p.TaskWg != null &&
-                        workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
-                }
-            }
+            // If user has ViewAll permission, don't apply any workgroup filtering - return all records
 
             return await query.ToListAsync();
         }
