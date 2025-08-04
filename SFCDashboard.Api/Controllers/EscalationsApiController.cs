@@ -13,15 +13,18 @@ namespace SFCDashboard.Api.Controllers
     public class EscalationsApiController : ControllerBase
     {
         private readonly IEscalationsApiService _escalationsService;
+        private readonly EscalationService _escalationService;
         private readonly ILogger<EscalationsApiController> _logger;
         private readonly IWebHostEnvironment _environment;
 
         public EscalationsApiController(
             IEscalationsApiService escalationsService,
+            EscalationService escalationService,
             ILogger<EscalationsApiController> logger,
             IWebHostEnvironment environment)
         {
             _escalationsService = escalationsService;
+            _escalationService = escalationService;
             _logger = logger;
             _environment = environment;
         }
@@ -120,7 +123,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting escalations for user role level {Level}", request.UserRoleLevel);
-                var escalations = await _escalationsService.GetEscalationsByUserRoleAsync(request);
+                var escalations = await _escalationService.GetEscalationsByUserRoleAsync(request.UserRoleLevel, request.UserWorkgroupNames);
                 return Ok(escalations);
             }
             catch (Exception ex)
@@ -187,6 +190,109 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while creating the escalation");
             }
         }
+
+        /// <summary>
+        /// Get escalation service status
+        /// </summary>
+        [HttpGet("service-status")]
+        public async Task<IActionResult> GetServiceStatus()
+        {
+            try
+            {
+                var isEnabled = await _escalationService.IsEscalationEnabledAsync();
+                return Ok(new { enabled = isEnabled });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting escalation service status");
+                return StatusCode(500, "An error occurred while retrieving service status");
+            }
+        }
+
+        /// <summary>
+        /// Toggle escalation service
+        /// </summary>
+        [HttpPost("toggle-service")]
+        public async Task<IActionResult> ToggleService([FromBody] ToggleServiceRequest request)
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                await _escalationService.SetEscalationEnabledAsync(request.Enabled);
+                var statusMessage = request.Enabled ? "enabled" : "disabled";
+                return Ok(new { 
+                    success = true, 
+                    enabled = request.Enabled, 
+                    message = $"Escalation service has been {statusMessage}" 
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling escalation service");
+                return StatusCode(500, "An error occurred while toggling service");
+            }
+        }
+
+        /// <summary>
+        /// Manual escalation check
+        /// </summary>
+        [HttpPost("manual-check")]
+        public async Task<IActionResult> ManualCheck()
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var result = await _escalationService.ManualEscalationCheckAsync();
+                return Ok(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error running manual escalation check");
+                return StatusCode(500, "An error occurred during manual escalation check");
+            }
+        }
+
+        /// <summary>
+        /// Get OLA violated tasks debug info
+        /// </summary>
+        [HttpGet("ola-violated-tasks-debug")]
+        public async Task<IActionResult> GetOLAViolatedTasksDebugInfo()
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var debugInfo = await _escalationService.GetOLAViolatedTasksDebugInfoAsync();
+                return Ok(debugInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violated tasks debug info");
+                return StatusCode(500, "An error occurred while retrieving debug info");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Request model for toggling service
+    /// </summary>
+    public class ToggleServiceRequest
+    {
+        public bool Enabled { get; set; }
     }
 }
 

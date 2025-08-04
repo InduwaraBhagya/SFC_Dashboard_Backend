@@ -6,6 +6,7 @@ namespace SFCDashboard.Api.Services
     {
         Task<PlannedEvent?> GetPlannedEventAsync(int id);
         Task<PlannedEvent?> GetPlannedEventByIdAsync(int? id);
+        Task<PlannedEvent?> GetPlannedEventByPENumberAsync(string peNumber);
         Task<IEnumerable<PlannedEvent>> GetPlannedEventsAsync();
         Task<IEnumerable<PlannedEvent>> GetPlannedEventsByWorkgroupAsync(List<string> workgroupNames, bool hasDrawFiberAccess = false, bool canViewAll = false);
         Task<IEnumerable<PlannedEvent>> GetInProgressPlannedEventsByUserIdAsync(int userId);

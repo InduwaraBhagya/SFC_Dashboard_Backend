@@ -146,6 +146,20 @@ namespace SFCDashboard.Api.Services
             }
         }
 
+        public async Task<PlannedEvent?> GetPlannedEventByPENumberAsync(string peNumber)
+        {
+            try
+            {
+                return await _context.PlannedEvents
+                    .FirstOrDefaultAsync(p => p.PeNumber == peNumber);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting planned event with PE Number {PENumber}", peNumber);
+                return null;
+            }
+        }
+
         public async Task<IEnumerable<PlannedEvent>> GetPlannedEventsAsync()
         {
             try

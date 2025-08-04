@@ -20,7 +20,7 @@ namespace SFCDashboard.ApiClients
             };
         }
 
-        public async Task<PlannedEvent> GetPlannedEventByPENumberAsync(string peNumber)
+        public async Task<PlannedEvent?> GetPlannedEventByPENumberAsync(string peNumber)
         {
             try
             {

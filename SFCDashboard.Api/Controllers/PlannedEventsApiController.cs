@@ -212,6 +212,28 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get planned event by PE Number
+        /// </summary>
+        [HttpGet("penumber/{peNumber}")]
+        public async Task<ActionResult<PlannedEvent>> GetPlannedEventByPENumber(string peNumber)
+        {
+            try
+            {
+                var plannedEvent = await _plannedEventsService.GetPlannedEventByPENumberAsync(peNumber);
+                if (plannedEvent == null)
+                {
+                    return NotFound();
+                }
+                return Ok(plannedEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving planned event by PE Number {PENumber}", peNumber);
+                return StatusCode(500, "An error occurred while retrieving the planned event");
+            }
+        }
+
+        /// <summary>
         /// Get pending urgent requests
         /// </summary>
         [HttpGet("pending-urgent-requests")]

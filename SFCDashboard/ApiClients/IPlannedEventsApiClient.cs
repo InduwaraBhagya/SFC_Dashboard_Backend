@@ -15,7 +15,7 @@ namespace SFCDashboard.ApiClients
         Task<IEnumerable<PlannedEvent>> GetPlannedEventsAsync();
         Task<PlannedEvent?> GetPlannedEventByIdAsync(int? id);
         // Add this method to support EscalationController
-        Task<PlannedEvent> GetPlannedEventByPENumberAsync(string peNumber);
+        Task<PlannedEvent?> GetPlannedEventByPENumberAsync(string peNumber);
         Task<PlannedEvent> CreatePlannedEventAsync(PlannedEvent plannedEvent);
         Task<PlannedEvent> UpdatePlannedEventAsync(PlannedEvent plannedEvent);
         Task<bool> DeletePlannedEventAsync(int id);
