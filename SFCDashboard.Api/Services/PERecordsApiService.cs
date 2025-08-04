@@ -127,7 +127,7 @@ namespace SFCDashboard.Api.Services
 
             try
             {
-                var response = await _httpClient.PostAsync($"{baseUrl}/api/perecordsapi/import", content);
+                var response = await _httpClient.PostAsync($"{baseUrl}/api/PERecordsApi/import", content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -190,7 +190,7 @@ namespace SFCDashboard.Api.Services
         {
             var baseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7001";
             
-            var response = await _httpClient.GetAsync($"{baseUrl}/api/perecordsapi/stats");
+            var response = await _httpClient.GetAsync($"{baseUrl}/api/PERecordsApi/stats");
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)

@@ -532,23 +532,52 @@ namespace SFCDashboard.Controllers.Api
             {
                 var stats = new
                 {
-                    peRecordsCount = await _context.PERecords.CountAsync(),
-                    plannedEventsCount = await _context.PlannedEvents.CountAsync(),
-                    peTasksCount = await _context.PETasks.CountAsync(),
-                    taskTemplatesCount = await _context.PETaskLists.CountAsync()
+                    PeRecordsCount = await _context.PERecords.CountAsync(),
+                    PlannedEventsCount = await _context.PlannedEvents.CountAsync(),
+                    PeTasksCount = await _context.PETasks.CountAsync(),
+                    TaskTemplatesCount = await _context.PETaskLists.CountAsync()
                 };
 
                 return Ok(new { 
-                    success = true, 
-                    data = stats
+                    Success = true, 
+                    Data = stats
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving database statistics");
                 return StatusCode(500, new { 
-                    success = false, 
-                    message = "An error occurred while retrieving database statistics." 
+                    Success = false, 
+                    Message = "An error occurred while retrieving database statistics." 
+                });
+            }
+        }
+
+        /// <summary>
+        /// Sync PE Records with related data
+        /// </summary>
+        /// <returns>Sync result with success status and message</returns>
+        [HttpPost("sync")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> SyncPERecords()
+        {
+            try
+            {
+                _logger.LogInformation("Starting PE record synchronization via API endpoint");
+                await _syncService.SyncPERecordsAsync();
+                
+                return Ok(new { 
+                    Success = true, 
+                    Message = "PE records synchronized successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing PE records");
+                return StatusCode(500, new { 
+                    Success = false, 
+                    Message = "An error occurred while syncing PE records." 
                 });
             }
         }

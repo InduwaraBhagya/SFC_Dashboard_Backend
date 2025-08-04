@@ -30,7 +30,7 @@ namespace SFCDashboard.ApiClients
                 fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(excelFile.ContentType);
                 content.Add(fileContent, "excelFile", excelFile.FileName);
 
-                var response = await _httpClient.PostAsync("api/perecords/import", content);
+                var response = await _httpClient.PostAsync("api/PERecordsApi/import", content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -57,7 +57,7 @@ namespace SFCDashboard.ApiClients
                 var json = JsonSerializer.Serialize(peRecords, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync("api/perecords/import-json", content);
+                var response = await _httpClient.PostAsync("api/PERecordsApi/import-json", content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -81,7 +81,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/perecords?page={page}&pageSize={pageSize}");
+                var response = await _httpClient.GetAsync($"api/PERecordsApi?page={page}&pageSize={pageSize}");
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -105,7 +105,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync("api/perecords/stats");
+                var response = await _httpClient.GetAsync("api/PERecordsApi/stats");
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -129,7 +129,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.PostAsync("api/perecords/sync", null);
+                var response = await _httpClient.PostAsync("api/PERecordsApi/sync", null);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
