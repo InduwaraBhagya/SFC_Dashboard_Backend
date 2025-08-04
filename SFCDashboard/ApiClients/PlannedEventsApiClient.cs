@@ -172,25 +172,47 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var requestData = new 
-                {
-                    searchType,
-                    searchString,
-                    workgroupName,
-                    hasDrawFiberAccess,
-                    pageIndex,
-                    pageSize
-                };
+                // Since the API doesn't have a search endpoint, we'll fetch all planned events and filter client-side
+                var allPlannedEvents = await GetPlannedEventsAsync();
+                var query = allPlannedEvents.AsQueryable();
 
-                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                // Apply search filters
+                if (!string.IsNullOrEmpty(searchString))
+                {
+                    switch (searchType?.ToLower())
+                    {
+                        case "customer":
+                            query = query.Where(p => p.Customer != null &&
+                                p.Customer.Contains(searchString, StringComparison.OrdinalIgnoreCase));
+                            break;
+                        case "jobreference":
+                            query = query.Where(p => p.JobReference != null &&
+                                p.JobReference.Contains(searchString, StringComparison.OrdinalIgnoreCase));
+                            break;
+                        case "sonumber":
+                            query = query.Where(p => p.SoNumber != null &&
+                                p.SoNumber.Contains(searchString, StringComparison.OrdinalIgnoreCase));
+                            break;
+                        default: // peNumber
+                            query = query.Where(p => p.PeNumber != null &&
+                                p.PeNumber.Contains(searchString, StringComparison.OrdinalIgnoreCase));
+                            break;
+                    }
+                }
+
+                // Apply workgroup filter if specified
+                if (!string.IsNullOrEmpty(workgroupName))
+                {
+                    query = query.Where(p => p.TaskWg != null &&
+                        p.TaskWg.Equals(workgroupName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                // Order and paginate results
+                var orderedQuery = query.OrderByDescending(x => x.PeNumber);
+                var totalCount = orderedQuery.Count();
+                var items = orderedQuery.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList();
                 
-                var response = await _httpClient.PostAsync("api/plannedeventsapi/search-paginated", content);
-                response.EnsureSuccessStatusCode();
-                
-                var responseJson = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<PaginatedList<PlannedEvent>>(responseJson, _jsonOptions) ?? 
-                       new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, pageSize);
+                return new PaginatedList<PlannedEvent>(items, totalCount, pageIndex, pageSize);
             }
             catch (Exception ex)
             {
@@ -1159,6 +1181,50 @@ namespace SFCDashboard.ApiClients
             {
                 _logger.LogError(ex, "Error fetching sales OLA violate count from API");
                 return 0;
+            }
+        }
+
+        public async Task<PaginatedList<PlannedEvent>> SearchPlannedEventsForUserAsync(string searchType, string searchString, int userId, int pageIndex, int pageSize)
+        {
+            try
+            {
+                var request = new
+                {
+                    UserId = userId,
+                    SearchType = searchType,
+                    SearchString = searchString,
+                    PageIndex = pageIndex,
+                    PageSize = pageSize
+                };
+
+                var json = JsonSerializer.Serialize(request, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("api/plannedeventsapi/search-user-paginated", content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                
+                // Deserialize the response object
+                using var document = JsonDocument.Parse(responseJson);
+                var root = document.RootElement;
+                
+                // Extract the pagination info
+                var pageIdx = root.GetProperty("pageIndex").GetInt32();
+                var totalPages = root.GetProperty("totalPages").GetInt32();
+                var totalCount = root.GetProperty("totalCount").GetInt32();
+                
+                // Extract and deserialize the items
+                var itemsJson = root.GetProperty("items").GetRawText();
+                var items = JsonSerializer.Deserialize<List<PlannedEvent>>(itemsJson, _jsonOptions) ?? new List<PlannedEvent>();
+                
+                // Create a new PaginatedList with the extracted data
+                return new PaginatedList<PlannedEvent>(items, totalCount, pageIdx, pageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching planned events for user {UserId} via API", userId);
+                return new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, pageSize);
             }
         }
     }

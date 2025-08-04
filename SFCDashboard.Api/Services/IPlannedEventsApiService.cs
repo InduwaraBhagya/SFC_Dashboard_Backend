@@ -58,6 +58,9 @@ namespace SFCDashboard.Api.Services
         Task<int> GetSalesHoldCountAsync(int userId);
         Task<int> GetSalesUrgentCountAsync(int userId);
         Task<int> GetSalesOLAViolateCountAsync(int userId);
+
+        // User-specific search method
+        Task<PaginatedList<PlannedEvent>> SearchPlannedEventsForUserAsync(string searchType, string searchValue, int userId, int pageIndex, int pageSize);
     }
 }
 

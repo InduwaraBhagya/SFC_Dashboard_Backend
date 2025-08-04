@@ -105,20 +105,25 @@
                             <h5 class="mb-0">
                                 <i class="bi bi-search"></i> Search PE Records
                             </h5>
-                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapse" aria-expanded="false" aria-controls="searchFormCollapse">
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapseViewAll" aria-expanded="false" aria-controls="searchFormCollapseViewAll">
                                 <i class="bi bi-chevron-down"></i>
                             </button>
                         </div>
                         
-                        <div class="collapse" id="searchFormCollapse">
+                        <div class="collapse" id="searchFormCollapseViewAll">
                             <div class="card-body">
                                 <form method="get" asp-action="Index">
+                                <!-- Preserve workgroup filter if set -->
+                                @if (ViewData["SelectedWorkgroupId"] != null)
+                                {
+                                    <input type="hidden" name="workgroupId" value="@ViewData["SelectedWorkgroupId"]" />
+                                }
                                 <div class="search-form-row">
                                     <div class="search-type-selector mb-3">
                                         <label class="form-label" for="searchType">
                                             <i class="bi bi-funnel"></i> Search By
                                         </label>
-                                        <select class="form-select" name="searchType" id="searchType" onchange="toggleSearchFields()">
+                                        <select class="form-select" name="searchType" id="searchTypeViewAll" onchange="toggleSearchFields('viewall')">
                                             <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">
                                                 PE Number
                                             </option>
@@ -135,13 +140,13 @@
                                     </div>
                                     
                                     <div class="search-input-container mb-3">
-                                        <label class="form-label" id="searchLabel">
+                                        <label class="form-label" id="searchLabelViewAll">
                                             <i class="bi bi-hash"></i> PE Number
                                         </label>
                                         <div class="position-relative">
                                             <input type="text" class="form-control" 
                                                    name="@(ViewData["SearchType"]?.ToString() ?? "peNumber")" 
-                                                   id="searchInput" 
+                                                   id="searchInputViewAll" 
                                                    placeholder="Enter PE Number" 
                                                    value="@(
                                                        ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
@@ -268,20 +273,25 @@ else
                     <h5 class="mb-0">
                         <i class="bi bi-search"></i> Search PE Records
                     </h5>
-                    <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapse" aria-expanded="false" aria-controls="searchFormCollapse">
+                    <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapseRegular" aria-expanded="false" aria-controls="searchFormCollapseRegular">
                         <i class="bi bi-chevron-down"></i>
                     </button>
                 </div>
                 
-                <div class="collapse" id="searchFormCollapse">
+                <div class="collapse" id="searchFormCollapseRegular">
                     <div class="card-body">
                         <form method="get" asp-action="Index">
+                        <!-- Preserve workgroup filter if set -->
+                        @if (ViewData["SelectedWorkgroupId"] != null)
+                        {
+                            <input type="hidden" name="workgroupId" value="@ViewData["SelectedWorkgroupId"]" />
+                        }
                         <div class="search-form-row">
                             <div class="search-type-selector mb-3">
                                 <label class="form-label" for="searchType">
                                     <i class="bi bi-funnel"></i> Search By
                                 </label>
-                                <select class="form-select" name="searchType" id="searchType" onchange="toggleSearchFields()">
+                                <select class="form-select" name="searchType" id="searchTypeRegular" onchange="toggleSearchFields('regular')">
                                     <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">
                                         PE Number
                                     </option>
@@ -298,13 +308,13 @@ else
                             </div>
                             
                             <div class="search-input-container mb-3">
-                                <label class="form-label" id="searchLabel">
+                                <label class="form-label" id="searchLabelRegular">
                                     <i class="bi bi-hash"></i> PE Number
                                 </label>
                                 <div class="position-relative">
                                     <input type="text" class="form-control" 
                                            name="@(ViewData["SearchType"]?.ToString() ?? "peNumber")" 
-                                           id="searchInput" 
+                                           id="searchInputRegular" 
                                            placeholder="Enter PE Number" 
                                            value="@(
                                                ViewData["SearchType"]?.ToString() == "customer" ? ViewData["CustomerFilter"] :
@@ -940,10 +950,14 @@ else
             });
             
             // Enhanced search type toggle
-            function toggleSearchFields() {
-                const searchType = $('#searchType').val();
-                const inputField = $('#searchInput');
-                const label = $('#searchLabel');
+            function toggleSearchFields(formType = 'regular') {
+                const searchTypeId = formType === 'viewall' ? '#searchTypeViewAll' : '#searchTypeRegular';
+                const inputFieldId = formType === 'viewall' ? '#searchInputViewAll' : '#searchInputRegular';
+                const labelId = formType === 'viewall' ? '#searchLabelViewAll' : '#searchLabelRegular';
+                
+                const searchType = $(searchTypeId).val();
+                const inputField = $(inputFieldId);
+                const label = $(labelId);
                 
                 // Add loading animation
                 inputField.addClass('loading-shimmer');
@@ -979,6 +993,26 @@ else
             // Make toggleSearchFields available globally
             window.toggleSearchFields = toggleSearchFields;
             
+            // Initialize search fields based on current search type
+            function initializeSearchFields() {
+                const currentSearchType = '@ViewData["SearchType"]';
+                if (currentSearchType) {
+                    // Initialize ViewAll form if present
+                    if ($('#searchTypeViewAll').length) {
+                        $('#searchTypeViewAll').val(currentSearchType);
+                        toggleSearchFields('viewall');
+                    }
+                    // Initialize Regular form if present  
+                    if ($('#searchTypeRegular').length) {
+                        $('#searchTypeRegular').val(currentSearchType);
+                        toggleSearchFields('regular');
+                    }
+                }
+            }
+            
+            // Call initialization
+            initializeSearchFields();
+            
             // Add success animation when filter is applied
             if (window.location.search.includes('workgroupId')) {
                 $('.workgroup-filter-section').addClass('filter-success');
@@ -1009,6 +1043,39 @@ else
                 }
             });
             
+            // Enhanced search form validation
+            $('form[action*="Index"]').on('submit', function(e) {
+                const form = $(this);
+                const searchType = form.find('select[name="searchType"]').val();
+                const searchValue = form.find('input[name="' + searchType + '"]').val();
+                
+                if (!searchValue || searchValue.trim() === '') {
+                    e.preventDefault();
+                    
+                    const searchFieldName = searchType === 'peNumber' ? 'PE Number' :
+                                          searchType === 'customer' ? 'Customer Name' :
+                                          searchType === 'jobReference' ? 'Job Reference' :
+                                          searchType === 'soNumber' ? 'SO Number' : 'search field';
+                    
+                    // Show error message
+                    const errorMsg = $('<div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">' +
+                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                        'Please enter a value for ' + searchFieldName + ' before searching.' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>');
+                    
+                    form.append(errorMsg);
+                    
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        errorMsg.fadeOut();
+                    }, 5000);
+                    
+                    // Focus on the input field
+                    form.find('input[name="' + searchType + '"]').focus();
+                }
+            });
+            
             // Add keyboard shortcuts
             $(document).on('keydown', function(e) {
                 // Alt + F to focus on filter
@@ -1020,7 +1087,12 @@ else
                 // Alt + S to focus on search
                 if (e.altKey && e.key === 's') {
                     e.preventDefault();
-                    $('#searchInput').focus();
+                    // Focus on the visible search input
+                    if ($('#searchInputViewAll').is(':visible')) {
+                        $('#searchInputViewAll').focus();
+                    } else if ($('#searchInputRegular').is(':visible')) {
+                        $('#searchInputRegular').focus();
+                    }
                 }
             });
             
@@ -1035,8 +1107,10 @@ else
         });
         
         // Synchronized card collapse/expand functionality
-        const searchCollapse = document.getElementById('searchFormCollapse');
-        const searchToggleButton = document.querySelector('[data-bs-target="#searchFormCollapse"]');
+        const searchCollapseViewAll = document.getElementById('searchFormCollapseViewAll');
+        const searchToggleButtonViewAll = document.querySelector('[data-bs-target="#searchFormCollapseViewAll"]');
+        const searchCollapseRegular = document.getElementById('searchFormCollapseRegular');
+        const searchToggleButtonRegular = document.querySelector('[data-bs-target="#searchFormCollapseRegular"]');
         const nextTaskCollapse = document.getElementById('nextTaskContent');
         const nextTaskToggleButton = document.querySelector('[data-bs-target="#nextTaskContent"]');
         const filterCollapse = document.getElementById('filterContent');
@@ -1059,45 +1133,45 @@ else
         }
         
         // Scenario 1: ViewAll users - Sync workgroup filter and search cards
-        if (filterCollapse && searchCollapse && filterToggleButton && searchToggleButton) {
+        if (filterCollapse && searchCollapseViewAll && filterToggleButton && searchToggleButtonViewAll) {
             // When filter card is shown, show search card
             filterCollapse.addEventListener('show.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
-                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseViewAll);
                     searchBsCollapse.show();
                 }
-                updateChevronIcons(true, filterToggleButton, searchToggleButton);
+                updateChevronIcons(true, filterToggleButton, searchToggleButtonViewAll);
             });
             
             // When filter card is hidden, hide search card
             filterCollapse.addEventListener('hide.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
-                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseViewAll);
                     searchBsCollapse.hide();
                 }
-                updateChevronIcons(false, filterToggleButton, searchToggleButton);
+                updateChevronIcons(false, filterToggleButton, searchToggleButtonViewAll);
             });
             
             // When search card is shown, show filter card
-            searchCollapse.addEventListener('show.bs.collapse', function() {
+            searchCollapseViewAll.addEventListener('show.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
                     const filterBsCollapse = bootstrap.Collapse.getOrCreateInstance(filterCollapse);
                     filterBsCollapse.show();
                 }
-                updateChevronIcons(true, filterToggleButton, searchToggleButton);
+                updateChevronIcons(true, filterToggleButton, searchToggleButtonViewAll);
             });
             
             // When search card is hidden, hide filter card
-            searchCollapse.addEventListener('hide.bs.collapse', function() {
+            searchCollapseViewAll.addEventListener('hide.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
                     const filterBsCollapse = bootstrap.Collapse.getOrCreateInstance(filterCollapse);
                     filterBsCollapse.hide();
                 }
-                updateChevronIcons(false, filterToggleButton, searchToggleButton);
+                updateChevronIcons(false, filterToggleButton, searchToggleButtonViewAll);
             });
             
             // Reset the manual toggle flag after animations complete
@@ -1109,62 +1183,62 @@ else
                 setTimeout(() => { isManualToggle = false; }, 50);
             });
             
-            searchCollapse.addEventListener('shown.bs.collapse', function() {
+            searchCollapseViewAll.addEventListener('shown.bs.collapse', function() {
                 setTimeout(() => { isManualToggle = false; }, 50);
             });
             
-            searchCollapse.addEventListener('hidden.bs.collapse', function() {
+            searchCollapseViewAll.addEventListener('hidden.bs.collapse', function() {
                 setTimeout(() => { isManualToggle = false; }, 50);
             });
         }
         // Scenario 2: Regular users - Sync next task and search cards
-        else if (nextTaskCollapse && searchCollapse && nextTaskToggleButton && searchToggleButton) {
+        else if (nextTaskCollapse && searchCollapseRegular && nextTaskToggleButton && searchToggleButtonRegular) {
             // When search card is shown, show next task card
-            searchCollapse.addEventListener('show.bs.collapse', function() {
+            searchCollapseRegular.addEventListener('show.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
                     const nextTaskBsCollapse = bootstrap.Collapse.getOrCreateInstance(nextTaskCollapse);
                     nextTaskBsCollapse.show();
                 }
-                updateChevronIcons(true, searchToggleButton, nextTaskToggleButton);
+                updateChevronIcons(true, searchToggleButtonRegular, nextTaskToggleButton);
             });
             
             // When search card is hidden, hide next task card
-            searchCollapse.addEventListener('hide.bs.collapse', function() {
+            searchCollapseRegular.addEventListener('hide.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
                     const nextTaskBsCollapse = bootstrap.Collapse.getOrCreateInstance(nextTaskCollapse);
                     nextTaskBsCollapse.hide();
                 }
-                updateChevronIcons(false, searchToggleButton, nextTaskToggleButton);
+                updateChevronIcons(false, searchToggleButtonRegular, nextTaskToggleButton);
             });
             
             // When next task card is shown, show search card
             nextTaskCollapse.addEventListener('show.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
-                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseRegular);
                     searchBsCollapse.show();
                 }
-                updateChevronIcons(true, filterToggleButton, searchToggleButton);
+                updateChevronIcons(true, filterToggleButton, searchToggleButtonRegular);
             });
             
             // When next task card is hidden, hide search card
             nextTaskCollapse.addEventListener('hide.bs.collapse', function() {
                 if (!isManualToggle) {
                     isManualToggle = true;
-                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapse);
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseRegular);
                     searchBsCollapse.hide();
                 }
-                updateChevronIcons(false, filterToggleButton, searchToggleButton);
+                updateChevronIcons(false, filterToggleButton, searchToggleButtonRegular);
             });
             
             // Reset the manual toggle flag after animations complete
-            searchCollapse.addEventListener('shown.bs.collapse', function() {
+            searchCollapseRegular.addEventListener('shown.bs.collapse', function() {
                 setTimeout(() => { isManualToggle = false; }, 50);
             });
             
-            searchCollapse.addEventListener('hidden.bs.collapse', function() {
+            searchCollapseRegular.addEventListener('hidden.bs.collapse', function() {
                 setTimeout(() => { isManualToggle = false; }, 50);
             });
             

@@ -1541,6 +1541,85 @@ namespace SFCDashboard.Api.Services
             }
         }
 
+        /// <summary>
+        /// Search planned events for a specific user (filters by user's workgroups and permissions)
+        /// </summary>
+        public async Task<PaginatedList<PlannedEvent>> SearchPlannedEventsForUserAsync(string searchType, string searchValue, int userId, int pageIndex, int pageSize)
+        {
+            try
+            {
+                _logger.LogInformation("Searching planned events for user: type={type}, value={value}, userId={userId}", 
+                    searchType, searchValue, userId);
+
+                // Get user with workgroups and permissions
+                var user = await _usersApiService.GetUserWithRoleAndWorkGroupsAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {userId} not found", userId);
+                    return new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, pageSize);
+                }
+
+                // Get user permissions and workgroups
+                var workgroupNames = user.UserWorkGroups?.Select(uwg => uwg.WorkGroup.Name).ToList() ?? new List<string>();
+                bool canViewAll = user.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
+                bool hasDrawFiberAccess = user.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase)) == true;
+
+                var query = _context.PlannedEvents.AsQueryable();
+
+                // Apply workgroup filtering if user doesn't have ViewAll permission
+                if (!canViewAll && workgroupNames.Any())
+                {
+                    if (hasDrawFiberAccess)
+                    {
+                        query = query.Where(p =>
+                            p.TaskWg != null && (
+                                workgroupNames.Any(wg => p.TaskWg.Contains(wg)) ||
+                                (p.TaskName != null && p.TaskName.Trim().ToLower() == "draw fiber")
+                            )
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.TaskWg != null && workgroupNames.Any(wg => p.TaskWg.Contains(wg)));
+                    }
+                }
+
+                // Apply search filters based on type
+                if (!string.IsNullOrEmpty(searchValue))
+                {
+                    switch (searchType)
+                    {
+                        case "customer":
+                            query = query.Where(p => p.Customer != null &&
+                                EF.Functions.Like(p.Customer, $"%{searchValue}%"));
+                            break;
+                        case "jobReference":
+                            query = query.Where(p => p.JobReference != null &&
+                                EF.Functions.Like(p.JobReference, $"%{searchValue}%"));
+                            break;
+                        case "soNumber":
+                            query = query.Where(p => p.SoNumber != null &&
+                                EF.Functions.Like(p.SoNumber, $"%{searchValue}%"));
+                            break;
+                        default: // peNumber
+                            query = query.Where(p => p.PeNumber != null &&
+                                EF.Functions.Like(p.PeNumber, $"%{searchValue}%"));
+                            break;
+                    }
+                }
+
+                query = query.OrderByDescending(p => p.PECreatedDate)
+                            .ThenBy(p => p.PeNumber);
+
+                return await PaginatedList<PlannedEvent>.CreateAsync(query.AsNoTracking(), pageIndex, pageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching planned events for user {userId}", userId);
+                return new PaginatedList<PlannedEvent>(new List<PlannedEvent>(), 0, pageIndex, pageSize);
+            }
+        }
+
     }
 }
 

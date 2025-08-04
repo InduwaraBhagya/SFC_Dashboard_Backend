@@ -625,6 +625,72 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while retrieving sales OLA violate count");
             }
         }
+
+        /// <summary>
+        /// Search planned events for a specific user with pagination
+        /// </summary>
+        [HttpPost("search-user-paginated")]
+        public async Task<ActionResult<object>> SearchPlannedEventsForUser([FromBody] SearchPlannedEventsRequest request)
+        {
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest("Search request is required");
+                }
+
+                // Validate pagination parameters
+                if (request.PageIndex < 1)
+                {
+                    return BadRequest("Page index must be greater than 0");
+                }
+
+                if (request.PageSize < 1 || request.PageSize > 100)
+                {
+                    return BadRequest("Page size must be between 1 and 100");
+                }
+
+                // Use the service to search planned events for user
+                var result = await _plannedEventsService.SearchPlannedEventsForUserAsync(
+                    request.SearchType ?? string.Empty,
+                    request.SearchString ?? string.Empty,
+                    request.UserId,
+                    request.PageIndex,
+                    request.PageSize);
+
+                // Return a simple object that can be easily serialized
+                var response = new
+                {
+                    Items = result.ToList(),
+                    PageIndex = result.PageIndex,
+                    TotalPages = result.TotalPages,
+                    HasPreviousPage = result.HasPreviousPage,
+                    HasNextPage = result.HasNextPage,
+                    TotalCount = result.Count
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching planned events for user {UserId}", request?.UserId);
+                return StatusCode(500, "An error occurred while searching planned events");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Request model for searching planned events
+    /// </summary>
+    public class SearchPlannedEventsRequest
+    {
+        public int UserId { get; set; }
+        public string? SearchType { get; set; }
+        public string? SearchString { get; set; }
+        public string? WorkgroupName { get; set; }
+        public bool HasDrawFiberAccess { get; set; }
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
     }
 
     /// <summary>

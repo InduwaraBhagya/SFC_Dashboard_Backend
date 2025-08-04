@@ -217,16 +217,9 @@ namespace SFCDashboard.Controllers
             // Apply search filters and get results using API service
             if (!string.IsNullOrEmpty(searchString))
             {
-                // Use the first effective workgroup name for search
-                string? workgroupName = null;
-                if (effectiveWorkgroupIds != null && effectiveWorkgroupIds.Any())
-                {
-                    var firstWorkgroupId = effectiveWorkgroupIds.First();
-                    workgroupName = await _workGroupsApi.GetWorkGroupNameAsync(firstWorkgroupId);
-                }
-
-                var searchResults = await _plannedEventsApi.SearchPlannedEventsAsync(
-                    searchType ?? "peNumber", searchString, workgroupName, hasDrawFiberAccess, pageIndex, 10);
+                // Use the new user-specific search method
+                var searchResults = await _plannedEventsApi.SearchPlannedEventsForUserAsync(
+                    searchType ?? "peNumber", searchString, currentUserId, pageIndex, 10);
 
                 // Get PE tasks for the filtered results
                 if (searchResults.Any())
@@ -399,11 +392,9 @@ namespace SFCDashboard.Controllers
             // Apply search filters using API service
             if (!string.IsNullOrEmpty(searchString))
             {
-                // Use the first workgroup name for search
-                string? workgroupName = workgroupNamesList.FirstOrDefault();
-
-                var searchResults = await _plannedEventsApi.SearchPlannedEventsAsync(
-                    searchType ?? "peNumber", searchString, workgroupName, hasDrawFiberAccess, pageIndex, 10);
+                // Use the new user-specific search method
+                var searchResults = await _plannedEventsApi.SearchPlannedEventsForUserAsync(
+                    searchType ?? "peNumber", searchString, currentUserId, pageIndex, 10);
 
                 // Get PE tasks for the filtered results
                 if (searchResults.Any())
