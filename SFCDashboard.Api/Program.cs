@@ -66,7 +66,9 @@ builder.Services.AddHostedService(provider => provider.GetRequiredService<PEReco
 builder.Services.AddHostedService<OLAViolationService>();
 builder.Services.AddHostedService<HoldTaskReminderService>();
 builder.Services.AddScoped<EscalationService>();
-builder.Services.AddHostedService<EscalationBackgroundService>();
+
+// Escalation processing is now handled by a separate service (SFCDashboard.EscalationService)
+// builder.Services.AddHostedService<EscalationBackgroundService>();
 
 // Authentication configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
