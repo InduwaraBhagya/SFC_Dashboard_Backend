@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using SFCDashboard.Background.Data;
 using System;
 using System.Linq;
@@ -14,14 +15,28 @@ namespace SFCDashboard.Background.Services
     {
         private readonly IServiceProvider _services;
         private readonly ILogger<OLAViolationService> _logger;
-        private readonly TimeSpan _checkInterval = TimeSpan.FromHours(6);
+        private readonly TimeSpan _checkInterval;
 
         public OLAViolationService(
             IServiceProvider services,
-            ILogger<OLAViolationService> logger)
+            ILogger<OLAViolationService> logger,
+            IConfiguration configuration)
         {
             _services = services;
             _logger = logger;
+            
+            // Get check interval from configuration, default to 6 hours
+            var intervalHours = configuration.GetValue<int?>("BackgroundServices:OLAViolationService:CheckIntervalHours");
+            if (intervalHours.HasValue && intervalHours.Value > 0)
+            {
+                _checkInterval = TimeSpan.FromHours(intervalHours.Value);
+                _logger.LogInformation("Using configured OLA check interval: {Hours} hours", intervalHours.Value);
+            }
+            else
+            {
+                _checkInterval = TimeSpan.FromHours(6);
+                _logger.LogInformation("Using default OLA check interval: 6 hours");
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

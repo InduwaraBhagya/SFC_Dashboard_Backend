@@ -1,8 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
-namespace SFCDashboard.EscalationService.Services
+namespace SFCDashboard.Background.Services
 {
     public class EscalationWorkerService : BackgroundService
     {
@@ -18,8 +19,8 @@ namespace SFCDashboard.EscalationService.Services
             _serviceProvider = serviceProvider;
             _logger = logger;
             
-            // Get scheduled times from configuration, default to 9 AM and 9 PM
-            var scheduledTimesConfig = configuration.GetSection("EscalationService:ScheduledTimes").Get<string[]>();
+            // Get scheduled times from configuration, default to 9 AM
+            var scheduledTimesConfig = configuration.GetSection("BackgroundServices:EscalationService:ScheduledTimes").Get<string[]>();
             _scheduledTimes = new List<TimeSpan>();
             
             if (scheduledTimesConfig != null && scheduledTimesConfig.Length > 0)
@@ -37,12 +38,11 @@ namespace SFCDashboard.EscalationService.Services
                 }
             }
             
-            // Default to 9 AM and 9 PM if no valid times configured
+            // Default to 9 AM if no valid times configured
             if (_scheduledTimes.Count == 0)
             {
                 _scheduledTimes.Add(new TimeSpan(9, 0, 0));  // 9 AM
-                _scheduledTimes.Add(new TimeSpan(21, 0, 0)); // 9 PM
-                _logger.LogInformation("Using default scheduled times: 9:00 AM and 9:00 PM");
+                _logger.LogInformation("Using default scheduled time: 9:00 AM");
             }
             
             _scheduledTimes.Sort(); // Sort times in ascending order
@@ -87,11 +87,11 @@ namespace SFCDashboard.EscalationService.Services
                             
                             using (var scope = _serviceProvider.CreateScope())
                             {
-                                var escalationService = scope.ServiceProvider.GetRequiredService<Services.EscalationService>();
-                                await escalationService.CheckAndCreateEscalationsBatchAsync();
+                                var escalationService = scope.ServiceProvider.GetRequiredService<EscalationService>();
+                                await escalationService.CheckAndCreateEscalationsAsync();
                             }
                             
-                            _logger.LogInformation("Escalation check completed at {Time}", DateTime.Now);
+                            _logger.LogInformation("Escalation check completed successfully at {Time}", DateTime.Now);
                             completedRunsToday.Add(scheduledTime); // Mark this scheduled time as completed
                         }
                     }
@@ -108,7 +108,7 @@ namespace SFCDashboard.EscalationService.Services
                             ? delayUntilNext.Subtract(TimeSpan.FromMinutes(1))
                             : TimeSpan.FromMinutes(1);
                     
-                    _logger.LogDebug("Next scheduled run: {NextRun}, sleeping for: {SleepDuration}", 
+                    _logger.LogDebug("Next escalation scheduled run: {NextRun}, sleeping for: {SleepDuration}", 
                         nextScheduledTime, sleepDuration);
                 }
                 catch (Exception ex)

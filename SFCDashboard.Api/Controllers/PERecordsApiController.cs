@@ -27,16 +27,13 @@ namespace SFCDashboard.Controllers.Api
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PERecordsApiController> _logger;
-        private readonly PERecordSyncService _syncService;
 
         public PERecordsApiController(
             ApplicationDbContext context,
-            ILogger<PERecordsApiController> logger,
-            PERecordSyncService syncService)
+            ILogger<PERecordsApiController> logger)
         {
             _context = context;
             _logger = logger;
-            _syncService = syncService;
         }
 
         /// <summary>
@@ -271,21 +268,19 @@ namespace SFCDashboard.Controllers.Api
 
                 try
                 {
-                    // Use the injected syncService
-                    _logger.LogInformation("Starting PE record synchronization");
-                    await _syncService.SyncPERecordsAsync();
+                    _logger.LogInformation("PE record synchronization will be handled by the background service");
                     
-                    // Check counts after sync
+                    // Check counts after import
                     var peCount = await _context.PERecords.CountAsync();
                     var plannedEventCount = await _context.PlannedEvents.CountAsync();
                     var peTaskCount = await _context.PETasks.CountAsync();
                     
-                    _logger.LogInformation("Sync completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}", 
+                    _logger.LogInformation("Import completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}", 
                         peCount, plannedEventCount, peTaskCount);
 
                     return Ok(new { 
                         success = true, 
-                        message = $"Successfully replaced all records with {peRecords.Count} new records from Excel and synced to all related tables.",
+                        message = $"Successfully replaced all records with {peRecords.Count} new records from Excel. Background service will handle synchronization.",
                         recordCount = peRecords.Count,
                         plannedEventCount = plannedEventCount,
                         peTaskCount = peTaskCount,
@@ -414,25 +409,23 @@ namespace SFCDashboard.Controllers.Api
 
                 try
                 {
-                    // Use the injected syncService
-                    _logger.LogInformation("Starting PE record synchronization");
-                    await _syncService.SyncPERecordsAsync();
+                    _logger.LogInformation("PE record synchronization will be handled by the background service");
                     
-                    // Check counts after sync
+                    // Check counts after import
                     var peCount = await _context.PERecords.CountAsync();
                     var plannedEventCount = await _context.PlannedEvents.CountAsync();
                     var peTaskCount = await _context.PETasks.CountAsync();
                     
-                    _logger.LogInformation("Sync completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}", 
+                    _logger.LogInformation("Import completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}", 
                         peCount, plannedEventCount, peTaskCount);
 
                     return Ok(new { 
                         success = true, 
-                        message = $"Successfully replaced all records with {peRecords.Count} new records and synced to all related tables.",
+                        message = $"Successfully replaced all records with {peRecords.Count} new records. Background service will handle synchronization.",
                         recordCount = peRecords.Count,
                         plannedEventCount = plannedEventCount,
                         peTaskCount = peTaskCount,
-                        syncCompleted = true
+                        syncCompleted = false // Will be handled by background service
                     });
                 }
                 catch (Exception ex)
@@ -560,16 +553,15 @@ namespace SFCDashboard.Controllers.Api
         [HttpPost("sync")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> SyncPERecords()
+        public IActionResult SyncPERecords()
         {
             try
             {
-                _logger.LogInformation("Starting PE record synchronization via API endpoint");
-                await _syncService.SyncPERecordsAsync();
+                _logger.LogInformation("PE record synchronization is now handled by the background service");
                 
                 return Ok(new { 
                     Success = true, 
-                    Message = "PE records synchronized successfully."
+                    Message = "PE records are synchronized automatically by the background service. No manual sync needed."
                 });
             }
             catch (Exception ex)

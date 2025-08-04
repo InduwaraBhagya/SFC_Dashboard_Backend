@@ -57,10 +57,17 @@ namespace SFCDashboard.Background
                         options.UseSqlServer(hostContext.Configuration.GetConnectionString("DefaultConnection"),
                             sqlOptions => sqlOptions.CommandTimeout(300))); // 5 minute timeout
 
+                    // Add memory cache for escalation service
+                    services.AddMemoryCache();
+
                     // Register background services
                     services.AddSingleton<PERecordSyncService>();
                     services.AddSingleton<OLAViolationService>();
                     services.AddSingleton<HoldTaskReminderService>();
+                    services.AddSingleton<EscalationWorkerService>();
+                    
+                    // Register escalation service as scoped (for database operations)
+                    services.AddScoped<EscalationService>();
 
                     // Register the main worker
                     services.AddHostedService<Worker>();

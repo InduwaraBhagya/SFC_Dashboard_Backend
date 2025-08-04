@@ -30,6 +30,17 @@ This is a standalone Windows service that handles all background processing for 
   - Sends reminder messages to workgroup users
   - Creates system-generated PEIssue records
 
+### 4. EscalationWorkerService
+- **Purpose**: Monitors OLA violations and creates escalations for overdue tasks
+- **Schedule**: Runs at 9 AM daily (configurable)
+- **Functions**:
+  - Checks tasks with OLA violations
+  - Creates escalations at appropriate levels (1, 2, or 3)
+  - Level 1: Tasks violated for less than 24 hours
+  - Level 2: Tasks violated for 1+ days
+  - Level 3: Tasks violated for 3+ days
+  - Respects escalation disabled flag on tasks
+
 ## Installation
 
 ### Prerequisites
@@ -81,6 +92,20 @@ Logging is configured in `appsettings.json` and can be adjusted for different en
   }
 }
 ```
+
+### Escalation Service Configuration
+Configure escalation service schedule in `appsettings.json`:
+```json
+{
+  "EscalationService": {
+    "ScheduledTimes": [ "09:00" ]
+  }
+}
+```
+
+- **ScheduledTimes**: Array of times (24-hour format) when escalation checks should run
+- Default time is 9:00 AM if not configured
+- The service can be enabled/disabled through the SystemConfigurations table
 
 ## Service Management
 

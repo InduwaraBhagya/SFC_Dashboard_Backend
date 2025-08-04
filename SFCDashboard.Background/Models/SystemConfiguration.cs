@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SFCDashboard.EscalationService.Models
+namespace SFCDashboard.Background.Models
 {
     public class SystemConfiguration
     {

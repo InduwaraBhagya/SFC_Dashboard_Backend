@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SFCDashboard.EscalationService.Models
+namespace SFCDashboard.Background.Models
 {
     public class Escalation
     {

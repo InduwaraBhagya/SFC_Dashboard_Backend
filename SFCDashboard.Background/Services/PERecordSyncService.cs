@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using SFCDashboard.Background.Models;
 using SFCDashboard.Background.Data;
 
@@ -15,15 +16,41 @@ namespace SFCDashboard.Background.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<PERecordSyncService> _logger;
-        private readonly TimeSpan[] _scheduledTimes = { 
-            new TimeSpan(6, 0, 0),   // 6:00 AM
-            new TimeSpan(13, 0, 0)   // 1:00 PM
-        };
+        private readonly List<TimeSpan> _scheduledTimes;
 
-        public PERecordSyncService(IServiceProvider serviceProvider, ILogger<PERecordSyncService> logger)
+        public PERecordSyncService(IServiceProvider serviceProvider, ILogger<PERecordSyncService> logger, IConfiguration configuration)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
+            
+            // Get scheduled times from configuration
+            var scheduledTimesConfig = configuration.GetSection("BackgroundServices:PERecordSyncService:ScheduledTimes").Get<string[]>();
+            _scheduledTimes = new List<TimeSpan>();
+            
+            if (scheduledTimesConfig != null && scheduledTimesConfig.Length > 0)
+            {
+                foreach (var timeStr in scheduledTimesConfig)
+                {
+                    if (TimeSpan.TryParse(timeStr, out var time))
+                    {
+                        _scheduledTimes.Add(time);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Invalid time format in PERecordSyncService configuration: {Time}", timeStr);
+                    }
+                }
+            }
+            
+            // Default to 6 AM and 1 PM if no valid times configured
+            if (_scheduledTimes.Count == 0)
+            {
+                _scheduledTimes.Add(new TimeSpan(6, 0, 0));   // 6:00 AM
+                _scheduledTimes.Add(new TimeSpan(13, 0, 0));  // 1:00 PM
+                _logger.LogInformation("Using default scheduled times for PE Record Sync: 6:00 AM and 1:00 PM");
+            }
+            
+            _scheduledTimes.Sort(); // Sort times in ascending order
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
