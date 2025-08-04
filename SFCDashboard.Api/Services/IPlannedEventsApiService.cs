@@ -54,10 +54,10 @@ namespace SFCDashboard.Api.Services
         Task<IEnumerable<PlannedEvent>> GetSalesOLAViolateRecordsAsync(int userId);
         
         // Sales count methods
-        Task<int> GetSalesInProgressCountAsync();
-        Task<int> GetSalesHoldCountAsync();
-        Task<int> GetSalesUrgentCountAsync();
-        Task<int> GetSalesOLAViolateCountAsync();
+        Task<int> GetSalesInProgressCountAsync(int userId);
+        Task<int> GetSalesHoldCountAsync(int userId);
+        Task<int> GetSalesUrgentCountAsync(int userId);
+        Task<int> GetSalesOLAViolateCountAsync(int userId);
     }
 }
 
