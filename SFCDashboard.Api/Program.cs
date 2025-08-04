@@ -60,15 +60,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
            .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
 
-// Register background services
-builder.Services.AddSingleton<PERecordSyncService>();
-builder.Services.AddHostedService(provider => provider.GetRequiredService<PERecordSyncService>());
-builder.Services.AddHostedService<OLAViolationService>();
-builder.Services.AddHostedService<HoldTaskReminderService>();
+// Register services (background services are now handled by SFCDashboard.Background and SFCDashboard.EscalationService)
 builder.Services.AddScoped<EscalationService>();
 
-// Escalation processing is now handled by a separate service (SFCDashboard.EscalationService)
-// builder.Services.AddHostedService<EscalationBackgroundService>();
+// Background services are now handled by separate services:
+// - PERecordSyncService, OLAViolationService, HoldTaskReminderService -> SFCDashboard.Background
+// - EscalationBackgroundService -> SFCDashboard.EscalationService
 
 // Authentication configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
