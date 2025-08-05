@@ -30,5 +30,6 @@ namespace SFCDashboard.ApiClients
 
         Task<IEnumerable<PEIssue>> GetByTaskIdAsync(int taskId);
         Task<IEnumerable<PEIssue>> GetByPlannedEventIdAsync(int plannedEventId);
+        Task<bool> MarkIssueAsReadAsync(int issueId);
     }
 }

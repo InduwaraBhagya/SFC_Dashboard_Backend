@@ -13,6 +13,7 @@ namespace SFCDashboard.Api.Services
         Task<bool> DeletePEIssueResolutionAsync(int id);
         Task<PEIssueResolution?> GetPendingResolutionAsync(int issueId);
         Task<PEIssueResolution?> GetByIssueIdAsync(int issueId);
+        Task<bool> ConfirmResolutionAsync(int resolutionId, bool isConfirmed);
     }
 }
 

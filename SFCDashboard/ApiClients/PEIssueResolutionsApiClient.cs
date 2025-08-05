@@ -93,5 +93,14 @@ namespace SFCDashboard.ApiClients
             var json = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<PEIssueResolution>(json, _jsonOptions);
         }
+
+        public async Task<bool> ConfirmResolutionAsync(int resolutionId, bool isConfirmed)
+        {
+            var json = JsonSerializer.Serialize(isConfirmed, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"api/peissueresolutions/{resolutionId}/confirm", content);
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
     }
 }
