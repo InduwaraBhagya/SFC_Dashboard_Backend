@@ -57,7 +57,8 @@ builder.Services.AddMemoryCache();
 
 // Add database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
+        sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
            .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
 
 // Register services (background services are now handled by SFCDashboard.Background and SFCDashboard.EscalationService)

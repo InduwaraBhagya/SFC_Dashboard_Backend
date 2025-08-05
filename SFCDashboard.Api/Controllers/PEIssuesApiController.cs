@@ -171,6 +171,38 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Mark all reminders as read for a user
+        /// </summary>
+        [HttpPost("reminders/{userId}/markallread")]
+        public async Task<ActionResult<object>> MarkAllRemindersAsRead(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Marking all reminders as read for user {userId}", userId);
+                
+                var reminders = await _context.PEIssues
+                    .Where(i => i.ReceiverId == userId && !i.IsResolved && i.IsReminder && !i.IsRead)
+                    .ToListAsync();
+
+                foreach (var reminder in reminders)
+                {
+                    reminder.IsRead = true;
+                }
+
+                var updatedCount = await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Marked {count} reminders as read for user {userId}", updatedCount, userId);
+                
+                return Ok(new { success = true, count = updatedCount });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking all reminders as read for user {userId}", userId);
+                return StatusCode(500, "An error occurred while marking reminders as read");
+            }
+        }
+
+        /// <summary>
         /// Get issues by multiple planned event IDs
         /// </summary>
         [HttpPost("by-plannedevent-ids")]

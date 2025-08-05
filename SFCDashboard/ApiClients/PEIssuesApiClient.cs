@@ -1,8 +1,19 @@
 using SFCDashboard.Models;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SFCDashboard.ApiClients
 {
+    // Response model for mark all reminders as read operation
+    public class MarkAllRemindersResponse
+    {
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+        
+        [JsonPropertyName("count")]
+        public int Count { get; set; }
+    }
+
     public class PEIssuesApiClient : IPEIssuesApiClient
     {
         private readonly HttpClient _httpClient;
@@ -63,8 +74,10 @@ namespace SFCDashboard.ApiClients
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var response = await _httpClient.PutAsync($"api/peissues/{peIssue.Id}", content);
             response.EnsureSuccessStatusCode();
-            var responseJson = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<PEIssue>(responseJson, _jsonOptions)!;
+            
+            // API returns NoContent (204), so we return the original object
+            // since the update was successful
+            return peIssue;
         }
 
         public async Task DeleteAsync(int id)
@@ -103,8 +116,8 @@ namespace SFCDashboard.ApiClients
             var response = await _httpClient.PostAsync($"api/peissues/reminders/{userId}/markallread", null);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<Dictionary<string, bool>>(json, _jsonOptions);
-            return result?.GetValueOrDefault("success", false) ?? false;
+            var result = JsonSerializer.Deserialize<MarkAllRemindersResponse>(json, _jsonOptions);
+            return result?.Success ?? false;
         }
 
         public async Task<IEnumerable<PEIssue>> GetPEIssuesByPlannedEventAsync(int plannedEventId)

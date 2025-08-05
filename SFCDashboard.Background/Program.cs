@@ -55,7 +55,11 @@ namespace SFCDashboard.Background
                     // Add Entity Framework
                     services.AddDbContext<ApplicationDbContext>(options =>
                         options.UseSqlServer(hostContext.Configuration.GetConnectionString("DefaultConnection"),
-                            sqlOptions => sqlOptions.CommandTimeout(300))); // 5 minute timeout
+                            sqlOptions => 
+                            {
+                                sqlOptions.CommandTimeout(300); // 5 minute timeout
+                                sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                            }));
 
                     // Add memory cache for escalation service
                     services.AddMemoryCache();
