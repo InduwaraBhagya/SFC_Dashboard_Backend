@@ -360,8 +360,8 @@ namespace SFCDashboard.Api.Controllers
 
             try
             {
-                _logger.LogInformation("Updating PE issue {Id}: IsResolved={IsResolved}, IsRead={IsRead}", 
-                    issue.Id, issue.IsResolved, issue.IsRead);
+                _logger.LogInformation("UpdatePEIssue called - Received issue data: Id={Id}, IsResolved={IsResolved}, IsRead={IsRead}, IssueText='{IssueText}'", 
+                    issue.Id, issue.IsResolved, issue.IsRead, issue.IssueText);
 
                 var existingIssue = await _context.PEIssues.FindAsync(id);
                 if (existingIssue == null)
@@ -370,7 +370,10 @@ namespace SFCDashboard.Api.Controllers
                     return NotFound();
                 }
 
-                // Update the properties
+                _logger.LogInformation("Before update - Existing issue: Id={Id}, IsResolved={IsResolved}, IsRead={IsRead}", 
+                    existingIssue.Id, existingIssue.IsResolved, existingIssue.IsRead);
+
+                // Update the properties explicitly
                 existingIssue.IssueText = issue.IssueText;
                 existingIssue.IsRead = issue.IsRead;
                 existingIssue.IsResolved = issue.IsResolved;
@@ -382,12 +385,19 @@ namespace SFCDashboard.Api.Controllers
                 existingIssue.AttachmentPath = issue.AttachmentPath;
                 // Note: Don't update CreatedAt, SenderId, ReceiverId, PlannedEventId, PETaskId as these should be immutable
 
-                await _context.SaveChangesAsync();
+                _logger.LogInformation("After property assignment - Issue: Id={Id}, IsResolved={IsResolved}, IsRead={IsRead}", 
+                    existingIssue.Id, existingIssue.IsResolved, existingIssue.IsRead);
+
+                // Mark the entity as modified to ensure EF tracks the changes
+                _context.Entry(existingIssue).State = EntityState.Modified;
                 
-                _logger.LogInformation("Successfully updated PE issue {Id}: IsResolved={IsResolved}", 
-                    existingIssue.Id, existingIssue.IsResolved);
+                var changesSaved = await _context.SaveChangesAsync();
                 
-                return NoContent();
+                _logger.LogInformation("SaveChanges completed - Changes saved: {ChangesSaved}, Final issue state: Id={Id}, IsResolved={IsResolved}", 
+                    changesSaved, existingIssue.Id, existingIssue.IsResolved);
+                
+                // Return the updated issue object (API client expects this)
+                return Ok(existingIssue);
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -428,6 +438,118 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogError(ex, "Error deleting PE issue {Id}", id);
                 return StatusCode(500, "An error occurred while deleting the PE issue");
+            }
+        }
+
+        /// <summary>
+        /// Test endpoint to directly update IsResolved status
+        /// </summary>
+        [HttpPost("{id}/mark-resolved")]
+        public async Task<IActionResult> MarkIssueAsResolved(int id, [FromBody] bool isResolved = true)
+        {
+            try
+            {
+                _logger.LogInformation("MarkIssueAsResolved called for issue {Id} with isResolved={IsResolved}", id, isResolved);
+
+                var existingIssue = await _context.PEIssues.FindAsync(id);
+                if (existingIssue == null)
+                {
+                    _logger.LogWarning("PE issue {Id} not found", id);
+                    return NotFound();
+                }
+
+                _logger.LogInformation("Before update: Issue {Id} IsResolved={IsResolved}", existingIssue.Id, existingIssue.IsResolved);
+
+                existingIssue.IsResolved = isResolved;
+                
+                var changesSaved = await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("After update: Issue {Id} IsResolved={IsResolved}, Changes saved: {ChangesSaved}", 
+                    existingIssue.Id, existingIssue.IsResolved, changesSaved);
+
+                return Ok(new { 
+                    id = existingIssue.Id, 
+                    isResolved = existingIssue.IsResolved, 
+                    changesSaved = changesSaved 
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking issue {Id} as resolved", id);
+                return StatusCode(500, "An error occurred while updating the issue");
+            }
+        }
+
+        /// <summary>
+        /// Test endpoint to check issue resolution status
+        /// </summary>
+        [HttpGet("test-status/{id}")]
+        public async Task<ActionResult> TestIssueStatus(int id)
+        {
+            try
+            {
+                var issue = await _context.PEIssues.FindAsync(id);
+                if (issue == null)
+                {
+                    return NotFound($"Issue {id} not found");
+                }
+
+                var resolution = await _context.PEIssueResolutions.FirstOrDefaultAsync(r => r.IssueId == id);
+
+                return Ok(new { 
+                    IssueId = issue.Id,
+                    IssueIsResolved = issue.IsResolved,
+                    IssueText = issue.IssueText,
+                    HasResolution = resolution != null,
+                    ResolutionId = resolution?.Id,
+                    ResolutionIsConfirmed = resolution?.IsConfirmed,
+                    ResolutionDetails = resolution?.ResolutionDetails,
+                    ResolutionConfirmedDate = resolution?.ConfirmedDate
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error testing issue status {Id}", id);
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Mark a specific issue as read
+        /// </summary>
+        [HttpPost("{id}/markread")]
+        public async Task<IActionResult> MarkIssueAsRead(int id)
+        {
+            try
+            {
+                _logger.LogInformation("MarkIssueAsRead called for issue {issueId}", id);
+
+                var issue = await _context.PEIssues.FindAsync(id);
+                if (issue == null)
+                {
+                    _logger.LogWarning("Issue {issueId} not found", id);
+                    return NotFound($"Issue with ID {id} not found");
+                }
+
+                if (!issue.IsRead)
+                {
+                    issue.IsRead = true;
+                    _context.Entry(issue).State = EntityState.Modified;
+                    
+                    var changesSaved = await _context.SaveChangesAsync();
+                    _logger.LogInformation("Issue {issueId} marked as read, changes saved: {changesSaved}", id, changesSaved);
+                }
+                else
+                {
+                    _logger.LogInformation("Issue {issueId} was already marked as read", id);
+                }
+
+                return Ok(new { success = true, message = "Issue marked as read" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking issue {issueId} as read", id);
+                return StatusCode(500, "An error occurred while marking the issue as read");
             }
         }
 

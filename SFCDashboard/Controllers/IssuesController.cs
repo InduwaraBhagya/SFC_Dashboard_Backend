@@ -383,20 +383,17 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var issue = await _peIssuesApi.GetByIdAsync(id);
-                if (issue == null)
+                // Use the dedicated API endpoint for marking as read
+                bool success = await _peIssuesApi.MarkIssueAsReadAsync(id);
+                
+                if (success)
+                {
+                    return Ok();
+                }
+                else
                 {
                     return NotFound();
                 }
-
-                // Mark as read
-                if (!issue.IsRead)
-                {
-                    issue.IsRead = true;
-                    await _peIssuesApi.UpdateAsync(issue);
-                }
-
-                return Ok();
             }
             catch (Exception ex)
             {
@@ -558,41 +555,34 @@ namespace SFCDashboard.Controllers
 
                 var pe = await _plannedEventsApi.GetByIdAsync(resolution.PlannedEventId);
 
+                // Only allow confirmation if not already confirmed
                 if (isConfirmed)
                 {
-                    // Update resolution status
-                    resolution.IsConfirmed = true;
-                    resolution.ConfirmedDate = DateTime.Now;
-                    await _peIssueResolutionsApi.UpdateAsync(resolution);
-
-                    // Mark issue as resolved
-                    if (issue != null)
+                    if (resolution.IsConfirmed)
                     {
-                        _logger.LogInformation($"Marking issue {issue.Id} as resolved (current status: IsResolved={issue.IsResolved})");
-                        issue.IsResolved = true;
-                        await _peIssuesApi.UpdateAsync(issue);
-                        _logger.LogInformation($"Issue {issue.Id} marked as resolved - API call completed");
+                        TempData["ErrorMessage"] = "Resolution has already been confirmed.";
+                        return RedirectToAction("Details", "PlannedEvents", new { id = resolution.PlannedEventId });
+                    }
 
-                        // Verify the update worked by fetching the issue again
-                        var updatedIssue = await _peIssuesApi.GetByIdAsync(issue.Id);
-                        _logger.LogInformation($"Verification: Issue {issue.Id} IsResolved status after update: {updatedIssue?.IsResolved}");
+                    // Only allow the original reporter to confirm
+                    var currentUserId = await GetCurrentUserIdAsync();
+                    if (currentUserId != issue.SenderId)
+                    {
+                        TempData["ErrorMessage"] = "Only the original reporter can confirm the resolution.";
+                        return RedirectToAction("Details", "PlannedEvents", new { id = resolution.PlannedEventId });
+                    }
 
-                        // Find and mark the original issue as resolved if this is a reply
-                        if (issue.OriginalIssueId.HasValue)
-                        {
-                            var originalIssue = await _peIssuesApi.GetByIdAsync(issue.OriginalIssueId.Value);
-                            if (originalIssue != null && !originalIssue.IsResolved)
-                            {
-                                _logger.LogInformation($"Marking original issue {originalIssue.Id} as resolved (current status: IsResolved={originalIssue.IsResolved})");
-                                originalIssue.IsResolved = true;
-                                await _peIssuesApi.UpdateAsync(originalIssue);
-                                _logger.LogInformation($"Original issue {originalIssue.Id} also marked as resolved");
-                                
-                                // Verify the original issue update
-                                var updatedOriginalIssue = await _peIssuesApi.GetByIdAsync(originalIssue.Id);
-                                _logger.LogInformation($"Verification: Original issue {originalIssue.Id} IsResolved status after update: {updatedOriginalIssue?.IsResolved}");
-                            }
-                        }
+                    // Use the new API endpoint that handles both resolution confirmation and issue resolution in one atomic call
+                    var success = await _peIssueResolutionsApi.ConfirmResolutionAsync(resolutionId, true);
+                    if (success)
+                    {
+                        _logger.LogInformation($"Resolution {resolutionId} confirmed successfully via API - both resolution and issue should be updated");
+                        // Wait a moment for the database to be consistent, then verify
+                        await Task.Delay(100);
+                        
+                        // Get the updated issue to verify it was resolved
+                        var updatedIssue = await _peIssuesApi.GetByIdAsync(resolution.IssueId);
+                        _logger.LogInformation($"Verification: Issue {resolution.IssueId} IsResolved status after API call: {updatedIssue?.IsResolved}");
 
                         // Find the resolution request message and hide it from inbox
                         var allIssues = pe != null ? await _peIssuesApi.GetByPlannedEventIdAsync(pe.Id) : new List<PEIssue>();
@@ -603,36 +593,41 @@ namespace SFCDashboard.Controllers
                             await _peIssuesApi.UpdateAsync(resolutionRequestMessage);
                             _logger.LogInformation($"Resolution request message {resolutionRequestMessage.Id} hidden from inbox");
                         }
+
+                        // Also hide the original issue from inbox since it's now resolved
+                        if (issue != null)
+                        {
+                            issue.IsHiddenFromInbox = true;
+                            await _peIssuesApi.UpdateAsync(issue);
+                            _logger.LogInformation($"Original issue {issue.Id} hidden from inbox as it's now resolved");
+                        }
+
+                        // Update planned event - ONLY if no other active issues remain
+                        if (pe != null)
+                        {
+                            // Check if any unresolved root issues remain
+                            var allPEIssues = await _peIssuesApi.GetByPlannedEventIdAsync(pe.Id);
+                            var hasOtherActiveIssues = allPEIssues.Any(i => !i.IsResolved && i.OriginalIssueId == null);
+                            
+                            if (!hasOtherActiveIssues)
+                            {
+                                pe.IsHold = false;
+                                await _plannedEventsApi.UpdateAsync(pe);
+                                _logger.LogInformation($"PE {pe.Id} removed from hold status as all issues are resolved");
+                            }
+                            else
+                            {
+                                _logger.LogInformation($"PE {pe.Id} remains on hold due to other unresolved issues");
+                            }
+                        }
+
+                        TempData["SuccessMessage"] = "Resolution confirmed and issue marked as resolved.";
                     }
                     else
                     {
-                        _logger.LogWarning($"Issue not found for resolution id: {resolutionId}");
+                        _logger.LogError($"Failed to confirm resolution {resolutionId} via API");
+                        TempData["ErrorMessage"] = "Failed to confirm resolution. Please try again.";
                     }
-
-                    // Update planned event - ONLY if no other active issues remain
-                    if (pe != null)
-                    {
-                        // Check if any unresolved root issues remain
-                        var allIssues = await _peIssuesApi.GetByPlannedEventIdAsync(pe.Id);
-                        var hasOtherActiveIssues = allIssues.Any(i => !i.IsResolved && i.OriginalIssueId == null);
-                        pe.IsHold = false;
-                        if (!hasOtherActiveIssues)
-                        {
-                            pe.IsHold = false;
-                            await _plannedEventsApi.UpdateAsync(pe);
-                            _logger.LogInformation($"PE {pe.Id} removed from hold status as all issues are resolved");
-                        }
-                        else
-                        {
-                            _logger.LogInformation($"PE {pe.Id} remains on hold due to other unresolved issues: {hasOtherActiveIssues}");
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogWarning($"PE not found for resolution id: {resolutionId}");
-                    }
-
-                    TempData["SuccessMessage"] = "Resolution confirmed and issue marked as resolved.";
                 }
                 else
                 {

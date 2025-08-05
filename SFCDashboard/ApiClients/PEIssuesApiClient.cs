@@ -28,7 +28,7 @@ namespace SFCDashboard.ApiClients
 
         public async Task<IEnumerable<PEIssue>> GetByPlannedEventIdAsync(int plannedEventId)
         {
-            var response = await _httpClient.GetAsync($"api/peissues/byplannedevent/{plannedEventId}");
+            var response = await _httpClient.GetAsync($"api/peissues/plannedevent/{plannedEventId}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<IEnumerable<PEIssue>>(json, _jsonOptions) ?? new List<PEIssue>();
@@ -302,6 +302,20 @@ namespace SFCDashboard.ApiClients
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<IEnumerable<PEIssueViewModel>>(json, _jsonOptions) ?? new List<PEIssueViewModel>();
+        }
+
+        public async Task<bool> MarkIssueAsReadAsync(int issueId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/peissues/{issueId}/markread", null);
+                response.EnsureSuccessStatusCode();
+                return true;
+            }
+            catch (HttpRequestException)
+            {
+                return false;
+            }
         }
     }
 }

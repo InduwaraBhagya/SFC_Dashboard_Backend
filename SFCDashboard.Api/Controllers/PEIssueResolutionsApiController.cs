@@ -245,6 +245,61 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Test endpoint to verify resolution confirmation is working properly
+        /// </summary>
+        [HttpGet("test-confirm/{id}")]
+        public async Task<ActionResult> TestConfirmResolution(int id)
+        {
+            try
+            {
+                var resolution = await _peIssueResolutionsService.GetPEIssueResolutionAsync(id);
+                if (resolution == null)
+                {
+                    return NotFound($"Resolution {id} not found");
+                }
+
+                return Ok(new { 
+                    ResolutionId = resolution.Id,
+                    IssueId = resolution.IssueId,
+                    ResolutionIsConfirmed = resolution.IsConfirmed,
+                    ResolutionDetails = resolution.ResolutionDetails,
+                    ConfirmedDate = resolution.ConfirmedDate,
+                    Message = "Use POST to /api/peissueresolutions/{id}/confirm to test the actual confirmation"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error testing resolution {Id}", id);
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Confirm or reject a resolution (this will automatically update the related issue)
+        /// </summary>
+        [HttpPut("{id}/confirm")]
+        public async Task<ActionResult> ConfirmResolution(int id, [FromBody] bool isConfirmed)
+        {
+            try
+            {
+                _logger.LogInformation("ConfirmResolution called for resolution {Id} with isConfirmed: {IsConfirmed}", id, isConfirmed);
+
+                var success = await _peIssueResolutionsService.ConfirmResolutionAsync(id, isConfirmed);
+                if (!success)
+                {
+                    return NotFound($"PE Issue Resolution with ID {id} not found");
+                }
+
+                return Ok(new { message = $"Resolution {(isConfirmed ? "confirmed" : "rejected")} successfully", resolutionId = id, isConfirmed });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming resolution {Id}", id);
+                return StatusCode(500, "An error occurred while confirming the resolution");
+            }
+        }
+
+        /// <summary>
         /// Get resolution by issue ID (single issue)
         /// </summary>
         [HttpGet("byissue/{issueId}")]

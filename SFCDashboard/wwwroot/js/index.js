@@ -118,9 +118,26 @@ $(document).ready(function() {
         $('#replyPlannedEventId').val(peId);
         $('#replyReceiverId').val(senderId);
         
-        // Hide the details modal and show the reply modal
+        // Hide the details modal and show the reply modal with proper accessibility
         $('#issueDetailsModal').modal('hide');
-        $('#issueReplyModal').modal('show');
+        
+        const replyModalElement = document.getElementById('issueReplyModal');
+        const replyModal = new bootstrap.Modal(replyModalElement);
+        
+        // Fix accessibility issue
+        replyModalElement.addEventListener('shown.bs.modal', function() {
+            replyModalElement.removeAttribute('aria-hidden');
+            const firstFocusable = replyModalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) {
+                firstFocusable.focus();
+            }
+        });
+        
+        replyModalElement.addEventListener('hidden.bs.modal', function() {
+            replyModalElement.setAttribute('aria-hidden', 'true');
+        });
+        
+        replyModal.show();
     });
     
     $('#resolveIssueBtn').on('click', function() {
@@ -131,9 +148,26 @@ $(document).ready(function() {
         $('#resolveIssueId').val(issueId);
         $('#resolvePlannedEventId').val(peId);
         
-        // Hide the details modal and show the resolve modal
+        // Hide the details modal and show the resolve modal with proper accessibility
         $('#issueDetailsModal').modal('hide');
-        $('#issueResolveModal').modal('show');
+        
+        const resolveModalElement = document.getElementById('issueResolveModal');
+        const resolveModal = new bootstrap.Modal(resolveModalElement);
+        
+        // Fix accessibility issue
+        resolveModalElement.addEventListener('shown.bs.modal', function() {
+            resolveModalElement.removeAttribute('aria-hidden');
+            const firstFocusable = resolveModalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) {
+                firstFocusable.focus();
+            }
+        });
+        
+        resolveModalElement.addEventListener('hidden.bs.modal', function() {
+            resolveModalElement.setAttribute('aria-hidden', 'true');
+        });
+        
+        resolveModal.show();
     });
     
     $('#confirmResolutionBtn').on('click', function() {
@@ -271,8 +305,27 @@ function showUrgentRequestModal(type, id) {
     // Show loading indicator
     document.getElementById('urgentRequestDetails').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading details...</p></div>';
     
-    // Show the modal while fetching details
-    const modal = new bootstrap.Modal(document.getElementById('urgentRequestModal'));
+    // Show the modal with proper accessibility handling while fetching details
+    const modalElement = document.getElementById('urgentRequestModal');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    // Fix accessibility issue by ensuring aria-hidden is properly managed
+    modalElement.addEventListener('shown.bs.modal', function() {
+        // Remove aria-hidden when modal is fully shown to prevent accessibility conflicts
+        modalElement.removeAttribute('aria-hidden');
+        
+        // Focus on the first focusable element in the modal
+        const firstFocusable = modalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (firstFocusable) {
+            firstFocusable.focus();
+        }
+    });
+    
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        // Restore aria-hidden when modal is hidden
+        modalElement.setAttribute('aria-hidden', 'true');
+    });
+    
     modal.show();
     
     // Fetch details from server
@@ -420,8 +473,27 @@ function showIssueDetails(element) {
         updateUnreadCount();
     }
     
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('issueDetailsModal'));
+    // Show the modal with proper accessibility handling
+    const modalElement = document.getElementById('issueDetailsModal');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    // Fix accessibility issue by ensuring aria-hidden is properly managed
+    modalElement.addEventListener('shown.bs.modal', function() {
+        // Remove aria-hidden when modal is fully shown to prevent accessibility conflicts
+        modalElement.removeAttribute('aria-hidden');
+        
+        // Focus on the first focusable element in the modal
+        const firstFocusable = modalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (firstFocusable) {
+            firstFocusable.focus();
+        }
+    });
+    
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        // Restore aria-hidden when modal is hidden
+        modalElement.setAttribute('aria-hidden', 'true');
+    });
+    
     modal.show();
 }
 
@@ -461,8 +533,27 @@ function showResolutionConfirm(element) {
     // Set up other modal elements
     $('#viewPEDetailsLink').attr('href', `/PlannedEvents/Details/${peId}`);
     
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('resolutionConfirmModal'));
+    // Show the modal with proper accessibility handling
+    const modalElement = document.getElementById('resolutionConfirmModal');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    // Fix accessibility issue by ensuring aria-hidden is properly managed
+    modalElement.addEventListener('shown.bs.modal', function() {
+        // Remove aria-hidden when modal is fully shown to prevent accessibility conflicts
+        modalElement.removeAttribute('aria-hidden');
+        
+        // Focus on the first focusable element in the modal
+        const firstFocusable = modalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (firstFocusable) {
+            firstFocusable.focus();
+        }
+    });
+    
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        // Restore aria-hidden when modal is hidden
+        modalElement.setAttribute('aria-hidden', 'true');
+    });
+    
     modal.show();
     
     // Mark as read
