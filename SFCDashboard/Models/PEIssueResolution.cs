@@ -12,7 +12,7 @@ namespace SFCDashboard.Models
         public int IssueId { get; set; }
         
         [Required]
-        public string ResolutionDetails { get; set; }
+        public string ResolutionDetails { get; set; } = string.Empty;
         
         [Required]
         public DateTime ResolutionDate { get; set; }

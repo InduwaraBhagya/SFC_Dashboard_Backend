@@ -4,6 +4,7 @@ namespace SFCDashboard.Api.Services
 {
     public interface IPEIssueResolutionsApiService
     {
+        Task<IEnumerable<PEIssueResolution>> GetAllPEIssueResolutionsAsync();
         Task<PEIssueResolution?> GetPEIssueResolutionAsync(int id);
         Task<IEnumerable<PEIssueResolution>> GetPEIssueResolutionsByIssueIdsAsync(List<int> issueIds);
         Task<Dictionary<int, PEIssueResolution>> GetResolutionsByIssueIdsAsync(List<int> issueIds);
@@ -11,6 +12,7 @@ namespace SFCDashboard.Api.Services
         Task<PEIssueResolution?> UpdatePEIssueResolutionAsync(PEIssueResolution resolution);
         Task<bool> DeletePEIssueResolutionAsync(int id);
         Task<PEIssueResolution?> GetPendingResolutionAsync(int issueId);
+        Task<PEIssueResolution?> GetByIssueIdAsync(int issueId);
     }
 }
 
