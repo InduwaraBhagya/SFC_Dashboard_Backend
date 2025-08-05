@@ -568,9 +568,14 @@ namespace SFCDashboard.Controllers
                     // Mark issue as resolved
                     if (issue != null)
                     {
+                        _logger.LogInformation($"Marking issue {issue.Id} as resolved (current status: IsResolved={issue.IsResolved})");
                         issue.IsResolved = true;
                         await _peIssuesApi.UpdateAsync(issue);
-                        _logger.LogInformation($"Issue {issue.Id} marked as resolved");
+                        _logger.LogInformation($"Issue {issue.Id} marked as resolved - API call completed");
+
+                        // Verify the update worked by fetching the issue again
+                        var updatedIssue = await _peIssuesApi.GetByIdAsync(issue.Id);
+                        _logger.LogInformation($"Verification: Issue {issue.Id} IsResolved status after update: {updatedIssue?.IsResolved}");
 
                         // Find and mark the original issue as resolved if this is a reply
                         if (issue.OriginalIssueId.HasValue)
@@ -578,9 +583,14 @@ namespace SFCDashboard.Controllers
                             var originalIssue = await _peIssuesApi.GetByIdAsync(issue.OriginalIssueId.Value);
                             if (originalIssue != null && !originalIssue.IsResolved)
                             {
+                                _logger.LogInformation($"Marking original issue {originalIssue.Id} as resolved (current status: IsResolved={originalIssue.IsResolved})");
                                 originalIssue.IsResolved = true;
                                 await _peIssuesApi.UpdateAsync(originalIssue);
                                 _logger.LogInformation($"Original issue {originalIssue.Id} also marked as resolved");
+                                
+                                // Verify the original issue update
+                                var updatedOriginalIssue = await _peIssuesApi.GetByIdAsync(originalIssue.Id);
+                                _logger.LogInformation($"Verification: Original issue {originalIssue.Id} IsResolved status after update: {updatedOriginalIssue?.IsResolved}");
                             }
                         }
 

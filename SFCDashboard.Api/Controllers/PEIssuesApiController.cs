@@ -354,17 +354,44 @@ namespace SFCDashboard.Api.Controllers
         {
             if (id != issue.Id)
             {
-                return BadRequest();
+                _logger.LogWarning("ID mismatch in UpdatePEIssue: URL id={UrlId}, Issue id={IssueId}", id, issue.Id);
+                return BadRequest("ID mismatch");
             }
 
             try
             {
-                _context.Entry(issue).State = EntityState.Modified;
+                _logger.LogInformation("Updating PE issue {Id}: IsResolved={IsResolved}, IsRead={IsRead}", 
+                    issue.Id, issue.IsResolved, issue.IsRead);
+
+                var existingIssue = await _context.PEIssues.FindAsync(id);
+                if (existingIssue == null)
+                {
+                    _logger.LogWarning("PE issue {Id} not found for update", id);
+                    return NotFound();
+                }
+
+                // Update the properties
+                existingIssue.IssueText = issue.IssueText;
+                existingIssue.IsRead = issue.IsRead;
+                existingIssue.IsResolved = issue.IsResolved;
+                existingIssue.IsReply = issue.IsReply;
+                existingIssue.IsReminder = issue.IsReminder;
+                existingIssue.IsResolutionRequest = issue.IsResolutionRequest;
+                existingIssue.IsHiddenFromInbox = issue.IsHiddenFromInbox;
+                existingIssue.OriginalIssueId = issue.OriginalIssueId;
+                existingIssue.AttachmentPath = issue.AttachmentPath;
+                // Note: Don't update CreatedAt, SenderId, ReceiverId, PlannedEventId, PETaskId as these should be immutable
+
                 await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Successfully updated PE issue {Id}: IsResolved={IsResolved}", 
+                    existingIssue.Id, existingIssue.IsResolved);
+                
                 return NoContent();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
+                _logger.LogError(ex, "Concurrency error updating PE issue {Id}", id);
                 if (!PEIssueExists(id))
                 {
                     return NotFound();

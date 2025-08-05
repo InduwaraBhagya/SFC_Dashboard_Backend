@@ -13,7 +13,7 @@ namespace SFCDashboard.Api.Models
         public int IssueId { get; set; }
         
         [Required]
-        public string ResolutionDetails { get; set; }
+        public string ResolutionDetails { get; set; } = string.Empty;
         
         [Required]
         public DateTime ResolutionDate { get; set; }
@@ -28,11 +28,12 @@ namespace SFCDashboard.Api.Models
         [Required]
         public int PlannedEventId { get; set; }
         
-        [ForeignKey("IssueId")]
-        public virtual PEIssue Issue { get; set; }
+        // Navigation properties commented out to avoid serialization issues
+        // [ForeignKey("IssueId")]
+        // public virtual PEIssue Issue { get; set; }
         
-        [ForeignKey("PlannedEventId")]
-        public virtual PlannedEvent PlannedEvent { get; set; }
+        // [ForeignKey("PlannedEventId")]
+        // public virtual PlannedEvent PlannedEvent { get; set; }
     }
 }
 

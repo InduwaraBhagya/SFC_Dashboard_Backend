@@ -15,6 +15,20 @@ namespace SFCDashboard.Api.Services
             _logger = logger;
         }
 
+        public async Task<IEnumerable<PEIssueResolution>> GetAllPEIssueResolutionsAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting all PE issue resolutions");
+                return await _context.PEIssueResolutions.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all PE issue resolutions");
+                return new List<PEIssueResolution>();
+            }
+        }
+
         public async Task<PEIssueResolution?> GetPEIssueResolutionAsync(int id)
         {
             try
@@ -131,6 +145,21 @@ namespace SFCDashboard.Api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting pending resolution for issue: {issueId}", issueId);
+                return null;
+            }
+        }
+
+        public async Task<PEIssueResolution?> GetByIssueIdAsync(int issueId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting resolution by issue ID: {issueId}", issueId);
+                return await _context.PEIssueResolutions
+                    .FirstOrDefaultAsync(r => r.IssueId == issueId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting resolution by issue ID: {issueId}", issueId);
                 return null;
             }
         }
