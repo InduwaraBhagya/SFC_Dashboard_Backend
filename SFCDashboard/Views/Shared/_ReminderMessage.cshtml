@@ -21,85 +21,25 @@
     </div>
 </div>
 
-<script>
-    function showReminderDetails(element) {
-        const issueId = $(element).data('issue-id');
-        const peId = $(element).data('pe-id');
-        const issueText = $(element).data('issue-text');
-        const date = $(element).data('date');
-        const isRead = $(element).data('is-read') === 'true';
-
-        // Build reminder-specific details content
-        let detailsHtml = `
-        <div class="message-detail-header">
-            <h5><span class="badge bg-primary me-2">System</span>${issueText}</h5>
-            <div class="message-info">
-                <span class="fw-bold">Date:</span> ${date}
-            </div>
-        </div>
-        <div class="message-detail-body my-3">
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                This PE has been on hold for more than 24 hours and requires attention.
-            </div>
-        </div>`;
-
-        // Update the modal content
-        $('#issueDetailsContent').html(detailsHtml);
-        $('#viewPEDetailsBtn').attr('href', `/PlannedEvents/Details/${peId}`);
-
-        // Hide reply and resolve buttons for system reminders
-        $('#replyIssueBtn').hide();
-        $('#resolveIssueBtn').hide();
-
-        // Fetch and display PE details
-        fetch(`/PlannedEvents/GetBasicDetails/${peId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Update the PE details section with basic info
-                let peDetailsHtml = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-2"><strong>PE Number:</strong> ${data.peNumber}</div>
-                        <div class="mb-2"><strong>Customer:</strong> ${data.customer || 'N/A'}</div>
-                        <div class="mb-2"><strong>Status:</strong> <span class="badge ${data.peStatus === 'Hold' ? 'bg-warning' : 'bg-primary'}">${data.peStatus}</span></div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-2"><strong>Service Type:</strong> ${data.serviceType || 'N/A'}</div>
-                        <div class="mb-2"><strong>Task:</strong> ${data.taskName}</div>
-                        <div class="mb-2"><strong>Workgroup:</strong> ${data.taskWg}</div>
-                    </div>
-                </div>`;
-
-                $('#relatedPEDetails').html(peDetailsHtml);
-            })
-            .catch(error => {
-                console.error('Error fetching PE details:', error);
-                $('#relatedPEDetails').html(`
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        Failed to load PE details. Please try again.
-                    </div>`);
-            });
-
-        // Mark as read if not already read
-        if (!isRead) {
-            markIssueAsRead(issueId);
-            $(element).removeClass('unread').addClass('read');
-            $(element).data('is-read', 'true');
-            updateUnreadCount();
-        }
-
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('issueDetailsModal'));
-        modal.show();
+<style>
+    .message-item.system-reminder {
+        border-left: 4px solid #ffc107;
+        background-color: #fffbf0;
     }
-</script>
+
+    .message-item.system-reminder:hover {
+        background-color: #fff8e1;
+        cursor: pointer;
+    }
+
+    .message-item.system-reminder.unread::before {
+        background-color: #ffc107;
+    }
+
+    .message-item.system-reminder .message-subject {
+        color: #856404;
+    }
+</style>
 
 <style>
     .message-item.system-reminder {

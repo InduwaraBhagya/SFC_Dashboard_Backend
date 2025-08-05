@@ -107,6 +107,15 @@ namespace SFCDashboard.ApiClients
             return result?.GetValueOrDefault("success", false) ?? false;
         }
 
+        public async Task<bool> MarkReminderAsReadAsync(int reminderId)
+        {
+            var response = await _httpClient.PostAsync($"api/peissues/{reminderId}/markread", null);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<Dictionary<string, bool>>(json, _jsonOptions);
+            return result?.GetValueOrDefault("success", false) ?? false;
+        }
+
         public async Task<IEnumerable<PEIssue>> GetPEIssuesByPlannedEventAsync(int plannedEventId)
         {
             try

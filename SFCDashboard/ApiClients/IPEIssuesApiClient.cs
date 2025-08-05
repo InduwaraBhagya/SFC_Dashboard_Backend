@@ -13,6 +13,7 @@ namespace SFCDashboard.ApiClients
         Task<IEnumerable<PEIssue>> GetRemindersAsync(int userId, bool showAll = true);
         Task<int> GetReminderCountAsync(int userId);
         Task<bool> MarkAllRemindersAsReadAsync(int userId);
+        Task<bool> MarkReminderAsReadAsync(int reminderId);
         Task<IEnumerable<PEIssue>> GetPEIssuesByPlannedEventAsync(int plannedEventId);
         Task<IEnumerable<PEIssueViewModel>> GetPEIssueViewModelsByPlannedEventAsync(int plannedEventId);
         Task<Dictionary<int, IEnumerable<PEIssueViewModel>>> GetPEIssueViewModelsByPlannedEventIdsAsync(List<int> peIds);

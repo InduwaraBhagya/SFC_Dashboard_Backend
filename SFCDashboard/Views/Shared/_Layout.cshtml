@@ -462,8 +462,11 @@
                 fetch(`/PlannedEvents/GetReminders?showAll=${currentReminderFilter === 'all'}`)
                     .then(response => response.json())
                     .then(data => {
+                        console.log('Loaded reminders data:', data);
+                        
                         // Filter to ensure only reminders are processed (extra safety)
                         const reminderData = data.filter(item => item.isReminder !== false);
+                        console.log('Filtered reminder data:', reminderData);
 
                         const reminderList = document.getElementById('reminderNotificationList');
                         const reminderBadge = document.getElementById('reminderCount');
@@ -541,6 +544,9 @@
             }
 
             function showReminderDetails(reminder) {
+                console.log('showReminderDetails called with:', reminder);
+                console.log('plannedEventId:', reminder.plannedEventId);
+                
                 // Mark as read if unread
                 if (!reminder.isRead) {
                     markReminderAsRead(reminder.id);
@@ -574,7 +580,13 @@
             `;
 
                 document.getElementById('reminderDetailsContent').innerHTML = detailsContent;
-                document.getElementById('viewPEDetailsBtn').href = `/PlannedEvents/Details/${reminder.plannedEventId}`;
+                
+                // Debug the PE ID and URL construction
+                const peId = reminder.plannedEventId;
+                const detailsUrl = `/PlannedEvents/Details/${peId}`;
+                console.log('Setting PE details URL to:', detailsUrl);
+                
+                document.getElementById('viewPEDetailsBtn').href = detailsUrl;
 
                 // Show the modal
                 const modal = new bootstrap.Modal(document.getElementById('reminderDetailsModal'));
