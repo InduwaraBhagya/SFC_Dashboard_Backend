@@ -70,13 +70,30 @@ namespace SFCDashboard.ApiClients
 
         public async Task<List<Escalation>> GetEscalationsByUserRoleAsync(int userRoleLevel, List<string>? userWorkgroupNames = null)
         {
-            var requestData = new { userRoleLevel, userWorkgroupNames };
-            var json = JsonSerializer.Serialize(requestData, _jsonOptions);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("api/escalations/by-user-role", content);
-            response.EnsureSuccessStatusCode();
-            var responseJson = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<List<Escalation>>(responseJson, _jsonOptions) ?? new List<Escalation>();
+            try
+            {
+                var requestData = new { userRoleLevel, userWorkgroupNames };
+                var json = JsonSerializer.Serialize(requestData, _jsonOptions);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("api/escalations/by-user-role", content);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
+                }
+                
+                var responseJson = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<Escalation>>(responseJson, _jsonOptions) ?? new List<Escalation>();
+            }
+            catch (HttpRequestException)
+            {
+                throw; // Re-throw HTTP exceptions as-is
+            }
+            catch (Exception ex)
+            {
+                throw new HttpRequestException($"Error calling escalations API: {ex.Message}", ex);
+            }
         }
 
         public async Task MarkAsReadAsync(int escalationId)

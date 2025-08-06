@@ -120,15 +120,31 @@ namespace SFCDashboard.Api.Controllers
                 return Unauthorized();
             }
 
+            // Validate request
+            if (request == null)
+            {
+                _logger.LogWarning("GetEscalationsByUserRole called with null request");
+                return BadRequest("Request body cannot be null");
+            }
+
             try
             {
-                _logger.LogInformation("Getting escalations for user role level {Level}", request.UserRoleLevel);
+                _logger.LogInformation("Getting escalations for user role level {Level} with workgroups: {Workgroups}", 
+                    request.UserRoleLevel, 
+                    request.UserWorkgroupNames?.Any() == true ? string.Join(", ", request.UserWorkgroupNames) : "none");
+                
                 var escalations = await _escalationService.GetEscalationsByUserRoleAsync(request.UserRoleLevel, request.UserWorkgroupNames);
+                
+                _logger.LogInformation("Retrieved {Count} escalations for user role level {Level}", 
+                    escalations.Count, request.UserRoleLevel);
+                
                 return Ok(escalations);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting escalations by user role");
+                _logger.LogError(ex, "Error getting escalations by user role. UserRoleLevel: {Level}, UserWorkgroupNames: {Workgroups}", 
+                    request?.UserRoleLevel, 
+                    request?.UserWorkgroupNames?.Any() == true ? string.Join(", ", request.UserWorkgroupNames) : "none");
                 return StatusCode(500, "An error occurred while retrieving escalations");
             }
         }
