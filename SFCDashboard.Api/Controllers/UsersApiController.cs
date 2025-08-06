@@ -156,6 +156,33 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get user workgroups with permissions by service ID
+        /// </summary>
+        [HttpGet("current-user-workgroups-with-permissions/{serviceId}")]
+        public async Task<ActionResult<object>> GetCurrentUserWorkgroupsWithPermissions(string serviceId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting workgroups with permissions for user with service ID: {serviceId}", serviceId);
+                var workgroupData = await _usersApiService.GetCurrentUserWorkGroupsAsync(serviceId);
+                
+                var response = new
+                {
+                    userWorkgroupIds = workgroupData.userWorkgroupIds,
+                    userWorkgroupNames = workgroupData.userWorkgroupNames,
+                    canViewAll = workgroupData.canViewAll
+                };
+                
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting workgroups with permissions for user with service ID: {serviceId}", serviceId);
+                return StatusCode(500, "An error occurred while retrieving user workgroups with permissions");
+            }
+        }
+
+        /// <summary>
         /// Check if user is in sales workgroup by service ID
         /// </summary>
         [HttpGet("is-in-sales-workgroup/{serviceId}")]

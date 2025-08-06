@@ -444,5 +444,25 @@ namespace SFCDashboard.ApiClients
                 return new List<PETask>();
             }
         }
+
+        public async Task<Dictionary<string, OLAViolationDetails>> GetOLAViolationDetailsAsync(List<string> peNumbers)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(peNumbers, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync("api/petasksapi/violation-details", content);
+                response.EnsureSuccessStatusCode();
+
+                var responseJson = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<Dictionary<string, OLAViolationDetails>>(responseJson, _jsonOptions) ?? new Dictionary<string, OLAViolationDetails>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching OLA violation details via API");
+                return new Dictionary<string, OLAViolationDetails>();
+            }
+        }
     }
 }

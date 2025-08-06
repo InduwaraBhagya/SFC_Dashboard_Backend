@@ -27,5 +27,6 @@ namespace SFCDashboard.ApiClients
         Task<IEnumerable<PETask>> GetPETasksByPENumbersAsync(List<string> peNumbers);
         Task<PETask> UpdatePETaskAsync(PETask peTask);
         Task<IEnumerable<PETask>> GetPendingUrgentTaskRequestsAsync(int limit = 5);
+        Task<Dictionary<string, OLAViolationDetails>> GetOLAViolationDetailsAsync(List<string> peNumbers);
     }
 }

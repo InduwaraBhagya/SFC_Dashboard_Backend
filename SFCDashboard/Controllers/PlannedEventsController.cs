@@ -77,14 +77,26 @@ namespace SFCDashboard.Controllers
             jobReference = string.IsNullOrEmpty(jobReference) ? jobReference : jobReference.Trim();
             soNumber = string.IsNullOrEmpty(soNumber) ? soNumber : soNumber.Trim();
 
+
             // Get current user's workgroup info
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+            
+            // Pass ViewAll permission to the view
+            ViewData["CanViewAll"] = canViewAll;
+            
 
             // Keep track of user's assigned workgroup(s) separately from the filter selection
             ViewData["UserAssignedWorkgroupIds"] = userWorkgroupIds;
             ViewData["UserAssignedWorkgroupNames"] = userWorkgroupNames;
 
             ViewData["UserWorkGroups"] = await _workGroupsApi.GetWorkGroupsForUserAsync(userWorkgroupIds, canViewAll);
+
+            // Provide all workgroups for ViewAll users
+            if (canViewAll)
+            {
+                var allGroups = await _workGroupsApi.GetWorkGroupsAsync();
+                ViewBag.AllWorkGroups = allGroups.ToList();
+            }
 
             // Keep track of selected filter workgroup (separate from user's assigned workgroup)
             ViewData["SelectedWorkgroupId"] = workgroupId;
@@ -123,11 +135,35 @@ namespace SFCDashboard.Controllers
                 }
             }
 
-            // Calculate dashboard counts using user-based endpoints
-            ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
-            ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
-            ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
-            ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
+            // Calculate dashboard counts based on user permissions and workgroup selection
+            if (canViewAll)
+            {
+                if (workgroupId.HasValue)
+                {
+                    // ViewAll user with specific workgroup selected - use workgroup-specific counts
+                    var selectedWorkgroupIds = new List<int> { workgroupId.Value };
+                    ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                    ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                    ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolateCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                    ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                }
+                else
+                {
+                    // ViewAll user with no workgroup selected - use user-based endpoints for consistent logic
+                    ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
+                    ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
+                    ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
+                    ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
+                }
+            }
+            else
+            {
+                // Regular user - use user-based endpoints (existing behavior)
+                ViewData["UrgentCount"] = await _plannedEventsApi.GetUrgentCountByUserIdAsync(currentUserId);
+                ViewData["InProgressCount"] = await _plannedEventsApi.GetInProgressCountByUserIdAsync(currentUserId);
+                ViewData["OLAViolateCount"] = await _plannedEventsApi.GetOLAViolatingCountByUserIdAsync(currentUserId);
+                ViewData["HoldCount"] = await _plannedEventsApi.GetHoldCountByUserIdAsync(currentUserId);
+            }
 
 
             ViewData["SearchType"] = searchType ?? "peNumber";
@@ -799,13 +835,37 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
+            
+            // Get current user's workgroup info and ViewAll permission
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            
             try
             {
-                // Use new backend endpoint for in-progress records by userId
-                var records = await _plannedEventsApi.GetInProgressPlannedEventsByUserIdAsync(currentUserId);
+                IEnumerable<PlannedEvent> records;
+                
+                if (canViewAll)
+                {
+                    if (workgroupId.HasValue)
+                    {
+                        // ViewAll user with specific workgroup selected - use workgroup-specific records
+                        var selectedWorkgroupIds = new List<int> { workgroupId.Value };
+                        records = await _plannedEventsApi.GetInProgressPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                    }
+                    else
+                    {
+                        // ViewAll user with no workgroup selected - use user-based endpoints for consistent logic
+                        records = await _plannedEventsApi.GetInProgressPlannedEventsByUserIdAsync(currentUserId);
+                    }
+                }
+                else
+                {
+                    // Regular user - use user-based endpoints (existing behavior)
+                    records = await _plannedEventsApi.GetInProgressPlannedEventsByUserIdAsync(currentUserId);
+                }
 
-                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
                 ViewData["SelectedWorkgroupId"] = workgroupId;
+                ViewData["CanViewAll"] = canViewAll;
 
                 return View(records.ToList());
             }
@@ -822,42 +882,43 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
+            
+            // Get current user's workgroup info and ViewAll permission
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            
             try
             {
-                // Use new backend endpoint for OLA violating records by userId
-                var records = await _plannedEventsApi.GetOLAViolatingPlannedEventsByUserIdAsync(currentUserId);
+                IEnumerable<PlannedEvent> records;
+                
+                if (canViewAll)
+                {
+                    if (workgroupId.HasValue)
+                    {
+                        // ViewAll user with specific workgroup selected - use workgroup-specific records
+                        var selectedWorkgroupIds = new List<int> { workgroupId.Value };
+                        records = await _plannedEventsApi.GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                    }
+                    else
+                    {
+                        // ViewAll user with no workgroup selected - use user-based endpoints for consistent logic
+                        records = await _plannedEventsApi.GetOLAViolatingPlannedEventsByUserIdAsync(currentUserId);
+                    }
+                }
+                else
+                {
+                    // Regular user - use user-based endpoints (existing behavior)
+                    records = await _plannedEventsApi.GetOLAViolatingPlannedEventsByUserIdAsync(currentUserId);
+                }
 
-                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
                 ViewData["SelectedWorkgroupId"] = workgroupId;
+                ViewData["CanViewAll"] = canViewAll;
 
                 var recordsList = records.OrderBy(p => p.PeNumber).ToList();
 
-                // For details, get all violating tasks for these PEs
+                // Get violation details using the new API endpoint
                 var peNumbers = recordsList.Select(r => r.PeNumber).Where(p => !string.IsNullOrEmpty(p)).Cast<string>().ToList();
-                var violatingTasks = await _peTasksApi.GetPETasksByPENumbersAsync(peNumbers);
-
-                var currentDate = DateTime.Today;
-                var violationDetails = violatingTasks
-                    .Where(t => t.IsOLAViolate)
-                    .GroupBy(t => t.PENumber)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => new
-                        {
-                            TasksCount = g.Count(),
-                            MaxDaysOverdue = g.Max(t =>
-                                t.EstimatedTime.HasValue
-                                    ? (currentDate - t.EstimatedTime.Value).Days
-                                    : (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays2))
-                                        ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays2)).Days
-                                        : 0
-                            ),
-                            OldestViolation = g.Min(t =>
-                                t.EstimatedTime ?? (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays3)
-                                    ? t.ActualTaskCreatedDate.Value.AddDays(olaDays3)
-                                    : (DateTime?)null))
-                        }
-                    );
+                var violationDetails = await _peTasksApi.GetOLAViolationDetailsAsync(peNumbers);
 
                 ViewBag.ViolationDetails = violationDetails;
 
@@ -875,13 +936,37 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
+            
+            // Get current user's workgroup info and ViewAll permission
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            
             try
             {
-                // Use new backend endpoint for hold records by userId
-                var records = await _plannedEventsApi.GetHoldPlannedEventsByUserIdAsync(currentUserId);
+                IEnumerable<PlannedEvent> records;
+                
+                if (canViewAll)
+                {
+                    if (workgroupId.HasValue)
+                    {
+                        // ViewAll user with specific workgroup selected - use workgroup-specific records
+                        var selectedWorkgroupIds = new List<int> { workgroupId.Value };
+                        records = await _plannedEventsApi.GetHoldPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                    }
+                    else
+                    {
+                        // ViewAll user with no workgroup selected - use user-based endpoints for consistent logic
+                        records = await _plannedEventsApi.GetHoldPlannedEventsByUserIdAsync(currentUserId);
+                    }
+                }
+                else
+                {
+                    // Regular user - use user-based endpoints (existing behavior)
+                    records = await _plannedEventsApi.GetHoldPlannedEventsByUserIdAsync(currentUserId);
+                }
 
-                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
                 ViewData["SelectedWorkgroupId"] = workgroupId;
+                ViewData["CanViewAll"] = canViewAll;
 
                 return View(records.ToList());
             }
@@ -897,13 +982,37 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
+            
+            // Get current user's workgroup info and ViewAll permission
+            var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
+            bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
+            
             try
             {
-                // Use new backend endpoint for urgent records by userId
-                var records = await _plannedEventsApi.GetUrgentPlannedEventsByUserIdAsync(currentUserId);
+                IEnumerable<PlannedEvent> records;
+                
+                if (canViewAll)
+                {
+                    if (workgroupId.HasValue)
+                    {
+                        // ViewAll user with specific workgroup selected - use workgroup-specific records
+                        var selectedWorkgroupIds = new List<int> { workgroupId.Value };
+                        records = await _plannedEventsApi.GetUrgentPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
+                    }
+                    else
+                    {
+                        // ViewAll user with no workgroup selected - use user-based endpoints for consistent logic
+                        records = await _plannedEventsApi.GetUrgentPlannedEventsByUserIdAsync(currentUserId);
+                    }
+                }
+                else
+                {
+                    // Regular user - use user-based endpoints (existing behavior)
+                    records = await _plannedEventsApi.GetUrgentPlannedEventsByUserIdAsync(currentUserId);
+                }
 
-                // Set ViewData (workgroupId is not used for filtering anymore, but keep for UI compatibility)
                 ViewData["SelectedWorkgroupId"] = workgroupId;
+                ViewData["CanViewAll"] = canViewAll;
 
                 // Only display urgent PE records, not urgent tasks
                 // Remove urgent tasks from the view to comply with business requirements

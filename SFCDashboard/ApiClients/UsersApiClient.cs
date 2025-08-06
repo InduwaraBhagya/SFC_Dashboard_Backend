@@ -231,7 +231,7 @@ namespace SFCDashboard.ApiClients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/users/current-user-workgroups/{Uri.EscapeDataString(serviceId)}");
+                var response = await _httpClient.GetAsync($"api/users/current-user-workgroups-with-permissions/{Uri.EscapeDataString(serviceId)}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return (new List<int>(), new List<string>(), false);
@@ -239,11 +239,25 @@ namespace SFCDashboard.ApiClients
                 response.EnsureSuccessStatusCode();
                 
                 var json = await response.Content.ReadAsStringAsync();
-                var userWorkgroupIds = JsonSerializer.Deserialize<List<int>>(json, _jsonOptions) ?? new List<int>();
                 
-                // For now, we'll return empty workgroup names and false for canViewAll
-                // as the API only returns workgroup IDs
-                return (userWorkgroupIds, new List<string>(), false);
+                // Expected response format:
+                // {
+                //   "userWorkgroupIds": [1, 2, 3],
+                //   "userWorkgroupNames": ["Group A", "Group B", "Group C"],
+                //   "canViewAll": true
+                // }
+                var result = JsonSerializer.Deserialize<Dictionary<string, object>>(json, _jsonOptions);
+                
+                if (result != null)
+                {
+                    var userWorkgroupIds = JsonSerializer.Deserialize<List<int>>(result["userWorkgroupIds"].ToString() ?? "[]", _jsonOptions) ?? new List<int>();
+                    var userWorkgroupNames = JsonSerializer.Deserialize<List<string>>(result["userWorkgroupNames"].ToString() ?? "[]", _jsonOptions) ?? new List<string>();
+                    var canViewAll = bool.Parse(result["canViewAll"].ToString() ?? "false");
+                    
+                    return (userWorkgroupIds, userWorkgroupNames, canViewAll);
+                }
+                
+                return (new List<int>(), new List<string>(), false);
             }
             catch (Exception ex)
             {

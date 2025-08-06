@@ -647,6 +647,55 @@ namespace SFCDashboard.Api.Controllers
                 return StatusCode(500, "An error occurred while retrieving estimation history");
             }
         }
+
+        /// <summary>
+        /// Get OLA violation details for specified PE numbers
+        /// </summary>
+        [HttpPost("violation-details")]
+        public async Task<ActionResult<Dictionary<string, OLAViolationDetails>>> GetOLAViolationDetails([FromBody] List<string> peNumbers)
+        {
+            try
+            {
+                if (peNumbers == null || !peNumbers.Any())
+                {
+                    return Ok(new Dictionary<string, OLAViolationDetails>());
+                }
+
+                var violatingTasks = await _context.PETasks
+                    .Where(t => peNumbers.Contains(t.PENumber) && t.IsOLAViolate)
+                    .ToListAsync();
+
+                var currentDate = DateTime.Today;
+                var violationDetails = violatingTasks
+                    .GroupBy(t => t.PENumber)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => new OLAViolationDetails
+                        {
+                            PENumber = g.Key,
+                            TasksCount = g.Count(),
+                            MaxDaysOverdue = g.Max(t =>
+                                t.EstimatedTime.HasValue
+                                    ? (currentDate - t.EstimatedTime.Value).Days
+                                    : (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays))
+                                        ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays)).Days
+                                        : 0
+                            ),
+                            OldestViolation = g.Min(t =>
+                                t.EstimatedTime ?? (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays)
+                                    ? t.ActualTaskCreatedDate.Value.AddDays(olaDays)
+                                    : (DateTime?)null))
+                        }
+                    );
+
+                return Ok(violationDetails);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving OLA violation details for PE numbers: {PENumbers}", string.Join(", ", peNumbers ?? new List<string>()));
+                return StatusCode(500, "An error occurred while retrieving OLA violation details");
+            }
+        }
     }
 
     public class ProcessUrgentRequestDto
