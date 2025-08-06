@@ -276,22 +276,183 @@ namespace SFCDashboard.Api.Services
             
             int targetEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
             
-            var query = _context.Escalations
-                .Include(e => e.PETask)
-                    .ThenInclude(t => t.PlannedEvent)
-                .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel);
+            // Set longer timeout for this complex query
+            var previousTimeout = _context.Database.GetCommandTimeout();
+            _context.Database.SetCommandTimeout(120); // 2 minutes
             
-            // Filter by user workgroups if provided - using exact match for strict filtering
-            if (userWorkgroupNames != null && userWorkgroupNames.Any())
+            try
             {
-                query = query.Where(e => e.PETask != null && 
-                    e.PETask.TaskWorkGroup != null && 
-                    userWorkgroupNames.Contains(e.PETask.TaskWorkGroup));
+                var query = _context.Escalations
+                    .Include(e => e.PETask)
+                        .ThenInclude(t => t.PlannedEvent)
+                    .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel);
+                
+                // Filter by user workgroups if provided - using exact match for strict filtering
+                if (userWorkgroupNames != null && userWorkgroupNames.Any())
+                {
+                    query = query.Where(e => e.PETask != null && 
+                        e.PETask.TaskWorkGroup != null && 
+                        userWorkgroupNames.Contains(e.PETask.TaskWorkGroup));
+                }
+                
+                return await query
+                    .OrderByDescending(e => e.CreatedAt)  // Order by creation date
+                    .ToListAsync();
             }
+            finally
+            {
+                // Restore previous timeout
+                _context.Database.SetCommandTimeout(previousTimeout);
+            }
+        }
+
+        /// <summary>
+        /// Gets escalations with pagination to improve performance for large datasets.
+        /// Uses the same filtering logic as GetEscalationsByUserRoleAsync but with pagination support.
+        /// </summary>
+        /// <param name="userRoleLevel">User's role level (0-3)</param>
+        /// <param name="userWorkgroupNames">List of user's workgroup names for filtering</param>
+        /// <param name="pageNumber">Page number (1-based)</param>
+        /// <param name="pageSize">Number of items per page</param>
+        /// <returns>Paginated list of escalations</returns>
+        public async Task<(List<Escalation> Escalations, int TotalCount)> GetEscalationsByUserRolePaginatedAsync(
+            int userRoleLevel, 
+            List<string>? userWorkgroupNames = null, 
+            int pageNumber = 1, 
+            int pageSize = 50)
+        {
+            int targetEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
             
-            return await query
-                .OrderByDescending(e => e.CreatedAt)  // Order by creation date
-                .ToListAsync();
+            // Set longer timeout for this complex query
+            var previousTimeout = _context.Database.GetCommandTimeout();
+            _context.Database.SetCommandTimeout(120);
+            
+            try
+            {
+                var baseQuery = _context.Escalations
+                    .Where(e => e.Level.HasValue && e.Level.Value == targetEscalationLevel);
+                
+                // Filter by user workgroups if provided
+                if (userWorkgroupNames != null && userWorkgroupNames.Any())
+                {
+                    baseQuery = baseQuery.Where(e => e.PETask != null && 
+                        e.PETask.TaskWorkGroup != null && 
+                        userWorkgroupNames.Contains(e.PETask.TaskWorkGroup));
+                }
+                
+                // Get total count first (without includes for performance)
+                var totalCount = await baseQuery.CountAsync();
+                
+                // Get paginated results with includes
+                var escalations = await baseQuery
+                    .Include(e => e.PETask)
+                        .ThenInclude(t => t.PlannedEvent)
+                    .OrderByDescending(e => e.CreatedAt)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                
+                return (escalations, totalCount);
+            }
+            finally
+            {
+                _context.Database.SetCommandTimeout(previousTimeout);
+            }
+        }
+
+        /// <summary>
+        /// Gets escalations with optimized query using projection to minimize data transfer.
+        /// This is the most performant version for large datasets.
+        /// </summary>
+        /// <param name="userRoleLevel">User's role level (0-3)</param>
+        /// <param name="userWorkgroupNames">List of user's workgroup names for filtering</param>
+        /// <param name="pageNumber">Page number (1-based)</param>
+        /// <param name="pageSize">Number of items per page</param>
+        /// <returns>Optimized escalations with minimal data</returns>
+        public async Task<(List<object> Escalations, int TotalCount)> GetEscalationsOptimizedAsync(
+            int userRoleLevel, 
+            List<string>? userWorkgroupNames = null, 
+            int pageNumber = 1, 
+            int pageSize = 50)
+        {
+            int targetEscalationLevel = userRoleLevel == 0 ? 1 : userRoleLevel;
+            
+            var previousTimeout = _context.Database.GetCommandTimeout();
+            _context.Database.SetCommandTimeout(60); // Shorter timeout for optimized query
+            
+            try
+            {
+                var baseQuery = from e in _context.Escalations
+                               join p in _context.PETasks on e.TaskId equals p.Id
+                               join pe in _context.PlannedEvents on p.PENumber equals pe.PeNumber
+                               where e.Level.HasValue && e.Level.Value == targetEscalationLevel
+                               select new { e, p, pe };
+                
+                // Filter by user workgroups if provided
+                if (userWorkgroupNames != null && userWorkgroupNames.Any())
+                {
+                    baseQuery = baseQuery.Where(x => x.p.TaskWorkGroup != null && 
+                        userWorkgroupNames.Contains(x.p.TaskWorkGroup));
+                }
+                
+                // Get total count
+                var totalCount = await baseQuery.CountAsync();
+                
+                // Get paginated results with only necessary fields
+                var escalations = await baseQuery
+                    .OrderByDescending(x => x.e.CreatedAt)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(x => new
+                    {
+                        // Escalation fields
+                        Id = x.e.Id,
+                        TaskId = x.e.TaskId,
+                        Level = x.e.Level,
+                        Title = x.e.Title,
+                        Message = x.e.Message,
+                        CreatedAt = x.e.CreatedAt,
+                        IsRead = x.e.IsRead,
+                        IsIgnored = x.e.IsIgnored,
+                        IgnoreReason = x.e.IgnoreReason,
+                        IgnoredAt = x.e.IgnoredAt,
+                        IgnoredById = x.e.IgnoredById,
+                        
+                        // PETask essential fields
+                        PETask = new
+                        {
+                            Id = x.p.Id,
+                            PENumber = x.p.PENumber,
+                            Task = x.p.Task,
+                            TaskWorkGroup = x.p.TaskWorkGroup,
+                            TaskStatus = x.p.TaskStatus,
+                            Priority = x.p.Priority,
+                            IsUrgent = x.p.IsUrgent,
+                            OLA = x.p.OLA,
+                            OLADateTime = x.p.OLADateTime,
+                            IsOLAViolate = x.p.IsOLAViolate
+                        },
+                        
+                        // PlannedEvent essential fields
+                        PlannedEvent = new
+                        {
+                            Id = x.pe.Id,
+                            PeNumber = x.pe.PeNumber,
+                            PeTitle = x.pe.PeTitle,
+                            Customer = x.pe.Customer,
+                            PEStatus = x.pe.PEStatus,
+                            Priority = x.pe.Priority,
+                            ServiceRequiredDate = x.pe.ServiceRequiredDate
+                        }
+                    })
+                    .ToListAsync<object>();
+                
+                return (escalations, totalCount);
+            }
+            finally
+            {
+                _context.Database.SetCommandTimeout(previousTimeout);
+            }
         }
 
         /// <summary>

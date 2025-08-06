@@ -150,6 +150,118 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Get escalations by user role with pagination - optimized for performance
+        /// </summary>
+        [HttpPost("paginated")]
+        public async Task<IActionResult> GetEscalationsByUserRolePaginated([FromBody] EscalationsByUserRolePaginatedRequest request)
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            // Validate request
+            if (request == null)
+            {
+                _logger.LogWarning("GetEscalationsByUserRolePaginated called with null request");
+                return BadRequest("Request body cannot be null");
+            }
+
+            try
+            {
+                _logger.LogInformation("Getting paginated escalations for user role level {Level} with workgroups: {Workgroups}, page {Page}, size {Size}", 
+                    request.UserRoleLevel, 
+                    request.UserWorkgroupNames?.Any() == true ? string.Join(", ", request.UserWorkgroupNames) : "none",
+                    request.PageNumber,
+                    request.PageSize);
+                
+                var result = await _escalationService.GetEscalationsByUserRolePaginatedAsync(
+                    request.UserRoleLevel, 
+                    request.UserWorkgroupNames, 
+                    request.PageNumber, 
+                    request.PageSize);
+                
+                var response = new
+                {
+                    Escalations = result.Escalations,
+                    TotalCount = result.TotalCount,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize,
+                    TotalPages = (int)Math.Ceiling((double)result.TotalCount / request.PageSize)
+                };
+                
+                _logger.LogInformation("Retrieved {Count} escalations (page {Page} of {TotalPages}) for user role level {Level}", 
+                    result.Escalations.Count, request.PageNumber, response.TotalPages, request.UserRoleLevel);
+                
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting paginated escalations by user role. UserRoleLevel: {Level}, UserWorkgroupNames: {Workgroups}", 
+                    request?.UserRoleLevel, 
+                    request?.UserWorkgroupNames?.Any() == true ? string.Join(", ", request.UserWorkgroupNames) : "none");
+                return StatusCode(500, "An error occurred while retrieving escalations");
+            }
+        }
+
+        /// <summary>
+        /// Get escalations by user role optimized - returns minimal data for fastest performance
+        /// </summary>
+        [HttpPost("optimized")]
+        public async Task<IActionResult> GetEscalationsByUserRoleOptimized([FromBody] EscalationsByUserRolePaginatedRequest request)
+        {
+            // Check authorization in production only
+            if (_environment.IsProduction() && !User.Identity?.IsAuthenticated == true)
+            {
+                return Unauthorized();
+            }
+
+            // Validate request
+            if (request == null)
+            {
+                _logger.LogWarning("GetEscalationsByUserRoleOptimized called with null request");
+                return BadRequest("Request body cannot be null");
+            }
+
+            try
+            {
+                _logger.LogInformation("Getting optimized escalations for user role level {Level} with workgroups: {Workgroups}, page {Page}, size {Size}", 
+                    request.UserRoleLevel, 
+                    request.UserWorkgroupNames?.Any() == true ? string.Join(", ", request.UserWorkgroupNames) : "none",
+                    request.PageNumber,
+                    request.PageSize);
+                
+                var result = await _escalationService.GetEscalationsOptimizedAsync(
+                    request.UserRoleLevel, 
+                    request.UserWorkgroupNames, 
+                    request.PageNumber, 
+                    request.PageSize);
+                
+                var response = new
+                {
+                    Escalations = result.Escalations,
+                    TotalCount = result.TotalCount,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize,
+                    TotalPages = (int)Math.Ceiling((double)result.TotalCount / request.PageSize)
+                };
+                
+                _logger.LogInformation("Retrieved {Count} optimized escalations (page {Page} of {TotalPages}) for user role level {Level}", 
+                    result.Escalations.Count, request.PageNumber, response.TotalPages, request.UserRoleLevel);
+                
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting optimized escalations by user role. UserRoleLevel: {Level}, UserWorkgroupNames: {Workgroups}", 
+                    request?.UserRoleLevel, 
+                    request?.UserWorkgroupNames?.Any() == true ? string.Join(", ", request.UserWorkgroupNames) : "none");
+                return StatusCode(500, "An error occurred while retrieving escalations");
+            }
+        }
+
+        /// <summary>
         /// Mark escalation as read
         /// </summary>
         [HttpPost("{id}/mark-read")]
