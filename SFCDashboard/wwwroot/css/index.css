@@ -1352,26 +1352,34 @@
       color: white;
   }
 
-  /* Enhanced Dashboard Cards */
+  /* Enhanced Dashboard Cards - Soft Glossy Button Style */
   .dashboard-card {
       display: flex;
       justify-content: space-between;
       align-items: center;
       text-decoration: none;
       background: var(--card-bg);
-      border-radius: 20px;
+      border-radius: 24px;
       padding: 2rem;
       height: 200px;
+      max-width: 380px;
+      width: 100%;
       position: relative;
       overflow: hidden;
-      border: none;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 
+          0 4px 15px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.1);
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dashboard-card:hover {
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 
+          0 8px 25px rgba(0, 0, 0, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.15);
       text-decoration: none;
   }
 
@@ -1379,73 +1387,98 @@
       content: '';
       position: absolute;
       top: 0;
-      left: -100%;
+      left: 0;
       width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.6s ease;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+      border-radius: 24px 24px 0 0;
       z-index: 1;
+      pointer-events: none;
   }
 
-  .dashboard-card:hover::before {
-      left: 100%;
+  .dashboard-card::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      right: 2px;
+      bottom: 2px;
+      border-radius: 22px;
+      background: inherit;
+      z-index: -1;
   }
 
-  /* Original Light Color Palette Dashboard Card Themes with Enhanced Shadows */
+  /* Soft Eye-Friendly Dashboard Card Themes */
   .urgent-card {
-      background: linear-gradient(135deg, #ff7688 0%, #e90f0f 100%);
-      border-left: 5px solid #9b1e2a;
-      color: #b31818;
-      box-shadow: 0 12px 30px rgba(229, 115, 115, 0.25);
+      background: linear-gradient(135deg, #ffa8b0 0%, #ff8a95 100%);
+      border: 5px solid #ff7688;
+      color: #8b1538;
+      box-shadow: 
+          0 6px 20px rgba(255, 168, 176, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .urgent-card:hover {
-      background: linear-gradient(135deg, #e90f0f 0%, #ff7688 100%);
-      border-left-color: #b02a37;
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: 0 20px 40px rgba(229, 115, 115, 0.35);
+      background: linear-gradient(135deg, #ff8a95 0%, #ffa8b0 100%);
+      border-color: #ff5a6e;
+      color: #6b1028;
+      box-shadow: 
+          0 8px 25px rgba(255, 168, 176, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
 
   .inprogress-card {
-      background: linear-gradient(135deg, #b6ff62 0%, #00ab33 100%);
-      border-left: 5px solid #198754;
-      color: #388e3c;
-      box-shadow: 0 12px 30px rgba(129, 199, 132, 0.25);
+      background: linear-gradient(135deg, #b8e6b8 0%, #98d8a8 100%);
+      border: 5px solid #4ade80;
+      color: #2d5a2d;
+      box-shadow: 
+          0 6px 20px rgba(184, 230, 184, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .inprogress-card:hover {
-      background: linear-gradient(135deg, #00ab33 0%, #b6ff62 100%);
-      transform: translateY(-8px) scale(1.02);
-      border-left-color: #146c43;
-      box-shadow: 0 20px 40px rgba(129, 199, 132, 0.35);
+      background: linear-gradient(135deg, #98d8a8 0%, #b8e6b8 100%);
+      border-color: #22c55e;
+      color: #1f3f1f;
+      box-shadow: 
+          0 8px 25px rgba(184, 230, 184, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
 
   .ola-card {
-      background: linear-gradient(135deg, #926efe 0%, #207cc8 100%);
-      border-left: 5px solid #00457d;
-      color: #1976d2;
-      box-shadow: 0 12px 30px rgba(100, 181, 246, 0.25);
+      background: linear-gradient(135deg, #b3c7f7 0%, #9bb5f0 100%);
+      border: 5px solid #3b82f6;
+      color: #2c4785;
+      box-shadow: 
+          0 6px 20px rgba(179, 199, 247, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .ola-card:hover {
-      background: linear-gradient(135deg, #207cc8 0%, #926efe 100%);
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: 0 20px 40px rgba(100, 181, 246, 0.35);
-      border-left-color: #00457d;
+      background: linear-gradient(135deg, #9bb5f0 0%, #b3c7f7 100%);
+      border-color: #2563eb;
+      color: #1e2f5a;
+      box-shadow: 
+          0 8px 25px rgba(179, 199, 247, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
 
   .hold-card {
-      background: linear-gradient(135deg, #ffa920 0%, #ffd700 100%);
-      border-left: 5px solid #ca7900;
-      color: #f57c00;
-      box-shadow: 0 12px 30px rgba(255, 183, 77, 0.25);
+      background: linear-gradient(135deg, #ffd4a3 0%, #ffcb85 100%);
+      border: 5px solid #f59e0b;
+      color: #8b5a00;
+      box-shadow: 
+          0 6px 20px rgba(255, 212, 163, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .hold-card:hover {
-      background: linear-gradient(135deg, #ffd700 0%, #ffa920 100%);
-      transform: translateY(-8px) scale(1.02);
-      border-left-color: #ca7900;
-      box-shadow: 0 20px 40px rgba(217, 119, 6, 0.25);
+      background: linear-gradient(135deg, #ffcb85 0%, #ffd4a3 100%);
+      border-color: #d97706;
+      color: #6b4500;
+      box-shadow: 
+          0 8px 25px rgba(255, 212, 163, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
 
   .dashboard-card .card-content {
@@ -1496,7 +1529,7 @@
 
   .dashboard-card .badge {
       background: rgba(255, 255, 255, 0.2) !important;
-      color: white !important;
+      color: #000000 !important;
       border: 1px solid rgba(255, 255, 255, 0.3);
       font-weight: 600;
   }
@@ -1513,55 +1546,75 @@
 
   /* Dark mode enhanced card colors matching the new light theme approach */
   [data-theme="dark"] .urgent-card {
-      background: linear-gradient(135deg, #ff4757 0%, #ff475759 100%);
-      border-left: 5px solid #ff3742;
-      color: #ffffff;
-      box-shadow: 0 12px 30px rgba(255, 71, 87, 0.35);
+      background: linear-gradient(135deg, #8b5a5a 0%, #7a4b4b 100%);
+      border: 5px solid #ff6b7a;
+      color: #f8d7da;
+      box-shadow: 
+          0 6px 20px rgba(139, 90, 90, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   [data-theme="dark"] .urgent-card:hover {
-      background: linear-gradient(135deg, #ff475759 0%, #ff4757 100%);
-      border-left-color: #ff6b7a;
-      box-shadow: 0 20px 40px rgba(255, 71, 87, 0.45);
+      background: linear-gradient(135deg, #7a4b4b 0%, #8b5a5a 100%);
+      border-color: #ff5a6e;
+      color: #ffffff;
+      box-shadow: 
+          0 8px 25px rgba(139, 90, 90, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   [data-theme="dark"] .inprogress-card {
-      background: linear-gradient(135deg, #5fb85f 0%, #2ed57359 100%);
-      border-left: 5px solid #20bf6b;
-      color: #ffffff;
-      box-shadow: 0 12px 30px rgba(46, 213, 115, 0.35);
+      background: linear-gradient(135deg, #5a8b5a 0%, #4b7a4b 100%);
+      border: 5px solid #22c55e;
+      color: #d1e7dd;
+      box-shadow: 
+          0 6px 20px rgba(90, 139, 90, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   [data-theme="dark"] .inprogress-card:hover {
-      background: linear-gradient(135deg, #2ed57359 0%, #5fb85f 100%);
-      border-left-color: #26de81;
-      box-shadow: 0 20px 40px rgba(46, 213, 115, 0.45);
+      background: linear-gradient(135deg, #4b7a4b 0%, #5a8b5a 100%);
+      border-color: #16a34a;
+      color: #ffffff;
+      box-shadow: 
+          0 8px 25px rgba(90, 139, 90, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   [data-theme="dark"] .ola-card {
-      background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
-      border-left: 5px solid #2f3a8f;
-      color: #ffffff;
-      box-shadow: 0 12px 30px rgba(55, 66, 250, 0.35);
+      background: linear-gradient(135deg, #5a6b8b 0%, #4b5a7a 100%);
+      border: 5px solid #3b82f6;
+      color: #cce7ff;
+      box-shadow: 
+          0 6px 20px rgba(90, 107, 139, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   [data-theme="dark"] .ola-card:hover {
-      background: linear-gradient(135deg, #2f3542 0%, #3742fa 100%);
-      border-left-color: #3d4de0;
-      box-shadow: 0 20px 40px rgba(55, 66, 250, 0.45);
+      background: linear-gradient(135deg, #4b5a7a 0%, #5a6b8b 100%);
+      border-color: #2563eb;
+      color: #ffffff;
+      box-shadow: 
+          0 8px 25px rgba(90, 107, 139, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   [data-theme="dark"] .hold-card {
-      background: linear-gradient(135deg, #ffa502 25%, #ffa50259 100%);
-      border-left: 5px solid #ff9500;
-      color: #ffffff;
-      box-shadow: 0 12px 30px rgba(255, 165, 2, 0.35);
+      background: linear-gradient(135deg, #8b7a5a 0%, #7a6b4b 100%);
+      border: 5px solid #f59e0b;
+      color: #fff3cd;
+      box-shadow: 
+          0 6px 20px rgba(139, 122, 90, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   [data-theme="dark"] .hold-card:hover {
-      background: linear-gradient(135deg, #ffa50259 0%, #ffa502 100%);
-      border-left-color: #ffb733;
-      box-shadow: 0 20px 40px rgba(255, 165, 2, 0.45);
+      background: linear-gradient(135deg, #7a6b4b 0%, #8b7a5a 100%);
+      border-color: #d97706;
+      color: #ffffff;
+      box-shadow: 
+          0 8px 25px rgba(139, 122, 90, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   /* Responsive adjustments for dashboard cards */
@@ -1569,6 +1622,7 @@
       .dashboard-card {
           height: 150px;
           padding: 1.5rem;
+          max-width: 280px;
       }
       
       .dashboard-card .card-content {
@@ -2123,16 +2177,27 @@
 .col-md-6.mb-3,
 .col-lg-8,
 .col-lg-4 {
-    padding-left: 0.375rem !important;
-    padding-right: 0.375rem !important;
+    padding-left: 0.125rem !important;
+    padding-right: 0.125rem !important;
 }
 
 .col-lg-6.mb-3 {
-    margin-bottom: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
 }
 
 .col-md-6.mb-3 {
-    margin-bottom: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Reduce spacing specifically for dashboard cards */
+.dashboard-card {
+    margin-bottom: 0.5rem !important;
+}
+
+/* Reduce row gutters for dashboard card containers */
+.row {
+    margin-left: -0.25rem !important;
+    margin-right: -0.25rem !important;
 }
 
 /* Make forms more compact */
@@ -2141,7 +2206,7 @@
 }
 
 .mb-2 {
-    margin-bottom: 0.375rem !important;
+    margin-bottom: 0.25rem !important;
 }
 
 .form-label {

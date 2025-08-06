@@ -620,8 +620,8 @@ namespace SFCDashboard.Controllers
 
             var reminderData = reminders.Select(i => new
             {
-                i.Id,
-                i.PlannedEventId,
+                id = i.Id,
+                plannedEventId = i.PlannedEventId,
                 message = i.IssueText,
                 createdDate = i.CreatedAt.ToString("MMM dd, yyyy HH:mm:ss"),
                 isRead = i.IsRead
@@ -1589,17 +1589,16 @@ namespace SFCDashboard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkReminderAsRead([FromBody] MarkReminderRequest request)
         {
-            var reminder = await _peIssuesApi.GetPEIssueAsync(request.Id);
-            if (reminder != null && reminder.IsReminder == true) // Ensure it's actually a reminder
+            try
             {
-                reminder.IsRead = true;
-                var updatedReminder = await _peIssuesApi.UpdatePEIssueAsync(reminder);
-                if (updatedReminder != null)
-                {
-                    return Json(new { success = true });
-                }
+                var success = await _peIssuesApi.MarkReminderAsReadAsync(request.Id);
+                return Json(new { success = success });
             }
-            return Json(new { success = false });
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking reminder {ReminderId} as read", request.Id);
+                return Json(new { success = false });
+            }
         }
 
         public class MarkReminderRequest
