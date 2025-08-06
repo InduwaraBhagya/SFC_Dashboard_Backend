@@ -56,13 +56,17 @@
                                 <label class="form-label" for="workgroupFilter">
                                     <i class="bi bi-people-fill"></i>
                                     Select a Workgroup
-                                    <span class="info-tooltip" data-tooltip="You can select a workgroup to view records only assigned to that workgroup"></span>
+                                    <span class="info-tooltip" data-tooltip="Select a workgroup to view records only assigned to that workgroup">
                                         <i class="bi bi-info-circle"></i>
                                     </span>
                                 </label>
                                 <div class="filter-row">
                                     <div class="filter-select-container mb-2">
-                                        <select class="form-select" name="workgroupId" id="workgroupFilter" multiple>
+                                        <select class="form-select" name="workgroupId" id="workgroupFilter">
+                                            @if (ViewData["CanViewAll"] as bool? == true)
+                                            {
+                                                <option value="">All Workgroups</option>
+                                            }
                                             @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
                                             {
                                                 foreach (var workgroup in workgroups)
@@ -921,17 +925,16 @@ else
         $(document).ready(function() {
             // Initialize Select2 with enhanced styling
             $('#workgroupFilter').select2({
-                placeholder: "Select workgroups...",
+                placeholder: "Select a workgroup...",
                 allowClear: true,
                 width: '100%',
-                closeOnSelect: false,
                 templateResult: function(option) {
                     if (!option.id) return option.text;
                     return $('<span><i class="bi bi-people me-2"></i>' + option.text + '</span>');
                 },
                 templateSelection: function(option) {
                     if (!option.id) return option.text;
-                    return $('<span><i class="bi bi-check-circle me-1"></i>' + option.text + '</span>');
+                    return $('<span><i class="bi bi-people me-1"></i>' + option.text + '</span>');
                 }
             });
             
