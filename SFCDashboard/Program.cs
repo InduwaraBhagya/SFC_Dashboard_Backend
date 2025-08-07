@@ -14,7 +14,14 @@ using DotNetEnv;
 // Load environment variables from .env file
 Env.Load();
 
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kestrel to use settings from appsettings.json (including HTTPS certificate)
+builder.WebHost.ConfigureKestrel((context, options) =>
+{
+    options.Configure(context.Configuration.GetSection("Kestrel"));
+});
 
 // Configure configuration to read from environment variables
 builder.Configuration.AddEnvironmentVariables();
