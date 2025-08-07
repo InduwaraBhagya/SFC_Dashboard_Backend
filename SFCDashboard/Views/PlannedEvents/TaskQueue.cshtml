@@ -199,7 +199,7 @@
                                             };
                                         }
                                         <span class="badge @badgeClass">@item.PriorityLevel</span>
-                                        <small class="d-block text-muted mt-1">Score: @item.PriorityScore.ToString("F1")</small>
+                                        @* <small class="d-block text-muted mt-1">Score: @item.PriorityScore.ToString("F1")</small> *@
                                         @if (item.Task.UrgentMarkedDate.HasValue)
                                         {
                                             <small class="d-block text-danger mt-1">

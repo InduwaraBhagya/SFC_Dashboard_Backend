@@ -248,7 +248,7 @@ app.UseUserRegistration();
 app.MapStaticAssets();
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")  // Changed from PlannedEvents to Home
+    pattern: "{controller=PlannedEvents}/{action=Index}/{id?}")
     .WithStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
