@@ -310,17 +310,10 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                var violatingPENumbers = await _context.PETasks
-                    .Where(t => t.IsOLAViolate)
-                    .Select(t => t.PENumber)
-                    .Distinct()
-                    .ToListAsync();
-
                 var query = _context.PlannedEvents
                     .Where(p =>
                         p.PEStatus == "urgent" &&
-                        !p.IsHold &&
-                        (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)))
+                        !p.IsHold)
                     .AsNoTracking();
 
                 // If user has ViewAll permission, don't filter by workgroup unless specifically requested
@@ -400,18 +393,10 @@ namespace SFCDashboard.Api.Services
                 _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, Workgroups={workgroups}, DrawFiberAccess={drawFiberAccess}",
                     userId, canViewAll, string.Join(", ", userWorkgroupNames), hasDrawFiberAccess);
 
-                // Get OLA violating PE numbers to exclude
-                var violatingPENumbers = await _context.PETasks
-                    .Where(t => t.IsOLAViolate)
-                    .Select(t => t.PENumber)
-                    .Distinct()
-                    .ToListAsync();
-
                 var query = _context.PlannedEvents
                     .Where(p =>
                         p.PEStatus == "urgent" &&
-                        !p.IsHold &&
-                        (p.PeNumber == null || !violatingPENumbers.Contains(p.PeNumber)))
+                        !p.IsHold)
                     .AsNoTracking();
 
                 // Apply workgroup filtering based on user permissions
@@ -1351,18 +1336,8 @@ namespace SFCDashboard.Api.Services
                 _logger.LogInformation("User {userId}: CanViewAll={canViewAll}, SalesWorkgroups={salesWorkgroups}, AssignedCustomers={assignedCustomers}",
                     userId, canViewAll, string.Join(", ", salesWorkgroups), assignedCustomers.Count);
 
-                // Get OLA violating PE numbers
-                var violatingPENumbers = await _context.PETasks
-                    .Where(t => t.IsOLAViolate)
-                    .Select(t => t.PENumber)
-                    .Distinct()
-                    .ToListAsync();
-
                 var query = _context.PlannedEvents
-                    .Where(p => p.PEStatus == "urgent" &&
-                           !p.IsHold &&
-                           p.PeNumber != null &&
-                           !violatingPENumbers.Contains(p.PeNumber))
+                    .Where(p => p.PEStatus == "urgent" && !p.IsHold)
                     .AsQueryable();
 
                 // Apply sales workgroup filtering
