@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
 using SFCDashboard.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,16 +14,13 @@ namespace SFCDashboard.Api.Controllers
     [Authorize]
     public class PETasksApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly ILogger<PETasksApiController> _logger;
         private readonly IPETasksApiService _peTasksService;
 
         public PETasksApiController(
-            ApplicationDbContext context,
             ILogger<PETasksApiController> logger,
             IPETasksApiService peTasksService)
         {
-            _context = context;
             _logger = logger;
             _peTasksService = peTasksService;
         }
@@ -38,9 +33,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var tasks = await _context.PETasks
-                    .OrderByDescending(t => t.TaskCreatedDate)
-                    .ToListAsync();
+                var tasks = await _peTasksService.GetAllPETasksAsync();
                 return Ok(tasks);
             }
             catch (Exception ex)
@@ -82,12 +75,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting pending task requests with limit: {limit}", limit);
-                var pendingTasks = await _context.PETasks
-                    .Where(t => t.TaskStatus == null || t.TaskStatus.ToLower() == "pending" || t.TaskStatus.ToLower() == "new")
-                    .OrderByDescending(t => t.TaskCreatedDate)
-                    .Take(limit)
-                    .ToListAsync();
-
+                var pendingTasks = await _peTasksService.GetPendingTaskRequestsAsync(limit);
                 return Ok(pendingTasks);
             }
             catch (Exception ex)
@@ -105,10 +93,14 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                _context.PETasks.Add(peTask);
-                await _context.SaveChangesAsync();
+                var createdTask = await _peTasksService.CreatePETaskAsync(peTask);
+                
+                if (createdTask == null)
+                {
+                    return StatusCode(500, "An error occurred while creating the PE task");
+                }
 
-                return CreatedAtAction(nameof(GetPETask), new { id = peTask.Id }, peTask);
+                return CreatedAtAction(nameof(GetPETask), new { id = createdTask.Id }, createdTask);
             }
             catch (Exception ex)
             {
@@ -132,11 +124,7 @@ namespace SFCDashboard.Api.Controllers
                     return Ok(new List<PETask>());
                 }
 
-                var tasks = await _context.PETasks
-                    .Where(t => request.PeNumbers.Contains(t.PENumber))
-                    .OrderByDescending(t => t.TaskCreatedDate)
-                    .ToListAsync();
-
+                var tasks = await _peTasksService.GetPETasksByPENumbersAsync(request.PeNumbers);
                 return Ok(tasks);
             }
             catch (Exception ex)
@@ -192,20 +180,20 @@ namespace SFCDashboard.Api.Controllers
 
             try
             {
-                _context.Entry(peTask).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                // Return the updated task instead of NoContent
-                var updatedTask = await _context.PETasks.FindAsync(id);
-                return Ok(updatedTask);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!PETaskExists(id))
+                var updatedTask = await _peTasksService.UpdatePETaskAsync(peTask);
+                
+                if (updatedTask == null)
                 {
-                    return NotFound();
+                    // Check if the task exists
+                    var existingTask = await _peTasksService.GetPETaskAsync(id);
+                    if (existingTask == null)
+                    {
+                        return NotFound();
+                    }
+                    return StatusCode(500, "An error occurred while updating the PE task");
                 }
-                throw;
+
+                return Ok(updatedTask);
             }
             catch (Exception ex)
             {
@@ -222,14 +210,12 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var peTask = await _context.PETasks.FindAsync(id);
-                if (peTask == null)
+                var success = await _peTasksService.DeletePETaskAsync(id);
+                
+                if (!success)
                 {
                     return NotFound();
                 }
-
-                _context.PETasks.Remove(peTask);
-                await _context.SaveChangesAsync();
 
                 return NoContent();
             }
@@ -240,9 +226,10 @@ namespace SFCDashboard.Api.Controllers
             }
         }
 
-        private bool PETaskExists(int id)
+        private async Task<bool> PETaskExists(int id)
         {
-            return _context.PETasks.Any(e => e.Id == id);
+            var task = await _peTasksService.GetPETaskAsync(id);
+            return task != null;
         }
 
         /// <summary>
@@ -253,11 +240,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var tasks = await _context.PETasks
-                    .Where(t => t.PENumber == peNumber)
-                    .Include(t => t.PlannedEvent)
-                    .OrderBy(t => t.TaskSeq)
-                    .ToListAsync();
+                var tasks = await _peTasksService.GetPETasksByPENumberAsync(peNumber);
                 return Ok(tasks);
             }
             catch (Exception ex)
@@ -293,58 +276,8 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var currentDate = DateTime.Today;
-                var violatingTasks = await _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .Where(t => t.TaskStatus != "COMPLETED" &&
-                               t.TaskCompleteDate < currentDate)
-                    .OrderBy(t => t.TaskCompleteDate)
-                    .ToListAsync();
-
-                // Update PE status for OLA violations
-                var hasUpdates = false;
-                foreach (var task in violatingTasks)
-                {
-                    if (task.PlannedEvent != null && task.PlannedEvent.PEStatus != "ola-violated")
-                    {
-                        task.PlannedEvent.PEStatus = "ola-violated";
-                        _context.Update(task.PlannedEvent);
-                        hasUpdates = true;
-                    }
-                }
-
-                if (hasUpdates)
-                {
-                    await _context.SaveChangesAsync();
-                }
-
-                // Return tasks without the PlannedEvent navigation property to avoid serialization issues
-                var result = violatingTasks.Select(t => new PETask
-                {
-                    Id = t.Id,
-                    PENumber = t.PENumber,
-                    TaskSeq = t.TaskSeq,
-                    Task = t.Task,
-                    TaskWorkGroup = t.TaskWorkGroup,
-                    OLA = t.OLA,
-                    TaskStatus = t.TaskStatus,
-                    TaskCreatedDate = t.TaskCreatedDate,
-                    TaskCompleteDate = t.TaskCompleteDate,
-                    ActualTaskCreatedDate = t.ActualTaskCreatedDate,
-                    ACtualTaskCompleteDate = t.ACtualTaskCompleteDate,
-                    IsUrgent = t.IsUrgent,
-                    UrgentMarkedDate = t.UrgentMarkedDate,
-                    UrgentRequested = t.UrgentRequested,
-                    Priority = t.Priority,
-                    EstimatedTime = t.EstimatedTime,
-                    IsOLAViolate = t.IsOLAViolate,
-                    OLADateTime = t.OLADateTime,
-                    ViolationStartTime = t.ViolationStartTime,
-                    EscalationsDisabled = t.EscalationsDisabled
-                    // Intentionally excluding PlannedEvent to avoid circular references
-                }).ToList();
-
-                return Ok(result);
+                var violatingTasks = await _peTasksService.GetOLAViolationsAsync();
+                return Ok(violatingTasks);
             }
             catch (Exception ex)
             {
@@ -451,32 +384,13 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var task = await _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .FirstOrDefaultAsync(m => m.Id == id);
-
-                if (task == null)
+                var result = await _peTasksService.CompleteViolatedTaskAsync(id);
+                
+                if (!result)
                 {
                     return NotFound();
                 }
 
-                task.TaskStatus = "COMPLETED";
-                task.ACtualTaskCompleteDate = DateTime.Now;
-
-                var otherViolationsExist = await _context.PETasks
-                    .AnyAsync(t => t.PENumber == task.PENumber &&
-                                  t.Id != task.Id &&
-                                  t.TaskStatus != "COMPLETED" &&
-                                  t.TaskCompleteDate.Date < DateTime.Today);
-
-                if (!otherViolationsExist && task.PlannedEvent != null && task.PlannedEvent.PEStatus == "ola-violated")
-                {
-                    task.PlannedEvent.PEStatus = "ongoing";
-                    _context.Update(task.PlannedEvent);
-                }
-
-                _context.Update(task);
-                await _context.SaveChangesAsync();
                 return NoContent();
             }
             catch (Exception ex)
@@ -494,48 +408,13 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var task = await _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .FirstOrDefaultAsync(t => t.Id == id);
-
-                if (task == null)
+                var result = await _peTasksService.RemoveUrgentStatusAsync(id);
+                
+                if (!result)
                 {
                     return NotFound();
                 }
 
-                task.IsUrgent = false;
-                task.UrgentMarkedDate = null;
-                task.Priority = task.Priority?.Replace("[URGENT: Opening Ceremony - Priority 1]", "")
-                                             .Replace("[URGENT: Critical Customer - Priority 2]", "")
-                                             .Trim();
-
-                if (string.IsNullOrWhiteSpace(task.Priority))
-                {
-                    task.Priority = null;
-                }
-
-                _context.Update(task);
-
-                var remainingUrgentTasks = await _context.PETasks
-                    .Where(t => t.PENumber == task.PENumber && t.IsUrgent == true && t.Id != id)
-                    .CountAsync();
-
-                if (remainingUrgentTasks == 0 && task.PlannedEvent != null)
-                {
-                    task.PlannedEvent.PEStatus = "ongoing";
-                    task.PlannedEvent.Priority = task.PlannedEvent.Priority?.Replace("[URGENT: Opening Ceremony - Priority 1]", "")
-                                                                          .Replace("[URGENT: Critical Customer - Priority 2]", "")
-                                                                          .Trim();
-
-                    if (string.IsNullOrWhiteSpace(task.PlannedEvent.Priority))
-                    {
-                        task.PlannedEvent.Priority = null;
-                    }
-
-                    _context.Update(task.PlannedEvent);
-                }
-
-                await _context.SaveChangesAsync();
                 return NoContent();
             }
             catch (Exception ex)
@@ -554,62 +433,13 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var task = await _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .FirstOrDefaultAsync(t => t.Id == id);
-
-                if (task == null)
-                    return NotFound("Task not found");
-
-                if (!string.Equals(task.Task?.Trim(), "Draw Fiber", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest("Estimated Time can only be set for 'Draw Fiber' tasks.");
-
-                var status = task.TaskStatus?.ToUpper();
-                if (status == "COMPLETED")
-                    return BadRequest("Already completed task.");
-
-                if (!task.IsOLAViolate && status != "ONGOING" && status != "WAITING")
-                    return BadRequest("Estimated Time can only be set when TaskStatus is ONGOING or WAITING or task is OLA Violated.");
-
-                if (request.EstimatedTime.Date < DateTime.Today)
-                    return BadRequest("Estimated Time cannot be in the past.");
-
-                var historyRecord = new TaskEstimationHistory
+                var result = await _peTasksService.UpdateEstimatedTimeAsync(id, request.EstimatedTime);
+                
+                if (!result)
                 {
-                    TaskId = id,
-                    EstimatedDate = request.EstimatedTime,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.TaskEstimationHistory.Add(historyRecord);
-
-                task.EstimatedTime = request.EstimatedTime;
-                task.TaskCompleteDate = request.EstimatedTime;
-
-                if (task.IsOLAViolate && request.EstimatedTime.Date >= DateTime.Today)
-                {
-                    task.IsOLAViolate = false;
+                    return BadRequest("Unable to update estimated time. Please check the task status and requirements.");
                 }
 
-                var allTasks = await _context.PETasks
-                    .Where(t => t.PENumber == task.PENumber)
-                    .OrderBy(t => t.TaskSeq)
-                    .ToListAsync();
-
-                int idx = allTasks.FindIndex(t => t.Id == id);
-                DateTime prevCompleteDate = request.EstimatedTime;
-
-                for (int i = idx + 1; i < allTasks.Count; i++)
-                {
-                    var currentTask = allTasks[i];
-                    currentTask.TaskCreatedDate = prevCompleteDate;
-                    int olaDays = 0;
-                    int.TryParse(currentTask.OLA, out olaDays);
-                    currentTask.TaskCompleteDate = currentTask.TaskCreatedDate.AddDays(olaDays);
-                    prevCompleteDate = currentTask.TaskCompleteDate;
-                }
-
-                await _context.SaveChangesAsync();
                 return NoContent();
             }
             catch (Exception ex)
@@ -627,18 +457,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var history = await _context.TaskEstimationHistory
-                    .Where(h => h.TaskId == id)
-                    .OrderByDescending(h => h.CreatedAt)
-                    .Select(h => new
-                    {
-                        h.Id,
-                        h.TaskId,
-                        h.EstimatedDate,
-                        h.CreatedAt
-                    })
-                    .ToListAsync();
-
+                var history = await _peTasksService.GetEstimationHistoryAsync(id);
                 return Ok(history);
             }
             catch (Exception ex)
@@ -656,38 +475,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                if (peNumbers == null || !peNumbers.Any())
-                {
-                    return Ok(new Dictionary<string, OLAViolationDetails>());
-                }
-
-                var violatingTasks = await _context.PETasks
-                    .Where(t => peNumbers.Contains(t.PENumber) && t.IsOLAViolate)
-                    .ToListAsync();
-
-                var currentDate = DateTime.Today;
-                var violationDetails = violatingTasks
-                    .GroupBy(t => t.PENumber)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => new OLAViolationDetails
-                        {
-                            PENumber = g.Key,
-                            TasksCount = g.Count(),
-                            MaxDaysOverdue = g.Max(t =>
-                                t.EstimatedTime.HasValue
-                                    ? (currentDate - t.EstimatedTime.Value).Days
-                                    : (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays))
-                                        ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays)).Days
-                                        : 0
-                            ),
-                            OldestViolation = g.Min(t =>
-                                t.EstimatedTime ?? (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays)
-                                    ? t.ActualTaskCreatedDate.Value.AddDays(olaDays)
-                                    : (DateTime?)null))
-                        }
-                    );
-
+                var violationDetails = await _peTasksService.GetOLAViolationDetailsAsync(peNumbers);
                 return Ok(violationDetails);
             }
             catch (Exception ex)

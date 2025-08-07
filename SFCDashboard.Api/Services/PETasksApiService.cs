@@ -401,6 +401,318 @@ namespace SFCDashboard.Api.Services
                 return false;
             }
         }
+
+        public async Task<IEnumerable<PETask>> GetAllPETasksAsync()
+        {
+            try
+            {
+                return await _context.PETasks
+                    .OrderByDescending(t => t.TaskCreatedDate)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all PE tasks");
+                return new List<PETask>();
+            }
+        }
+
+        public async Task<IEnumerable<PETask>> GetOLAViolationsAsync()
+        {
+            try
+            {
+                var currentDate = DateTime.Today;
+                var violatingTasks = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .Where(t => t.TaskStatus != "COMPLETED" &&
+                               t.TaskCompleteDate < currentDate)
+                    .OrderBy(t => t.TaskCompleteDate)
+                    .ToListAsync();
+
+                // Update PE status for OLA violations
+                var hasUpdates = false;
+                foreach (var task in violatingTasks)
+                {
+                    if (task.PlannedEvent != null && task.PlannedEvent.PEStatus != "ola-violated")
+                    {
+                        task.PlannedEvent.PEStatus = "ola-violated";
+                        _context.Update(task.PlannedEvent);
+                        hasUpdates = true;
+                    }
+                }
+
+                if (hasUpdates)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                // Return tasks without the PlannedEvent navigation property to avoid serialization issues
+                var result = violatingTasks.Select(t => new PETask
+                {
+                    Id = t.Id,
+                    PENumber = t.PENumber,
+                    TaskSeq = t.TaskSeq,
+                    Task = t.Task,
+                    TaskWorkGroup = t.TaskWorkGroup,
+                    OLA = t.OLA,
+                    TaskStatus = t.TaskStatus,
+                    TaskCreatedDate = t.TaskCreatedDate,
+                    TaskCompleteDate = t.TaskCompleteDate,
+                    ActualTaskCreatedDate = t.ActualTaskCreatedDate,
+                    ACtualTaskCompleteDate = t.ACtualTaskCompleteDate,
+                    IsUrgent = t.IsUrgent,
+                    UrgentMarkedDate = t.UrgentMarkedDate,
+                    UrgentRequested = t.UrgentRequested,
+                    Priority = t.Priority,
+                    EstimatedTime = t.EstimatedTime,
+                    IsOLAViolate = t.IsOLAViolate,
+                    OLADateTime = t.OLADateTime,
+                    ViolationStartTime = t.ViolationStartTime,
+                    EscalationsDisabled = t.EscalationsDisabled
+                    // Intentionally excluding PlannedEvent to avoid circular references
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violations");
+                return new List<PETask>();
+            }
+        }
+
+        public async Task<bool> CompleteViolatedTaskAsync(int id)
+        {
+            try
+            {
+                var task = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (task == null)
+                {
+                    return false;
+                }
+
+                task.TaskStatus = "COMPLETED";
+                task.ACtualTaskCompleteDate = DateTime.Now;
+
+                var otherViolationsExist = await _context.PETasks
+                    .AnyAsync(t => t.PENumber == task.PENumber &&
+                                  t.Id != task.Id &&
+                                  t.TaskStatus != "COMPLETED" &&
+                                  t.TaskCompleteDate.Date < DateTime.Today);
+
+                if (!otherViolationsExist && task.PlannedEvent != null && task.PlannedEvent.PEStatus == "ola-violated")
+                {
+                    task.PlannedEvent.PEStatus = "ongoing";
+                    _context.Update(task.PlannedEvent);
+                }
+
+                _context.Update(task);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error completing violated task {Id}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> RemoveUrgentStatusAsync(int id)
+        {
+            try
+            {
+                var task = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(t => t.Id == id);
+
+                if (task == null)
+                {
+                    return false;
+                }
+
+                task.IsUrgent = false;
+                task.UrgentMarkedDate = null;
+                task.Priority = task.Priority?.Replace("[URGENT: Opening Ceremony - Priority 1]", "")
+                                             ?.Replace("[URGENT: Critical Customer - Priority 2]", "")
+                                             ?.Trim();
+
+                if (string.IsNullOrWhiteSpace(task.Priority))
+                {
+                    task.Priority = null;
+                }
+
+                _context.Update(task);
+
+                var remainingUrgentTasks = await _context.PETasks
+                    .Where(t => t.PENumber == task.PENumber && t.IsUrgent == true && t.Id != id)
+                    .CountAsync();
+
+                if (remainingUrgentTasks == 0 && task.PlannedEvent != null)
+                {
+                    task.PlannedEvent.PEStatus = "ongoing";
+                    task.PlannedEvent.Priority = task.PlannedEvent.Priority?.Replace("[URGENT: Opening Ceremony - Priority 1]", "")
+                                                                          ?.Replace("[URGENT: Critical Customer - Priority 2]", "")
+                                                                          ?.Trim();
+
+                    if (string.IsNullOrWhiteSpace(task.PlannedEvent.Priority))
+                    {
+                        task.PlannedEvent.Priority = null;
+                    }
+
+                    _context.Update(task.PlannedEvent);
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing urgent status from task {Id}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateEstimatedTimeAsync(int id, DateTime estimatedTime)
+        {
+            try
+            {
+                var task = await _context.PETasks
+                    .Include(t => t.PlannedEvent)
+                    .FirstOrDefaultAsync(t => t.Id == id);
+
+                if (task == null)
+                    return false;
+
+                if (!string.Equals(task.Task?.Trim(), "Draw Fiber", StringComparison.OrdinalIgnoreCase))
+                    return false; // Only allowed for Draw Fiber tasks
+
+                var status = task.TaskStatus?.ToUpper();
+                if (status == "COMPLETED")
+                    return false; // Already completed
+
+                if (!task.IsOLAViolate && status != "ONGOING" && status != "WAITING")
+                    return false; // Only allowed for specific statuses
+
+                if (estimatedTime.Date < DateTime.Today)
+                    return false; // Cannot be in the past
+
+                var historyRecord = new TaskEstimationHistory
+                {
+                    TaskId = id,
+                    EstimatedDate = estimatedTime,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.TaskEstimationHistory.Add(historyRecord);
+
+                task.EstimatedTime = estimatedTime;
+                task.TaskCompleteDate = estimatedTime;
+
+                if (task.IsOLAViolate && estimatedTime.Date >= DateTime.Today)
+                {
+                    task.IsOLAViolate = false;
+                }
+
+                var allTasks = await _context.PETasks
+                    .Where(t => t.PENumber == task.PENumber)
+                    .OrderBy(t => t.TaskSeq)
+                    .ToListAsync();
+
+                int idx = allTasks.FindIndex(t => t.Id == id);
+                DateTime prevCompleteDate = estimatedTime;
+
+                for (int i = idx + 1; i < allTasks.Count; i++)
+                {
+                    var currentTask = allTasks[i];
+                    currentTask.TaskCreatedDate = prevCompleteDate;
+                    int olaDays = 0;
+                    int.TryParse(currentTask.OLA, out olaDays);
+                    currentTask.TaskCompleteDate = currentTask.TaskCreatedDate.AddDays(olaDays);
+                    prevCompleteDate = currentTask.TaskCompleteDate;
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating estimated time for task {Id}", id);
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<object>> GetEstimationHistoryAsync(int id)
+        {
+            try
+            {
+                var history = await _context.TaskEstimationHistory
+                    .Where(h => h.TaskId == id)
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Select(h => new
+                    {
+                        h.Id,
+                        h.TaskId,
+                        h.EstimatedDate,
+                        h.CreatedAt
+                    })
+                    .ToListAsync();
+
+                return history;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting estimation history for task {Id}", id);
+                return new List<object>();
+            }
+        }
+
+        public async Task<Dictionary<string, OLAViolationDetails>> GetOLAViolationDetailsAsync(List<string> peNumbers)
+        {
+            try
+            {
+                if (peNumbers == null || !peNumbers.Any())
+                {
+                    return new Dictionary<string, OLAViolationDetails>();
+                }
+
+                var violatingTasks = await _context.PETasks
+                    .Where(t => peNumbers.Contains(t.PENumber) && t.IsOLAViolate)
+                    .ToListAsync();
+
+                var currentDate = DateTime.Today;
+                var violationDetails = violatingTasks
+                    .GroupBy(t => t.PENumber)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => new OLAViolationDetails
+                        {
+                            PENumber = g.Key,
+                            TasksCount = g.Count(),
+                            MaxDaysOverdue = g.Max(t =>
+                                t.EstimatedTime.HasValue
+                                    ? (currentDate - t.EstimatedTime.Value).Days
+                                    : (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays))
+                                        ? (currentDate - t.ActualTaskCreatedDate.Value.AddDays(olaDays)).Days
+                                        : 0
+                            ),
+                            OldestViolation = g.Min(t =>
+                                t.EstimatedTime ?? (t.ActualTaskCreatedDate.HasValue && t.OLA != null && int.TryParse(t.OLA, out var olaDays)
+                                    ? t.ActualTaskCreatedDate.Value.AddDays(olaDays)
+                                    : (DateTime?)null))
+                        }
+                    );
+
+                return violationDetails;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting OLA violation details for PE numbers: {PENumbers}", string.Join(", ", peNumbers ?? new List<string>()));
+                return new Dictionary<string, OLAViolationDetails>();
+            }
+        }
     }
 }
 
