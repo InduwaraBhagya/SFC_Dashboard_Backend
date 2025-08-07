@@ -289,7 +289,7 @@ namespace SFCDashboard.Controllers
                         IsRead = false,
                         IsReply = true,
                         IsReminder = false,
-                        OriginalIssueId = issue.Id
+                        OriginalIssueId = issue.OriginalIssueId ?? issue.Id
                     };
                     await _peIssuesApiClient.CreateAsync(notification);
                     return Json(new { success = true, message = "Resolution rejected. The responder has been notified." });

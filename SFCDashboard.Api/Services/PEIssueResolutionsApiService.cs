@@ -287,11 +287,53 @@ namespace SFCDashboard.Api.Services
                     {
                         issue.IsHiddenFromInbox = true;
                         _logger.LogInformation("Issue {issueId} CONFIRMED RESOLVED: IsResolved=1 (TRUE), hidden from inbox", issue.Id);
+                        
+                        // CASCADING RESOLUTION: If this is an original issue being resolved, also resolve all its replies
+                        if (issue.OriginalIssueId == null)
+                        {
+                            _logger.LogInformation("Issue {issueId} is an original issue. Checking for replies to resolve.", issue.Id);
+                            
+                            var relatedReplies = await _context.PEIssues
+                                .Where(i => i.OriginalIssueId == issue.Id && !i.IsResolved)
+                                .ToListAsync();
+
+                            foreach (var reply in relatedReplies)
+                            {
+                                reply.IsResolved = true;
+                                reply.IsHiddenFromInbox = true;
+                                _context.Entry(reply).State = EntityState.Modified;
+                                _logger.LogInformation("Reply {ReplyId} also marked as resolved due to original issue {OriginalId} being resolved.", 
+                                    reply.Id, issue.Id);
+                            }
+                            
+                            _logger.LogInformation("Resolved {count} replies for original issue {issueId}", relatedReplies.Count, issue.Id);
+                        }
                     }
                     else
                     {
                         issue.IsHiddenFromInbox = false;
                         _logger.LogInformation("Issue {issueId} UNCONFIRMED: IsResolved=0 (FALSE), visible in inbox", issue.Id);
+                        
+                        // CASCADING UN-RESOLUTION: If this is an original issue being un-resolved, also un-resolve all its replies
+                        if (issue.OriginalIssueId == null)
+                        {
+                            _logger.LogInformation("Issue {issueId} is an original issue being un-resolved. Checking for replies to un-resolve.", issue.Id);
+                            
+                            var relatedReplies = await _context.PEIssues
+                                .Where(i => i.OriginalIssueId == issue.Id && i.IsResolved)
+                                .ToListAsync();
+
+                            foreach (var reply in relatedReplies)
+                            {
+                                reply.IsResolved = false;
+                                reply.IsHiddenFromInbox = false;
+                                _context.Entry(reply).State = EntityState.Modified;
+                                _logger.LogInformation("Reply {ReplyId} also marked as unresolved due to original issue {OriginalId} being unresolved.", 
+                                    reply.Id, issue.Id);
+                            }
+                            
+                            _logger.LogInformation("Un-resolved {count} replies for original issue {issueId}", relatedReplies.Count, issue.Id);
+                        }
                     }
                     
                     // Ensure the change is tracked

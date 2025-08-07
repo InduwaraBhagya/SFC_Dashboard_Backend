@@ -188,7 +188,8 @@ namespace SFCDashboard.Controllers
                 IsRead = false,
                 IsReply = true,
                 IsReminder= false,
-                OriginalIssueId = issueId                   // Link to the original issue
+                // Handle hierarchical reply system: if replying to a reply, use the root original issue ID
+                OriginalIssueId = originalIssue.OriginalIssueId ?? originalIssue.Id
             };
 
             await _peIssuesApi.CreateAsync(reply);
@@ -431,7 +432,8 @@ namespace SFCDashboard.Controllers
                     IsRead = false,
                     IsReply = true,
                     IsReminder = false,
-                    OriginalIssueId = issueId
+                    // Handle hierarchical reply system: if replying to a reply, use the root original issue ID
+                    OriginalIssueId = originalIssue?.OriginalIssueId ?? issueId
                 };
 
                 // Handle attachment if provided
@@ -480,10 +482,16 @@ namespace SFCDashboard.Controllers
                     return RedirectToAction("Index", "PlannedEvents");
                 }
 
-                // Create a resolution confirmation request
+                // Determine the root issue ID for the resolution
+                // Resolutions should always be linked to the root original issue
+                var rootIssueId = issue.OriginalIssueId ?? issueId;
+                
+                _logger.LogInformation("Creating resolution for issueId: {IssueId}, rootIssueId: {RootIssueId}", issueId, rootIssueId);
+
+                // Create a resolution confirmation request linked to the root issue
                 var resolutionRequest = new PEIssueResolution
                 {
-                    IssueId = issueId,
+                    IssueId = rootIssueId, // Always link to root issue
                     ResolutionDetails = resolutionDetails,
                     ResolutionDate = DateTime.Now,
                     IsConfirmed = false,
@@ -493,18 +501,22 @@ namespace SFCDashboard.Controllers
 
                 await _peIssueResolutionsApi.CreateAsync(resolutionRequest);
 
-                // Send a notification to the original reporter
+                // Get the root issue for notification purposes
+                var rootIssue = rootIssueId == issueId ? issue : await _peIssuesApi.GetByIdAsync(rootIssueId);
+
+                // Send a notification to the original reporter (always the root issue's sender)
                 var notification = new PEIssue
                 {
                     PlannedEventId = plannedEventId,
                     PETaskId = issue.PETaskId,
                     SenderId = issue.ReceiverId, // Current user who fixed it
-                    ReceiverId = issue.SenderId, // Original reporter
+                    ReceiverId = rootIssue?.SenderId ?? issue.SenderId, // Original reporter of root issue
                     IssueText = $"RESOLUTION REQUEST: {resolutionDetails}",
                     CreatedAt = DateTime.Now,
                     IsRead = false,
                     IsReply = true,
-                    OriginalIssueId = issueId,
+                    // Always link to the root original issue
+                    OriginalIssueId = rootIssueId,
                     IsReminder = false,
                     IsResolutionRequest = true
                 };
@@ -586,12 +598,23 @@ namespace SFCDashboard.Controllers
 
                         // Find the resolution request message and hide it from inbox
                         var allIssues = pe != null ? await _peIssuesApi.GetByPlannedEventIdAsync(pe.Id) : new List<PEIssue>();
-                        var resolutionRequestMessage = allIssues.FirstOrDefault(i => i.IsResolutionRequest && i.OriginalIssueId == issue.Id);
+                        
+                        // Updated logic to find resolution request message - check both direct and hierarchical references
+                        var resolutionRequestMessage = allIssues.FirstOrDefault(i => 
+                            i.IsResolutionRequest && 
+                            (i.OriginalIssueId == issue.Id || // Direct reply to this issue
+                             (issue.OriginalIssueId.HasValue && i.OriginalIssueId == issue.OriginalIssueId) || // Both reference same root
+                             (issue.OriginalIssueId == null && i.OriginalIssueId == issue.Id))); // This is root, resolution references it
+                        
                         if (resolutionRequestMessage != null)
                         {
                             resolutionRequestMessage.IsHiddenFromInbox = true;
                             await _peIssuesApi.UpdateAsync(resolutionRequestMessage);
                             _logger.LogInformation($"Resolution request message {resolutionRequestMessage.Id} hidden from inbox");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Resolution request message not found for issue {issue.Id}. Looking for messages with OriginalIssueId={issue.Id} or root issue reference.");
                         }
 
                         // Also hide the original issue from inbox since it's now resolved
@@ -643,7 +666,8 @@ namespace SFCDashboard.Controllers
                         IsRead = false,
                         IsReply = true,
                         IsReminder= false,
-                        OriginalIssueId = issue.Id
+                        // Handle hierarchical reply system: reference the root original issue
+                        OriginalIssueId = issue.OriginalIssueId ?? issue.Id
                     };
 
                     await _peIssuesApi.CreateAsync(notification);

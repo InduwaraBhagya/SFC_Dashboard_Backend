@@ -168,6 +168,21 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
+                // Handle hierarchical reply system for OriginalIssueId
+                if (peIssue.OriginalIssueId.HasValue)
+                {
+                    var parentIssue = await _context.PEIssues.FindAsync(peIssue.OriginalIssueId.Value);
+                    if (parentIssue != null)
+                    {
+                        // If the parent issue has an OriginalIssueId, use that as the root
+                        // Otherwise, use the parent issue's ID as the root
+                        peIssue.OriginalIssueId = parentIssue.OriginalIssueId ?? parentIssue.Id;
+                        
+                        _logger.LogInformation("Setting OriginalIssueId to {OriginalIssueId} for new issue replying to issue {ParentIssueId}", 
+                            peIssue.OriginalIssueId, parentIssue.Id);
+                    }
+                }
+
                 _context.Add(peIssue);
                 await _context.SaveChangesAsync();
                 return peIssue;
@@ -189,6 +204,8 @@ namespace SFCDashboard.Api.Services
                     return null;
                 }
 
+                var wasResolved = existingIssue.IsResolved;
+
                 // Update the properties explicitly
                 existingIssue.IssueText = peIssue.IssueText;
                 existingIssue.IsRead = peIssue.IsRead;
@@ -199,6 +216,40 @@ namespace SFCDashboard.Api.Services
                 existingIssue.IsHiddenFromInbox = peIssue.IsHiddenFromInbox;
                 existingIssue.OriginalIssueId = peIssue.OriginalIssueId;
                 existingIssue.AttachmentPath = peIssue.AttachmentPath;
+
+                // Handle cascading resolution logic for hierarchical issues
+                if (peIssue.IsResolved && !wasResolved)
+                {
+                    _logger.LogInformation("Issue {Id} is being marked as resolved. Checking for original issue to resolve.", existingIssue.Id);
+                    
+                    // If this is a reply being resolved, also resolve the original issue
+                    if (existingIssue.OriginalIssueId.HasValue)
+                    {
+                        var originalIssue = await _context.PEIssues.FindAsync(existingIssue.OriginalIssueId.Value);
+                        if (originalIssue != null && !originalIssue.IsResolved)
+                        {
+                            originalIssue.IsResolved = true;
+                            _context.Entry(originalIssue).State = EntityState.Modified;
+                            _logger.LogInformation("Original issue {OriginalIssueId} also marked as resolved due to reply {ReplyId} being resolved.", 
+                                originalIssue.Id, existingIssue.Id);
+                        }
+                    }
+                    // If this is an original issue being resolved, also resolve all its replies
+                    else
+                    {
+                        var relatedReplies = await _context.PEIssues
+                            .Where(i => i.OriginalIssueId == existingIssue.Id && !i.IsResolved)
+                            .ToListAsync();
+
+                        foreach (var reply in relatedReplies)
+                        {
+                            reply.IsResolved = true;
+                            _context.Entry(reply).State = EntityState.Modified;
+                            _logger.LogInformation("Reply {ReplyId} also marked as resolved due to original issue {OriginalId} being resolved.", 
+                                reply.Id, existingIssue.Id);
+                        }
+                    }
+                }
 
                 _context.Entry(existingIssue).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
@@ -407,7 +458,43 @@ namespace SFCDashboard.Api.Services
                     return null;
                 }
 
+                var wasResolved = existingIssue.IsResolved;
                 existingIssue.IsResolved = isResolved;
+
+                // Handle cascading resolution logic for hierarchical issues
+                if (isResolved && !wasResolved)
+                {
+                    _logger.LogInformation("Issue {Id} is being marked as resolved. Checking for original issue to resolve.", existingIssue.Id);
+                    
+                    // If this is a reply being resolved, also resolve the original issue
+                    if (existingIssue.OriginalIssueId.HasValue)
+                    {
+                        var originalIssue = await _context.PEIssues.FindAsync(existingIssue.OriginalIssueId.Value);
+                        if (originalIssue != null && !originalIssue.IsResolved)
+                        {
+                            originalIssue.IsResolved = true;
+                            _context.Entry(originalIssue).State = EntityState.Modified;
+                            _logger.LogInformation("Original issue {OriginalIssueId} also marked as resolved due to reply {ReplyId} being resolved.", 
+                                originalIssue.Id, existingIssue.Id);
+                        }
+                    }
+                    // If this is an original issue being resolved, also resolve all its replies
+                    else
+                    {
+                        var relatedReplies = await _context.PEIssues
+                            .Where(i => i.OriginalIssueId == existingIssue.Id && !i.IsResolved)
+                            .ToListAsync();
+
+                        foreach (var reply in relatedReplies)
+                        {
+                            reply.IsResolved = true;
+                            _context.Entry(reply).State = EntityState.Modified;
+                            _logger.LogInformation("Reply {ReplyId} also marked as resolved due to original issue {OriginalId} being resolved.", 
+                                reply.Id, existingIssue.Id);
+                        }
+                    }
+                }
+
                 await _context.SaveChangesAsync();
                 
                 return existingIssue;
