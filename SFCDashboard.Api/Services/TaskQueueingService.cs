@@ -18,7 +18,9 @@ namespace SFCDashboard.Api.Services
         private readonly ILogger<TaskQueueingService> _logger;
         private readonly IMemoryCache _cache;
         private const string WORKGROUP_CACHE_KEY = "Workgroup_{0}";
+        private const string TASKQUEUE_CACHE_KEY = "TaskQueue_{0}_{1}_{2}"; // workgroupId_year_take
         private readonly TimeSpan _workgroupCacheTime = TimeSpan.FromMinutes(30);
+        private readonly TimeSpan _taskQueueCacheTime = TimeSpan.FromMinutes(5);
 
         public TaskQueueingService(ApplicationDbContext context, ILogger<TaskQueueingService> logger, IMemoryCache cache)
         {
@@ -29,12 +31,23 @@ namespace SFCDashboard.Api.Services
 
         public async Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int? year = null, int take = 20)
         {
+            // Check cache first for better performance
+            string cacheKey = string.Format(TASKQUEUE_CACHE_KEY, workgroupId ?? 0, year ?? 0, take);
+            
+            if (_cache.TryGetValue(cacheKey, out List<TaskQueueItem>? cachedResult))
+            {
+                _logger.LogDebug("Task queue cache hit for key: {CacheKey}", cacheKey);
+                return cachedResult ?? new List<TaskQueueItem>();
+            }
+
             var stopwatch = Stopwatch.StartNew();
             var today = DateTime.Today;
             var result = new List<TaskQueueItem>();
             
             try
             {
+                _logger.LogDebug("Task queue cache miss for key: {CacheKey}, fetching from database", cacheKey);
+                
                 // Get all active tasks (not completed, not on hold)
                 var query = _context.PETasks
                     .Include(t => t.PlannedEvent)
@@ -136,6 +149,10 @@ namespace SFCDashboard.Api.Services
                 stopwatch.Stop();
                 _logger.LogInformation("Task prioritization completed in {ElapsedMs}ms for {Count} tasks, returning {TakeCount}", 
                     stopwatch.ElapsedMilliseconds, taskItems.Count, result.Count);
+                
+                // Cache the result for better performance
+                _cache.Set(cacheKey, result, _taskQueueCacheTime);
+                _logger.LogDebug("Task queue cached with key: {CacheKey} for {CacheMinutes} minutes", cacheKey, _taskQueueCacheTime.TotalMinutes);
                 
                 return result;
             }
@@ -344,6 +361,60 @@ namespace SFCDashboard.Api.Services
                 return "Due tomorrow";
             else
                 return $"Due in {daysUntilDue} days";
+        }
+
+        /// <summary>
+        /// Clear task queue cache for a specific workgroup
+        /// </summary>
+        public void ClearTaskQueueCache(int? workgroupId = null)
+        {
+            try
+            {
+                // Clear all cache entries for the specified workgroup
+                var patterns = new List<string>();
+                
+                // Generate cache key patterns to clear
+                for (int year = 2020; year <= DateTime.Now.Year + 1; year++)
+                {
+                    for (int take = 1; take <= 100; take += 19) // Common take values: 1, 20, 39, etc.
+                    {
+                        patterns.Add(string.Format(TASKQUEUE_CACHE_KEY, workgroupId ?? 0, year, take));
+                        patterns.Add(string.Format(TASKQUEUE_CACHE_KEY, workgroupId ?? 0, 0, take)); // year = null
+                    }
+                }
+
+                foreach (var pattern in patterns)
+                {
+                    _cache.Remove(pattern);
+                }
+
+                _logger.LogDebug("Cleared task queue cache for workgroup: {WorkgroupId}", workgroupId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing task queue cache for workgroup: {WorkgroupId}", workgroupId);
+            }
+        }
+
+        /// <summary>
+        /// Clear all task queue cache entries
+        /// </summary>
+        public void ClearAllTaskQueueCache()
+        {
+            try
+            {
+                // This is a simple implementation. In a production environment,
+                // you might want to implement a more sophisticated cache key tracking mechanism
+                _logger.LogDebug("Clearing all task queue cache entries");
+                
+                // Note: IMemoryCache doesn't provide a way to enumerate keys,
+                // so we can't clear specific patterns. This method is here for future enhancement.
+                // Consider using a different caching strategy if you need to clear all related cache entries.
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing all task queue cache");
+            }
         }
     }
 }

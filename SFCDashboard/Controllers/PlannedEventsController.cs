@@ -184,13 +184,9 @@ namespace SFCDashboard.Controllers
             var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
             ViewBag.UserWorkgroupId = userWorkgroupId;
 
-            // Pre-load next task instead of loading it directly in the view
-            var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(
-                workgroupId: userWorkgroupId,
-                take: 1);
-
-            ViewBag.NextTask = nextTaskList;
-            ViewBag.HasNextTask = nextTaskList != null && nextTaskList.Any();
+            // Don't pre-load next task - let user manually load it
+            ViewBag.NextTask = new List<TaskQueueItem>();
+            ViewBag.HasNextTask = false;
 
             // Pending urgent requests
             var pendingUrgentRequests = await _plannedEventsApi.GetPendingUrgentRequestsAsync();
@@ -361,13 +357,9 @@ namespace SFCDashboard.Controllers
             var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
             ViewBag.UserWorkgroupId = userWorkgroupId;
 
-            // Pre-load next task instead of loading it directly in the view
-            var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(
-                workgroupId: userWorkgroupId,
-                take: 1);
-
-            ViewBag.NextTask = nextTaskList;
-            ViewBag.HasNextTask = nextTaskList != null && nextTaskList.Any();
+            // Don't pre-load next task - let user manually load it
+            ViewBag.NextTask = new List<TaskQueueItem>();
+            ViewBag.HasNextTask = false;
 
             // Pending urgent requests
             var pendingUrgentRequests = await _plannedEventsApi.GetPendingUrgentRequestsAsync();
@@ -2261,6 +2253,59 @@ namespace SFCDashboard.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refreshing next task");
+                return Json(new { success = false, message = "Error refreshing task queue." });
+            }
+        }
+
+        // GET: PlannedEvents/LoadNextTask - Manual task loading with caching
+        [HttpGet]
+        public async Task<IActionResult> LoadNextTask()
+        {
+            try
+            {
+                // Get user's primary workgroup ID for the task queue
+                var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
+                var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: userWorkgroupId, take: 1);
+                var hasNextTask = nextTaskList?.Any() == true;
+
+                return Json(new { 
+                    success = true, 
+                    hasTask = hasNextTask,
+                    taskData = hasNextTask ? nextTaskList!.First() : null,
+                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading next task");
+                return Json(new { success = false, message = "Error loading task queue." });
+            }
+        }
+
+        // GET: PlannedEvents/RefreshTaskQueue - Refresh cached task queue
+        [HttpGet]
+        public async Task<IActionResult> RefreshTaskQueue()
+        {
+            try
+            {
+                // Get user's primary workgroup ID for the task queue
+                var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
+                
+                // Use the refresh endpoint which clears cache and gets fresh data
+                var nextTaskList = await _taskQueueApiClient.RefreshTaskQueueAsync(workgroupId: userWorkgroupId, take: 1);
+                var hasNextTask = nextTaskList?.Any() == true;
+
+                return Json(new { 
+                    success = true, 
+                    hasTask = hasNextTask,
+                    taskData = hasNextTask ? nextTaskList!.First() : null,
+                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    refreshed = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing task queue");
                 return Json(new { success = false, message = "Error refreshing task queue." });
             }
         }
