@@ -595,12 +595,9 @@ namespace SFCDashboard.Controllers
                         }
 
                         // Also hide the original issue from inbox since it's now resolved
-                        if (issue != null)
-                        {
-                            issue.IsHiddenFromInbox = true;
-                            await _peIssuesApi.UpdateAsync(issue);
-                            _logger.LogInformation($"Original issue {issue.Id} hidden from inbox as it's now resolved");
-                        }
+                        // Note: Don't call UpdateAsync here as it would override the IsResolved value set by ConfirmResolutionAsync
+                        // The ConfirmResolutionAsync method already sets IsResolved=true and IsHiddenFromInbox=true
+                        _logger.LogInformation($"Original issue {issue.Id} will be hidden from inbox automatically by ConfirmResolutionAsync");
 
                         // Update planned event - ONLY if no other active issues remain
                         if (pe != null)

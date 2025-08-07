@@ -236,23 +236,27 @@ namespace SFCDashboard.Controllers
 
                 if (isConfirmed)
                 {
-                    // Update resolution status via API client
-                    resolution.IsConfirmed = true;
-                    resolution.ConfirmedDate = DateTime.Now;
-                    await _peIssueResolutionsApiClient.UpdateAsync(resolution);
+                    // Use ConfirmResolutionAsync to trigger synchronization logic
+                    // This method automatically handles setting IsResolved = true for the issue
+                    await _peIssueResolutionsApiClient.ConfirmResolutionAsync(resolutionId, true);
 
-                    // Mark issue as resolved via API client
-                    issue.IsResolved = true;
-                    await _peIssuesApiClient.UpdateAsync(issue);
-
-                    // Find and mark the original issue as resolved if this is a reply
+                    // Note: Removed redundant issue updates as ConfirmResolutionAsync handles synchronization
+                    // The API method automatically sets issue.IsResolved = true when resolution is confirmed
+                    
+                    // Handle original issue if this is a reply (but let ConfirmResolutionAsync handle the main issue)
                     if (issue.OriginalIssueId.HasValue)
                     {
                         var originalIssue = await _peIssuesApiClient.GetByIdAsync(issue.OriginalIssueId.Value);
                         if (originalIssue != null && !originalIssue.IsResolved)
                         {
-                            originalIssue.IsResolved = true;
-                            await _peIssuesApiClient.UpdateAsync(originalIssue);
+                            // For original issues related to replies, we may need manual update
+                            // But first check if ConfirmResolutionAsync already handled it
+                            var refreshedOriginalIssue = await _peIssuesApiClient.GetByIdAsync(issue.OriginalIssueId.Value);
+                            if (refreshedOriginalIssue != null && !refreshedOriginalIssue.IsResolved)
+                            {
+                                refreshedOriginalIssue.IsResolved = true;
+                                await _peIssuesApiClient.UpdateAsync(refreshedOriginalIssue);
+                            }
                         }
                     }
 

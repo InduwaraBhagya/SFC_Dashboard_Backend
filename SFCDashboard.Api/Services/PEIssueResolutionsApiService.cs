@@ -116,6 +116,9 @@ namespace SFCDashboard.Api.Services
                 _logger.LogInformation("Before update - Resolution {id}: IsConfirmed={isConfirmed}", 
                     existingResolution.Id, existingResolution.IsConfirmed);
 
+                // Check if IsConfirmed status is changing
+                bool isConfirmedChanged = existingResolution.IsConfirmed != resolution.IsConfirmed;
+
                 // Update properties explicitly
                 existingResolution.ResolutionDetails = resolution.ResolutionDetails;
                 existingResolution.ResolutionDate = resolution.ResolutionDate;
@@ -124,6 +127,48 @@ namespace SFCDashboard.Api.Services
                 existingResolution.ConfirmedDate = resolution.ConfirmedDate;
                 existingResolution.PlannedEventId = resolution.PlannedEventId;
                 // Note: Don't update IssueId as it should be immutable
+
+                // CRITICAL: Update the corresponding issue's IsResolved status when IsConfirmed changes
+                if (isConfirmedChanged)
+                {
+                    _logger.LogInformation("IsConfirmed status changed for resolution {id} from {oldValue} to {newValue}, updating corresponding issue {issueId}", 
+                        existingResolution.Id, !resolution.IsConfirmed, resolution.IsConfirmed, existingResolution.IssueId);
+
+                    var relatedIssue = await _context.PEIssues.FindAsync(existingResolution.IssueId);
+                    if (relatedIssue != null)
+                    {
+                        _logger.LogInformation("Found related issue {issueId}, current IsResolved: {isResolved}, updating to: {newIsResolved}", 
+                            relatedIssue.Id, relatedIssue.IsResolved, resolution.IsConfirmed);
+
+                        // Synchronize the issue's resolved status with the resolution's confirmed status
+                        relatedIssue.IsResolved = resolution.IsConfirmed;
+                        
+                        // Update related fields based on confirmation status
+                        if (resolution.IsConfirmed)
+                        {
+                            relatedIssue.IsHiddenFromInbox = true;
+                            existingResolution.ConfirmedDate = DateTime.Now;
+                            _logger.LogInformation("Issue {issueId} marked as RESOLVED (IsResolved=1) and hidden from inbox", relatedIssue.Id);
+                        }
+                        else
+                        {
+                            relatedIssue.IsHiddenFromInbox = false;
+                            existingResolution.ConfirmedDate = null;
+                            _logger.LogInformation("Issue {issueId} marked as UNRESOLVED (IsResolved=0) and visible in inbox", relatedIssue.Id);
+                        }
+
+                        // Ensure the issue change is tracked
+                        _context.Entry(relatedIssue).State = EntityState.Modified;
+                        
+                        _logger.LogInformation("FINAL STATE: Issue {issueId} IsResolved={isResolved} (should be {expectedValue})", 
+                            relatedIssue.Id, relatedIssue.IsResolved, resolution.IsConfirmed);
+                    }
+                    else
+                    {
+                        _logger.LogError("CRITICAL: Related issue {issueId} not found for resolution {resolutionId}", 
+                            existingResolution.IssueId, existingResolution.Id);
+                    }
+                }
 
                 await _context.SaveChangesAsync();
                 
@@ -204,20 +249,24 @@ namespace SFCDashboard.Api.Services
                 _logger.LogInformation("Found resolution {resolutionId} for issue {issueId}", resolutionId, resolution.IssueId);
                 
                 // Log resolution details for debugging
-                _logger.LogInformation("Resolution details - ID: {resolutionId}, IssueId: {issueId}, PlannedEventId: {plannedEventId}, IsConfirmed: {isConfirmed}", 
+                _logger.LogInformation("Resolution details - ID: {resolutionId}, IssueId: {issueId}, PlannedEventId: {plannedEventId}, CURRENT IsConfirmed: {currentIsConfirmed}", 
                     resolution.Id, resolution.IssueId, resolution.PlannedEventId, resolution.IsConfirmed);
 
-                // Update the resolution
+                // Update the resolution first
                 resolution.IsConfirmed = isConfirmed;
                 if (isConfirmed)
                 {
                     resolution.ConfirmedDate = DateTime.Now;
                 }
+                else
+                {
+                    resolution.ConfirmedDate = null;
+                }
 
                 _logger.LogInformation("Updated resolution {resolutionId}: IsConfirmed={isConfirmed}, ConfirmedDate={confirmedDate}", 
                     resolutionId, resolution.IsConfirmed, resolution.ConfirmedDate);
 
-                // Update the related issue's resolved status based on confirmation
+                // CRITICAL: Update the related issue's resolved status based on confirmation
                 _logger.LogInformation("Looking for issue with ID: {issueId} (from resolution {resolutionId})", resolution.IssueId, resolutionId);
                 
                 // First check if the issue exists at all
@@ -227,23 +276,29 @@ namespace SFCDashboard.Api.Services
                 var issue = await _context.PEIssues.FindAsync(resolution.IssueId);
                 if (issue != null)
                 {
-                    _logger.LogInformation("Found issue {issueId}, current IsResolved status: {isResolved}", issue.Id, issue.IsResolved);
+                    _logger.LogInformation("Found issue {issueId}, CURRENT IsResolved status: {isResolved}, UPDATING TO: {newIsResolved}", 
+                        issue.Id, issue.IsResolved, isConfirmed);
                     
-                    // Set the issue resolved status to match confirmation status
+                    // CRITICAL: Set the issue resolved status to match confirmation status
                     issue.IsResolved = isConfirmed;
                     
-                    // If confirmed as resolved, also hide from inbox to show "Fixed" status
+                    // Update related properties based on confirmation status
                     if (isConfirmed)
                     {
                         issue.IsHiddenFromInbox = true;
-                        _logger.LogInformation("Issue {issueId} hidden from inbox as it's confirmed resolved", issue.Id);
+                        _logger.LogInformation("Issue {issueId} CONFIRMED RESOLVED: IsResolved=1 (TRUE), hidden from inbox", issue.Id);
+                    }
+                    else
+                    {
+                        issue.IsHiddenFromInbox = false;
+                        _logger.LogInformation("Issue {issueId} UNCONFIRMED: IsResolved=0 (FALSE), visible in inbox", issue.Id);
                     }
                     
                     // Ensure the change is tracked
                     _context.Entry(issue).State = EntityState.Modified;
                     
-                    _logger.LogInformation("Updated issue {issueId} IsResolved to: {isResolved}, IsHiddenFromInbox: {isHidden}, Entity state: {entityState}", 
-                        issue.Id, issue.IsResolved, issue.IsHiddenFromInbox, _context.Entry(issue).State);
+                    _logger.LogInformation("FINAL ISSUE STATE: Issue {issueId} IsResolved={isResolved} (expected: {expected}), IsHiddenFromInbox={isHidden}, Entity state: {entityState}", 
+                        issue.Id, issue.IsResolved, isConfirmed, issue.IsHiddenFromInbox, _context.Entry(issue).State);
                 }
                 else
                 {
@@ -253,14 +308,7 @@ namespace SFCDashboard.Api.Services
                     var allIssueIds = await _context.PEIssues.Select(i => i.Id).Take(10).ToListAsync();
                     _logger.LogError("Sample of existing issue IDs: [{issueIds}]", string.Join(", ", allIssueIds));
                     
-                    // Check if there are any resolutions with invalid issue IDs
-                    var invalidResolutions = await _context.PEIssueResolutions
-                        .Where(r => !_context.PEIssues.Any(i => i.Id == r.IssueId))
-                        .Select(r => new { r.Id, r.IssueId })
-                        .Take(5)
-                        .ToListAsync();
-                    _logger.LogError("Found {count} resolutions with invalid issue IDs: {invalidResolutions}", 
-                        invalidResolutions.Count, string.Join(", ", invalidResolutions.Select(r => $"ResolutionId:{r.Id}->IssueId:{r.IssueId}")));
+                    return false; // Don't continue if the issue doesn't exist
                 }
 
                 // Ensure the resolution change is tracked
