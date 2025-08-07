@@ -526,8 +526,6 @@
                                             <i class="bi bi-three-dots"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); viewPEDetails(${reminder.plannedEventId})">
-                                                <i class="bi bi-eye me-2"></i>View PE Details</a></li>
                                             ${!reminder.isRead ?
                                     `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); markReminderAsRead(${reminder.id})">
                                                     <i class="bi bi-check me-2"></i>Mark as Read</a></li>` : ''

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace SFCDashboard.Api.Controllers
@@ -14,14 +13,14 @@ namespace SFCDashboard.Api.Controllers
     [Produces("application/json")]
     public class PETaskListsApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPETaskListsApiService _taskListService;
         private readonly ILogger<PETaskListsApiController> _logger;
 
         public PETaskListsApiController(
-            ApplicationDbContext context,
+            IPETaskListsApiService taskListService,
             ILogger<PETaskListsApiController> logger)
         {
-            _context = context;
+            _taskListService = taskListService;
             _logger = logger;
         }
 
@@ -33,9 +32,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var taskLists = await _context.PETaskLists
-                    .OrderBy(tl => tl.TaskSeq)
-                    .ToListAsync();
+                var taskLists = await _taskListService.GetPETaskListsAsync();
                 return Ok(taskLists);
             }
             catch (Exception ex)
@@ -53,8 +50,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var taskList = await _context.PETaskLists
-                    .FirstOrDefaultAsync(tl => tl.Id == id);
+                var taskList = await _taskListService.GetPETaskListAsync(id);
 
                 if (taskList == null)
                 {
@@ -77,8 +73,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var taskList = await _context.PETaskLists
-                    .FirstOrDefaultAsync(tl => tl.Name == taskName);
+                var taskList = await _taskListService.GetPETaskListByNameAsync(taskName);
 
                 if (taskList == null)
                 {
@@ -101,7 +96,8 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var exists = await _context.PETaskLists.AnyAsync(tl => tl.Id == id);
+                var taskList = await _taskListService.GetPETaskListAsync(id);
+                var exists = taskList != null;
                 return Ok(exists);
             }
             catch (Exception ex)
@@ -119,10 +115,14 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                _context.PETaskLists.Add(taskList);
-                await _context.SaveChangesAsync();
+                var createdTaskList = await _taskListService.CreatePETaskListAsync(taskList);
+                
+                if (createdTaskList == null)
+                {
+                    return StatusCode(500, "An error occurred while creating the PE task list");
+                }
 
-                return CreatedAtAction(nameof(GetPETaskList), new { id = taskList.Id }, taskList);
+                return CreatedAtAction(nameof(GetPETaskList), new { id = createdTaskList.Id }, createdTaskList);
             }
             catch (Exception ex)
             {
@@ -144,17 +144,20 @@ namespace SFCDashboard.Api.Controllers
 
             try
             {
-                _context.Entry(taskList).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-                return NoContent();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await PETaskListExists(id))
+                var updatedTaskList = await _taskListService.UpdatePETaskListAsync(taskList);
+                
+                if (updatedTaskList == null)
                 {
-                    return NotFound();
+                    // Check if the task list exists
+                    var existingTaskList = await _taskListService.GetPETaskListAsync(id);
+                    if (existingTaskList == null)
+                    {
+                        return NotFound();
+                    }
+                    return StatusCode(500, "An error occurred while updating the PE task list");
                 }
-                throw;
+                
+                return NoContent();
             }
             catch (Exception ex)
             {
@@ -171,14 +174,12 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var taskList = await _context.PETaskLists.FindAsync(id);
-                if (taskList == null)
+                var success = await _taskListService.DeletePETaskListAsync(id);
+                
+                if (!success)
                 {
                     return NotFound();
                 }
-
-                _context.PETaskLists.Remove(taskList);
-                await _context.SaveChangesAsync();
 
                 return NoContent();
             }
@@ -191,7 +192,8 @@ namespace SFCDashboard.Api.Controllers
 
         private async Task<bool> PETaskListExists(int id)
         {
-            return await _context.PETaskLists.AnyAsync(e => e.Id == id);
+            var taskList = await _taskListService.GetPETaskListAsync(id);
+            return taskList != null;
         }
     }
 }

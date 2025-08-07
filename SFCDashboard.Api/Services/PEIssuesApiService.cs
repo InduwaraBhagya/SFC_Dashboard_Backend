@@ -15,6 +15,21 @@ namespace SFCDashboard.Api.Services
             _logger = logger;
         }
 
+        public async Task<IEnumerable<PEIssue>> GetAllPEIssuesAsync()
+        {
+            try
+            {
+                return await _context.PEIssues
+                    .OrderByDescending(i => i.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all PE issues");
+                return new List<PEIssue>();
+            }
+        }
+
         public async Task<PEIssue?> GetPEIssueAsync(int id)
         {
             try
@@ -164,17 +179,35 @@ namespace SFCDashboard.Api.Services
             }
         }
 
-        public async Task<PEIssue?> UpdatePEIssueAsync(PEIssue peIssue)
+        public async Task<PEIssue?> UpdatePEIssueAsync(int id, PEIssue peIssue)
         {
             try
             {
-                _context.Update(peIssue);
+                var existingIssue = await _context.PEIssues.FindAsync(id);
+                if (existingIssue == null)
+                {
+                    return null;
+                }
+
+                // Update the properties explicitly
+                existingIssue.IssueText = peIssue.IssueText;
+                existingIssue.IsRead = peIssue.IsRead;
+                existingIssue.IsResolved = peIssue.IsResolved;
+                existingIssue.IsReply = peIssue.IsReply;
+                existingIssue.IsReminder = peIssue.IsReminder;
+                existingIssue.IsResolutionRequest = peIssue.IsResolutionRequest;
+                existingIssue.IsHiddenFromInbox = peIssue.IsHiddenFromInbox;
+                existingIssue.OriginalIssueId = peIssue.OriginalIssueId;
+                existingIssue.AttachmentPath = peIssue.AttachmentPath;
+
+                _context.Entry(existingIssue).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
-                return peIssue;
+                
+                return existingIssue;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating PE issue");
+                _logger.LogError(ex, "Error updating PE issue {Id}", id);
                 return null;
             }
         }
@@ -199,7 +232,7 @@ namespace SFCDashboard.Api.Services
             }
         }
 
-        public async Task<bool> MarkAllRemindersAsReadAsync(int userId)
+        public async Task<int> MarkAllRemindersAsReadAsync(int userId)
         {
             try
             {
@@ -212,13 +245,13 @@ namespace SFCDashboard.Api.Services
                     reminder.IsRead = true;
                 }
 
-                await _context.SaveChangesAsync();
-                return true;
+                var updatedCount = await _context.SaveChangesAsync();
+                return updatedCount;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error marking all reminders as read for user {UserId}", userId);
-                return false;
+                return 0;
             }
         }
 
@@ -262,6 +295,183 @@ namespace SFCDashboard.Api.Services
             {
                 _logger.LogError(ex, "Error getting inbox issues for user {UserId}", userId);
                 return new List<PEIssueViewModel>();
+            }
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetInboxIssuesRawAsync(int userId, int limit = 10)
+        {
+            try
+            {
+                return await _context.PEIssues
+                    .Where(i => i.ReceiverId == userId)
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Take(limit)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting inbox issues for user {UserId}", userId);
+                return new List<PEIssue>();
+            }
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetRemindersRawAsync(int userId, bool showAll = true)
+        {
+            try
+            {
+                var query = _context.PEIssues
+                    .Where(i => i.ReceiverId == userId);
+
+                if (!showAll)
+                {
+                    // Only show unresolved reminders and actual reminders
+                    query = query.Where(i => !i.IsResolved && i.IsReminder);
+                }
+                else
+                {
+                    // Show all reminders (including resolved ones)
+                    query = query.Where(i => i.IsReminder);
+                }
+
+                return await query
+                    .OrderByDescending(i => i.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting reminders for user {UserId}", userId);
+                return new List<PEIssue>();
+            }
+        }
+
+        public async Task<Dictionary<int, IEnumerable<PEIssue>>> GetIssuesByPlannedEventIdsRawAsync(List<int> peIds)
+        {
+            try
+            {
+                if (peIds == null || !peIds.Any())
+                {
+                    return new Dictionary<int, IEnumerable<PEIssue>>();
+                }
+
+                var issues = await _context.PEIssues
+                    .Where(i => peIds.Contains(i.PlannedEventId))
+                    .OrderByDescending(i => i.CreatedAt)
+                    .ToListAsync();
+
+                // Group issues by PlannedEventId
+                var groupedIssues = issues
+                    .GroupBy(i => i.PlannedEventId)
+                    .ToDictionary(g => g.Key, g => g.AsEnumerable());
+
+                // Ensure all requested PE IDs are in the result, even if they have no issues
+                foreach (var peId in peIds)
+                {
+                    if (!groupedIssues.ContainsKey(peId))
+                    {
+                        groupedIssues[peId] = Enumerable.Empty<PEIssue>();
+                    }
+                }
+
+                return groupedIssues;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting issues for planned events");
+                return new Dictionary<int, IEnumerable<PEIssue>>();
+            }
+        }
+
+        public async Task<IEnumerable<PEIssue>> GetPEIssuesByPlannedEventRawAsync(int plannedEventId)
+        {
+            try
+            {
+                return await _context.PEIssues
+                    .Where(i => i.PlannedEventId == plannedEventId)
+                    .OrderBy(i => i.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PE issues for planned event {PlannedEventId}", plannedEventId);
+                return new List<PEIssue>();
+            }
+        }
+
+        public async Task<PEIssue?> MarkIssueAsResolvedAsync(int id, bool isResolved = true)
+        {
+            try
+            {
+                var existingIssue = await _context.PEIssues.FindAsync(id);
+                if (existingIssue == null)
+                {
+                    return null;
+                }
+
+                existingIssue.IsResolved = isResolved;
+                await _context.SaveChangesAsync();
+                
+                return existingIssue;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking issue {Id} as resolved", id);
+                return null;
+            }
+        }
+
+        public async Task<object> GetIssueStatusAsync(int id)
+        {
+            try
+            {
+                var issue = await _context.PEIssues.FindAsync(id);
+                if (issue == null)
+                {
+                    return new { error = "Issue not found" };
+                }
+
+                var resolution = await _context.PEIssueResolutions.FirstOrDefaultAsync(r => r.IssueId == id);
+
+                return new { 
+                    IssueId = issue.Id,
+                    IssueIsResolved = issue.IsResolved,
+                    IssueText = issue.IssueText,
+                    HasResolution = resolution != null,
+                    ResolutionId = resolution?.Id,
+                    ResolutionIsConfirmed = resolution?.IsConfirmed,
+                    ResolutionDetails = resolution?.ResolutionDetails,
+                    ResolutionConfirmedDate = resolution?.ConfirmedDate
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting issue status {Id}", id);
+                return new { error = ex.Message };
+            }
+        }
+
+        public async Task<bool> MarkIssueAsReadAsync(int id)
+        {
+            try
+            {
+                var issue = await _context.PEIssues.FindAsync(id);
+                if (issue == null)
+                {
+                    return false;
+                }
+
+                if (!issue.IsRead)
+                {
+                    issue.IsRead = true;
+                    _context.Entry(issue).State = EntityState.Modified;
+                    await _context.SaveChangesAsync();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking issue {Id} as read", id);
+                return false;
             }
         }
     }

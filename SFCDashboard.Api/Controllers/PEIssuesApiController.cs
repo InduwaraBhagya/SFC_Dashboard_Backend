@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
 using SFCDashboard.Api.Services;
 
@@ -14,16 +13,13 @@ namespace SFCDashboard.Api.Controllers
     [Produces("application/json")]
     public class PEIssuesApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly ILogger<PEIssuesApiController> _logger;
         private readonly IPEIssuesApiService _peIssuesService;
 
         public PEIssuesApiController(
-            ApplicationDbContext context,
             ILogger<PEIssuesApiController> logger,
             IPEIssuesApiService peIssuesService)
         {
-            _context = context;
             _logger = logger;
             _peIssuesService = peIssuesService;
         }
@@ -36,9 +32,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var issues = await _context.PEIssues
-                    .OrderByDescending(i => i.CreatedAt)
-                    .ToListAsync();
+                var issues = await _peIssuesService.GetAllPEIssuesAsync();
                 return Ok(issues);
             }
             catch (Exception ex)
@@ -56,7 +50,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var issue = await _context.PEIssues.FindAsync(id);
+                var issue = await _peIssuesService.GetPEIssueAsync(id);
                 if (issue == null)
                 {
                     return NotFound($"PE Issue with ID {id} not found");
@@ -79,12 +73,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting inbox issues for user {userId} with limit: {limit}", userId, limit);
-                var issues = await _context.PEIssues
-                    .Where(i => i.ReceiverId == userId)
-                    .OrderByDescending(i => i.CreatedAt)
-                    .Take(limit)
-                    .ToListAsync();
-
+                var issues = await _peIssuesService.GetInboxIssuesRawAsync(userId, limit);
                 return Ok(issues);
             }
             catch (Exception ex)
@@ -122,24 +111,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting reminders for user {userId}, showAll: {showAll}", userId, showAll);
-                var query = _context.PEIssues
-                    .Where(i => i.ReceiverId == userId);
-
-                if (!showAll)
-                {
-                    // Only show unresolved reminders and actual reminders
-                    query = query.Where(i => !i.IsResolved && i.IsReminder);
-                }
-                else
-                {
-                    // Show all reminders (including resolved ones)
-                    query = query.Where(i => i.IsReminder);
-                }
-
-                var reminders = await query
-                    .OrderByDescending(i => i.CreatedAt)
-                    .ToListAsync();
-
+                var reminders = await _peIssuesService.GetRemindersRawAsync(userId, showAll);
                 return Ok(reminders);
             }
             catch (Exception ex)
@@ -158,9 +130,7 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 _logger.LogInformation("Getting reminder count for user {userId}", userId);
-                var count = await _context.PEIssues
-                    .Where(i => i.ReceiverId == userId && !i.IsResolved && i.IsReminder)
-                    .CountAsync();
+                var count = await _peIssuesService.GetReminderCountAsync(userId);
                 return Ok(count);
             }
             catch (Exception ex)
@@ -180,16 +150,7 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogInformation("Marking all reminders as read for user {userId}", userId);
                 
-                var reminders = await _context.PEIssues
-                    .Where(i => i.ReceiverId == userId && !i.IsResolved && i.IsReminder && !i.IsRead)
-                    .ToListAsync();
-
-                foreach (var reminder in reminders)
-                {
-                    reminder.IsRead = true;
-                }
-
-                var updatedCount = await _context.SaveChangesAsync();
+                var updatedCount = await _peIssuesService.MarkAllRemindersAsReadAsync(userId);
                 
                 _logger.LogInformation("Marked {count} reminders as read for user {userId}", updatedCount, userId);
                 
@@ -212,30 +173,7 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogInformation("Getting issues for {Count} planned events", peIds.Count);
 
-                if (peIds == null || !peIds.Any())
-                {
-                    return Ok(new Dictionary<int, IEnumerable<PEIssue>>());
-                }
-
-                var issues = await _context.PEIssues
-                    .Where(i => peIds.Contains(i.PlannedEventId))
-                    .OrderByDescending(i => i.CreatedAt)
-                    .ToListAsync();
-
-                // Group issues by PlannedEventId
-                var groupedIssues = issues
-                    .GroupBy(i => i.PlannedEventId)
-                    .ToDictionary(g => g.Key, g => g.AsEnumerable());
-
-                // Ensure all requested PE IDs are in the result, even if they have no issues
-                foreach (var peId in peIds)
-                {
-                    if (!groupedIssues.ContainsKey(peId))
-                    {
-                        groupedIssues[peId] = Enumerable.Empty<PEIssue>();
-                    }
-                }
-
+                var groupedIssues = await _peIssuesService.GetIssuesByPlannedEventIdsRawAsync(peIds);
                 return Ok(groupedIssues);
             }
             catch (Exception ex)
@@ -255,12 +193,9 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogInformation("Getting PE issues for planned event {plannedEventId}", plannedEventId);
 
-                var issues = await _context.PEIssues
-                    .Where(i => i.PlannedEventId == plannedEventId)
-                    .OrderBy(i => i.CreatedAt)
-                    .ToListAsync();
+                var issues = await _peIssuesService.GetPEIssuesByPlannedEventRawAsync(plannedEventId);
 
-                _logger.LogInformation("Found {count} PE issues for planned event {plannedEventId}", issues.Count, plannedEventId);
+                _logger.LogInformation("Found {count} PE issues for planned event {plannedEventId}", issues.Count(), plannedEventId);
                 return Ok(issues);
             }
             catch (Exception ex)
@@ -334,10 +269,14 @@ namespace SFCDashboard.Api.Controllers
             try
             {
                 issue.CreatedAt = DateTime.Now;
-                _context.PEIssues.Add(issue);
-                await _context.SaveChangesAsync();
+                var createdIssue = await _peIssuesService.CreatePEIssueAsync(issue);
+                
+                if (createdIssue == null)
+                {
+                    return StatusCode(500, "Failed to create PE issue");
+                }
 
-                return CreatedAtAction(nameof(GetPEIssue), new { id = issue.Id }, issue);
+                return CreatedAtAction(nameof(GetPEIssue), new { id = createdIssue.Id }, createdIssue);
             }
             catch (Exception ex)
             {
@@ -363,41 +302,18 @@ namespace SFCDashboard.Api.Controllers
                 _logger.LogInformation("UpdatePEIssue called - Received issue data: Id={Id}, IsResolved={IsResolved}, IsRead={IsRead}, IssueText='{IssueText}'", 
                     issue.Id, issue.IsResolved, issue.IsRead, issue.IssueText);
 
-                var existingIssue = await _context.PEIssues.FindAsync(id);
-                if (existingIssue == null)
+                var updatedIssue = await _peIssuesService.UpdatePEIssueAsync(id, issue);
+                if (updatedIssue == null)
                 {
                     _logger.LogWarning("PE issue {Id} not found for update", id);
                     return NotFound();
                 }
 
-                _logger.LogInformation("Before update - Existing issue: Id={Id}, IsResolved={IsResolved}, IsRead={IsRead}", 
-                    existingIssue.Id, existingIssue.IsResolved, existingIssue.IsRead);
-
-                // Update the properties explicitly
-                existingIssue.IssueText = issue.IssueText;
-                existingIssue.IsRead = issue.IsRead;
-                existingIssue.IsResolved = issue.IsResolved;
-                existingIssue.IsReply = issue.IsReply;
-                existingIssue.IsReminder = issue.IsReminder;
-                existingIssue.IsResolutionRequest = issue.IsResolutionRequest;
-                existingIssue.IsHiddenFromInbox = issue.IsHiddenFromInbox;
-                existingIssue.OriginalIssueId = issue.OriginalIssueId;
-                existingIssue.AttachmentPath = issue.AttachmentPath;
-                // Note: Don't update CreatedAt, SenderId, ReceiverId, PlannedEventId, PETaskId as these should be immutable
-
-                _logger.LogInformation("After property assignment - Issue: Id={Id}, IsResolved={IsResolved}, IsRead={IsRead}", 
-                    existingIssue.Id, existingIssue.IsResolved, existingIssue.IsRead);
-
-                // Mark the entity as modified to ensure EF tracks the changes
-                _context.Entry(existingIssue).State = EntityState.Modified;
-                
-                var changesSaved = await _context.SaveChangesAsync();
-                
-                _logger.LogInformation("SaveChanges completed - Changes saved: {ChangesSaved}, Final issue state: Id={Id}, IsResolved={IsResolved}", 
-                    changesSaved, existingIssue.Id, existingIssue.IsResolved);
+                _logger.LogInformation("Update completed - Issue: Id={Id}, IsResolved={IsResolved}", 
+                    updatedIssue.Id, updatedIssue.IsResolved);
                 
                 // Return the updated issue object (API client expects this)
-                return Ok(existingIssue);
+                return Ok(updatedIssue);
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -423,14 +339,11 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var issue = await _context.PEIssues.FindAsync(id);
-                if (issue == null)
+                var deleted = await _peIssuesService.DeletePEIssueAsync(id);
+                if (!deleted)
                 {
                     return NotFound();
                 }
-
-                _context.PEIssues.Remove(issue);
-                await _context.SaveChangesAsync();
 
                 return NoContent();
             }
@@ -451,26 +364,19 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogInformation("MarkIssueAsResolved called for issue {Id} with isResolved={IsResolved}", id, isResolved);
 
-                var existingIssue = await _context.PEIssues.FindAsync(id);
-                if (existingIssue == null)
+                var updatedIssue = await _peIssuesService.MarkIssueAsResolvedAsync(id, isResolved);
+                if (updatedIssue == null)
                 {
                     _logger.LogWarning("PE issue {Id} not found", id);
                     return NotFound();
                 }
 
-                _logger.LogInformation("Before update: Issue {Id} IsResolved={IsResolved}", existingIssue.Id, existingIssue.IsResolved);
-
-                existingIssue.IsResolved = isResolved;
-                
-                var changesSaved = await _context.SaveChangesAsync();
-                
-                _logger.LogInformation("After update: Issue {Id} IsResolved={IsResolved}, Changes saved: {ChangesSaved}", 
-                    existingIssue.Id, existingIssue.IsResolved, changesSaved);
+                _logger.LogInformation("After update: Issue {Id} IsResolved={IsResolved}", 
+                    updatedIssue.Id, updatedIssue.IsResolved);
 
                 return Ok(new { 
-                    id = existingIssue.Id, 
-                    isResolved = existingIssue.IsResolved, 
-                    changesSaved = changesSaved 
+                    id = updatedIssue.Id, 
+                    isResolved = updatedIssue.IsResolved
                 });
             }
             catch (Exception ex)
@@ -488,24 +394,14 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var issue = await _context.PEIssues.FindAsync(id);
-                if (issue == null)
+                var status = await _peIssuesService.GetIssueStatusAsync(id);
+                
+                if (status is object statusObj && statusObj.GetType().GetProperty("error") != null)
                 {
                     return NotFound($"Issue {id} not found");
                 }
-
-                var resolution = await _context.PEIssueResolutions.FirstOrDefaultAsync(r => r.IssueId == id);
-
-                return Ok(new { 
-                    IssueId = issue.Id,
-                    IssueIsResolved = issue.IsResolved,
-                    IssueText = issue.IssueText,
-                    HasResolution = resolution != null,
-                    ResolutionId = resolution?.Id,
-                    ResolutionIsConfirmed = resolution?.IsConfirmed,
-                    ResolutionDetails = resolution?.ResolutionDetails,
-                    ResolutionConfirmedDate = resolution?.ConfirmedDate
-                });
+                
+                return Ok(status);
             }
             catch (Exception ex)
             {
@@ -524,26 +420,14 @@ namespace SFCDashboard.Api.Controllers
             {
                 _logger.LogInformation("MarkIssueAsRead called for issue {issueId}", id);
 
-                var issue = await _context.PEIssues.FindAsync(id);
-                if (issue == null)
+                var success = await _peIssuesService.MarkIssueAsReadAsync(id);
+                if (!success)
                 {
                     _logger.LogWarning("Issue {issueId} not found", id);
                     return NotFound($"Issue with ID {id} not found");
                 }
 
-                if (!issue.IsRead)
-                {
-                    issue.IsRead = true;
-                    _context.Entry(issue).State = EntityState.Modified;
-                    
-                    var changesSaved = await _context.SaveChangesAsync();
-                    _logger.LogInformation("Issue {issueId} marked as read, changes saved: {changesSaved}", id, changesSaved);
-                }
-                else
-                {
-                    _logger.LogInformation("Issue {issueId} was already marked as read", id);
-                }
-
+                _logger.LogInformation("Issue {issueId} marked as read", id);
                 return Ok(new { success = true, message = "Issue marked as read" });
             }
             catch (Exception ex)
@@ -555,7 +439,8 @@ namespace SFCDashboard.Api.Controllers
 
         private bool PEIssueExists(int id)
         {
-            return _context.PEIssues.Any(e => e.Id == id);
+            var issue = _peIssuesService.GetPEIssueAsync(id).Result;
+            return issue != null;
         }
     }
 }
