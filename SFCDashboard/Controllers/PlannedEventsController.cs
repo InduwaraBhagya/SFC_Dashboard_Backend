@@ -2290,7 +2290,9 @@ namespace SFCDashboard.Controllers
             {
                 // Get user's primary workgroup ID for the task queue
                 var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
-                var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: userWorkgroupId, take: 1);
+                
+                // Use the refresh endpoint which clears cache and gets fresh data
+                var nextTaskList = await _taskQueueApiClient.RefreshTaskQueueAsync(workgroupId: userWorkgroupId, take: 1);
                 var hasNextTask = nextTaskList?.Any() == true;
 
                 return Json(new { 
