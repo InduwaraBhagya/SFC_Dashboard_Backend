@@ -86,6 +86,7 @@ namespace SFCDashboard.Controllers
         public IActionResult Create() => View();
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(AreaNetworkEngineer model)
         {
             if (ModelState.IsValid)
@@ -104,6 +105,7 @@ namespace SFCDashboard.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(AreaNetworkEngineer model)
         {
             if (ModelState.IsValid)

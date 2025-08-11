@@ -38,6 +38,7 @@ public class ProjectController : BaseController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(Project project)
     {
         if (ModelState.IsValid)
