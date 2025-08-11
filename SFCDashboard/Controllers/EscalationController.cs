@@ -108,6 +108,7 @@ namespace SFCDashboard.Controllers
         }
         
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Ignore(int id, string reason)
         {
             if (string.IsNullOrWhiteSpace(reason))
@@ -302,6 +303,7 @@ namespace SFCDashboard.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Resolve(int id, string reason)
         {
             try
