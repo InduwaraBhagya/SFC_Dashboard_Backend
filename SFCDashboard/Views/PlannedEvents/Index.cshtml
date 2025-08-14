@@ -32,6 +32,57 @@
         ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count <= 1);
 }
 
+<!-- Action Buttons Section - Modern Vertical Style -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="action-buttons-container">
+            <div class="vertical-action-buttons">
+                <div class="action-button-group">
+                    <a asp-controller="PlannedEvents" asp-action="Create" class="action-btn btn-create" title="Create New PE">
+                        <div class="btn-icon">
+                            <i class="bi bi-plus-circle-fill"></i>
+                        </div>
+                        <div class="btn-content">
+                            <span class="btn-title">Create PE</span>
+                            <small class="btn-subtitle">Add new planned event</small>
+                        </div>
+                    </a>
+                    
+                    <a asp-controller="PlannedEvents" asp-action="Import" class="action-btn btn-import" title="Import PEs">
+                        <div class="btn-icon">
+                            <i class="bi bi-cloud-upload-fill"></i>
+                        </div>
+                        <div class="btn-content">
+                            <span class="btn-title">Import</span>
+                            <small class="btn-subtitle">Bulk import data</small>
+                        </div>
+                    </a>
+                    
+                    <a href="#" onclick="exportData()" class="action-btn btn-export" title="Export Data">
+                        <div class="btn-icon">
+                            <i class="bi bi-download"></i>
+                        </div>
+                        <div class="btn-content">
+                            <span class="btn-title">Export</span>
+                            <small class="btn-subtitle">Download data</small>
+                        </div>
+                    </a>
+                    
+                    <a asp-controller="PlannedEvents" asp-action="Reports" class="action-btn btn-reports" title="View Reports">
+                        <div class="btn-icon">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <div class="btn-content">
+                            <span class="btn-title">Reports</span>
+                            <small class="btn-subtitle">Analytics & insights</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Top Section: Dynamic Layout Based on Permissions -->
 @if (ViewData["CanViewAll"] as bool? == true)
 {
@@ -1483,6 +1534,84 @@ else
         window.clearTaskCache = clearTaskCache;
     </script>
     <script src="~/js/index.js"></script>
+    
+    <script>
+        // Export functionality for the action buttons
+        function exportData() {
+            // Show a modern export options modal or directly trigger export
+            const exportFormat = confirm("Export as Excel? (Cancel for CSV)") ? 'excel' : 'csv';
+            
+            // Get current filter parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentFilters = {};
+            
+            // Extract current filters from URL
+            for (const [key, value] of urlParams) {
+                currentFilters[key] = value;
+            }
+            
+            // Build export URL with current filters
+            const exportUrl = new URL('@Url.Action("Export", "PlannedEvents")', window.location.origin);
+            exportUrl.searchParams.append('format', exportFormat);
+            
+            // Add current filter parameters to maintain context
+            Object.entries(currentFilters).forEach(([key, value]) => {
+                if (value && key !== 'page') { // Don't include pagination in export
+                    exportUrl.searchParams.append(key, value);
+                }
+            });
+            
+            // Create temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = exportUrl.toString();
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Show success toast
+            showToast('Export started!', 'Your data is being prepared for download.', 'success');
+        }
+        
+        // Toast notification function
+        function showToast(title, message, type = 'info') {
+            // Create toast element
+            const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+            
+            const toastHtml = `
+                <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="4000">
+                    <div class="toast-header">
+                        <i class="bi bi-${type === 'success' ? 'check-circle-fill text-success' : 
+                                        type === 'error' ? 'exclamation-triangle-fill text-danger' : 
+                                        'info-circle-fill text-info'} me-2"></i>
+                        <strong class="me-auto">${title}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Auto remove after delay
+            setTimeout(() => {
+                const toasts = toastContainer.querySelectorAll('.toast');
+                if (toasts.length > 3) {
+                    toasts[0].remove();
+                }
+            }, 4500);
+        }
+        
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '9999';
+            document.body.appendChild(container);
+            return container;
+        }
+    </script>
 }
 
 

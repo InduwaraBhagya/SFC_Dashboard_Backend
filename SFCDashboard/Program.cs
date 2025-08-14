@@ -240,6 +240,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+// Add cookie clearing middleware before authentication
+app.UseCookieClearing(); // Server-side cookie clearing enabled
+
 app.UseAuthentication(); // Must be called, even in development mode
 app.UseAuthorization();
 
