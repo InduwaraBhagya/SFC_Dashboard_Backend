@@ -20,6 +20,32 @@
 
 @{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
 
+<!-- Global Search Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-3">
+                <form class="d-flex align-items-center justify-content-center" method="get" asp-controller="PlannedEvents"
+                    asp-action="GlobalSearch" role="search">
+                    <div class="input-group" style="max-width: 600px;">
+                        <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px;">
+                            <option value="peNumber" selected>PE Number</option>
+                            <option value="customer">Customer</option>
+                            <option value="jobReference">Job Reference</option>
+                            <option value="soNumber">SO Number</option>
+                        </select>
+                        <input class="form-control" type="search" name="peNumber" id="globalSearchInput"
+                            placeholder="Search PE Number" aria-label="Search" />
+                        <button class="btn btn-primary" type="submit">
+                            <i class="bi bi-search me-1"></i>Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="container-fluid mt-2">
 @{
     var nextTask = ViewBag.NextTask as List<TaskQueueItem>;

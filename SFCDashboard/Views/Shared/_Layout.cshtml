@@ -52,7 +52,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/Layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/NewLayout.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/escalation.css" asp-append-version="true" />
 
     <link rel="stylesheet" href="~/lib/jquery-ui/themes/base/jquery-ui.css" asp-append-version="true" />
@@ -67,194 +67,212 @@
 <body>
     @if (!isHomePage)
     {
-        <header>
-            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-                <div class="container-fluid">
-                    <a class="navbar-brand d-flex align-items-center app-name" asp-area="" asp-controller="Home"
-                        asp-action="Index">
-                        <img src="~/images/logo.png" alt="SFCDashboard" height="40" class="logo-img" />
+        <!-- Side Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <!-- Sidebar Toggle Arrow -->
+            <button class="sidebar-toggle-arrow" id="sidebarToggle">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <div class="sidebar-content">
+                <!-- Logo Section -->
+                <div class="sidebar-header">
+                    <a class="sidebar-brand d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                        <img src="~/images/logo.png" alt="SFCDashboard" height="32" class="sidebar-logo" />
+                        <span class="brand-text">PlanNet</span>
                     </a>
+                </div>
 
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="PlannedEvents" asp-action="Index">
-                                    <i class="bi bi-speedometer2"></i> Dashboard
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Escalation" asp-action="Index">
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Escalations
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Project" asp-action="Index">
-                                    <i class="bi bi-folder-fill me-2"></i>Projects
-                                </a>
-                            </li>
-                            @if (canManageCustomerAssignments)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment" asp-action="Index">
-                                        <i class="bi bi-person-check-fill me-2"></i>Customer Assignments
-                                    </a>
-                                </li>
-                            }
-                            @if (canManageDrawFiberPerms)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="DrawFiberPerms" asp-action="Index">
-                                        <i class="bi bi-diagram-3-fill me-2"></i>D/F Permissions
-                                    </a>
-                                </li>
-                            }
-                            @if (isAdmin)
-                            {
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" id="adminMenuDropdown" role="button"
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-gear-fill me-1"></i> Admin Menu
-                                    </a>
-                                    <ul class="dropdown-menu modern-dropdown" aria-labelledby="adminMenuDropdown">
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="WorkGroups" asp-action="Index">
-                                                <i class="bi bi-people-fill me-2"></i> <span>Add WorkGroup</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="SystemUsers"
-                                                asp-action="Index">
-                                                <i class="bi bi-person-plus-fill me-2"></i> <span>Add User</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="UserRoles" asp-action="Index">
-                                                <i class="bi bi-person-badge-fill me-2"></i> <span>Manage Roles</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="Permissions"
-                                                asp-action="Index">
-                                                <i class="bi bi-shield-check me-2"></i> <span>Manage Permissions</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="PETaskLists"
-                                                asp-action="Index">
-                                                <i class="bi bi-list-task me-2"></i> <span>Manage PE Task Lists</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="PERecords"
-                                                asp-action="ImportExcel">
-                                                <i class="bi bi-file-earmark-arrow-up-fill me-2"></i> <span>Import Excel</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="NetworkEngineer"
-                                                asp-action="ImportExcel">
-                                                <i class="bi bi-person-lines-fill me-2"></i> <span>Network Engineers</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                    </ul>
-                                </li>
-                            }
-
-                        </ul>
-
-                        <form class="d-flex align-items-center me-3" method="get" asp-controller="PlannedEvents"
-                            asp-action="GlobalSearch" role="search" style="min-width:320px;">
-                            <div class="input-group">
-                                <select class="form-select" name="searchType" id="navbarSearchType"
-                                    style="max-width: 140px;">
-                                    <option value="peNumber" selected>PE Number</option>
-                                    <option value="customer">Customer</option>
-                                    <option value="jobReference">Job Reference</option>
-                                    <option value="soNumber">SO Number</option>
-                                </select>
-                                <input class="form-control" type="search" name="peNumber" id="navbarSearchInput"
-                                    placeholder="Search PE Number" aria-label="Search" />
-                                <button class="btn btn-primary" type="submit">
-                                    <i class="bi bi-search"></i>
-                                </button>
+                <!-- Main Navigation -->
+                <ul class="nav flex-column sidebar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="PlannedEvents" asp-action="Index">
+                            <i class="bi bi-speedometer2"></i>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Escalation" asp-action="Index">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span class="nav-text">Escalations</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Project" asp-action="Index">
+                            <i class="bi bi-folder-fill"></i>
+                            <span class="nav-text">Projects</span>
+                        </a>
+                    </li>
+                    @if (canManageCustomerAssignments)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="CustomerUserAssignment" asp-action="Index">
+                                <i class="bi bi-person-check-fill"></i>
+                                <span class="nav-text">Customer Assignments</span>
+                            </a>
+                        </li>
+                    }
+                    @if (canManageDrawFiberPerms)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="DrawFiberPerms" asp-action="Index">
+                                <i class="bi bi-diagram-3-fill"></i>
+                                <span class="nav-text">D/F Permissions</span>
+                            </a>
+                        </li>
+                    }
+                    @if (isAdmin)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="collapse"
+                                data-bs-target="#adminSubmenu" aria-expanded="false">
+                                <i class="bi bi-gear-fill"></i>
+                                <span class="nav-text">Admin Menu</span>
+                            </a>
+                            <div class="collapse" id="adminSubmenu">
+                                <ul class="nav flex-column submenu">
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-area="" asp-controller="WorkGroups" asp-action="Index">
+                                            <i class="bi bi-people-fill"></i>
+                                            <span class="nav-text">Add WorkGroup</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-area="" asp-controller="SystemUsers" asp-action="Index">
+                                            <i class="bi bi-person-plus-fill"></i>
+                                            <span class="nav-text">Add User</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-area="" asp-controller="UserRoles" asp-action="Index">
+                                            <i class="bi bi-person-badge-fill"></i>
+                                            <span class="nav-text">Manage Roles</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-area="" asp-controller="Permissions" asp-action="Index">
+                                            <i class="bi bi-shield-check"></i>
+                                            <span class="nav-text">Manage Permissions</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-area="" asp-controller="PETaskLists" asp-action="Index">
+                                            <i class="bi bi-list-task"></i>
+                                            <span class="nav-text">Manage PE Task Lists</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-area="" asp-controller="PERecords" asp-action="ImportExcel">
+                                            <i class="bi bi-file-earmark-arrow-up-fill"></i>
+                                            <span class="nav-text">Import Excel</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-area="" asp-controller="NetworkEngineer"
+                                            asp-action="ImportExcel">
+                                            <i class="bi bi-person-lines-fill"></i>
+                                            <span class="nav-text">Network Engineers</span>
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
-                        </form>
+                        </li>
+                    }
+                </ul>
 
-                        <!-- Dark Mode Toggle Button -->
-                        <div class="theme-switch-wrapper me-3">
-                            <label class="theme-switch" for="darkModeToggle">
-                                <input type="checkbox" id="darkModeToggle" />
-                                <div class="slider round">
-                                    <i class="bi bi-moon-fill moon-icon"></i>
-                                    <i class="bi bi-sun-fill sun-icon"></i>
-                                </div>
-                            </label>
+                <!-- Bottom Section: Notifications, Dark Mode, User -->
+                <div class="sidebar-bottom">
+                    <!-- Dark Mode Toggle -->
+                    <div class="nav-item">
+                        <div class="nav-link theme-toggle-item">
+                            <i class="bi bi-moon-fill"></i>
+                            <div class="theme-switch-wrapper">
+                                <label class="theme-switch" for="darkModeToggle">
+                                    <input type="checkbox" id="darkModeToggle" />
+                                    <div class="slider round"></div>
+                                </label>
+                            </div>
+                            <span class="nav-text">Dark Mode</span>
                         </div>
+                    </div>
 
-                        <!-- Compact Reminders Notification Bell -->
-                        <div class="dropdown me-3">
-                            <button class="btn btn-outline-light position-relative" type="button" id="reminderDropdown"
-                                data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem;">
-                                <i class="bi bi-bell" style="font-size: 1.2rem;"></i>
+                    <!-- Notifications -->
+                    <div class="nav-item">
+                        <div class="nav-link dropdown" data-bs-toggle="dropdown" style="cursor: pointer;">
+                            <i class="bi bi-bell position-relative">
                                 <span
                                     class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                                     id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
-                                style="width: 350px; max-height: 400px; overflow-y: auto;">
-                                <div class="dropdown-header bg-primary text-white p-3">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">
-                                            <i class="bi bi-bell me-2"></i>Reminders
-                                        </h6>
-                                        <div>
-                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
-                                                title="Mark all as read">
-                                                <i class="bi bi-check-all"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
-                                                <i class="bi bi-arrow-clockwise"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="btn-group btn-group-sm w-100 mt-2">
-                                        <button type="button" class="btn btn-outline-light active"
-                                            data-filter="unread">Unread</button>
-                                        <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
+                            </i>
+                            <span class="nav-text">Notifications</span>
+                        </div>
+                        <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
+                            style="width: 350px; max-height: 400px; overflow-y: auto;">
+                            <div class="dropdown-header bg-primary text-white p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-bell me-2"></i>Reminders
+                                    </h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
+                                            title="Mark all as read">
+                                            <i class="bi bi-check-all"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
                                     </div>
                                 </div>
-                                <div id="reminderNotificationList" class="notification-list">
-                                    <!-- Reminders will be loaded here -->
+                                <div class="btn-group btn-group-sm w-100 mt-2">
+                                    <button type="button" class="btn btn-outline-light active"
+                                        data-filter="unread">Unread</button>
+                                    <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
                                 </div>
                             </div>
+                            <div id="reminderNotificationList" class="notification-list">
+                                <!-- Reminders will be loaded here -->
+                            </div>
                         </div>
+                    </div>
 
-                        <span class="nav-link text-white" style="pointer-events:none;">
-                            @currentUserName
-                        </span>
-
-                        <partial name="_LoginPartial" />
+                    <!-- User Profile -->
+                    <div class="nav-item">
+                        <div class="nav-link user-profile" data-bs-toggle="dropdown" style="cursor: pointer;">
+                            <div class="user-avatar">
+                                <i class="bi bi-person-circle" style="font-size: 24px;"></i>
+                            </div>
+                            <span class="nav-text">@currentUserName</span>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <partial name="_LoginPartial" />
+                            </li>
+                        </ul>
                     </div>
                 </div>
-            </nav>
-        </header>
-    }
 
-    <div class="@(isHomePage ? "" : "container mt-4")">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+                <!-- Hidden logout form -->
+                <form id="logoutForm" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut"
+                    method="post" style="display: none;">
+                </form>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <div class="main-content" id="mainContent">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+    }
+    else
+    {
+        <div class="">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+    }
 
     @if (!isHomePage)
     {
@@ -469,7 +487,7 @@
                     .then(response => response.json())
                     .then(data => {
                         console.log('Loaded reminders data:', data);
-                        
+
                         // Filter to ensure only reminders are processed (extra safety)
                         const reminderData = data.filter(item => item.isReminder !== false);
                         console.log('Filtered reminder data:', reminderData);
@@ -550,7 +568,7 @@
             function showReminderDetails(reminder) {
                 console.log('showReminderDetails called with:', reminder);
                 console.log('plannedEventId:', reminder.plannedEventId);
-                
+
                 // Mark as read if unread
                 if (!reminder.isRead) {
                     markReminderAsRead(reminder.id);
@@ -584,12 +602,12 @@
             `;
 
                 document.getElementById('reminderDetailsContent').innerHTML = detailsContent;
-                
+
                 // Debug the PE ID and URL construction
                 const peId = reminder.plannedEventId;
                 const detailsUrl = `/PlannedEvents/Details/${peId}`;
                 console.log('Setting PE details URL to:', detailsUrl);
-                
+
                 document.getElementById('viewPEDetailsBtn').href = detailsUrl;
 
                 // Show the modal
@@ -796,6 +814,102 @@
                         updateToggleState(newTheme);
                     }
                 });
+            }
+
+            // Sidebar toggle functionality
+            $('#sidebarToggle').on('click', function () {
+                const sidebar = $('#sidebar');
+                const mainContent = $('#mainContent');
+
+                sidebar.toggleClass('collapsed');
+                mainContent.toggleClass('sidebar-collapsed');
+
+                // Save sidebar state to localStorage
+                const isCollapsed = sidebar.hasClass('collapsed');
+                localStorage.setItem('sidebarCollapsed', isCollapsed);
+            });
+
+            // Restore sidebar state from localStorage
+            const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (sidebarCollapsed) {
+                $('#sidebar').addClass('collapsed');
+                $('#mainContent').addClass('sidebar-collapsed');
+            }
+
+            // Set active navigation item
+            function setActiveNavItem() {
+                const currentPath = window.location.pathname.toLowerCase();
+                const currentController = '@ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower()';
+                const currentAction = '@ViewContext.RouteData.Values["action"]?.ToString()?.ToLower()';
+
+                // Remove all active classes
+                $('.sidebar-nav .nav-link').removeClass('active');
+
+                // Set active class based on current route
+                $('.sidebar-nav .nav-link').each(function () {
+                    const href = $(this).attr('href');
+                    if (href && href !== '#') {
+                        const url = new URL(href, window.location.origin);
+                        if (url.pathname.toLowerCase() === currentPath) {
+                            $(this).addClass('active');
+                            return false; // Exit loop
+                        }
+                    }
+                });
+
+                // Fallback: set active based on controller name
+                if ($('.sidebar-nav .nav-link.active').length === 0) {
+                    $(`.sidebar-nav .nav-link[href*="/${currentController}"]`).first().addClass('active');
+                }
+            }
+
+            // Call setActiveNavItem on page load
+            setActiveNavItem();
+
+            // Handle responsive sidebar for mobile
+            function handleResponsiveSidebar() {
+                if (window.innerWidth <= 768) {
+                    $('#sidebarToggle').off('click').on('click', function () {
+                        $('#sidebar').toggleClass('show');
+                    });
+
+                    // Close sidebar when clicking outside on mobile
+                    $(document).on('click', function (e) {
+                        if (window.innerWidth <= 768 &&
+                            !$(e.target).closest('#sidebar, #sidebarToggle').length) {
+                            $('#sidebar').removeClass('show');
+                        }
+                    });
+                }
+            }
+
+            handleResponsiveSidebar();
+            $(window).on('resize', handleResponsiveSidebar);
+
+            // Global search functionality for PlannedEvents page
+            const globalSearchType = document.getElementById('globalSearchType');
+            const globalSearchInput = document.getElementById('globalSearchInput');
+
+            if (globalSearchType && globalSearchInput) {
+                function updateGlobalSearchPlaceholder() {
+                    globalSearchInput.name = globalSearchType.value;
+                    switch (globalSearchType.value) {
+                        case "peNumber":
+                            globalSearchInput.placeholder = "Search PE Number";
+                            break;
+                        case "customer":
+                            globalSearchInput.placeholder = "Search Customer";
+                            break;
+                        case "jobReference":
+                            globalSearchInput.placeholder = "Search Job Reference";
+                            break;
+                        case "soNumber":
+                            globalSearchInput.placeholder = "Search SO Number";
+                            break;
+                    }
+                }
+                globalSearchType.addEventListener('change', updateGlobalSearchPlaceholder);
+                updateGlobalSearchPlaceholder();
             }
         });
     </script>
