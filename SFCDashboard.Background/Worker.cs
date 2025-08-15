@@ -34,14 +34,16 @@ namespace SFCDashboard.Background
                     var olaViolationService = scope.ServiceProvider.GetRequiredService<OLAViolationService>();
                     var holdTaskReminderService = scope.ServiceProvider.GetRequiredService<HoldTaskReminderService>();
                     var escalationWorkerService = scope.ServiceProvider.GetRequiredService<EscalationWorkerService>();
+                    var taskQueueService = scope.ServiceProvider.GetRequiredService<TaskQueueService>();
 
                     // Start all services concurrently
                     serviceTasks.Add(peRecordSyncService.StartAsync(stoppingToken));
                     serviceTasks.Add(olaViolationService.StartAsync(stoppingToken));
                     serviceTasks.Add(holdTaskReminderService.StartAsync(stoppingToken));
                     serviceTasks.Add(escalationWorkerService.StartAsync(stoppingToken));
+                    serviceTasks.Add(taskQueueService.StartAsync(stoppingToken));
 
-                    _logger.LogInformation("All background services started successfully including escalation service");
+                    _logger.LogInformation("All background services started successfully including escalation and task queue services");
 
                     // Wait for cancellation
                     await Task.Delay(Timeout.Infinite, stoppingToken);

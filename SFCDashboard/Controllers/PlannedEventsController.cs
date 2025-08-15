@@ -184,9 +184,27 @@ namespace SFCDashboard.Controllers
             var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
             ViewBag.UserWorkgroupId = userWorkgroupId;
 
-            // Don't pre-load next task - let user manually load it
-            ViewBag.NextTask = new List<TaskQueueItem>();
-            ViewBag.HasNextTask = false;
+            // Automatically load task queue for user's workgroup
+            try
+            {
+                var taskQueueItems = await _taskQueueApiClient.GetPrioritizedTasksAsync(
+                    workgroupId: userWorkgroupId, 
+                    year: DateTime.Now.Year, // Add current year parameter
+                    take: 5); // Load top 5 tasks initially
+                
+                ViewBag.NextTask = taskQueueItems;
+                ViewBag.HasNextTask = taskQueueItems.Any();
+                
+                // Set task queue statistics
+                ViewBag.TaskQueueUrgentCount = taskQueueItems.Count(t => t.Task.IsUrgent);
+                ViewBag.TaskQueueOLACount = taskQueueItems.Count(t => t.Task.IsOLAViolate && !t.Task.IsUrgent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading task queue for user workgroup {userWorkgroupId}", userWorkgroupId);
+                ViewBag.NextTask = new List<TaskQueueItem>();
+                ViewBag.HasNextTask = false;
+            }
 
             // Pending urgent requests
             var pendingUrgentRequests = await _plannedEventsApi.GetPendingUrgentRequestsAsync();
@@ -2106,6 +2124,7 @@ namespace SFCDashboard.Controllers
                 ViewData["Workgroups"] = workgroups.OrderBy(w => w.Name).ToList();
                 ViewData["SelectedWorkgroupId"] = effectiveWorkgroupId;
                 ViewData["SelectedYear"] = year;
+                ViewData["CanSwitchWorkgroup"] = canViewAll; // Add this for the view logic
 
                 // Get years for the dropdown from actual PE numbers
                 var years = await _taskQueueApiClient.GetAvailableYearsAsync();
@@ -2114,7 +2133,7 @@ namespace SFCDashboard.Controllers
                 // Get prioritized tasks from the queue service
                 var prioritizedTasks = await _taskQueueApiClient.GetPrioritizedTasksAsync(
                     workgroupId: effectiveWorkgroupId,
-                    year: year,
+                    year: year ?? DateTime.Now.Year, // Always provide a year - current year if not specified
                     take: take);
 
                 // Get statistics for the summary boxes
@@ -2291,8 +2310,8 @@ namespace SFCDashboard.Controllers
                 // Get user's primary workgroup ID for the task queue
                 var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
                 
-                // Use the refresh endpoint which clears cache and gets fresh data
-                var nextTaskList = await _taskQueueApiClient.RefreshTaskQueueAsync(workgroupId: userWorkgroupId, take: 1);
+                // Get fresh data from the background service snapshots
+                var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: userWorkgroupId, take: 1);
                 var hasNextTask = nextTaskList?.Any() == true;
 
                 return Json(new { 

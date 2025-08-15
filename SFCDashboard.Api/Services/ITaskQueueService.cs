@@ -9,6 +9,7 @@ namespace SFCDashboard.Api.Services
         Task<List<int>> GetAvailableYearsAsync();
         void ClearTaskQueueCache(int? workgroupId = null);
         void ClearAllTaskQueueCache();
+        Task RefreshTaskQueueSnapshotsAsync(int? workgroupId = null, int? year = null);
     }
 }
 

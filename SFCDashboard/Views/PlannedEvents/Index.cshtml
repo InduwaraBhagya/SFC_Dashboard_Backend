@@ -32,56 +32,6 @@
         ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count <= 1);
 }
 
-<!-- Action Buttons Section - Modern Vertical Style -->
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="action-buttons-container">
-            <div class="vertical-action-buttons">
-                <div class="action-button-group">
-                    <a asp-controller="PlannedEvents" asp-action="Create" class="action-btn btn-create" title="Create New PE">
-                        <div class="btn-icon">
-                            <i class="bi bi-plus-circle-fill"></i>
-                        </div>
-                        <div class="btn-content">
-                            <span class="btn-title">Create PE</span>
-                            <small class="btn-subtitle">Add new planned event</small>
-                        </div>
-                    </a>
-                    
-                    <a asp-controller="PlannedEvents" asp-action="Import" class="action-btn btn-import" title="Import PEs">
-                        <div class="btn-icon">
-                            <i class="bi bi-cloud-upload-fill"></i>
-                        </div>
-                        <div class="btn-content">
-                            <span class="btn-title">Import</span>
-                            <small class="btn-subtitle">Bulk import data</small>
-                        </div>
-                    </a>
-                    
-                    <a href="#" onclick="exportData()" class="action-btn btn-export" title="Export Data">
-                        <div class="btn-icon">
-                            <i class="bi bi-download"></i>
-                        </div>
-                        <div class="btn-content">
-                            <span class="btn-title">Export</span>
-                            <small class="btn-subtitle">Download data</small>
-                        </div>
-                    </a>
-                    
-                    <a asp-controller="PlannedEvents" asp-action="Reports" class="action-btn btn-reports" title="View Reports">
-                        <div class="btn-icon">
-                            <i class="bi bi-graph-up"></i>
-                        </div>
-                        <div class="btn-content">
-                            <span class="btn-title">Reports</span>
-                            <small class="btn-subtitle">Analytics & insights</small>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Top Section: Dynamic Layout Based on Permissions -->
 @if (ViewData["CanViewAll"] as bool? == true)
@@ -249,12 +199,6 @@ else
                             <i class="bi bi-arrow-right-circle-fill me-2"></i> Next Task
                         </h5>
                         <div class="d-flex align-items-center gap-2">
-                            <button id="loadTaskBtn" class="btn btn-sm btn-success" style="display: none;">
-                                <i class="bi bi-play-circle me-1"></i> Load Task
-                            </button>
-                            <button id="refreshTaskBtn" class="btn btn-sm btn-warning" style="display: none;">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-                            </button>
                             <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-sm btn-light">
                                 <i class="bi bi-list-task me-1"></i> View All Tasks
                             </a>
@@ -267,34 +211,71 @@ else
                     <div class="collapse" id="nextTaskContent">
                         <div class="card-body">
                             <div id="taskContent">
-                                <!-- Default state: Show load task button -->
-                                <div id="noTaskLoaded" class="text-center py-4">
-                                    <i class="bi bi-hourglass-split text-muted" style="font-size: 2rem;"></i>
-                                    <p class="mt-3 mb-3 text-muted">Click "Load Task" to fetch your next task</p>
-                                    <button id="loadTaskMainBtn" class="btn btn-primary">
-                                        <i class="bi bi-play-circle me-1"></i> Load Next Task
-                                    </button>
-                                </div>
-                                
-                                <!-- Loading state -->
-                                <div id="taskLoading" class="text-center py-4" style="display: none;">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
+                                @if (hasNextTask == true && nextTask?.Any() == true)
+                                {
+                                    <!-- Server-side rendered task queue -->
+                                    <div class="task-queue-container">
+                                        @foreach (var task in nextTask!)
+                                        {
+                                            <div class="task-queue-item mb-3 p-3 border rounded" style="border-left: 4px solid @(task.Task.IsUrgent ? "#dc3545" : task.Task.IsOLAViolate ? "#fd7e14" : "#28a745") !important;">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1">
+                                                            <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" class="text-decoration-none">
+                                                                @task.Task.PlannedEvent?.PeNumber
+                                                            </a>
+                                                            @if (task.Task.IsUrgent)
+                                                            {
+                                                                <span class="badge bg-danger ms-2">URGENT</span>
+                                                            }
+                                                            else if (task.Task.IsOLAViolate)
+                                                            {
+                                                                <span class="badge bg-warning text-dark ms-2">OLA VIOLATION</span>
+                                                            }
+                                                        </h6>
+                                                        <p class="mb-1 text-muted small">
+                                                            <strong>Task:</strong> @task.Task.Task<br/>
+                                                            <strong>Customer:</strong> @task.Task.PlannedEvent?.Customer<br/>
+                                                            <strong>Status:</strong> @task.DueStatus
+                                                        </p>
+                                                        <div class="priority-score">
+                                                            <small class="text-muted">Priority Score: <strong>@task.PriorityScore.ToString("F1")</strong></small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="task-actions">
+                                                        <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-eye"></i> View
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        <div class="text-center mt-3">
+                                            <a href="@Url.Action("TaskQueue", "PlannedEvents")" class="btn btn-outline-primary me-2">
+                                                <i class="bi bi-list-task me-1"></i> View Full Task Queue
+                                            </a>
+                                            <a href="@Url.Action("Index", "PlannedEvents")" class="btn btn-outline-secondary">
+                                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                                            </a>
+                                        </div>
                                     </div>
-                                    <p class="mt-3 mb-0">Loading your next task...</p>
-                                </div>
-                                
-                                <!-- Task loaded state (will be populated via JavaScript) -->
-                                <div id="taskLoaded" style="display: none;">
-                                    <!-- Content will be populated dynamically -->
-                                </div>
-                                
-                                <!-- No tasks available state -->
-                                <div id="noTaskAvailable" class="text-center py-4" style="display: none;">
-                                    <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
-                                    <p class="mt-3 mb-0">No pending tasks in your queue!</p>
-                                    <small class="text-muted">Last updated: <span id="lastUpdateTime"></span></small>
-                                </div>
+                                }
+                                else
+                                {
+                                    <!-- No tasks available -->
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                                        <p class="mt-3 mb-3 text-muted">No tasks in your queue at the moment</p>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <a href="@Url.Action("TaskQueue", "PlannedEvents")" class="btn btn-outline-primary">
+                                                <i class="bi bi-list-task me-1"></i> View Task Queue
+                                            </a>
+                                            <a href="@Url.Action("Index", "PlannedEvents")" class="btn btn-outline-secondary">
+                                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -1286,216 +1267,10 @@ else
             });
         }
 
-        // Task Queue Management with Caching
-        let cachedTaskData = null;
-        let cacheTimestamp = null;
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
-        
-        // Initialize task queue functionality
-        initializeTaskQueue();
-        
-        function initializeTaskQueue() {
-            // Check if server has cached data available
-            checkForExistingCachedData();
-            
-            // Show initial load button or cached data
-            updateTaskQueueButtons();
-            
-            // Bind event handlers
-            $('#loadTaskBtn, #loadTaskMainBtn').on('click', loadNextTask);
-            $('#refreshTaskBtn').on('click', refreshTaskQueue);
-        }
-        
-        function checkForExistingCachedData() {
-            // Check if there's server-side cached data we can use
-            @if (ViewBag.HasNextTask == true && ViewBag.NextTask != null)
-            {
-                <text>
-                // Convert server data to JavaScript format
-                var serverTask = @Html.Raw(Json.Serialize(((List<SFCDashboard.Models.TaskQueueItem>)ViewBag.NextTask).FirstOrDefault()));
-                if (serverTask && serverTask.task) {
-                    cachedTaskData = serverTask;
-                    cacheTimestamp = Date.now();
-                    displayTaskData(true, serverTask, new Date().toLocaleString());
-                    return;
-                }
-                </text>
-            }
-            
-            // Check localStorage for previously cached data
-            var storedData = localStorage.getItem('taskQueueCache');
-            var storedTimestamp = localStorage.getItem('taskQueueTimestamp');
-            
-            if (storedData && storedTimestamp) {
-                var timestamp = parseInt(storedTimestamp);
-                if (Date.now() - timestamp < CACHE_DURATION) {
-                    try {
-                        cachedTaskData = JSON.parse(storedData);
-                        cacheTimestamp = timestamp;
-                        displayTaskData(true, cachedTaskData, new Date(timestamp).toLocaleString());
-                        return;
-                    } catch (e) {
-                        // Clear invalid cache data
-                        localStorage.removeItem('taskQueueCache');
-                        localStorage.removeItem('taskQueueTimestamp');
-                    }
-                }
-            }
-        }
-        
-        function updateTaskQueueButtons() {
-            const hasData = cachedTaskData !== null;
-            $('#loadTaskBtn').toggle(!hasData);
-            $('#refreshTaskBtn').toggle(hasData);
-        }
-        
-        function loadNextTask() {
-            showLoadingState();
-            updateTaskQueueButtons();
-            
-            $.ajax({
-                url: '@Url.Action("LoadNextTask", "PlannedEvents")',
-                type: 'GET',
-                success: function(response) {
-                    if (response.success) {
-                        cachedTaskData = response.taskData;
-                        cacheTimestamp = Date.now();
-                        
-                        // Save to localStorage for persistence across page loads
-                        if (response.taskData) {
-                            localStorage.setItem('taskQueueCache', JSON.stringify(response.taskData));
-                            localStorage.setItem('taskQueueTimestamp', cacheTimestamp.toString());
-                        }
-                        
-                        displayTaskData(response.hasTask, response.taskData, response.timestamp);
-                    } else {
-                        showError(response.message || 'Failed to load task');
-                    }
-                    updateTaskQueueButtons();
-                },
-                error: function() {
-                    showError('Network error while loading task');
-                    updateTaskQueueButtons();
-                }
-            });
-        }
-        
-        function refreshTaskQueue() {
-            showLoadingState();
-            
-            $.ajax({
-                url: '@Url.Action("RefreshTaskQueue", "PlannedEvents")',
-                type: 'GET',
-                success: function(response) {
-                    if (response.success) {
-                        cachedTaskData = response.taskData;
-                        cacheTimestamp = Date.now();
-                        
-                        // Update localStorage with fresh data
-                        if (response.taskData) {
-                            localStorage.setItem('taskQueueCache', JSON.stringify(response.taskData));
-                            localStorage.setItem('taskQueueTimestamp', cacheTimestamp.toString());
-                        } else {
-                            // Clear cache if no task available
-                            localStorage.removeItem('taskQueueCache');
-                            localStorage.removeItem('taskQueueTimestamp');
-                        }
-                        
-                        displayTaskData(response.hasTask, response.taskData, response.timestamp);
-                        
-                        // Show refresh notification
-                        if (typeof toastr !== 'undefined') {
-                            toastr.success('Task queue refreshed successfully!');
-                        }
-                    } else {
-                        showError(response.message || 'Failed to refresh task queue');
-                    }
-                },
-                error: function() {
-                    showError('Network error while refreshing task queue');
-                }
-            });
-        }
-        
-        function showLoadingState() {
-            $('#noTaskLoaded, #taskLoaded, #noTaskAvailable').hide();
-            $('#taskLoading').show();
-        }
-        
-        function displayTaskData(hasTask, taskData, timestamp) {
-            $('#taskLoading').hide();
-            
-            if (hasTask && taskData) {
-                $('#noTaskLoaded').hide(); // Hide the load task section when task is present
-                renderTaskCard(taskData);
-                $('#taskLoaded').show();
-            } else {
-                $('#noTaskLoaded').hide(); // Hide the load task section when no tasks
-                $('#lastUpdateTime').text(timestamp);
-                $('#noTaskAvailable').show();
-            }
-        }
-        
-        function renderTaskCard(task) {
-            const badgeClass = getBadgeClass(task.priorityLevel);
-            const daysClass = getDaysClass(task.isOverdue, task.daysUntilDue);
-            
-            const taskHtml = `
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <span class="badge ${badgeClass} p-3">
-                            <i class="bi bi-lightning-charge-fill"></i>
-                        </span>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h5 class="card-title mb-1">${escapeHtml(task.task.task)}</h5>
-                        <p class="card-text mb-1 text-muted">
-                            <small>
-                                <i class="bi bi-file-earmark-text me-1"></i> PE: ${escapeHtml(task.task.peNumber)} 
-                                <i class="bi bi-person ms-2 me-1"></i> ${escapeHtml(task.task.plannedEvent?.customer || 'N/A')}
-                            </small>
-                        </p>
-                        <p class="mb-0">
-                            <span class="${daysClass}">
-                                <i class="bi bi-calendar-check me-1"></i>
-                                ${escapeHtml(task.dueStatus)}
-                            </span>
-                        </p>
-                    </div>
-                    <div class="flex-shrink-0 ms-3">
-                        <a href="@Url.Action("Details", "PlannedEvents")?id=${task.task.plannedEvent?.id || ''}" 
-                           class="btn btn-primary">
-                            <i class="bi bi-arrow-right"></i> View Details
-                        </a>
-                    </div>
-                </div>
-            `;
-            
-            $('#taskLoaded').html(taskHtml);
-        }
-        
-        function getBadgeClass(priorityLevel) {
-            switch (priorityLevel) {
-                case 'URGENT P0': return 'bg-danger fw-bold';
-                case 'URGENT P1': 
-                case 'URGENT P2': 
-                case 'URGENT': return 'bg-danger';
-                case 'OLA VIOLATION': return 'bg-warning text-dark';
-                case 'APPROACHING DEADLINE': return 'bg-info text-dark';
-                default: return 'bg-secondary';
-            }
-        }
-        
-        function getDaysClass(isOverdue, daysUntilDue) {
-            if (isOverdue) return 'text-danger fw-bold';
-            if (daysUntilDue <= 2) return 'text-warning fw-bold';
-            return 'text-success';
-        }
+        // Task Queue Management - Server-side rendering only
+        // No automatic refresh - task queue loads from server on page load only
         
         function showError(message) {
-            $('#taskLoading, #taskLoaded, #noTaskAvailable').hide();
-            $('#noTaskLoaded').show();
-            
             if (typeof toastr !== 'undefined') {
                 toastr.error(message);
             } else {
@@ -1505,33 +1280,22 @@ else
         
         function escapeHtml(text) {
             if (!text) return '';
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
-        // Check cache validity
-        function isCacheValid() {
-            return cachedTaskData !== null && 
-                   cacheTimestamp !== null && 
-                   (Date.now() - cacheTimestamp) < CACHE_DURATION;
-        }
-        
-        // Clear task cache (useful when task is completed or user wants fresh data)
-        function clearTaskCache() {
-            cachedTaskData = null;
-            cacheTimestamp = null;
-            localStorage.removeItem('taskQueueCache');
-            localStorage.removeItem('taskQueueTimestamp');
-            
-            // Reset to initial state
-            $('#taskLoaded, #noTaskAvailable').hide();
-            $('#noTaskLoaded').show();
-            updateTaskQueueButtons();
-        }
-        
-        // Expose clearTaskCache globally for use by other scripts
-        window.clearTaskCache = clearTaskCache;
     </script>
     <script src="~/js/index.js"></script>
     

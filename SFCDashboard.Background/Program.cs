@@ -69,6 +69,7 @@ namespace SFCDashboard.Background
                     services.AddSingleton<OLAViolationService>();
                     services.AddSingleton<HoldTaskReminderService>();
                     services.AddSingleton<EscalationWorkerService>();
+                    services.AddSingleton<TaskQueueService>();
                     
                     // Register escalation service as scoped (for database operations)
                     services.AddScoped<EscalationService>();

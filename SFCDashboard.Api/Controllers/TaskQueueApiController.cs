@@ -90,30 +90,6 @@ namespace SFCDashboard.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Refresh the task queue cache and get fresh prioritized tasks
-        /// </summary>
-        [HttpPost("refresh")]
-        public async Task<ActionResult<List<TaskQueueItem>>> RefreshTaskQueue(
-            [FromQuery] int? workgroupId = null, 
-            [FromQuery] int? year = null, 
-            [FromQuery] int take = 20)
-        {
-            try
-            {
-                // Clear the cache first
-                _taskQueueService.ClearTaskQueueCache(workgroupId);
-                
-                // Get fresh tasks
-                var tasks = await _taskQueueService.GetPrioritizedTasksAsync(workgroupId, year, take);
-                return Ok(tasks);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error refreshing task queue with workgroupId: {workgroupId}, year: {year}, take: {take}",
-                    workgroupId, year, take);
-                return StatusCode(500, "An error occurred while refreshing the task queue");
-            }
-        }
+
     }
 }

@@ -23,6 +23,7 @@ namespace SFCDashboard.Background.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<Escalation> Escalations { get; set; }
         public DbSet<SystemConfiguration> SystemConfigurations { get; set; }
+        public DbSet<TaskQueueSnapshot> TaskQueueSnapshots { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,6 +43,7 @@ namespace SFCDashboard.Background.Data
             modelBuilder.Entity<PlannedEvent>().ToTable("PlannedEvents");
             modelBuilder.Entity<Escalation>().ToTable("Escalations");
             modelBuilder.Entity<SystemConfiguration>().ToTable("SystemConfigurations");
+            modelBuilder.Entity<TaskQueueSnapshot>().ToTable("TaskQueueSnapshots");
 
             // Configure relationship between PETask and PlannedEvent
             modelBuilder.Entity<PETask>()
@@ -63,6 +65,38 @@ namespace SFCDashboard.Background.Data
                 .WithMany()
                 .HasForeignKey(e => e.IgnoredById)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure UserWorkGroup relationships
+            modelBuilder.Entity<UserWorkGroup>()
+                .HasKey(uwg => new { uwg.SystemUserId, uwg.WorkGroupId });
+
+            modelBuilder.Entity<UserWorkGroup>()
+                .HasOne(uwg => uwg.SystemUser)
+                .WithMany(u => u.UserWorkGroups)
+                .HasForeignKey(uwg => uwg.SystemUserId);
+
+            modelBuilder.Entity<UserWorkGroup>()
+                .HasOne(uwg => uwg.WorkGroup)
+                .WithMany(wg => wg.UserWorkGroups)
+                .HasForeignKey(uwg => uwg.WorkGroupId);
+
+            // Configure TaskQueueSnapshot relationships
+            modelBuilder.Entity<TaskQueueSnapshot>()
+                .HasOne(tqs => tqs.WorkGroup)
+                .WithMany()
+                .HasForeignKey(tqs => tqs.WorkGroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TaskQueueSnapshot>()
+                .HasOne(tqs => tqs.Task)
+                .WithMany()
+                .HasForeignKey(tqs => tqs.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Create index for performance
+            modelBuilder.Entity<TaskQueueSnapshot>()
+                .HasIndex(tqs => new { tqs.WorkGroupId, tqs.Year, tqs.PriorityScore })
+                .HasDatabaseName("IX_TaskQueueSnapshots_WorkGroup_Year_Priority");
         }
     }
 }

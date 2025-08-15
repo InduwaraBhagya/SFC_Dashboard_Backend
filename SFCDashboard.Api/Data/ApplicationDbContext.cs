@@ -36,6 +36,7 @@ namespace SFCDashboard.Api.Data
         public DbSet<SystemConfiguration> SystemConfigurations { get; set; }
 
         public DbSet<CustomerUserAssignment> CustomerUserAssignments { get; set; }
+        public DbSet<TaskQueueSnapshot> TaskQueueSnapshots { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -115,7 +116,23 @@ namespace SFCDashboard.Api.Data
                 .WithMany()
                 .HasForeignKey(e => e.TaskId);
 
+            // Configure TaskQueueSnapshot relationships
+            modelBuilder.Entity<TaskQueueSnapshot>()
+                .HasOne(tqs => tqs.WorkGroup)
+                .WithMany()
+                .HasForeignKey(tqs => tqs.WorkGroupId)
+                .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<TaskQueueSnapshot>()
+                .HasOne(tqs => tqs.Task)
+                .WithMany()
+                .HasForeignKey(tqs => tqs.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Create index for performance
+            modelBuilder.Entity<TaskQueueSnapshot>()
+                .HasIndex(tqs => new { tqs.WorkGroupId, tqs.Year, tqs.PriorityScore })
+                .HasDatabaseName("IX_TaskQueueSnapshots_WorkGroup_Year_Priority");
 
             // Make sure System.Threading.Tasks.Task is not registered as an entity
             modelBuilder.Ignore<System.Threading.Tasks.Task>();

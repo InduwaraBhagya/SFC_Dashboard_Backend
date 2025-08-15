@@ -41,12 +41,72 @@ namespace SFCDashboard.Api.Services
             }
 
             var stopwatch = Stopwatch.StartNew();
+            var result = new List<TaskQueueItem>();
+            
+            try
+            {
+                _logger.LogDebug("Task queue cache miss for key: {CacheKey}, fetching from database snapshots", cacheKey);
+                
+                // Use TaskQueueSnapshots for much faster retrieval
+                var query = _context.TaskQueueSnapshots
+                    .Include(tqs => tqs.Task)
+                        .ThenInclude(t => t.PlannedEvent)
+                    .Include(tqs => tqs.WorkGroup)
+                    .AsNoTracking()
+                    .Where(tqs => tqs.Year == year); // Filter by year
+
+                // Apply workgroup filter if specified
+                if (workgroupId.HasValue)
+                {
+                    query = query.Where(tqs => tqs.WorkGroupId == workgroupId.Value);
+                }
+
+                // Get top results ordered by priority score (descending)
+                var snapshots = await query
+                    .OrderByDescending(tqs => tqs.PriorityScore)
+                    .Take(take)
+                    .ToListAsync();
+
+                // Convert snapshots to TaskQueueItems
+                result = snapshots.Select(snapshot => new TaskQueueItem
+                {
+                    Task = snapshot.Task,
+                    PriorityScore = snapshot.PriorityScore,
+                    DaysUntilDue = snapshot.DaysUntilDue,
+                    EffectiveDeadline = snapshot.EffectiveDeadline,
+                    OLAInDays = snapshot.OLAInDays,
+                    OLAPercentRemaining = snapshot.OLAPercentRemaining
+                }).ToList();
+
+                stopwatch.Stop();
+                _logger.LogInformation("Retrieved {count} task queue items from snapshots in {elapsed}ms for workgroup {workgroupId}, year {year}", 
+                    result.Count, stopwatch.ElapsedMilliseconds, workgroupId, year);
+
+                // Cache the result
+                _cache.Set(cacheKey, result, _taskQueueCacheTime);
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting prioritized tasks from snapshots");
+                
+                // Fallback to original computation method if snapshots fail
+                _logger.LogWarning("Falling back to original task queue computation method");
+                return await GetPrioritizedTasksLegacyAsync(workgroupId, year, take);
+            }
+        }
+
+        // Fallback method using original computation (renamed from original GetPrioritizedTasksAsync)
+        private async Task<List<TaskQueueItem>> GetPrioritizedTasksLegacyAsync(int? workgroupId = null, int? year = null, int take = 20)
+        {
+            var stopwatch = Stopwatch.StartNew();
             var today = DateTime.Today;
             var result = new List<TaskQueueItem>();
             
             try
             {
-                _logger.LogDebug("Task queue cache miss for key: {CacheKey}, fetching from database", cacheKey);
+                _logger.LogDebug("Using legacy task queue computation for workgroup {workgroupId}, year {year}", workgroupId, year);
                 
                 // Get all active tasks (not completed, not on hold)
                 var query = _context.PETasks
@@ -88,7 +148,7 @@ namespace SFCDashboard.Api.Services
                     .Select(t => new {
                         Task = t,
                         StartDate = t.ActualTaskCreatedDate ?? t.TaskCreatedDate,
-                        EffectiveDeadline = t.EstimatedTime ?? t.PlannedEvent.ServiceRequiredDate ?? t.TaskCompleteDate,
+                        EffectiveDeadline = (DateTime?)(t.EstimatedTime ?? t.PlannedEvent!.ServiceRequiredDate ?? t.TaskCompleteDate),
                         TaskOLA = t.OLA
                     })
                     .ToListAsync();
@@ -99,10 +159,9 @@ namespace SFCDashboard.Api.Services
                     
                     // Calculate days until due and OLA metrics
                     int daysUntilDue = 0;
-                    if (data.EffectiveDeadline != null)
+                    if (data.EffectiveDeadline.HasValue)
                     {
-                        // Remove .Value since EffectiveDeadline is not nullable
-                        daysUntilDue = (data.EffectiveDeadline.Date - today).Days;
+                        daysUntilDue = (data.EffectiveDeadline.Value.Date - today).Days;
                     }
 
                     // Parse OLA in days
@@ -114,10 +173,9 @@ namespace SFCDashboard.Api.Services
 
                     // Calculate OLA percentage remaining
                     double olaPercentRemaining = 100.0;
-                    if (data.EffectiveDeadline != null)
+                    if (data.EffectiveDeadline.HasValue)
                     {
-                        // Remove .Value since EffectiveDeadline is not nullable
-                        var totalOlaDuration = (data.EffectiveDeadline.Date - data.StartDate.Date).TotalDays;
+                        var totalOlaDuration = (data.EffectiveDeadline.Value.Date - data.StartDate.Date).TotalDays;
                         var daysElapsed = (today - data.StartDate.Date).TotalDays;
                         
                         if (totalOlaDuration > 0)
@@ -140,26 +198,36 @@ namespace SFCDashboard.Api.Services
                     };
                 }).ToList();
 
+                // Group by PlannedEvent and return only the current task (highest priority) for each PE
+                var currentTasksOnly = taskItems
+                    .Where(t => t.Task.PlannedEvent != null)
+                    .GroupBy(t => t.Task.PlannedEvent!.Id)
+                    .Select(group => group.OrderByDescending(t => t.PriorityScore).First())
+                    .ToList();
+
+                // Add tasks without PlannedEvent (standalone tasks)
+                var standaloneTasks = taskItems
+                    .Where(t => t.Task.PlannedEvent == null)
+                    .ToList();
+
+                currentTasksOnly.AddRange(standaloneTasks);
+
                 // Sort the final list by priority score (descending) and take the requested number
-                result = taskItems
+                result = currentTasksOnly
                     .OrderByDescending(t => t.PriorityScore)
                     .Take(take)
                     .ToList();
 
                 stopwatch.Stop();
-                _logger.LogInformation("Task prioritization completed in {ElapsedMs}ms for {Count} tasks, returning {TakeCount}", 
+                _logger.LogInformation("Legacy task prioritization completed in {ElapsedMs}ms for {Count} tasks, returning {TakeCount}", 
                     stopwatch.ElapsedMilliseconds, taskItems.Count, result.Count);
-                
-                // Cache the result for better performance
-                _cache.Set(cacheKey, result, _taskQueueCacheTime);
-                _logger.LogDebug("Task queue cached with key: {CacheKey} for {CacheMinutes} minutes", cacheKey, _taskQueueCacheTime.TotalMinutes);
                 
                 return result;
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                _logger.LogError(ex, "Error calculating task priorities after {ElapsedMs}ms", 
+                _logger.LogError(ex, "Error in legacy task priority calculation after {ElapsedMs}ms", 
                     stopwatch.ElapsedMilliseconds);
                 return new List<TaskQueueItem>();
             }
@@ -414,6 +482,108 @@ namespace SFCDashboard.Api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error clearing all task queue cache");
+            }
+        }
+
+        /// <summary>
+        /// Manually refresh task queue snapshots for specific workgroup and year
+        /// </summary>
+        public async Task RefreshTaskQueueSnapshotsAsync(int? workgroupId = null, int? year = null)
+        {
+            try
+            {
+                _logger.LogInformation("Manually refreshing task queue snapshots for workgroup {workgroupId}, year {year}", workgroupId, year);
+                
+                // If no specific workgroup provided, refresh all workgroups
+                var workgroupsToRefresh = new List<int>();
+                
+                if (workgroupId.HasValue)
+                {
+                    workgroupsToRefresh.Add(workgroupId.Value);
+                }
+                else
+                {
+                    // Get all workgroup IDs
+                    var allWorkgroups = await _context.WorkGroups.Select(w => w.Id).ToListAsync();
+                    workgroupsToRefresh.AddRange(allWorkgroups);
+                }
+
+                // If no specific year provided, refresh all available years
+                var yearsToRefresh = new List<int?>();
+                
+                if (year.HasValue)
+                {
+                    yearsToRefresh.Add(year.Value);
+                }
+                else
+                {
+                    var availableYears = await GetAvailableYearsAsync();
+                    yearsToRefresh.AddRange(availableYears.Cast<int?>());
+                    yearsToRefresh.Add(null); // Also include "all years"
+                }
+
+                // Refresh snapshots
+                foreach (var wgId in workgroupsToRefresh)
+                {
+                    foreach (var yr in yearsToRefresh)
+                    {
+                        await RefreshTaskQueueForWorkgroupAndYearAsync(wgId, yr);
+                    }
+                }
+
+                // Clear related cache entries
+                foreach (var wgId in workgroupsToRefresh)
+                {
+                    ClearTaskQueueCache(wgId);
+                }
+                
+                _logger.LogInformation("Completed manual refresh of task queue snapshots");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error manually refreshing task queue snapshots");
+                throw;
+            }
+        }
+
+        private async Task RefreshTaskQueueForWorkgroupAndYearAsync(int workgroupId, int? year)
+        {
+            try
+            {
+                _logger.LogDebug("Refreshing task queue snapshots for workgroup {workgroupId}, year {year}", workgroupId, year?.ToString() ?? "all");
+
+                // Delete existing snapshots for this workgroup and year
+                var existingSnapshots = _context.TaskQueueSnapshots
+                    .Where(tqs => tqs.WorkGroupId == workgroupId && tqs.Year == year);
+                _context.TaskQueueSnapshots.RemoveRange(existingSnapshots);
+
+                // Generate new task queue data using legacy method to avoid circular dependency
+                var taskQueueItems = await GetPrioritizedTasksLegacyAsync(workgroupId, year, 1000); // Get more items for snapshot
+
+                // Create new snapshots
+                var snapshots = taskQueueItems.Select(item => new TaskQueueSnapshot
+                {
+                    WorkGroupId = workgroupId,
+                    TaskId = item.Task.Id,
+                    PriorityScore = item.PriorityScore,
+                    DaysUntilDue = item.DaysUntilDue,
+                    EffectiveDeadline = item.EffectiveDeadline,
+                    OLAInDays = item.OLAInDays,
+                    OLAPercentRemaining = item.OLAPercentRemaining,
+                    CreatedAt = DateTime.Now,
+                    Year = year
+                }).ToList();
+
+                _context.TaskQueueSnapshots.AddRange(snapshots);
+                await _context.SaveChangesAsync();
+
+                _logger.LogDebug("Created {count} task queue snapshots for workgroup {workgroupId}, year {year}", 
+                    snapshots.Count, workgroupId, year?.ToString() ?? "all");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing task queue snapshots for workgroup {workgroupId}, year {year}", workgroupId, year?.ToString() ?? "all");
+                throw;
             }
         }
     }
