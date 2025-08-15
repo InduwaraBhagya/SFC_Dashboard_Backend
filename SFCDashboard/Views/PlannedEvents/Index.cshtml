@@ -25,22 +25,64 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-body py-3">
-                <form class="d-flex align-items-center justify-content-center" method="get" asp-controller="PlannedEvents"
-                    asp-action="GlobalSearch" role="search">
-                    <div class="input-group" style="max-width: 600px;">
-                        <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px;">
-                            <option value="peNumber" selected>PE Number</option>
-                            <option value="customer">Customer</option>
-                            <option value="jobReference">Job Reference</option>
-                            <option value="soNumber">SO Number</option>
-                        </select>
-                        <input class="form-control" type="search" name="peNumber" id="globalSearchInput"
-                            placeholder="Search PE Number" aria-label="Search" />
-                        <button class="btn btn-primary" type="submit">
-                            <i class="bi bi-search me-1"></i>Search
-                        </button>
+                <div class="d-flex align-items-center justify-content-between">
+                    <!-- Global Search Form -->
+                    <form class="d-flex align-items-center justify-content-center flex-grow-1" method="get" asp-controller="PlannedEvents"
+                        asp-action="GlobalSearch" role="search">
+                        <div class="input-group" style="max-width: 600px;">
+                            <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px;">
+                                <option value="peNumber" selected>PE Number</option>
+                                <option value="customer">Customer</option>
+                                <option value="jobReference">Job Reference</option>
+                                <option value="soNumber">SO Number</option>
+                            </select>
+                            <input class="form-control" type="search" name="peNumber" id="globalSearchInput"
+                                placeholder="Search PE Number" aria-label="Search" />
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Reminder Notifications -->
+                    <div class="ms-3">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary position-relative" type="button" id="reminderDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem;">
+                                <i class="bi bi-bell" style="font-size: 1.2rem;"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                    id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
+                                style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <div class="dropdown-header bg-primary text-white p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-bell me-2"></i>Reminders
+                                        </h6>
+                                        <div>
+                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
+                                                title="Mark all as read">
+                                                <i class="bi bi-check-all"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100 mt-2">
+                                        <button type="button" class="btn btn-outline-light active"
+                                            data-filter="unread">Unread</button>
+                                        <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
+                                    </div>
+                                </div>
+                                <div id="reminderNotificationList" class="notification-list">
+                                    <!-- Reminders will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
@@ -1764,3 +1806,267 @@ else
         }
     }
 }
+
+<!-- Reminder Details Modal -->
+<div class="modal fade" id="reminderDetailsModal" tabindex="-1" aria-labelledby="reminderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="reminderDetailsModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Reminder Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="reminderDetailsContent">
+                <!-- Reminder details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" class="btn btn-primary" id="viewPEDetailsBtn" target="_blank">
+                    <i class="bi bi-eye me-1"></i>View PE Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Reminder notification functionality
+    let currentReminderFilter = 'unread';
+
+    $(document).ready(function() {
+        // Load reminders on page load
+        loadReminders();
+        
+        // Set up filter buttons
+        $('[data-filter]').on('click', function() {
+            $('[data-filter]').removeClass('active');
+            $(this).addClass('active');
+            currentReminderFilter = $(this).data('filter');
+            loadReminders();
+        });
+        
+        // Set up event listeners for reminder dropdown
+        document.getElementById('refreshReminders')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            loadReminders();
+        });
+
+        document.getElementById('markAllRemindersRead')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            markAllRemindersAsRead();
+        });
+
+        // Load reminders when dropdown is shown
+        document.getElementById('reminderDropdown')?.addEventListener('show.bs.dropdown', function () {
+            loadReminders();
+        });
+    });
+
+    function loadReminders() {
+        fetch('/PlannedEvents/GetReminders')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Loaded reminders data:', data);
+
+                // Filter to ensure only reminders are processed (extra safety)
+                const reminderData = data.filter(item => item.isReminder !== false);
+                console.log('Filtered reminder data:', reminderData);
+
+                const reminderList = document.getElementById('reminderNotificationList');
+                const reminderBadge = document.getElementById('reminderCount');
+
+                if (!reminderList) return;
+
+                reminderList.innerHTML = '';
+
+                // Filter data based on current filter
+                const filteredData = currentReminderFilter === 'unread'
+                    ? reminderData.filter(r => !r.isRead)
+                    : reminderData;
+
+                // Update badge count (always show unread count)
+                const unreadCount = reminderData.filter(r => !r.isRead).length;
+                if (unreadCount > 0) {
+                    reminderBadge.textContent = unreadCount;
+                    reminderBadge.style.display = 'block';
+                } else {
+                    reminderBadge.style.display = 'none';
+                }
+
+                if (filteredData.length === 0) {
+                    reminderList.innerHTML = `
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-bell-slash me-2"></i>No ${currentReminderFilter} reminders
+                        </div>`;
+                    return;
+                }
+
+                filteredData.forEach(reminder => {
+                    const reminderElement = document.createElement('div');
+                    reminderElement.className = `dropdown-item reminder-item ${!reminder.isRead ? 'unread' : 'read'}`;
+                    reminderElement.style.cursor = 'pointer';
+                    reminderElement.style.borderBottom = '1px solid #eee';
+                    reminderElement.setAttribute('data-reminder-id', reminder.id);
+                    reminderElement.setAttribute('data-pe-id', reminder.plannedEventId);
+
+                    reminderElement.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-warning text-dark me-2">Hold Reminder</span>
+                                    ${!reminder.isRead ? '<i class="bi bi-circle-fill text-primary me-1" style="font-size: 0.5rem;"></i>' : ''}
+                                </div>
+                                <p class="mb-1 small">${reminder.message}</p>
+                                <small class="text-muted">${formatDate(new Date(reminder.createdDate))}</small>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    ${!reminder.isRead ?
+                            `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); markReminderAsRead(${reminder.id})">
+                                            <i class="bi bi-check me-2"></i>Mark as Read</a></li>` : ''
+                        }
+                                </ul>
+                            </div>
+                        </div>`;
+
+                    // Add click event to show details modal
+                    reminderElement.addEventListener('click', function () {
+                        showReminderDetails(reminder);
+                    });
+
+                    reminderList.appendChild(reminderElement);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading reminders:', error);
+            });
+    }
+
+    function showReminderDetails(reminder) {
+        console.log('showReminderDetails called with:', reminder);
+        console.log('plannedEventId:', reminder.plannedEventId);
+
+        // Mark as read if unread
+        if (!reminder.isRead) {
+            markReminderAsRead(reminder.id);
+        }
+
+        // Build reminder details content
+        const detailsContent = `
+        <div class="alert alert-warning">
+            <h6 class="fw-bold mb-2">
+                <i class="bi bi-exclamation-triangle me-2"></i>Hold Reminder
+            </h6>
+            <p class="mb-0">${reminder.message}</p>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Created:</strong> ${formatDate(new Date(reminder.createdDate))}
+            </div>
+            <div class="col-md-6">
+                <strong>Status:</strong> 
+                <span class="badge ${reminder.isRead ? 'bg-success' : 'bg-warning text-dark'}">
+                    ${reminder.isRead ? 'Read' : 'Unread'}
+                </span>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <h6 class="fw-bold mb-3">Related PE Information</h6>
+            <p class="mb-2"><strong>PE Number:</strong> ${reminder.peNumber || extractPENumber(reminder.message)}</p>
+            <p class="mb-0"><strong>Customer:</strong> ${reminder.customer || extractCustomer(reminder.message)}</p>
+        </div>
+    `;
+
+        document.getElementById('reminderDetailsContent').innerHTML = detailsContent;
+
+        // Debug the PE ID and URL construction
+        const peId = reminder.plannedEventId;
+        const detailsUrl = `/PlannedEvents/Details/${peId}`;
+        console.log('Setting PE details URL to:', detailsUrl);
+
+        document.getElementById('viewPEDetailsBtn').href = detailsUrl;
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('reminderDetailsModal'));
+        modal.show();
+    }
+
+    // Helper functions to extract PE number and customer from reminder message
+    function extractPENumber(message) {
+        const match = message.match(/PE\s+([A-Z0-9]+)/i);
+        return match ? match[1] : 'N/A';
+    }
+
+    function extractCustomer(message) {
+        const match = message.match(/Customer:\s*([^.]+)/i);
+        return match ? match[1].trim() : 'N/A';
+    }
+
+    function markReminderAsRead(reminderId) {
+        fetch('/PlannedEvents/MarkReminderAsRead', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ id: reminderId })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Reminder marked as read successfully');
+                    loadReminders(); // Refresh the list
+                } else {
+                    console.error('Error marking reminder as read:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error marking reminder as read:', error);
+            });
+    }
+
+    function markAllRemindersAsRead() {
+        fetch('/PlannedEvents/MarkAllRemindersAsRead', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('All reminders marked as read successfully');
+                    loadReminders(); // Refresh the list
+                } else {
+                    console.error('Error marking all reminders as read:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error marking all reminders as read:', error);
+            });
+    }
+
+    function formatDate(date) {
+        const now = new Date();
+        const diffInMs = now - date;
+        const diffInHours = diffInMs / (1000 * 60 * 60);
+
+        if (diffInHours < 1) {
+            const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+            return `${diffInMinutes} minutes ago`;
+        } else if (diffInHours < 24) {
+            return `${Math.floor(diffInHours)} hours ago`;
+        } else {
+            const diffInDays = Math.floor(diffInHours / 24);
+            return `${diffInDays} days ago`;
+        }
+    }
+</script>

@@ -196,45 +196,6 @@
                         </div>
                     </div>
 
-                    <!-- Notifications -->
-                    <div class="nav-item">
-                        <div class="nav-link dropdown" data-bs-toggle="dropdown" style="cursor: pointer;">
-                            <i class="bi bi-bell position-relative">
-                                <span
-                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                    id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
-                            </i>
-                            <span class="nav-text">Notifications</span>
-                        </div>
-                        <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
-                            style="width: 350px; max-height: 400px; overflow-y: auto;">
-                            <div class="dropdown-header bg-primary text-white p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">
-                                        <i class="bi bi-bell me-2"></i>Reminders
-                                    </h6>
-                                    <div>
-                                        <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
-                                            title="Mark all as read">
-                                            <i class="bi bi-check-all"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="btn-group btn-group-sm w-100 mt-2">
-                                    <button type="button" class="btn btn-outline-light active"
-                                        data-filter="unread">Unread</button>
-                                    <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
-                                </div>
-                            </div>
-                            <div id="reminderNotificationList" class="notification-list">
-                                <!-- Reminders will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- User Profile -->
                     <div class="nav-item">
                         <div class="nav-link user-profile" data-bs-toggle="dropdown" style="cursor: pointer;">
@@ -479,91 +440,9 @@
             }
 
 
-            // Notification functionality
-            let currentReminderFilter = 'unread'; // Define the filter variable
+            // Theme and sidebar functionality moved below
 
-            function loadReminders() {
-                fetch(`/PlannedEvents/GetReminders?showAll=${currentReminderFilter === 'all'}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Loaded reminders data:', data);
-
-                        // Filter to ensure only reminders are processed (extra safety)
-                        const reminderData = data.filter(item => item.isReminder !== false);
-                        console.log('Filtered reminder data:', reminderData);
-
-                        const reminderList = document.getElementById('reminderNotificationList');
-                        const reminderBadge = document.getElementById('reminderCount');
-
-                        if (!reminderList) return;
-
-                        reminderList.innerHTML = '';
-
-                        // Filter data based on current filter
-                        const filteredData = currentReminderFilter === 'unread'
-                            ? reminderData.filter(r => !r.isRead)
-                            : reminderData;
-
-                        // Update badge count (always show unread count)
-                        const unreadCount = reminderData.filter(r => !r.isRead).length;
-                        if (unreadCount > 0) {
-                            reminderBadge.textContent = unreadCount;
-                            reminderBadge.style.display = 'block';
-                        } else {
-                            reminderBadge.style.display = 'none';
-                        }
-
-                        if (filteredData.length === 0) {
-                            reminderList.innerHTML = `
-                                <div class="p-3 text-center text-muted">
-                                    <i class="bi bi-bell-slash me-2"></i>No ${currentReminderFilter} reminders
-                                </div>`;
-                            return;
-                        }
-
-                        filteredData.forEach(reminder => {
-                            const reminderElement = document.createElement('div');
-                            reminderElement.className = `dropdown-item reminder-item ${!reminder.isRead ? 'unread' : 'read'}`;
-                            reminderElement.style.cursor = 'pointer';
-                            reminderElement.style.borderBottom = '1px solid #eee';
-                            reminderElement.setAttribute('data-reminder-id', reminder.id);
-                            reminderElement.setAttribute('data-pe-id', reminder.plannedEventId);
-
-                            reminderElement.innerHTML = `
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center mb-1">
-                                            <span class="badge bg-warning text-dark me-2">Hold Reminder</span>
-                                            ${!reminder.isRead ? '<i class="bi bi-circle-fill text-primary me-1" style="font-size: 0.5rem;"></i>' : ''}
-                                        </div>
-                                        <p class="mb-1 small">${reminder.message}</p>
-                                        <small class="text-muted">${formatDate(new Date(reminder.createdDate))}</small>
-                                    </div>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
-                                            <i class="bi bi-three-dots"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            ${!reminder.isRead ?
-                                    `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); markReminderAsRead(${reminder.id})">
-                                                    <i class="bi bi-check me-2"></i>Mark as Read</a></li>` : ''
-                                }
-                                        </ul>
-                                    </div>
-                                </div>`;
-
-                            // Add click event to show details modal
-                            reminderElement.addEventListener('click', function () {
-                                showReminderDetails(reminder);
-                            });
-
-                            reminderList.appendChild(reminderElement);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error loading reminders:', error);
-                    });
-            }
+            // Dark mode toggle and sidebar functionality starts here
 
             function showReminderDetails(reminder) {
                 console.log('showReminderDetails called with:', reminder);

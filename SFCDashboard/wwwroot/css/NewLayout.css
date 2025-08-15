@@ -292,31 +292,12 @@
   transform: translate(-50%, -50%);
 }
 
-/* Fix notification badge alignment when collapsed */
-.sidebar.collapsed .nav-link .bi-bell {
-  position: relative;
-}
-
-.sidebar.collapsed .nav-link .bi-bell .badge {
-  position: absolute !important;
-  top: -8px !important;
-  right: -8px !important;
-  transform: none !important;
-}
-
-/* Ensure notification badge is visible and properly sized */
-.nav-link .bi-bell .badge {
+/* Ensure notification badge is visible and properly sized in global search area */
+.btn-outline-primary .bi-bell .badge {
   font-size: 0.6rem !important;
   min-width: 16px;
   min-height: 16px;
   padding: 2px 4px;
-}
-
-.sidebar.collapsed .nav-link .bi-bell .badge {
-  font-size: 0.5rem !important;
-  min-width: 14px;
-  min-height: 14px;
-  padding: 1px 3px;
 }
 
 /* Theme Toggle in Sidebar */
@@ -662,4 +643,22 @@ input:checked + .slider:before {
 
 [data-theme="dark"] .sidebar-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* Global Search Area Notification Styling */
+.btn-outline-primary {
+  border: 1px solid #0d6efd;
+  color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.btn-outline-primary .bi-bell .badge {
+  font-size: 0.6rem !important;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 2px 4px;
 }
