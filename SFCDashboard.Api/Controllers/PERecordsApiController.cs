@@ -54,9 +54,10 @@ namespace SFCDashboard.Controllers.Api
                 // Validate file
                 if (excelFile == null || excelFile.Length <= 0)
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Please provide an Excel file to upload." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Please provide an Excel file to upload."
                     });
                 }
 
@@ -64,9 +65,10 @@ namespace SFCDashboard.Controllers.Api
                 const long maxFileSize = 100 * 1024 * 1024; // 100MB
                 if (excelFile.Length > maxFileSize)
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "File size exceeds maximum limit of 100MB." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "File size exceeds maximum limit of 100MB."
                     });
                 }
 
@@ -75,30 +77,33 @@ namespace SFCDashboard.Controllers.Api
                 var fileExtension = Path.GetExtension(excelFile.FileName)?.ToLowerInvariant();
                 if (string.IsNullOrEmpty(fileExtension) || !allowedExtensions.Contains(fileExtension))
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Only .xlsx files are supported." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Only .xlsx files are supported."
                     });
                 }
 
                 // Validate content type
-                var allowedContentTypes = new[] { 
+                var allowedContentTypes = new[] {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     "application/octet-stream" // Some browsers send this for xlsx files
                 };
                 if (!allowedContentTypes.Contains(excelFile.ContentType))
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Invalid file type. Only Excel files (.xlsx) are allowed." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Invalid file type. Only Excel files (.xlsx) are allowed."
                     });
                 }
 
                 if (!Path.GetExtension(excelFile.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Please provide a valid Excel file (.xlsx)." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Please provide a valid Excel file (.xlsx)."
                     });
                 }
 
@@ -123,7 +128,7 @@ namespace SFCDashboard.Controllers.Api
                         try
                         {
                             processedRows++;
-                            
+
                             // Log progress for large files
                             if (processedRows % 1000 == 0)
                             {
@@ -231,7 +236,7 @@ namespace SFCDashboard.Controllers.Api
                         await _context.SaveChangesAsync();
 
                         _logger.LogInformation("Adding {count} new PE records in batches", peRecords.Count);
-                        
+
                         // Process in batches to avoid memory issues with large datasets
                         const int batchSize = 1000;
                         for (int i = 0; i < peRecords.Count; i += batchSize)
@@ -239,7 +244,7 @@ namespace SFCDashboard.Controllers.Api
                             var batch = peRecords.Skip(i).Take(batchSize).ToList();
                             await _context.PERecords.AddRangeAsync(batch);
                             await _context.SaveChangesAsync();
-                            _logger.LogInformation("Processed batch {batchNumber}/{totalBatches}", 
+                            _logger.LogInformation("Processed batch {batchNumber}/{totalBatches}",
                                 (i / batchSize) + 1, (peRecords.Count + batchSize - 1) / batchSize);
                         }
 
@@ -258,8 +263,9 @@ namespace SFCDashboard.Controllers.Api
                 var templateCount = await _context.PETaskLists.CountAsync();
                 if (templateCount == 0)
                 {
-                    return Ok(new { 
-                        success = true, 
+                    return Ok(new
+                    {
+                        success = true,
                         message = "Records imported successfully, but PETaskList templates are missing. Please add task templates before syncing.",
                         recordCount = peRecords.Count,
                         syncCompleted = false
@@ -269,17 +275,18 @@ namespace SFCDashboard.Controllers.Api
                 try
                 {
                     _logger.LogInformation("PE record synchronization will be handled by the background service");
-                    
+
                     // Check counts after import
                     var peCount = await _context.PERecords.CountAsync();
                     var plannedEventCount = await _context.PlannedEvents.CountAsync();
                     var peTaskCount = await _context.PETasks.CountAsync();
-                    
-                    _logger.LogInformation("Import completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}", 
+
+                    _logger.LogInformation("Import completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}",
                         peCount, plannedEventCount, peTaskCount);
 
-                    return Ok(new { 
-                        success = true, 
+                    return Ok(new
+                    {
+                        success = true,
                         message = $"Successfully replaced all records with {peRecords.Count} new records from Excel. Background service will handle synchronization.",
                         recordCount = peRecords.Count,
                         plannedEventCount = plannedEventCount,
@@ -290,8 +297,9 @@ namespace SFCDashboard.Controllers.Api
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error during synchronization");
-                    return Ok(new { 
-                        success = true, 
+                    return Ok(new
+                    {
+                        success = true,
                         message = $"Records imported but sync failed: {ex.Message}",
                         recordCount = peRecords.Count,
                         syncCompleted = false,
@@ -302,9 +310,10 @@ namespace SFCDashboard.Controllers.Api
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in ImportPERecords API");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "An internal server error occurred. Please try again later." 
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An internal server error occurred. Please try again later."
                 });
             }
         }
@@ -324,9 +333,10 @@ namespace SFCDashboard.Controllers.Api
             {
                 if (peRecords == null || !peRecords.Any())
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "No PE records provided." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "No PE records provided."
                     });
                 }
 
@@ -334,9 +344,10 @@ namespace SFCDashboard.Controllers.Api
                 const int maxRecordCount = 100000; // 100k records limit
                 if (peRecords.Count > maxRecordCount)
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = $"Maximum {maxRecordCount} records allowed per import." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"Maximum {maxRecordCount} records allowed per import."
                     });
                 }
 
@@ -346,9 +357,10 @@ namespace SFCDashboard.Controllers.Api
                 var invalidRecords = peRecords.Where(r => string.IsNullOrWhiteSpace(r.PE_NUMBER)).ToList();
                 if (invalidRecords.Any())
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = $"Found {invalidRecords.Count} records with missing PE_NUMBER." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"Found {invalidRecords.Count} records with missing PE_NUMBER."
                     });
                 }
 
@@ -356,9 +368,10 @@ namespace SFCDashboard.Controllers.Api
                 var invalidLengthRecords = peRecords.Where(r => !string.IsNullOrWhiteSpace(r.PE_NUMBER) && r.PE_NUMBER.Length > 50).ToList();
                 if (invalidLengthRecords.Any())
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = $"Found {invalidLengthRecords.Count} records with PE_NUMBER longer than 50 characters." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"Found {invalidLengthRecords.Count} records with PE_NUMBER longer than 50 characters."
                     });
                 }
 
@@ -372,7 +385,7 @@ namespace SFCDashboard.Controllers.Api
                         await _context.SaveChangesAsync();
 
                         _logger.LogInformation("Adding {count} new PE records in batches", peRecords.Count);
-                        
+
                         // Process in batches to avoid memory issues with large datasets
                         const int batchSize = 1000;
                         for (int i = 0; i < peRecords.Count; i += batchSize)
@@ -380,7 +393,7 @@ namespace SFCDashboard.Controllers.Api
                             var batch = peRecords.Skip(i).Take(batchSize).ToList();
                             await _context.PERecords.AddRangeAsync(batch);
                             await _context.SaveChangesAsync();
-                            _logger.LogInformation("Processed batch {batchNumber}/{totalBatches}", 
+                            _logger.LogInformation("Processed batch {batchNumber}/{totalBatches}",
                                 (i / batchSize) + 1, (peRecords.Count + batchSize - 1) / batchSize);
                         }
 
@@ -399,8 +412,9 @@ namespace SFCDashboard.Controllers.Api
                 var templateCount = await _context.PETaskLists.CountAsync();
                 if (templateCount == 0)
                 {
-                    return Ok(new { 
-                        success = true, 
+                    return Ok(new
+                    {
+                        success = true,
                         message = "Records imported successfully, but PETaskList templates are missing. Please add task templates before syncing.",
                         recordCount = peRecords.Count,
                         syncCompleted = false
@@ -410,17 +424,18 @@ namespace SFCDashboard.Controllers.Api
                 try
                 {
                     _logger.LogInformation("PE record synchronization will be handled by the background service");
-                    
+
                     // Check counts after import
                     var peCount = await _context.PERecords.CountAsync();
                     var plannedEventCount = await _context.PlannedEvents.CountAsync();
                     var peTaskCount = await _context.PETasks.CountAsync();
-                    
-                    _logger.LogInformation("Import completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}", 
+
+                    _logger.LogInformation("Import completed. PERecords: {peCount}, PlannedEvents: {plannedEventCount}, PETasks: {peTaskCount}",
                         peCount, plannedEventCount, peTaskCount);
 
-                    return Ok(new { 
-                        success = true, 
+                    return Ok(new
+                    {
+                        success = true,
                         message = $"Successfully replaced all records with {peRecords.Count} new records. Background service will handle synchronization.",
                         recordCount = peRecords.Count,
                         plannedEventCount = plannedEventCount,
@@ -431,8 +446,9 @@ namespace SFCDashboard.Controllers.Api
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error during synchronization");
-                    return Ok(new { 
-                        success = true, 
+                    return Ok(new
+                    {
+                        success = true,
                         message = $"Records imported but sync failed: {ex.Message}",
                         recordCount = peRecords.Count,
                         syncCompleted = false,
@@ -443,9 +459,10 @@ namespace SFCDashboard.Controllers.Api
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in ImportPERecordsFromJson API");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "An internal server error occurred. Please try again later." 
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An internal server error occurred. Please try again later."
                 });
             }
         }
@@ -466,17 +483,19 @@ namespace SFCDashboard.Controllers.Api
                 // Validate pagination parameters
                 if (request.Page < 1)
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Page number must be greater than 0." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Page number must be greater than 0."
                     });
                 }
 
                 if (request.PageSize < 1 || request.PageSize > 10000)
                 {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Page size must be between 1 and 10000." 
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Page size must be between 1 and 10000."
                     });
                 }
 
@@ -488,26 +507,32 @@ namespace SFCDashboard.Controllers.Api
 
                 var totalPages = (int)Math.Ceiling((double)totalRecords / request.PageSize);
 
-                return Ok(new { 
-                    success = true, 
-                    data = records,
-                    pagination = new
+                return Ok(new
+                {
+                    success = true,
+                    data = new
                     {
-                        currentPage = request.Page,
-                        pageSize = request.PageSize,
-                        totalRecords = totalRecords,
-                        totalPages = totalPages,
-                        hasNextPage = request.Page < totalPages,
-                        hasPreviousPage = request.Page > 1
-                    }
+                        items = records,
+                        pagination = new
+                        {
+                            currentPage = request.Page,
+                            pageSize = request.PageSize,
+                            totalRecords = totalRecords,
+                            totalPages = totalPages,
+                            hasNextPage = request.Page < totalPages,
+                            hasPreviousPage = request.Page > 1
+                        }
+                    },
+                    message = $"Retrieved {records.Count} records successfully."
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving PE records");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "An error occurred while retrieving PE records." 
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while retrieving PE records."
                 });
             }
         }
@@ -531,17 +556,82 @@ namespace SFCDashboard.Controllers.Api
                     TaskTemplatesCount = await _context.PETaskLists.CountAsync()
                 };
 
-                return Ok(new { 
-                    Success = true, 
+                return Ok(new
+                {
+                    Success = true,
                     Data = stats
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving database statistics");
-                return StatusCode(500, new { 
-                    Success = false, 
-                    Message = "An error occurred while retrieving database statistics." 
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving database statistics."
+                });
+            }
+        }
+
+        /// <summary>
+        /// Get filtered PE Records for reporting
+        /// </summary>
+        /// <param name="province">Filter by province</param>
+        /// <param name="region">Filter by region</param>
+        /// <param name="rtom">Filter by RTOM</param>
+        /// <param name="contractorName">Filter by contractor name</param>
+        /// <param name="soNumber">Filter by SO number</param>
+        /// <param name="customer">Filter by customer</param>
+        /// <returns>Filtered list of PE Records</returns>
+        [HttpGet("filter")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetFilteredPERecords(
+            [FromQuery] string? province = null,
+            [FromQuery] string? region = null,
+            [FromQuery] string? rtom = null,
+            [FromQuery] string? contractorName = null,
+            [FromQuery] string? soNumber = null,
+            [FromQuery] string? customer = null)
+        {
+            try
+            {
+                var query = _context.PERecords.AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(province))
+                    query = query.Where(x => x.PROVINCE == province);
+
+                if (!string.IsNullOrWhiteSpace(region))
+                    query = query.Where(x => x.REGION == region);
+
+                if (!string.IsNullOrWhiteSpace(rtom))
+                    query = query.Where(x => x.RTOM == rtom);
+
+                if (!string.IsNullOrWhiteSpace(contractorName))
+                    query = query.Where(x => x.CONTRACTOR_NAME == contractorName);
+
+                if (!string.IsNullOrWhiteSpace(soNumber))
+                    query = query.Where(x => x.SO_NUMBER == soNumber);
+
+                if (!string.IsNullOrWhiteSpace(customer))
+                    query = query.Where(x => x.CUSTOMER == customer);
+
+                var filteredRecords = await query.ToListAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    data = filteredRecords,
+                    message = $"Retrieved {filteredRecords.Count} filtered records successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving filtered PE records");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while retrieving filtered PE records."
                 });
             }
         }
@@ -558,18 +648,20 @@ namespace SFCDashboard.Controllers.Api
             try
             {
                 _logger.LogInformation("PE record synchronization is now handled by the background service");
-                
-                return Ok(new { 
-                    Success = true, 
+
+                return Ok(new
+                {
+                    Success = true,
                     Message = "PE records are synchronized automatically by the background service. No manual sync needed."
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error syncing PE records");
-                return StatusCode(500, new { 
-                    Success = false, 
-                    Message = "An error occurred while syncing PE records." 
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while syncing PE records."
                 });
             }
         }
@@ -586,20 +678,20 @@ namespace SFCDashboard.Controllers.Api
             try
             {
                 var cell = row.Cell(columnIndex);
-                
+
                 // For strings, handle empty cells as empty strings
                 if (typeof(T) == typeof(string))
                 {
                     if (cell.IsEmpty())
                         return (T)(object)string.Empty;
-                    
+
                     return cell.GetValue<T>();
                 }
-                
+
                 // For other types, return default if cell is empty
                 if (cell.IsEmpty())
                     return default(T)!;
-                
+
                 return cell.GetValue<T>();
             }
             catch

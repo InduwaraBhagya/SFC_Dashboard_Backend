@@ -39,7 +39,7 @@ namespace SFCDashboard.ApiClients
                     return result ?? new ApiResponse { Success = false, Message = "Failed to deserialize response" };
                 }
 
-                _logger.LogError("Failed to import PE records. Status: {StatusCode}, Response: {Response}", 
+                _logger.LogError("Failed to import PE records. Status: {StatusCode}, Response: {Response}",
                     response.StatusCode, responseContent);
                 return new ApiResponse { Success = false, Message = $"API call failed with status {response.StatusCode}" };
             }
@@ -66,7 +66,7 @@ namespace SFCDashboard.ApiClients
                     return result ?? new ApiResponse { Success = false, Message = "Failed to deserialize response" };
                 }
 
-                _logger.LogError("Failed to import PE records from JSON. Status: {StatusCode}, Response: {Response}", 
+                _logger.LogError("Failed to import PE records from JSON. Status: {StatusCode}, Response: {Response}",
                     response.StatusCode, responseContent);
                 return new ApiResponse { Success = false, Message = $"API call failed with status {response.StatusCode}" };
             }
@@ -90,7 +90,7 @@ namespace SFCDashboard.ApiClients
                     return result ?? new ApiResponse<PaginatedResult<PERecord>> { Success = false, Message = "Failed to deserialize response" };
                 }
 
-                _logger.LogError("Failed to get PE records. Status: {StatusCode}, Response: {Response}", 
+                _logger.LogError("Failed to get PE records. Status: {StatusCode}, Response: {Response}",
                     response.StatusCode, responseContent);
                 return new ApiResponse<PaginatedResult<PERecord>> { Success = false, Message = $"API call failed with status {response.StatusCode}" };
             }
@@ -98,6 +98,54 @@ namespace SFCDashboard.ApiClients
             {
                 _logger.LogError(ex, "Error getting PE records");
                 return new ApiResponse<PaginatedResult<PERecord>> { Success = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<ApiResponse<List<PERecord>>> GetFilteredPERecordsAsync(string? province = null, string? region = null,
+            string? rtom = null, string? contractorName = null, string? soNumber = null, string? customer = null)
+        {
+            try
+            {
+                var queryParams = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(province))
+                    queryParams.Add($"province={Uri.EscapeDataString(province)}");
+
+                if (!string.IsNullOrWhiteSpace(region))
+                    queryParams.Add($"region={Uri.EscapeDataString(region)}");
+
+                if (!string.IsNullOrWhiteSpace(rtom))
+                    queryParams.Add($"rtom={Uri.EscapeDataString(rtom)}");
+
+                if (!string.IsNullOrWhiteSpace(contractorName))
+                    queryParams.Add($"contractorName={Uri.EscapeDataString(contractorName)}");
+
+                if (!string.IsNullOrWhiteSpace(soNumber))
+                    queryParams.Add($"soNumber={Uri.EscapeDataString(soNumber)}");
+
+                if (!string.IsNullOrWhiteSpace(customer))
+                    queryParams.Add($"customer={Uri.EscapeDataString(customer)}");
+
+                var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+                var url = $"api/PERecordsApi/filter{queryString}";
+
+                var response = await _httpClient.GetAsync(url);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<List<PERecord>>>(responseContent, _jsonOptions);
+                    return result ?? new ApiResponse<List<PERecord>> { Success = false, Message = "Failed to deserialize response" };
+                }
+
+                _logger.LogError("Failed to get filtered PE records. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return new ApiResponse<List<PERecord>> { Success = false, Message = $"API call failed with status {response.StatusCode}" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting filtered PE records");
+                return new ApiResponse<List<PERecord>> { Success = false, Message = ex.Message };
             }
         }
 
@@ -114,7 +162,7 @@ namespace SFCDashboard.ApiClients
                     return result ?? new ApiResponse<DatabaseStats> { Success = false, Message = "Failed to deserialize response" };
                 }
 
-                _logger.LogError("Failed to get database stats. Status: {StatusCode}, Response: {Response}", 
+                _logger.LogError("Failed to get database stats. Status: {StatusCode}, Response: {Response}",
                     response.StatusCode, responseContent);
                 return new ApiResponse<DatabaseStats> { Success = false, Message = $"API call failed with status {response.StatusCode}" };
             }
@@ -138,7 +186,7 @@ namespace SFCDashboard.ApiClients
                     return result ?? new ApiResponse { Success = false, Message = "Failed to deserialize response" };
                 }
 
-                _logger.LogError("Failed to sync PE records. Status: {StatusCode}, Response: {Response}", 
+                _logger.LogError("Failed to sync PE records. Status: {StatusCode}, Response: {Response}",
                     response.StatusCode, responseContent);
                 return new ApiResponse { Success = false, Message = $"API call failed with status {response.StatusCode}" };
             }

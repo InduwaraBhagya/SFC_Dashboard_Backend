@@ -36,6 +36,7 @@ namespace SFCDashboard.Api.Data
         public DbSet<SystemConfiguration> SystemConfigurations { get; set; }
 
         public DbSet<CustomerUserAssignment> CustomerUserAssignments { get; set; }
+        public DbSet<Notice> Notices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

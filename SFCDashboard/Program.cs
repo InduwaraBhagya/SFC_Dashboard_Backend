@@ -170,6 +170,13 @@ builder.Services.AddHttpClient<ISubTaskListsApiClient, SubTaskListsApiClient>(cl
 })
 .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
+builder.Services.AddHttpClient<INoticesApiClient, NoticesApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(5);
+})
+.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
+
 // Load Azure AD Configuration
 var azureAdConfig = builder.Configuration.GetSection("AzureAd");
 var isDevelopment = builder.Environment.IsDevelopment();

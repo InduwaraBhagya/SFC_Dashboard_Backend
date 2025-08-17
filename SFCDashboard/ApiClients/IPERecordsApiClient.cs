@@ -7,6 +7,8 @@ namespace SFCDashboard.ApiClients
         Task<ApiResponse> ImportPERecordsAsync(IFormFile excelFile);
         Task<ApiResponse> ImportPERecordsFromJsonAsync(List<PERecord> peRecords);
         Task<ApiResponse<PaginatedResult<PERecord>>> GetPERecordsAsync(int page = 1, int pageSize = 1000);
+        Task<ApiResponse<List<PERecord>>> GetFilteredPERecordsAsync(string? province = null, string? region = null,
+            string? rtom = null, string? contractorName = null, string? soNumber = null, string? customer = null);
         Task<ApiResponse<DatabaseStats>> GetDatabaseStatsAsync();
         Task<ApiResponse> SyncPERecordsAsync();
     }
