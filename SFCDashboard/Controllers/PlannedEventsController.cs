@@ -2111,7 +2111,7 @@ namespace SFCDashboard.Controllers
 
         // GET: PlannedEvents/TaskQueue
         [HttpGet]
-        public async Task<IActionResult> TaskQueue(int? workgroupId, int? year = null, int take = 20)
+        public async Task<IActionResult> TaskQueue(int? workgroupId, int? year = null, int take = 1000)
         {
             var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
             var (_, _, canViewAll) = await GetCurrentUserWorkGroupsAsync();

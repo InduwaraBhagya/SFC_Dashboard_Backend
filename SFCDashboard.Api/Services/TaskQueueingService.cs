@@ -52,8 +52,13 @@ namespace SFCDashboard.Api.Services
                     .Include(tqs => tqs.Task)
                         .ThenInclude(t => t.PlannedEvent)
                     .Include(tqs => tqs.WorkGroup)
-                    .AsNoTracking()
-                    .Where(tqs => tqs.Year == year); // Filter by year
+                    .AsNoTracking();
+
+                // Apply year filter if specified
+                if (year.HasValue)
+                {
+                    query = query.Where(tqs => tqs.Year == year.Value);
+                }
 
                 // Apply workgroup filter if specified
                 if (workgroupId.HasValue)
@@ -64,11 +69,25 @@ namespace SFCDashboard.Api.Services
                 // Get top results ordered by priority score (descending)
                 var snapshots = await query
                     .OrderByDescending(tqs => tqs.PriorityScore)
-                    .Take(take)
                     .ToListAsync();
 
+                // If year is null (getting all years), we need to deduplicate by TaskId
+                if (!year.HasValue)
+                {
+                    snapshots = snapshots
+                        .GroupBy(tqs => tqs.TaskId)
+                        .Select(group => group.OrderByDescending(tqs => tqs.PriorityScore).First())
+                        .OrderByDescending(tqs => tqs.PriorityScore)
+                        .Take(take)
+                        .ToList();
+                }
+                else
+                {
+                    snapshots = snapshots.Take(take).ToList();
+                }
+
                 // Convert snapshots to TaskQueueItems
-                result = snapshots.Select(snapshot => new TaskQueueItem
+                var taskQueueItems = snapshots.Select(snapshot => new TaskQueueItem
                 {
                     Task = snapshot.Task,
                     PriorityScore = snapshot.PriorityScore,
@@ -77,6 +96,23 @@ namespace SFCDashboard.Api.Services
                     OLAInDays = snapshot.OLAInDays,
                     OLAPercentRemaining = snapshot.OLAPercentRemaining
                 }).ToList();
+
+                // Apply "current task only" filtering - one task per PlannedEvent
+                var currentTasksOnly = taskQueueItems
+                    .Where(tqi => tqi.Task.PlannedEvent != null)
+                    .GroupBy(tqi => tqi.Task.PlannedEvent!.Id)
+                    .Select(group => group.OrderByDescending(tqi => tqi.PriorityScore).First())
+                    .ToList();
+
+                // Add tasks without PlannedEvent (standalone tasks)
+                var standaloneTasks = taskQueueItems
+                    .Where(tqi => tqi.Task.PlannedEvent == null)
+                    .ToList();
+
+                currentTasksOnly.AddRange(standaloneTasks);
+
+                // Sort by priority score and return final result
+                result = currentTasksOnly.OrderByDescending(tqi => tqi.PriorityScore).ToList();
 
                 stopwatch.Stop();
                 _logger.LogInformation("Retrieved {count} task queue items from snapshots in {elapsed}ms for workgroup {workgroupId}, year {year}", 
@@ -90,145 +126,6 @@ namespace SFCDashboard.Api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting prioritized tasks from snapshots");
-                
-                // Fallback to original computation method if snapshots fail
-                _logger.LogWarning("Falling back to original task queue computation method");
-                return await GetPrioritizedTasksLegacyAsync(workgroupId, year, take);
-            }
-        }
-
-        // Fallback method using original computation (renamed from original GetPrioritizedTasksAsync)
-        private async Task<List<TaskQueueItem>> GetPrioritizedTasksLegacyAsync(int? workgroupId = null, int? year = null, int take = 20)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            var today = DateTime.Today;
-            var result = new List<TaskQueueItem>();
-            
-            try
-            {
-                _logger.LogDebug("Using legacy task queue computation for workgroup {workgroupId}, year {year}", workgroupId, year);
-                
-                // Get all active tasks (not completed, not on hold)
-                var query = _context.PETasks
-                    .Include(t => t.PlannedEvent)
-                    .AsNoTracking() // Don't track entities since we're just reading
-                    .Where(t => t.TaskStatus != "COMPLETED" && 
-                               (t.PlannedEvent == null || t.PlannedEvent.IsHold == false));
-        
-                // Filter PEs directly in the database query
-                query = query.Where(t => t.PlannedEvent == null || 
-                                       (t.PlannedEvent.PeNumber != null && 
-                                        t.PlannedEvent.PeNumber.StartsWith("PE") &&
-                                        t.PlannedEvent.PeNumber.Length >= 6 &&
-                                        EF.Functions.Like(t.PlannedEvent.PeNumber, "PE2[0-9][2-9][0-9]%")));
-        
-                // Apply workgroup filter if specified
-                if (workgroupId.HasValue)
-                {
-                    var workgroup = await GetWorkgroupAsync(workgroupId.Value);
-                    if (workgroup != null)
-                    {
-                        query = query.Where(t => t.TaskWorkGroup != null && 
-                                               t.TaskWorkGroup.Contains(workgroup.Name));
-                    }
-                }
-                
-                // Apply year filter if specified
-                if (year.HasValue)
-                {
-                    // Filter based on the year in the PE number (assuming format PE2023xxx)
-                    query = query.Where(t => t.PlannedEvent != null && 
-                                         t.PlannedEvent.PeNumber != null &&
-                                         t.PlannedEvent.PeNumber.Length >= 6 &&
-                                         t.PlannedEvent.PeNumber.Substring(2, 4) == year.Value.ToString());
-                }
-
-                // Use projection to select only needed data
-                var tasksData = await query
-                    .Select(t => new {
-                        Task = t,
-                        StartDate = t.ActualTaskCreatedDate ?? t.TaskCreatedDate,
-                        EffectiveDeadline = (DateTime?)(t.EstimatedTime ?? t.PlannedEvent!.ServiceRequiredDate ?? t.TaskCompleteDate),
-                        TaskOLA = t.OLA
-                    })
-                    .ToListAsync();
-
-                // Process tasks in parallel for better performance with large datasets
-                var taskItems = tasksData.AsParallel().Select(data => {
-                    var task = data.Task;
-                    
-                    // Calculate days until due and OLA metrics
-                    int daysUntilDue = 0;
-                    if (data.EffectiveDeadline.HasValue)
-                    {
-                        daysUntilDue = (data.EffectiveDeadline.Value.Date - today).Days;
-                    }
-
-                    // Parse OLA in days
-                    int olaInDays = 1; // Default
-                    if (!string.IsNullOrEmpty(data.TaskOLA) && int.TryParse(data.TaskOLA, out int parsedOla))
-                    {
-                        olaInDays = parsedOla > 0 ? parsedOla : 1;
-                    }
-
-                    // Calculate OLA percentage remaining
-                    double olaPercentRemaining = 100.0;
-                    if (data.EffectiveDeadline.HasValue)
-                    {
-                        var totalOlaDuration = (data.EffectiveDeadline.Value.Date - data.StartDate.Date).TotalDays;
-                        var daysElapsed = (today - data.StartDate.Date).TotalDays;
-                        
-                        if (totalOlaDuration > 0)
-                        {
-                            olaPercentRemaining = Math.Max(0, 100 - ((daysElapsed / totalOlaDuration) * 100));
-                        }
-                    }
-
-                    // Calculate priority score using helper method
-                    double priorityScore = CalculateTaskPriority(task, today, daysUntilDue, olaInDays, olaPercentRemaining);
-                    
-                    return new TaskQueueItem
-                    {
-                        Task = task,
-                        PriorityScore = priorityScore,
-                        DaysUntilDue = daysUntilDue,
-                        EffectiveDeadline = data.EffectiveDeadline,
-                        OLAInDays = olaInDays,
-                        OLAPercentRemaining = olaPercentRemaining
-                    };
-                }).ToList();
-
-                // Group by PlannedEvent and return only the current task (highest priority) for each PE
-                var currentTasksOnly = taskItems
-                    .Where(t => t.Task.PlannedEvent != null)
-                    .GroupBy(t => t.Task.PlannedEvent!.Id)
-                    .Select(group => group.OrderByDescending(t => t.PriorityScore).First())
-                    .ToList();
-
-                // Add tasks without PlannedEvent (standalone tasks)
-                var standaloneTasks = taskItems
-                    .Where(t => t.Task.PlannedEvent == null)
-                    .ToList();
-
-                currentTasksOnly.AddRange(standaloneTasks);
-
-                // Sort the final list by priority score (descending) and take the requested number
-                result = currentTasksOnly
-                    .OrderByDescending(t => t.PriorityScore)
-                    .Take(take)
-                    .ToList();
-
-                stopwatch.Stop();
-                _logger.LogInformation("Legacy task prioritization completed in {ElapsedMs}ms for {Count} tasks, returning {TakeCount}", 
-                    stopwatch.ElapsedMilliseconds, taskItems.Count, result.Count);
-                
-                return result;
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Error in legacy task priority calculation after {ElapsedMs}ms", 
-                    stopwatch.ElapsedMilliseconds);
                 return new List<TaskQueueItem>();
             }
         }
@@ -557,28 +454,12 @@ namespace SFCDashboard.Api.Services
                     .Where(tqs => tqs.WorkGroupId == workgroupId && tqs.Year == year);
                 _context.TaskQueueSnapshots.RemoveRange(existingSnapshots);
 
-                // Generate new task queue data using legacy method to avoid circular dependency
-                var taskQueueItems = await GetPrioritizedTasksLegacyAsync(workgroupId, year, 1000); // Get more items for snapshot
-
-                // Create new snapshots
-                var snapshots = taskQueueItems.Select(item => new TaskQueueSnapshot
-                {
-                    WorkGroupId = workgroupId,
-                    TaskId = item.Task.Id,
-                    PriorityScore = item.PriorityScore,
-                    DaysUntilDue = item.DaysUntilDue,
-                    EffectiveDeadline = item.EffectiveDeadline,
-                    OLAInDays = item.OLAInDays,
-                    OLAPercentRemaining = item.OLAPercentRemaining,
-                    CreatedAt = DateTime.Now,
-                    Year = year
-                }).ToList();
-
-                _context.TaskQueueSnapshots.AddRange(snapshots);
+                // Note: Snapshot refresh is now handled by the background service
+                // This method only clears existing snapshots to trigger fresh generation
                 await _context.SaveChangesAsync();
 
-                _logger.LogDebug("Created {count} task queue snapshots for workgroup {workgroupId}, year {year}", 
-                    snapshots.Count, workgroupId, year?.ToString() ?? "all");
+                _logger.LogDebug("Cleared existing task queue snapshots for workgroup {workgroupId}, year {year}", 
+                    workgroupId, year?.ToString() ?? "all");
             }
             catch (Exception ex)
             {

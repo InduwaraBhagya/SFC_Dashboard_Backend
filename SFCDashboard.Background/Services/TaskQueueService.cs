@@ -96,7 +96,7 @@ namespace SFCDashboard.Background.Services
 
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ✅ Found {workgroups.Count} workgroups and {availableYears.Count} years to process");
 
-                int totalOperations = workgroups.Count * (availableYears.Count + 1); // +1 for null year
+                int totalOperations = workgroups.Count * availableYears.Count; // Only specific years, no null year
                 int currentOperation = 0;
 
                 foreach (var workgroup in workgroups)
@@ -105,15 +105,11 @@ namespace SFCDashboard.Background.Services
                     foreach (var year in availableYears)
                     {
                         currentOperation++;
+                        var progress = (double)currentOperation / totalOperations * 100;
+                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ⚙️  Processing Task Queue : ({progress:F1}% complete)");
+                        
                         await RefreshTaskQueueForWorkgroupAndYearAsync(context, workgroup.Id, year);
                     }
-                    
-                    // Also refresh for null year (all years)
-                    currentOperation++;
-                    var finalProgress = (double)currentOperation / totalOperations * 100;
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ⚙️  Processing Task Queue : ({finalProgress:F1}% complete)");
-                    
-                    await RefreshTaskQueueForWorkgroupAndYearAsync(context, workgroup.Id, null);
                 }
 
                 stopwatch.Stop();
