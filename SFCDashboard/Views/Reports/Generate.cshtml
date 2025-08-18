@@ -135,8 +135,8 @@
                                             <th>Customer</th>
                                             <th>PE Number</th>
                                             <th>PE Title</th>
-                                            <th>PE Activity</th>
-                                            <th>PE Nature</th>
+                                            <th>Task Name</th>
+                                            <th>Task Workgroup</th>
                                         </tr>
                                     </thead>
                                     <tbody id="recordsTableBody">
@@ -152,8 +152,8 @@
                                                 <td>@(record.CUSTOMER ?? "")</td>
                                                 <td>@(record.PE_NUMBER ?? "")</td>
                                                 <td>@(record.PE_TITLE ?? "")</td>
-                                                <td>@(record.PE_ACTIVITY ?? "")</td>
-                                                <td>@(record.PE_NATURE ?? "")</td>
+                                                <td>@(record.TASK_NAME ?? "")</td>
+                                                <td>@(record.TASK_WG ?? "")</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -212,8 +212,8 @@
                     customer: cells[6].textContent.trim(),
                     pe_number: cells[7].textContent.trim(),
                     pe_title: cells[8].textContent.trim(),
-                    pe_activity: cells[9].textContent.trim(),
-                    pe_nature: cells[10].textContent.trim(),
+                    task_name: cells[9].textContent.trim(),
+                    task_wg: cells[10].textContent.trim(),
                     element: row // Keep reference to DOM element for fast manipulation
                 };
             });
