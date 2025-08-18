@@ -46,10 +46,6 @@ body {
     flex-grow: 1; 
 }
 
-footer {
-    margin-top: auto; 
-}
-
 /* Increase navbar height */
 .navbar {
     padding-top: 1rem;

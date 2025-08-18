@@ -91,7 +91,7 @@ namespace SFCDashboard.ApiClients
             }
         }
 
-        public async Task<ApiResponse<Notice>> CreateNoticeAsync(string description, int createdBy, string createdUserName, bool isPinned = false)
+        public async Task<ApiResponse<Notice>> CreateNoticeAsync(string description, int createdBy, string createdUserName, bool isPinned = false, DateTime? expireDate = null)
         {
             try
             {
@@ -100,7 +100,8 @@ namespace SFCDashboard.ApiClients
                     Description = description,
                     CreatedBy = createdBy,
                     CreatedUserName = createdUserName,
-                    IsPinned = isPinned
+                    IsPinned = isPinned,
+                    ExpireDate = expireDate
                 };
 
                 var json = JsonSerializer.Serialize(request, _jsonOptions);

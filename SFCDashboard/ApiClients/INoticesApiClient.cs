@@ -6,7 +6,7 @@ namespace SFCDashboard.ApiClients
     {
         Task<ApiResponse<List<Notice>>> GetNoticesAsync();
         Task<ApiResponse<Notice>> GetNoticeAsync(int id);
-        Task<ApiResponse<Notice>> CreateNoticeAsync(string description, int createdBy, string createdUserName, bool isPinned = false);
+        Task<ApiResponse<Notice>> CreateNoticeAsync(string description, int createdBy, string createdUserName, bool isPinned = false, DateTime? expireDate = null);
         Task<ApiResponse<Notice>> UpdateNoticeAsync(int id, string description, int updatedBy, string updatedUserName);
         Task<ApiResponse<Notice>> TogglePinNoticeAsync(int id, bool isPinned, int updatedBy, string updatedUserName);
         Task<ApiResponse> DeleteNoticeAsync(int id, int updatedBy, string updatedUserName);
@@ -18,6 +18,7 @@ namespace SFCDashboard.ApiClients
         public int CreatedBy { get; set; }
         public string CreatedUserName { get; set; } = string.Empty;
         public bool IsPinned { get; set; } = false;
+        public DateTime? ExpireDate { get; set; }
     }
 
     public class NoticeUpdateRequest

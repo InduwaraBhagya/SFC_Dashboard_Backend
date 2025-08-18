@@ -88,7 +88,7 @@
     </div>
 </div>
 
-<!-- Dashboard Cards: 5 boxes in horizontal layout -->
+<!-- Dashboard Cards: 5 tiles with 4 primary operation tiles and 1 secondary tool -->
 <div class="container-fluid p-0 position-relative mb-4" style="z-index: 1;">
     <div class="row">
         <div class="col-12">
@@ -97,7 +97,7 @@
                 <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
                     <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card urgent-card">
                         <div class="card-content">
-                            <h5>Urgent</h5>
+                            <h5>Urgent Records</h5>
                             <span class="badge">@ViewData["UrgentCount"]</span>
                         </div>
                         <div class="img-container">
@@ -109,7 +109,7 @@
                 <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
                     <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card inprogress-card">
                         <div class="card-content">
-                            <h5>In Progress</h5>
+                            <h5>In Progress Records</h5>
                             <span class="badge">@ViewData["InProgressCount"]</span>
                         </div>
                         <div class="img-container">
@@ -121,7 +121,7 @@
                 <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
                     <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card ola-card">
                         <div class="card-content">
-                            <h5>OLA Violated</h5>
+                            <h5>OLA Violated Records</h5>
                             <span class="badge">@ViewData["OLAViolateCount"]</span>
                         </div>
                         <div class="img-container">
@@ -141,15 +141,17 @@
                         </div>
                     </a>
                 </div>
-                <!-- Report Generator Card -->
-                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
-                    <a href="@Url.Action("Generate", "Reports")" class="dashboard-card report-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 1px solid #5a67d8;">
+                <!-- Report Generator Card - Secondary Tool -->
+                <div class="dashboard-card-container secondary-tool" style="flex: 0 0 140px; min-width: 140px;">
+                    <a href="@Url.Action("Generate", "Reports")" class="dashboard-card report-card secondary-card">
                         <div class="card-content">
-                            <h5>Report Generator</h5>
-                            <span class="badge" style="background-color: rgba(255,255,255,0.2);">Generate</span>
+                            <h6>Reports</h6>
+                            <span class="badge secondary-badge">
+                                <i class="bi bi-file-earmark-bar-graph"></i>
+                            </span>
                         </div>
-                        <div class="img-container">
-                            <i class="bi bi-file-earmark-bar-graph" style="font-size: 2.5rem; color: white;"></i>
+                        <div class="img-container secondary-icon">
+                            <i class="bi bi-tools" style="font-size: 1.8rem; color: #ffffff;"></i>
                         </div>
                     </a>
                 </div>
@@ -244,318 +246,9 @@
     </div>
 }
 
-<!-- Task Queue and Message Inbox Section -->
+<!-- Message Inbox and Notice Board Section -->
 <div class="row mt-3">
-    <!-- Left Column: Task Queue (40% width) -->
-    <div class="col-lg-4">
-        @if (shouldShowNextTask)
-        {
-            <!-- Next Task Card -->
-            <div class="card border-info shadow-sm mb-3" style="height: 400px;">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
-                    <h6 class="mb-0">
-                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Next Task
-                    </h6>
-                    <div class="d-flex align-items-center gap-1">
-                        <button id="loadTaskBtn" class="btn btn-xs btn-success" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-play-circle me-1"></i> Load
-                        </button>
-                        <button id="refreshTaskBtn" class="btn btn-xs btn-warning" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                        <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-xs btn-light" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-list-task me-1"></i> All
-                        </a>
-                    </div>
-                </div>
-                
-                <div id="nextTaskContent">
-                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
-                        <div id="taskContent">
-                            <!-- Default state: Show load task button -->
-                            <div id="noTaskLoaded" class="text-center py-1">
-                                <i class="bi bi-hourglass-split text-muted" style="font-size: 1.2rem;"></i>
-                                <p class="mt-1 mb-1 text-muted small">Click "Load Task"</p>
-                                <button id="loadTaskMainBtn" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-play-circle me-1"></i> Load Task
-                                </button>
-                            </div>
-                            
-                            <!-- Loading state -->
-                            <div id="taskLoading" class="text-center py-1" style="display: none;">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-1 mb-0 small">Loading...</p>
-                            </div>
-                            
-                            <!-- Task loaded state (will be populated via JavaScript) -->
-                            <div id="taskLoaded" style="display: none;">
-                                <!-- Content will be populated dynamically -->
-                            </div>
-                            
-                            <!-- No tasks available state -->
-                            <div id="noTaskAvailable" class="text-center py-1" style="display: none;">
-                                <i class="bi bi-check-circle text-success" style="font-size: 1.2rem;"></i>
-                                <p class="mt-1 mb-0 small">No pending tasks!</p>
-                                <small class="text-muted">Last updated: <span id="lastUpdateTime"></span></small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-        else
-        {
-            <!-- Workgroup Filter for ViewAll Users -->
-            @if (ViewData["CanViewAll"] as bool? == true)
-            {
-                <div class="card border-primary shadow-sm" style="height: 300px;">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
-                        <h6 class="mb-0">
-                            <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
-                        </h6>
-                        <button class="btn btn-xs btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="collapse" id="filterContent">
-                        <div class="card-body py-1 px-2">
-                            <form method="get" asp-action="Index">
-                                <div class="mb-1">
-                                    <label class="form-label mb-1 small" for="workgroupFilter">
-                                        <i class="bi bi-people-fill"></i>
-                                        Select a Workgroup
-                                    </label>
-                                    <div class="filter-row">
-                                        <div class="filter-select-container mb-1">
-                                            <select class="form-select form-select-sm" name="workgroupId" id="workgroupFilter">
-                                                @if (ViewData["CanViewAll"] as bool? == true)
-                                                {
-                                                    <option value="">All Workgroups</option>
-                                                }
-                                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                                {
-                                                    foreach (var workgroup in workgroups)
-                                                    {
-                                                        bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
-                                                                        ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
-                                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                                    }
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="filter-actions d-flex gap-1">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-funnel"></i> Apply
-                                            </button>
-                                            @if (ViewData["SelectedWorkgroupId"] != null)
-                                            {
-                                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                                                    <i class="bi bi-x-circle"></i> Clear
-                                                </a>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            }
-        }
-    </div>
-
-    <!-- Middle Column: BOQ Status (33% width) -->
-    <div class="col-lg-4 mb-3">
-        <div class="card border-success shadow-sm" style="height: 300px;">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-1">
-                <h6 class="mb-0">
-                    <i class="bi bi-clipboard-data me-1"></i>BOQ Status
-                </h6>
-                <button class="btn btn-xs btn-outline-light" id="refreshBoqBtn" title="Refresh BOQ Status" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </button>
-            </div>
-            
-            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 260px;">
-                <div id="boqStatusContent">
-                    @{
-                        // BOQ Status data from ViewBag
-                        var boqData = ViewBag.BOQStatus as dynamic;
-                        var totalBOQs = ViewBag.TotalBOQs as int? ?? 0;
-                        var completedBOQs = ViewBag.CompletedBOQs as int? ?? 0;
-                        var pendingBOQs = ViewBag.PendingBOQs as int? ?? 0;
-                        var inProgressBOQs = ViewBag.InProgressBOQs as int? ?? 0;
-                    }
-                    
-                    <!-- BOQ Summary Cards -->
-                    <div class="row g-1 mb-2">
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-primary text-white rounded">
-                                <div class="fw-bold h6 mb-0">@totalBOQs</div>
-                                <small style="font-size: 0.7rem;">Total</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-success text-white rounded">
-                                <div class="fw-bold h6 mb-0">@completedBOQs</div>
-                                <small style="font-size: 0.7rem;">Done</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row g-1 mb-2">
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-warning text-dark rounded">
-                                <div class="fw-bold h6 mb-0">@inProgressBOQs</div>
-                                <small style="font-size: 0.7rem;">Progress</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-danger text-white rounded">
-                                <div class="fw-bold h6 mb-0">@pendingBOQs</div>
-                                <small style="font-size: 0.7rem;">Pending</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Progress Bar -->
-                    @if (totalBOQs > 0)
-                    {
-                        var completionPercentage = Math.Round((double)completedBOQs / totalBOQs * 100, 1);
-                        <div class="mb-2">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <small class="text-muted" style="font-size: 0.7rem;">Progress</small>
-                                <small class="fw-bold" style="font-size: 0.7rem;">@completionPercentage%</small>
-                            </div>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar bg-success" role="progressbar" 
-                                     style="width: @completionPercentage%" 
-                                     aria-valuenow="@completionPercentage" aria-valuemin="0" aria-valuemax="100">
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    
-                    <!-- Quick Actions -->
-                    <div class="d-grid gap-1">
-                        <a href="@Url.Action("BOQList", "BOQ")" class="btn btn-outline-success btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
-                            <i class="bi bi-list-ul me-1"></i> View All
-                        </a>
-                        <a href="@Url.Action("CreateBOQ", "BOQ")" class="btn btn-outline-primary btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
-                            <i class="bi bi-plus-circle me-1"></i> Create New
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Notice Board Section -->
-        <div class="card border-warning shadow-sm mt-3" style="height: 250px;">
-            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-1">
-                <h6 class="mb-0">
-                    <i class="bi bi-megaphone me-1"></i>Notice Board
-                </h6>
-                <button class="btn btn-xs btn-outline-dark" id="addNoticeBtn" title="Add Notice" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                    <i class="bi bi-plus-circle"></i>
-                </button>
-            </div>
-            
-            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
-                <div id="noticeContent">
-                    @{
-                        // Notice data from ViewBag (you can populate this from controller)
-                        var notices = ViewBag.Notices as List<dynamic> ?? new List<dynamic>();
-                    }
-                    
-                    @if (notices.Any())
-                    {
-                        foreach (var notice in notices)
-                        {
-                            <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #ffc107 !important;">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">@notice.Title</h6>
-                                    <small class="text-muted" style="font-size: 0.65rem;">@notice.Date</small>
-                                </div>
-                                <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">@notice.Content</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted" style="font-size: 0.65rem;">By: @notice.CreatedBy</small>
-                                    @if (notice.Priority == "High")
-                                    {
-                                        <span class="badge bg-danger" style="font-size: 0.6rem;">High Priority</span>
-                                    }
-                                    else if (notice.Priority == "Medium")
-                                    {
-                                        <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Medium</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-info" style="font-size: 0.6rem;">Normal</span>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <!-- Default notices when no data from backend -->
-                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #ffc107 !important;">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">System Maintenance</h6>
-                                <small class="text-muted" style="font-size: 0.65rem;">Aug 15</small>
-                            </div>
-                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
-                                Scheduled maintenance on Aug 20th from 2:00 AM to 4:00 AM. System will be temporarily unavailable.
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" style="font-size: 0.65rem;">By: System Admin</small>
-                                <span class="badge bg-danger" style="font-size: 0.6rem;">High Priority</span>
-                            </div>
-                        </div>
-                        
-                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #17a2b8 !important;">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">New Feature Release</h6>
-                                <small class="text-muted" style="font-size: 0.65rem;">Aug 12</small>
-                            </div>
-                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
-                                New report generation feature is now available. Check the Reports section in the navigation.
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" style="font-size: 0.65rem;">By: Development Team</small>
-                                <span class="badge bg-info" style="font-size: 0.6rem;">Normal</span>
-                            </div>
-                        </div>
-                        
-                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #28a745 !important;">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">Training Session</h6>
-                                <small class="text-muted" style="font-size: 0.65rem;">Aug 10</small>
-                            </div>
-                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
-                                Join us for a training session on new dashboard features. Date: Aug 25th, 10:00 AM.
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" style="font-size: 0.65rem;">By: HR Department</small>
-                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Medium</span>
-                            </div>
-                        </div>
-                    }
-                    
-                    <!-- Quick Actions -->
-                    <div class="d-grid gap-1 mt-2">
-                        <a href="@Url.Action("NoticeBoard", "Dashboard")" class="btn btn-outline-warning btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
-                            <i class="bi bi-eye me-1"></i> View All Notices
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Message Inbox (33% width) -->
+    <!-- Left Column: Message Inbox (40% width) -->
     <div class="col-lg-4">
         <div class="card border-info shadow-sm" style="height: 400px;">
             <div class="card-header bg-info text-white py-1">
@@ -648,96 +341,382 @@
                                                         <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
                                                     </div>
                                                     <div class="message-subject">
-                                                        <span class="badge bg-warning text-dark me-1">Task</span>
-                                                        @task.Task Needs Priority
+                                                        <span class="badge bg-danger me-1">Action Required</span>
+                                                        Approve Urgent Task
                                                     </div>
                                                     <div class="message-preview">
-                                                        @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
+                                                        Task: @task.Task - @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
                                                     </div>
                                                 </div>
                                             </div>
                                         }
                                     }
                                 }
-                                    
                                     <!-- Issue Messages -->
                     @if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssuesList)
-                        {
-                            foreach (var issue in inboxIssuesList)
-                        {
-                        
-                                        
-                                            <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
-                                                data-message-id="issue-@issue.CreatedAt.Ticks"
-                                                data-issue-id="@issue.Id"
-                                                data-pe-id="@issue.PlannedEventId"
-                                                data-sender="@issue.SenderName"
-                                                data-sender-id="@issue.SenderId"
-                                                data-issue-text="@issue.IssueText"
-                                                data-attachment="@issue.AttachmentPath"
-                                                data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
-                                                data-is-read="@issue.IsRead.ToString().ToLower()"
-                                                data-is-reply="@issue.IsReply.ToString().ToLower()"
-                                                data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
-                                                data-original-issue-id="@issue.OriginalIssueId"
-                                                @if (issue.IsResolutionRequest)
-                                                {
-                                                    <text>
-                                                    data-resolution-details="@(GetResolutionDetails(issue.OriginalIssueId ?? issue.Id))"
-                                                    data-resolution-id="@(GetResolutionId(issue.OriginalIssueId ?? issue.Id))"
-                                                    onclick="showResolutionConfirm(this)"
-                                                    </text>
-                                                }
-                                                else
-                                                {
-                                                    <text>onclick="showIssueDetails(this)"</text>
-                                                }>
-                                                <div class="message-indicator"></div>
-                                                <div class="message-content">
-                                                    <div class="d-flex justify-content-between align-items-start">
-                                                        <h6 class="message-sender">
-                                                            @if (issue.IsResolutionRequest)
-                                                            {
-                                                                <span class="badge bg-success me-1">Resolution</span>
-                                                            }
-                                                            From @issue.SenderName 
-                                                        </h6>
-                                                        <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
-                                                    </div>
-                                                    <div class="message-subject">
+                                {
+                                    foreach (var issue in inboxIssuesList)
+                                    {
+                                        <div class="message-item @(issue.IsRead ? "read" : "unread") @(issue.IsResolutionRequest ? "resolution" : "")" 
+                                             data-message-id="issue-@issue.Id" data-pe-id="@issue.PlannedEventId">
+                                            <div class="message-indicator"></div>
+                                            <div class="message-content">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <h6 class="message-sender">
                                                         @if (issue.IsResolutionRequest)
                                                         {
-                                                            <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                                            <span class="badge bg-success me-1">Resolution</span>
                                                         }
-                                                        else if (issue.IsReply)
-                                                        {
-                                                            <span class="badge bg-info text-dark me-1">Reply</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-danger text-white me-1">Issue</span>
-                                                        }
-                                                        @issue.IssueText
-                                                    </div>
-                                                    <div class="message-preview">
-                                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
-                                                        {
-                                                            <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span>No attachment</span>
-                                                        }
-                                                    </div>
+                                                        From @issue.SenderName 
+                                                    </h6>
+                                                    <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                                </div>
+                                                <div class="message-subject">
+                                                    @if (issue.IsResolutionRequest)
+                                                    {
+                                                        <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                                    }
+                                                    else if (issue.IsReply)
+                                                    {
+                                                        <span class="badge bg-info text-dark me-1">Reply</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger text-white me-1">Issue</span>
+                                                    }
+                                                    @issue.IssueText
+                                                </div>
+                                                <div class="message-preview">
+                                                    @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                                    {
+                                                        <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>No attachment</span>
+                                                    }
                                                 </div>
                                             </div>
-                                        }
-                                    }           
+                                        </div>
+                                    }
+                                }           
                             </div>
                         </div>
                     </div>
                 </div>
-       
+
+    <!-- Middle Column: BOQ Status (33% width) -->
+    <div class="col-lg-4 mb-3">
+        <div class="card border-success shadow-sm" style="height: 300px;">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-1">
+                <h6 class="mb-0">
+                    <i class="bi bi-clipboard-data me-1"></i>BOQ Status
+                </h6>
+                <button class="btn btn-xs btn-outline-light" id="refreshBoqBtn" title="Refresh BOQ Status" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 260px;">
+                <div id="boqStatusContent">
+                    @{
+                        // BOQ Status data from ViewBag
+                        var boqData = ViewBag.BOQStatus as dynamic;
+                        var totalBOQs = ViewBag.TotalBOQs as int? ?? 0;
+                        var completedBOQs = ViewBag.CompletedBOQs as int? ?? 0;
+                        var pendingBOQs = ViewBag.PendingBOQs as int? ?? 0;
+                        var inProgressBOQs = ViewBag.InProgressBOQs as int? ?? 0;
+                    }
+                    
+                    <!-- BOQ Summary Cards -->
+                    <div class="row g-1 mb-2">
+                        <div class="col-6">
+                            <div class="small-stat-card text-center p-1 bg-primary text-white rounded">
+                                <div class="fw-bold h6 mb-0">@totalBOQs</div>
+                                <small style="font-size: 0.7rem;">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small-stat-card text-center p-1 bg-success text-white rounded">
+                                <div class="fw-bold h6 mb-0">@completedBOQs</div>
+                                <small style="font-size: 0.7rem;">Done</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-1 mb-2">
+                        <div class="col-6">
+                            <div class="small-stat-card text-center p-1 bg-warning text-dark rounded">
+                                <div class="fw-bold h6 mb-0">@inProgressBOQs</div>
+                                <small style="font-size: 0.7rem;">Progress</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small-stat-card text-center p-1 bg-danger text-white rounded">
+                                <div class="fw-bold h6 mb-0">@pendingBOQs</div>
+                                <small style="font-size: 0.7rem;">Pending</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    @if (totalBOQs > 0)
+                    {
+                        var completionPercentage = Math.Round((double)completedBOQs / totalBOQs * 100, 1);
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="text-muted" style="font-size: 0.7rem;">Progress</small>
+                                <small class="fw-bold" style="font-size: 0.7rem;">@completionPercentage%</small>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: @completionPercentage%" 
+                                     aria-valuenow="@completionPercentage" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Quick Actions -->
+                    <div class="d-grid gap-1">
+                        <a href="@Url.Action("BOQList", "BOQ")" class="btn btn-outline-success btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                            <i class="bi bi-list-ul me-1"></i> View All
+                        </a>
+                        <a href="@Url.Action("CreateBOQ", "BOQ")" class="btn btn-outline-primary btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                            <i class="bi bi-plus-circle me-1"></i> Create New
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Task Queue Section -->
+        @if (shouldShowNextTask)
+        {
+            <!-- Next Task Card -->
+            <div class="card border-info shadow-sm mt-3" style="height: 250px;">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Next Task
+                    </h6>
+                    <div class="d-flex align-items-center gap-1">
+                        <button id="loadTaskBtn" class="btn btn-xs btn-success" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-play-circle me-1"></i> Load
+                        </button>
+                        <button id="refreshTaskBtn" class="btn btn-xs btn-warning" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-xs btn-light" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-list-task me-1"></i> All
+                        </a>
+                    </div>
+                </div>
+                
+                <div id="nextTaskContent">
+                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
+                        <div id="taskContent">
+                            <!-- Default state: Show load task button -->
+                            <div id="noTaskLoaded" class="text-center py-1">
+                                <i class="bi bi-hourglass-split text-muted" style="font-size: 1.2rem;"></i>
+                                <p class="mt-1 mb-1 text-muted small">Click "Load Task"</p>
+                                <button id="loadTaskMainBtn" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-play-circle me-1"></i> Load Task
+                                </button>
+                            </div>
+                            
+                            <!-- Loading state -->
+                            <div id="taskLoading" class="text-center py-1" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-1 mb-0 small">Loading...</p>
+                            </div>
+                            
+                            <!-- Task loaded state (will be populated via JavaScript) -->
+                            <div id="taskLoaded" style="display: none;">
+                                <!-- Content will be populated dynamically -->
+                            </div>
+                            
+                            <!-- No tasks available state -->
+                            <div id="noTaskAvailable" class="text-center py-1" style="display: none;">
+                                <i class="bi bi-check-circle text-success" style="font-size: 1.2rem;"></i>
+                                <p class="mt-1 mb-0 small">No pending tasks!</p>
+                                <small class="text-muted">Last updated: <span id="lastUpdateTime"></span></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Workgroup Filter for ViewAll Users -->
+            @if (ViewData["CanViewAll"] as bool? == true)
+            {
+                <div class="card border-primary shadow-sm mt-3" style="height: 250px;">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                        <h6 class="mb-0">
+                            <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
+                        </h6>
+                        <button class="btn btn-xs btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="collapse" id="filterContent">
+                        <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
+                            <form method="get" asp-action="Index">
+                                <div class="mb-1">
+                                    <label class="form-label mb-1 small" for="workgroupFilter">
+                                        <i class="bi bi-people-fill"></i>
+                                        Select a Workgroup
+                                    </label>
+                                    <div class="filter-row">
+                                        <div class="filter-select-container mb-1">
+                                            <select class="form-select form-select-sm" name="workgroupId" id="workgroupFilter">
+                                                @if (ViewData["CanViewAll"] as bool? == true)
+                                                {
+                                                    <option value="">All Workgroups</option>
+                                                }
+                                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                                {
+                                                    foreach (var workgroup in workgroups)
+                                                    {
+                                                        bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
+                                                                        ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
+                                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="filter-actions d-flex gap-1">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-funnel"></i> Apply
+                                            </button>
+                                            @if (ViewData["SelectedWorkgroupId"] != null)
+                                            {
+                                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="bi bi-x-circle"></i> Clear
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Right Column: Notice Board (33% width) -->
+    <div class="col-lg-4">
+        <!-- Notice Board Section -->
+        <div class="card border-warning shadow-sm" style="height: 400px;">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-1">
+                <h6 class="mb-0">
+                    <i class="bi bi-megaphone me-1"></i>Notice Board
+                </h6>
+                <button class="btn btn-xs btn-outline-dark" id="addNoticeBtn" title="Add Notice" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                    <i class="bi bi-plus-circle"></i>
+                </button>
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <div id="noticeContent">
+                    @{
+                        // Notice data from ViewBag (you can populate this from controller)
+                        var notices = ViewBag.Notices as List<dynamic> ?? new List<dynamic>();
+                    }
+                    
+                    @if (notices.Any())
+                    {
+                        foreach (var notice in notices)
+                        {
+                            <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #ffc107 !important;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">@notice.Title</h6>
+                                    <small class="text-muted" style="font-size: 0.65rem;">@notice.Date</small>
+                                </div>
+                                <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">@notice.Content</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted" style="font-size: 0.65rem;">By: @notice.CreatedBy</small>
+                                    @if (notice.Priority == "High")
+                                    {
+                                        <span class="badge bg-danger" style="font-size: 0.6rem;">High Priority</span>
+                                    }
+                                    else if (notice.Priority == "Medium")
+                                    {
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Medium</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info" style="font-size: 0.6rem;">Normal</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <!-- Default notices when no data from backend -->
+                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #ffc107 !important;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">System Maintenance</h6>
+                                <small class="text-muted" style="font-size: 0.65rem;">Aug 15</small>
+                            </div>
+                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
+                                Scheduled maintenance on Aug 20th from 2:00 AM to 4:00 AM. System will be temporarily unavailable.
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted" style="font-size: 0.65rem;">By: System Admin</small>
+                                <span class="badge bg-danger" style="font-size: 0.6rem;">High Priority</span>
+                            </div>
+                        </div>
+                        
+                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #17a2b8 !important;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">New Feature Release</h6>
+                                <small class="text-muted" style="font-size: 0.65rem;">Aug 12</small>
+                            </div>
+                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
+                                New report generation feature is now available. Check the Reports section in the navigation.
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted" style="font-size: 0.65rem;">By: Development Team</small>
+                                <span class="badge bg-info" style="font-size: 0.6rem;">Normal</span>
+                            </div>
+                        </div>
+                        
+                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #28a745 !important;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">Training Session</h6>
+                                <small class="text-muted" style="font-size: 0.65rem;">Aug 10</small>
+                            </div>
+                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
+                                Join us for a training session on new dashboard features. Date: Aug 25th, 10:00 AM.
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted" style="font-size: 0.65rem;">By: HR Department</small>
+                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Medium</span>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Quick Actions -->
+                    <div class="d-grid gap-1 mt-2">
+                        <a href="@Url.Action("NoticeBoard", "Dashboard")" class="btn btn-outline-warning btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                            <i class="bi bi-eye me-1"></i> View All Notices
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
 <!-- End of container-fluid -->
 
 @section Scripts {
@@ -2078,3 +2057,176 @@
         }
     }
 </script>
+
+<style>
+    /* Secondary Tool Styling - Report Generator */
+    .dashboard-card-container.secondary-tool {
+        opacity: 0.8;
+        filter: grayscale(15%);
+        position: relative;
+    }
+
+    .dashboard-card.secondary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        box-shadow: 0 3px 6px rgba(102, 126, 234, 0.2);
+        transition: all 0.3s ease;
+        opacity: 0.95;
+    }
+
+    .dashboard-card.secondary-card:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        border-color: rgba(102, 126, 234, 0.6);
+        opacity: 1;
+        filter: grayscale(0%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .dashboard-card.secondary-card .card-content h6 {
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-card.secondary-card .badge.secondary-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        font-size: 1.1rem;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+    }
+
+    .dashboard-card.secondary-card .img-container.secondary-icon {
+        opacity: 0.8;
+    }
+
+    .dashboard-card.secondary-card:hover .img-container.secondary-icon {
+        opacity: 1;
+        color: #ffffff !important;
+    }
+
+    /* Visual separator for secondary tool */
+    .dashboard-card-container.secondary-tool::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 15%;
+        bottom: 15%;
+        width: 3px;
+        background: repeating-linear-gradient(
+            to bottom,
+            #adb5bd,
+            #adb5bd 4px,
+            transparent 4px,
+            transparent 8px
+        );
+        border-radius: 2px;
+        opacity: 0.6;
+    }
+
+    /* Enhanced primary dashboard cards visual priority */
+    .dashboard-card:not(.secondary-card) {
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 2px solid transparent;
+    }
+
+    .dashboard-card:not(.secondary-card)::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        border-radius: inherit;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card:not(.secondary-card):hover::before {
+        opacity: 1;
+    }
+
+    .dashboard-card:not(.secondary-card):hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Subtle text label for secondary tools */
+    .dashboard-card-container.secondary-tool::after {
+        content: 'Generate Reports';
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        color: #6c757d;
+        background: rgba(248, 249, 250, 0.9);
+        padding: 2px 6px;
+        border-radius: 3px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card-container.secondary-tool:hover::after {
+        opacity: 1;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .dashboard-card-container.secondary-tool {
+            flex: 1 1 0 !important;
+            min-width: 120px !important;
+        }
+        
+        .dashboard-card.secondary-card .card-content h6 {
+            font-size: 0.75rem;
+        }
+
+        .dashboard-card-container.secondary-tool::before {
+            display: none;
+        }
+
+        .dashboard-card-container.secondary-tool::after {
+            display: none;
+        }
+    }
+
+    /* Subtle animation for all cards with staggered delay */
+    .dashboard-card-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .dashboard-card-container:nth-child(1) { animation-delay: 0.1s; }
+    .dashboard-card-container:nth-child(2) { animation-delay: 0.2s; }
+    .dashboard-card-container:nth-child(3) { animation-delay: 0.3s; }
+    .dashboard-card-container:nth-child(4) { animation-delay: 0.4s; }
+    .dashboard-card-container:nth-child(5) { animation-delay: 0.6s; }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Badge styling enhancement for primary cards */
+    .dashboard-card:not(.secondary-card) .badge {
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>

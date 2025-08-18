@@ -85,7 +85,9 @@
                                 <td>@item.TaskName</td>
                                 <td>@item.TaskWg</td>
                                 <td>
-                                    <a asp-action="Details" asp-route-id="@item.Id" asp-route-returnUrl="@Url.Action("OLAViolateRecords")" class="btn btn-primary btn-sm">
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                        asp-route-returnUrl="@Url.Action("OLAViolateRecords")"
+                                        class="btn btn-primary btn-sm">
                                         <i class="bi bi-eye"></i> View Details
                                     </a>
                                 </td>
@@ -100,6 +102,22 @@
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-2"></i> No OLA violations found.
                 </div>
+
+                @* Add diagnostic information for troubleshooting *@
+                @if (ViewBag.DiagnosticInfo != null)
+                {
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="bi bi-wrench me-2"></i>Diagnostic Information:</h6>
+                        <p><strong>User ID:</strong> @ViewBag.DiagnosticInfo.UserId</p>
+                        <p><strong>Can View All:</strong> @ViewBag.DiagnosticInfo.CanViewAll</p>
+                        <p><strong>Selected Workgroup ID:</strong> @ViewBag.DiagnosticInfo.WorkgroupId</p>
+                        <p><strong>User Workgroups:</strong> @ViewBag.DiagnosticInfo.UserWorkgroups</p>
+                        <p><strong>Has Draw Fiber Access:</strong> @ViewBag.DiagnosticInfo.HasDrawFiberAccess</p>
+                        <p><strong>Records Found:</strong> @ViewBag.DiagnosticInfo.RecordCount</p>
+                        <small class="text-muted">This information helps diagnose why no records are showing. Check the
+                            application logs for more detailed information about the database queries.</small>
+                    </div>
+                }
             }
         </div>
     </div>
@@ -108,7 +126,7 @@
 @section Scripts {
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Add search functionality
             const searchForm = document.getElementById('searchForm');
             const searchInputs = searchForm.querySelectorAll('input');
@@ -164,7 +182,7 @@
             });
 
             // Prevent form submission (using real-time filter instead)
-            searchForm.addEventListener('submit', function(e) {
+            searchForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 filterTable();
             });

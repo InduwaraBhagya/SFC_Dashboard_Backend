@@ -49,7 +49,7 @@ namespace SFCDashboard.Api.Services
                 .Where(p =>
                     (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
                     !p.IsHold &&
-                    (p.PeNumber == null || 
+                    (p.PeNumber == null ||
                      (!urgentPENumbers.Contains(p.PeNumber) && !violatingPENumbers.Contains(p.PeNumber))))
                 .AsNoTracking();
 
@@ -91,6 +91,9 @@ namespace SFCDashboard.Api.Services
             bool canViewAll = user.UserRole?.RolePermissions.Any(rp => rp.Permission.Name == "ViewAll") == true;
             bool hasDrawFiberAccess = user.UserWorkGroups?.Any(uwg => uwg.WorkGroup.Name.Equals("NET-PROJ-ACC-CABLE", StringComparison.OrdinalIgnoreCase)) == true;
 
+            _logger.LogInformation("GetOLAViolatingPlannedEventsByUserIdAsync: UserId={userId}, CanViewAll={canViewAll}, Workgroups={workgroups}",
+                userId, canViewAll, string.Join(",", workgroupNames));
+
             // Use the same logic as GetOLAViolatingPlannedEventsAsync
             var urgentPENumbers = await _context.PETasks
                 .Where(t => t.IsUrgent)
@@ -104,13 +107,17 @@ namespace SFCDashboard.Api.Services
                 .Distinct()
                 .ToListAsync();
 
+            _logger.LogInformation("OLA Violation Data: UrgentPEs={urgentCount}, ViolatingPEs={violatingCount}",
+                urgentPENumbers.Count, violatingPENumbers.Count);
+
             var query = _context.PlannedEvents
-                .Where(p => p.PeNumber != null && 
-                           violatingPENumbers.Contains(p.PeNumber) && 
-                           !urgentPENumbers.Contains(p.PeNumber) && 
+                .Where(p => p.PeNumber != null &&
+                           violatingPENumbers.Contains(p.PeNumber) &&
+                           !urgentPENumbers.Contains(p.PeNumber) &&
                            !p.IsHold)
                 .AsNoTracking();
 
+            // Apply workgroup filtering only if user doesn't have ViewAll permission
             if (!canViewAll && workgroupNames.Any())
             {
                 if (hasDrawFiberAccess)
@@ -130,7 +137,10 @@ namespace SFCDashboard.Api.Services
             }
             // If user has ViewAll permission, don't apply any workgroup filtering - return all records
 
-            return await query.ToListAsync();
+            var result = await query.ToListAsync();
+            _logger.LogInformation("Final OLA violating records count: {count}", result.Count);
+
+            return result;
         }
 
         public async Task<PlannedEvent?> GetPlannedEventAsync(int id)
@@ -149,7 +159,7 @@ namespace SFCDashboard.Api.Services
         public async Task<PlannedEvent?> GetPlannedEventByIdAsync(int? id)
         {
             if (id == null) return null;
-            
+
             try
             {
                 return await _context.PlannedEvents
@@ -279,7 +289,7 @@ namespace SFCDashboard.Api.Services
                     .Where(p =>
                         (p.PEStatus == "ongoing" || p.PEStatus == "PENDING_URGENT_CONFIRMATION") &&
                         !p.IsHold &&
-                        (p.PeNumber == null || 
+                        (p.PeNumber == null ||
                          (!urgentPENumbers.Contains(p.PeNumber) && !violatingPENumbers.Contains(p.PeNumber))))
                     .AsNoTracking();
 
@@ -342,7 +352,7 @@ namespace SFCDashboard.Api.Services
 
                 var query = _context.PlannedEvents
                     .Where(p =>
-                        (p.PEStatus == "urgent" || 
+                        (p.PEStatus == "urgent" ||
                          (p.PeNumber != null && urgentPENumbers.Contains(p.PeNumber))) &&
                         !p.IsHold)
                     .AsNoTracking();
@@ -433,7 +443,7 @@ namespace SFCDashboard.Api.Services
 
                 var query = _context.PlannedEvents
                     .Where(p =>
-                        (p.PEStatus == "urgent" || 
+                        (p.PEStatus == "urgent" ||
                          (p.PeNumber != null && urgentPENumbers.Contains(p.PeNumber))) &&
                         !p.IsHold)
                     .AsNoTracking();
@@ -593,6 +603,9 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
+                _logger.LogInformation("GetOLAViolatingPlannedEventsAsync: CanViewAll={canViewAll}, Workgroups={workgroups}, HasDrawFiberAccess={hasDrawFiberAccess}",
+                    canViewAll, string.Join(",", workgroupNames), hasDrawFiberAccess);
+
                 var urgentPENumbers = await _context.PETasks
                     .Where(t => t.IsUrgent)
                     .Select(t => t.PENumber)
@@ -605,16 +618,20 @@ namespace SFCDashboard.Api.Services
                     .Distinct()
                     .ToListAsync();
 
+                _logger.LogInformation("OLA Violation Data: UrgentPEs={urgentCount}, ViolatingPEs={violatingCount}",
+                    urgentPENumbers.Count, violatingPENumbers.Count);
+
                 var query = _context.PlannedEvents
-                    .Where(p => p.PeNumber != null && 
-                               violatingPENumbers.Contains(p.PeNumber) && 
-                               !urgentPENumbers.Contains(p.PeNumber) && 
+                    .Where(p => p.PeNumber != null &&
+                               violatingPENumbers.Contains(p.PeNumber) &&
+                               !urgentPENumbers.Contains(p.PeNumber) &&
                                !p.IsHold)
                     .AsNoTracking();
 
                 // If user has ViewAll permission, don't filter by workgroup unless specifically requested
                 if (!canViewAll && workgroupNames.Any())
                 {
+                    _logger.LogInformation("Applying workgroup filter for regular user");
                     if (hasDrawFiberAccess)
                     {
                         query = query.Where(p =>
@@ -632,6 +649,7 @@ namespace SFCDashboard.Api.Services
                 }
                 else if (canViewAll && workgroupNames.Any())
                 {
+                    _logger.LogInformation("Applying workgroup filter for ViewAll user with specific workgroups");
                     // ViewAll users can still filter by specific workgroups if requested
                     if (hasDrawFiberAccess)
                     {
@@ -648,8 +666,15 @@ namespace SFCDashboard.Api.Services
                             workgroupNames.Any(wgName => p.TaskWg.Contains(wgName)));
                     }
                 }
+                else if (canViewAll)
+                {
+                    _logger.LogInformation("ViewAll user - no workgroup filtering applied");
+                }
 
-                return await query.ToListAsync();
+                var result = await query.ToListAsync();
+                _logger.LogInformation("Final OLA violating records count: {count}", result.Count);
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -663,7 +688,7 @@ namespace SFCDashboard.Api.Services
             try
             {
                 _logger.LogInformation("Getting pending urgent requests, take: {take}", take);
-                
+
                 return await _context.PlannedEvents
                     .Where(p => p.PEStatus == "PENDING_URGENT_CONFIRMATION")
                     .OrderByDescending(p => p.PECreatedDate)
@@ -1111,7 +1136,7 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                _logger.LogInformation("Searching planned events: type={type}, value={value}, workgroup={workgroup}, drawFiber={drawFiber}", 
+                _logger.LogInformation("Searching planned events: type={type}, value={value}, workgroup={workgroup}, drawFiber={drawFiber}",
                     searchType, searchValue, workgroupName, hasDrawFiberAccess);
 
                 var query = _context.PlannedEvents.AsQueryable();
@@ -1174,7 +1199,7 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                _logger.LogInformation("Searching planned events for sales: type={type}, value={value}, workgroups={workgroups}, drawFiber={drawFiber}", 
+                _logger.LogInformation("Searching planned events for sales: type={type}, value={value}, workgroups={workgroups}, drawFiber={drawFiber}",
                     searchType, searchValue, string.Join(",", salesWorkgroups), hasDrawFiberAccess);
 
                 var query = _context.PlannedEvents.AsQueryable();
@@ -1399,8 +1424,8 @@ namespace SFCDashboard.Api.Services
                     .ToListAsync();
 
                 var query = _context.PlannedEvents
-                    .Where(p => (p.PEStatus == "urgent" || 
-                                (p.PeNumber != null && urgentPENumbers.Contains(p.PeNumber))) && 
+                    .Where(p => (p.PEStatus == "urgent" ||
+                                (p.PeNumber != null && urgentPENumbers.Contains(p.PeNumber))) &&
                                !p.IsHold)
                     .AsQueryable();
 
@@ -1471,9 +1496,9 @@ namespace SFCDashboard.Api.Services
                     .ToListAsync();
 
                 var query = _context.PlannedEvents
-                    .Where(p => p.PeNumber != null && 
-                               violatingPENumbers.Contains(p.PeNumber) && 
-                               !urgentPENumbers.Contains(p.PeNumber) && 
+                    .Where(p => p.PeNumber != null &&
+                               violatingPENumbers.Contains(p.PeNumber) &&
+                               !urgentPENumbers.Contains(p.PeNumber) &&
                                !p.IsHold)
                     .AsQueryable();
 
@@ -1610,7 +1635,7 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
-                _logger.LogInformation("Searching planned events for user: type={type}, value={value}, userId={userId}", 
+                _logger.LogInformation("Searching planned events for user: type={type}, value={value}, userId={userId}",
                     searchType, searchValue, userId);
 
                 // Get user with workgroups and permissions

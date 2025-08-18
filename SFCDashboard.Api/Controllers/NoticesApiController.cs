@@ -28,8 +28,9 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
+                var currentDate = DateTime.Now.Date;
                 var notices = await _context.Notices
-                    .Where(n => n.IsActive)
+                    .Where(n => n.IsActive && (n.ExpireDate == null || n.ExpireDate >= currentDate))
                     .OrderByDescending(n => n.IsPinned)
                     .ThenByDescending(n => n.CreatedDate)
                     .ToListAsync();
@@ -88,6 +89,7 @@ namespace SFCDashboard.Api.Controllers
                     CreatedUserName = request.CreatedUserName,
                     CreatedDate = DateTime.Now,
                     IsPinned = request.IsPinned,
+                    ExpireDate = request.ExpireDate,
                     IsActive = true
                 };
 
@@ -233,6 +235,8 @@ namespace SFCDashboard.Api.Controllers
         public string CreatedUserName { get; set; } = string.Empty;
 
         public bool IsPinned { get; set; } = false;
+
+        public DateTime? ExpireDate { get; set; }
     }
 
     public class UpdateNoticeRequest

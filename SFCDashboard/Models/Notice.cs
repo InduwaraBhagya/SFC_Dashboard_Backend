@@ -29,6 +29,9 @@ namespace SFCDB.Models
         [Column("IsPinned")]
         public bool IsPinned { get; set; } = false;
 
+        [Column("ExpireDate")]
+        public DateTime? ExpireDate { get; set; }
+
         [Column("IsActive")]
         public bool IsActive { get; set; } = true;
 

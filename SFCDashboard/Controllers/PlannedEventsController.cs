@@ -882,6 +882,10 @@ namespace SFCDashboard.Controllers
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
 
+            // Add debugging information
+            _logger.LogInformation("OLAViolateRecords: UserId={userId}, CanViewAll={canViewAll}, WorkgroupId={workgroupId}, UserWorkgroups={workgroups}",
+                currentUserId, canViewAll, workgroupId, string.Join(",", userWorkgroupNames));
+
             try
             {
                 IEnumerable<PlannedEvent> records;
@@ -892,17 +896,20 @@ namespace SFCDashboard.Controllers
                     {
                         // ViewAll user with specific workgroup selected - use workgroup-specific records
                         var selectedWorkgroupIds = new List<int> { workgroupId.Value };
+                        _logger.LogInformation("Using GetOLAViolatingPlannedEventsForMultiWorkgroupAsync with workgroupId={workgroupId}", workgroupId);
                         records = await _plannedEventsApi.GetOLAViolatingPlannedEventsForMultiWorkgroupAsync(selectedWorkgroupIds, userWorkgroupIds, hasDrawFiberAccess);
                     }
                     else
                     {
                         // ViewAll user with no workgroup selected - use user-based endpoints for consistent logic
+                        _logger.LogInformation("Using GetOLAViolatingPlannedEventsByUserIdAsync for ViewAll user without workgroup");
                         records = await _plannedEventsApi.GetOLAViolatingPlannedEventsByUserIdAsync(currentUserId);
                     }
                 }
                 else
                 {
                     // Regular user - use user-based endpoints (existing behavior)
+                    _logger.LogInformation("Using GetOLAViolatingPlannedEventsByUserIdAsync for regular user");
                     records = await _plannedEventsApi.GetOLAViolatingPlannedEventsByUserIdAsync(currentUserId);
                 }
 
@@ -917,7 +924,19 @@ namespace SFCDashboard.Controllers
 
                 ViewBag.ViolationDetails = violationDetails;
 
-                _logger.LogInformation("Retrieved {count} OLA violated records", recordsList.Count);
+                _logger.LogInformation("Retrieved {count} OLA violated records for display", recordsList.Count);
+
+                // Add diagnostic information to ViewBag for troubleshooting
+                ViewBag.DiagnosticInfo = new
+                {
+                    UserId = currentUserId,
+                    CanViewAll = canViewAll,
+                    WorkgroupId = workgroupId,
+                    UserWorkgroups = string.Join(",", userWorkgroupNames),
+                    HasDrawFiberAccess = hasDrawFiberAccess,
+                    RecordCount = recordsList.Count
+                };
+
                 return View(recordsList);
             }
             catch (Exception ex)
@@ -2441,7 +2460,8 @@ namespace SFCDashboard.Controllers
                     request.Description,
                     currentUserId,
                     currentUser?.Name ?? "Unknown User",
-                    request.IsPinned
+                    request.IsPinned,
+                    request.ExpireDate
                 );
 
                 return Json(new { success = response.Success, data = response.Data, message = response.Message });
@@ -2457,6 +2477,7 @@ namespace SFCDashboard.Controllers
         {
             public string Description { get; set; } = string.Empty;
             public bool IsPinned { get; set; } = false;
+            public DateTime? ExpireDate { get; set; }
         }
     }
 }
