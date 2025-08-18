@@ -19,6 +19,7 @@ namespace SFCDashboard.Controllers
         private readonly ILogger<PlannedEventsController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ITaskQueueApiClient _taskQueueApiClient;
+        private readonly INoticesApiClient _noticesApi;
 
         public PlannedEventsController(
             IPlannedEventsApiClient plannedEventsApi,
@@ -33,7 +34,8 @@ namespace SFCDashboard.Controllers
             ICustomerUserAssignmentsApiClient customerUserAssignmentsApi,
             ILogger<PlannedEventsController> logger,
             IWebHostEnvironment webHostEnvironment,
-            ITaskQueueApiClient taskQueueApiClient) : base(usersApi)
+            ITaskQueueApiClient taskQueueApiClient,
+            INoticesApiClient noticesApi) : base(usersApi)
         {
             _plannedEventsApi = plannedEventsApi;
             _usersApi = usersApi;
@@ -48,6 +50,7 @@ namespace SFCDashboard.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _taskQueueApiClient = taskQueueApiClient;
+            _noticesApi = noticesApi;
         }
 
         // GET: PlannedEvents/Index
@@ -80,10 +83,10 @@ namespace SFCDashboard.Controllers
 
             // Get current user's workgroup info
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
-            
+
             // Pass ViewAll permission to the view
             ViewData["CanViewAll"] = canViewAll;
-            
+
 
             // Keep track of user's assigned workgroup(s) separately from the filter selection
             ViewData["UserAssignedWorkgroupIds"] = userWorkgroupIds;
@@ -455,7 +458,7 @@ namespace SFCDashboard.Controllers
 
             // Get user's sales workgroup
             var (salesWorkgroups, canViewAll) = await GetUserSalesWorkgroups();
-            
+
             // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
             // This should match the logic in RedirectBasedOnUserType to prevent redirect loops
             bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
@@ -827,15 +830,15 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-            
+
             // Get current user's workgroup info and ViewAll permission
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            
+
             try
             {
                 IEnumerable<PlannedEvent> records;
-                
+
                 if (canViewAll)
                 {
                     if (workgroupId.HasValue)
@@ -874,15 +877,15 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-            
+
             // Get current user's workgroup info and ViewAll permission
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            
+
             try
             {
                 IEnumerable<PlannedEvent> records;
-                
+
                 if (canViewAll)
                 {
                     if (workgroupId.HasValue)
@@ -928,15 +931,15 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-            
+
             // Get current user's workgroup info and ViewAll permission
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            
+
             try
             {
                 IEnumerable<PlannedEvent> records;
-                
+
                 if (canViewAll)
                 {
                     if (workgroupId.HasValue)
@@ -974,15 +977,15 @@ namespace SFCDashboard.Controllers
         {
             int currentUserId = await GetCurrentUserIdAsync();
             var currentUser = await _usersApi.GetUserWithRoleAndWorkGroupsAsync(currentUserId);
-            
+
             // Get current user's workgroup info and ViewAll permission
             var (userWorkgroupIds, userWorkgroupNames, canViewAll) = await GetCurrentUserWorkGroupsAsync();
             bool hasDrawFiberAccess = await HasDrawFiberAccessAsync(currentUserId);
-            
+
             try
             {
                 IEnumerable<PlannedEvent> records;
-                
+
                 if (canViewAll)
                 {
                     if (workgroupId.HasValue)
@@ -1889,7 +1892,7 @@ namespace SFCDashboard.Controllers
             // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
             bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
             var (_, canViewAll) = await GetUserSalesWorkgroups();
-            
+
             if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(InProgressRecords));
@@ -1915,7 +1918,7 @@ namespace SFCDashboard.Controllers
             // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
             bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
             var (_, canViewAll) = await GetUserSalesWorkgroups();
-            
+
             if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(HoldRecords));
@@ -1940,7 +1943,7 @@ namespace SFCDashboard.Controllers
             // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
             bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
             var (_, canViewAll) = await GetUserSalesWorkgroups();
-            
+
             if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(UrgentRecords));
@@ -1965,7 +1968,7 @@ namespace SFCDashboard.Controllers
             // Check if user is actually in a sales workgroup and doesn't have ViewAll permission
             bool isInSalesWorkgroup = await IsUserInSalesWorkgroup();
             var (_, canViewAll) = await GetUserSalesWorkgroups();
-            
+
             if (!isInSalesWorkgroup || canViewAll)
             {
                 return RedirectToAction(nameof(OLAViolateRecords));
@@ -1990,8 +1993,8 @@ namespace SFCDashboard.Controllers
                         var violatingTasks = violatingTasksByPeNumber[pe.PeNumber].Where(t => t.IsOLAViolate);
                         foreach (var task in violatingTasks)
                         {
-                            var daysOverdue = task.ActualTaskCreatedDate.HasValue 
-                                ? (currentDate - task.ActualTaskCreatedDate.Value).Days 
+                            var daysOverdue = task.ActualTaskCreatedDate.HasValue
+                                ? (currentDate - task.ActualTaskCreatedDate.Value).Days
                                 : 0;
 
                             violationDetails[pe.PeNumber] = new
@@ -2268,8 +2271,9 @@ namespace SFCDashboard.Controllers
                 var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: userWorkgroupId, take: 1);
                 var hasNextTask = nextTaskList?.Any() == true;
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     hasTask = hasNextTask,
                     taskData = hasNextTask ? nextTaskList!.First() : null,
                     timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
@@ -2290,13 +2294,14 @@ namespace SFCDashboard.Controllers
             {
                 // Get user's primary workgroup ID for the task queue
                 var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
-                
+
                 // Use the refresh endpoint which clears cache and gets fresh data
                 var nextTaskList = await _taskQueueApiClient.RefreshTaskQueueAsync(workgroupId: userWorkgroupId, take: 1);
                 var hasNextTask = nextTaskList?.Any() == true;
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     hasTask = hasNextTask,
                     taskData = hasNextTask ? nextTaskList!.First() : null,
                     timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -2401,6 +2406,57 @@ namespace SFCDashboard.Controllers
                 _logger.LogError(ex, "Error running workgroup diagnostics");
                 return Json(new { error = "Failed to run diagnostics" });
             }
+        }
+
+        // Notice Board API Proxy Methods
+        [HttpGet]
+        public async Task<IActionResult> GetNotices()
+        {
+            try
+            {
+                var response = await _noticesApi.GetNoticesAsync();
+                return Json(new { success = response.Success, data = response.Data, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting notices");
+                return Json(new { success = false, message = "Error retrieving notices" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateNotice([FromBody] CreateNoticeRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return Json(new { success = false, message = "Invalid data provided" });
+                }
+
+                var currentUserId = await GetCurrentUserIdAsync();
+                var currentUser = await _usersApi.GetUserAsync(currentUserId);
+
+                var response = await _noticesApi.CreateNoticeAsync(
+                    request.Description,
+                    currentUserId,
+                    currentUser?.Name ?? "Unknown User",
+                    request.IsPinned
+                );
+
+                return Json(new { success = response.Success, data = response.Data, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating notice");
+                return Json(new { success = false, message = "Error creating notice" });
+            }
+        }
+
+        public class CreateNoticeRequest
+        {
+            public string Description { get; set; } = string.Empty;
+            public bool IsPinned { get; set; } = false;
         }
     }
 }

@@ -1347,9 +1347,8 @@
         }
         
         function loadNoticeBoard() {
-            // This function can be used to refresh notice board data
-            // For now, it's a placeholder for future AJAX functionality
-            console.log('Notice board loaded');
+            // Load notice board data from API
+            refreshNoticeBoard();
         }
         
         function showAddNoticeModal() {
@@ -1364,29 +1363,15 @@
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
-                            <form id="addNoticeForm" method="post" action="@Url.Action("AddNotice", "PlannedEvents")">
-                                @Html.AntiForgeryToken()
+                            <form id="addNoticeForm">
                                 <div class="modal-body">
                                     <div class="mb-3">
-                                        <label for="noticeTitle" class="form-label">Title</label>
-                                        <input type="text" class="form-control" id="noticeTitle" name="title" required>
+                                        <label for="addNoticeTitle" class="form-label">Title</label>
+                                        <input type="text" class="form-control" id="addNoticeTitle" name="title" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="noticeContent" class="form-label">Content</label>
-                                        <textarea class="form-control" id="noticeContent" name="content" rows="4" required></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="noticePriority" class="form-label">Priority</label>
-                                        <select class="form-select" id="noticePriority" name="priority" required>
-                                            <option value="">Select Priority</option>
-                                            <option value="High">High</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="Normal">Normal</option>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="noticeExpiry" class="form-label">Expiry Date (Optional)</label>
-                                        <input type="date" class="form-control" id="noticeExpiry" name="expiryDate">
+                                        <label for="addNoticeContent" class="form-label">Content</label>
+                                        <textarea class="form-control" id="addNoticeContent" name="content" rows="4" required></textarea>
                                     </div>
                                 </div>
                                 <div class="modal-footer">
@@ -1411,6 +1396,67 @@
             const modal = new bootstrap.Modal(document.getElementById('addNoticeModal'));
             modal.show();
             
+            // Handle form submission
+            $('#addNoticeForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const title = $('#addNoticeTitle').val();
+                const content = $('#addNoticeContent').val();
+                
+                console.log('Form submission - Title:', title, 'Content:', content);
+                
+                // Validate fields
+                if (!title || title.trim() === '') {
+                    alert('Please enter a title.');
+                    $('#addNoticeTitle').focus();
+                    return;
+                }
+                
+                if (!content || content.trim() === '') {
+                    alert('Please enter content.');
+                    $('#addNoticeContent').focus();
+                    return;
+                }
+                
+                // Create notice description (combine title and content)
+                const description = title.trim() + '\n\n' + content.trim();
+                
+                console.log('Submitting notice with description:', description);
+                
+                // Submit the notice
+                $.ajax({
+                    url: '@Url.Action("CreateNotice", "PlannedEvents")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        description: description,
+                        isPinned: false
+                    }),
+                    success: function(response) {
+                        console.log('API Response:', response);
+                        if (response.success) {
+                            modal.hide();
+                            // Refresh the notice board
+                            refreshNoticeBoard();
+                            
+                            // Show success message
+                            if (typeof toastr !== 'undefined') {
+                                toastr.success('Notice added successfully!');
+                            } else {
+                                alert('Notice added successfully!');
+                            }
+                        } else {
+                            alert('Error adding notice: ' + (response.message || 'Unknown error'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error adding notice:', error);
+                        console.error('XHR:', xhr);
+                        alert('Error adding notice. Please try again. Details: ' + error);
+                    }
+                });
+            });
+            
             // Clean up modal after hide
             $('#addNoticeModal').on('hidden.bs.modal', function() {
                 $(this).remove();
@@ -1433,12 +1479,7 @@
                 type: 'GET',
                 success: function(response) {
                     if (response.success) {
-                        updateNoticeBoardContent(response.notices);
-                        
-                        // Show success message
-                        if (typeof toastr !== 'undefined') {
-                            toastr.success('Notice board refreshed successfully!');
-                        }
+                        updateNoticeBoardContent(response.data);
                     } else {
                         console.error('Failed to refresh notice board:', response.message);
                     }
@@ -1450,44 +1491,50 @@
         }
         
         function updateNoticeBoardContent(notices) {
-            const noticeList = $('#noticeBoardContent .notice-list');
-            noticeList.empty();
+            const noticeContent = $('#noticeContent');
+            noticeContent.empty();
             
             if (notices && notices.length > 0) {
                 notices.slice(0, 3).forEach(function(notice) { // Show only first 3 notices
-                    const priorityClass = getPriorityBadgeClass(notice.priority);
+                    // Split description to get title and content
+                    const lines = notice.description.split('\n');
+                    const title = lines[0] || 'Notice';
+                    const content = lines.slice(2).join('\n') || notice.description; // Skip empty line
+                    
+                    const isPinned = notice.isPinned;
+                    const borderClass = isPinned ? 'border-warning' : 'border-info';
+                    const pinIcon = isPinned ? '<i class="bi bi-pin-fill text-warning me-1"></i>' : '';
+                    
                     const noticeHtml = `
-                        <div class="notice-item d-flex align-items-start p-2 border-bottom cursor-pointer" data-notice-id="${notice.id}">
-                            <div class="flex-shrink-0 me-2">
-                                <span class="badge ${priorityClass}">${notice.priority}</span>
+                        <div class="notice-item mb-2 p-2 border rounded ${borderClass}" style="border-left: 4px solid #${isPinned ? 'ffc107' : '0dcaf0'} !important;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">
+                                    ${pinIcon}${escapeHtml(title)}
+                                </h6>
+                                <small class="text-muted" style="font-size: 0.65rem;">${formatNoticeDate(notice.createdDate)}</small>
                             </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1 small fw-bold">${escapeHtml(notice.title)}</h6>
-                                <p class="mb-0 text-muted small">${escapeHtml(notice.content.substring(0, 60))}${notice.content.length > 60 ? '...' : ''}</p>
-                                <small class="text-muted">${formatNoticeDate(notice.createdDate)}</small>
+                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">${escapeHtml(content.substring(0, 100))}${content.length > 100 ? '...' : ''}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted" style="font-size: 0.65rem;">By: ${escapeHtml(notice.createdUserName)}</small>
                             </div>
                         </div>
                     `;
-                    noticeList.append(noticeHtml);
-                });
-                
-                // Re-attach click handlers
-                $('.notice-item').on('click', function() {
-                    const noticeId = $(this).data('notice-id');
-                    viewNoticeDetails(noticeId);
+                    noticeContent.append(noticeHtml);
                 });
             } else {
-                noticeList.html('<div class="text-center text-muted p-3"><i class="bi bi-info-circle me-2"></i>No notices available</div>');
+                noticeContent.html('<div class="text-center text-muted p-3"><i class="bi bi-info-circle me-2"></i>No notices available</div>');
             }
         }
         
-        function getPriorityBadgeClass(priority) {
-            switch (priority.toLowerCase()) {
-                case 'high': return 'bg-danger';
-                case 'medium': return 'bg-warning text-dark';
-                case 'normal': return 'bg-success';
-                default: return 'bg-secondary';
-            }
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
         
         function formatNoticeDate(dateString) {
