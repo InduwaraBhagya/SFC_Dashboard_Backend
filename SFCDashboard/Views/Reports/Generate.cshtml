@@ -168,7 +168,8 @@
 </div>
 
 <!-- Loading Modal -->
-<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-body text-center">
@@ -184,63 +185,130 @@
 
 @section Scripts {
     <script>
-        function applyFilters() {
-            showLoading();
-            
-            const formData = new FormData(document.getElementById('filterForm'));
-            const params = new URLSearchParams(formData).toString();
-            
-            fetch('/Reports/FilterRecords', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: params
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    updateTable(data.data);
-                    updateRecordsCount(data.data.length);
-                } else {
-                    alert('Error filtering records: ' + data.message);
+        // Store all data for fast client-side filtering
+        let allRecords = [];
+        let filteredRecords = [];
+
+        // Initialize data from the table
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeData();
+            setupRealTimeFiltering();
+            console.log('Reports page loaded with @Model.Count records');
+        });
+
+        function initializeData() {
+            const tbody = document.getElementById('recordsTableBody');
+            const rows = tbody.querySelectorAll('tr');
+
+            allRecords = Array.from(rows).map(row => {
+                const cells = row.querySelectorAll('td');
+                return {
+                    id: cells[0].textContent.trim(),
+                    province: cells[1].textContent.trim(),
+                    region: cells[2].textContent.trim(),
+                    rtom: cells[3].textContent.trim(),
+                    contractor_name: cells[4].textContent.trim(),
+                    so_number: cells[5].textContent.trim(),
+                    customer: cells[6].textContent.trim(),
+                    pe_number: cells[7].textContent.trim(),
+                    pe_title: cells[8].textContent.trim(),
+                    pe_activity: cells[9].textContent.trim(),
+                    pe_nature: cells[10].textContent.trim(),
+                    element: row // Keep reference to DOM element for fast manipulation
+                };
+            });
+
+            filteredRecords = [...allRecords];
+        }
+
+        function setupRealTimeFiltering() {
+            // Add event listeners for real-time filtering
+            const filterInputs = document.querySelectorAll('#filterForm select, #filterForm input');
+            filterInputs.forEach(input => {
+                input.addEventListener('change', applyFiltersInstant);
+                if (input.type === 'text') {
+                    input.addEventListener('input', debounce(applyFiltersInstant, 300));
                 }
-            })
-            .catch(error => {
-                hideLoading();
-                console.error('Error:', error);
-                alert('An error occurred while filtering records.');
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function applyFilters() {
+            // This function is called by the Apply Filters button
+            applyFiltersInstant();
+        }
+
+        function applyFiltersInstant() {
+            // Show minimal loading for visual feedback
+            const button = document.querySelector('button[onclick="applyFilters()"]');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Filtering...';
+            button.disabled = true;
+
+            // Small delay to show the feedback, then filter instantly
+            setTimeout(() => {
+                performClientSideFilter();
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 100);
+        }
+
+        function performClientSideFilter() {
+            const filters = {
+                province: document.getElementById('provinceFilter').value.toLowerCase(),
+                region: document.getElementById('regionFilter').value.toLowerCase(),
+                rtom: document.getElementById('rtomFilter').value.toLowerCase(),
+                contractor: document.getElementById('contractorFilter')?.value.toLowerCase() || '',
+                soNumber: document.getElementById('soNumberFilter')?.value.toLowerCase() || '',
+                customer: document.getElementById('customerFilter')?.value.toLowerCase() || '',
+                peNumber: document.getElementById('peNumberFilter')?.value.toLowerCase() || ''
+            };
+
+            // Filter records instantly
+            filteredRecords = allRecords.filter(record => {
+                return (!filters.province || record.province.toLowerCase().includes(filters.province)) &&
+                    (!filters.region || record.region.toLowerCase().includes(filters.region)) &&
+                    (!filters.rtom || record.rtom.toLowerCase().includes(filters.rtom)) &&
+                    (!filters.contractor || record.contractor_name.toLowerCase().includes(filters.contractor)) &&
+                    (!filters.soNumber || record.so_number.toLowerCase().includes(filters.soNumber)) &&
+                    (!filters.customer || record.customer.toLowerCase().includes(filters.customer)) &&
+                    (!filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber));
+            });
+
+            updateTableInstant();
+            updateRecordsCount(filteredRecords.length);
+        }
+
+        function updateTableInstant() {
+            const tbody = document.getElementById('recordsTableBody');
+
+            // Hide all rows first
+            allRecords.forEach(record => {
+                record.element.style.display = 'none';
+            });
+
+            // Show only filtered rows
+            filteredRecords.forEach(record => {
+                record.element.style.display = '';
             });
         }
 
         function clearFilters() {
             document.getElementById('filterForm').reset();
-            location.reload();
-        }
-
-        function updateTable(records) {
-            const tbody = document.getElementById('recordsTableBody');
-            tbody.innerHTML = '';
-            
-            records.forEach(record => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${record.id || ''}</td>
-                    <td>${record.province || ''}</td>
-                    <td>${record.region || ''}</td>
-                    <td>${record.rtom || ''}</td>
-                    <td>${record.contractor_name || ''}</td>
-                    <td>${record.so_number || ''}</td>
-                    <td>${record.customer || ''}</td>
-                    <td>${record.pe_number || ''}</td>
-                    <td>${record.pe_title || ''}</td>
-                    <td>${record.pe_activity || ''}</td>
-                    <td>${record.pe_nature || ''}</td>
-                `;
-                tbody.appendChild(row);
-            });
+            filteredRecords = [...allRecords];
+            updateTableInstant();
+            updateRecordsCount(allRecords.length);
         }
 
         function updateRecordsCount(count) {
@@ -249,10 +317,10 @@
 
         function exportData(format) {
             showLoading();
-            
+
             const formData = new FormData(document.getElementById('filterForm'));
             const params = new URLSearchParams(formData).toString();
-            
+
             let url = '';
             switch (format) {
                 case 'excel':
@@ -269,11 +337,11 @@
                     alert('Invalid export format');
                     return;
             }
-            
+
             if (params) {
                 url += '?' + params;
             }
-            
+
             // Create a temporary link to download the file
             const link = document.createElement('a');
             link.href = url;
@@ -281,7 +349,7 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             setTimeout(() => {
                 hideLoading();
             }, 2000);
@@ -298,12 +366,24 @@
                 modal.hide();
             }
         }
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Reports page loaded with @Model.Count records');
-        });
     </script>
+
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* CSS keyframes for spin animation */
+        @@keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
