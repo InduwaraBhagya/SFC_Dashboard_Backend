@@ -1311,16 +1311,6 @@
                 showAddNoticeModal();
             });
             
-            $('#viewAllNoticesBtn').on('click', function() {
-                window.location.href = '@Url.Action("Notices", "PlannedEvents")';
-            });
-            
-            // Add click handlers for individual notices
-            $('.notice-item').on('click', function() {
-                const noticeId = $(this).data('notice-id');
-                viewNoticeDetails(noticeId);
-            });
-            
             // Initialize notice board on page load
             loadNoticeBoard();
         }
@@ -1331,10 +1321,10 @@
         }
         
         function showAddNoticeModal() {
-            // Create add notice modal
+            // Create add notice modal with pin and expire date options
             const modalHtml = `
                 <div class="modal fade" id="addNoticeModal" tabindex="-1" aria-labelledby="addNoticeModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
+                    <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title" id="addNoticeModalLabel">
@@ -1344,17 +1334,65 @@
                             </div>
                             <form id="addNoticeForm">
                                 <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label for="addNoticeTitle" class="form-label">Title</label>
-                                        <input type="text" class="form-control" id="addNoticeTitle" name="title" required>
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label for="addNoticeTitle" class="form-label">
+                                                    <i class="bi bi-card-text me-1"></i>Title
+                                                </label>
+                                                <input type="text" class="form-control" id="addNoticeTitle" name="title" required 
+                                                       placeholder="Enter notice title">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="addNoticeContent" class="form-label">
+                                                    <i class="bi bi-file-text me-1"></i>Content
+                                                </label>
+                                                <textarea class="form-control" id="addNoticeContent" name="content" rows="4" required 
+                                                          placeholder="Enter notice content..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">
+                                                    <i class="bi bi-pin-angle me-1"></i>Notice Options
+                                                </label>
+                                                <div class="card border-light">
+                                                    <div class="card-body py-2">
+                                                        <div class="form-check form-switch mb-2">
+                                                            <input class="form-check-input" type="checkbox" id="isPinnedCheck" name="isPinned">
+                                                            <label class="form-check-label" for="isPinnedCheck">
+                                                                <i class="bi bi-pin-fill me-1"></i>Pin Notice
+                                                            </label>
+                                                            <small class="d-block text-muted">Pinned notices appear at the top</small>
+                                                        </div>
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" id="hasExpireDateCheck" name="hasExpireDate">
+                                                            <label class="form-check-label" for="hasExpireDateCheck">
+                                                                <i class="bi bi-calendar-x me-1"></i>Set Expire Date
+                                                            </label>
+                                                            <small class="d-block text-muted">Notice will auto-hide after this date</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3" id="expireDateContainer" style="display: none;">
+                                                <label for="expireDate" class="form-label">
+                                                    <i class="bi bi-calendar-event me-1"></i>Expire Date & Time
+                                                </label>
+                                                <input type="datetime-local" class="form-control" id="expireDate" name="expireDate">
+                                                <small class="form-text text-muted">Notice will disappear after this date and time</small>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label for="addNoticeContent" class="form-label">Content</label>
-                                        <textarea class="form-control" id="addNoticeContent" name="content" rows="4" required></textarea>
+                                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <small>Notices will be visible to all users. Pinned notices appear first and expired notices are automatically hidden.</small>
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="bi bi-x-circle me-1"></i>Cancel
+                                    </button>
                                     <button type="submit" class="btn btn-primary">
                                         <i class="bi bi-plus-circle me-1"></i>Add Notice
                                     </button>
@@ -1375,63 +1413,96 @@
             const modal = new bootstrap.Modal(document.getElementById('addNoticeModal'));
             modal.show();
             
+            // Handle expire date toggle
+            $('#hasExpireDateCheck').on('change', function() {
+                const expireDateContainer = $('#expireDateContainer');
+                if ($(this).is(':checked')) {
+                    expireDateContainer.slideDown();
+                    // Set minimum date to tomorrow
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    $('#expireDate').attr('min', tomorrow.toISOString().slice(0, 16));
+                } else {
+                    expireDateContainer.slideUp();
+                    $('#expireDate').val('');
+                }
+            });
+            
             // Handle form submission
             $('#addNoticeForm').on('submit', function(e) {
                 e.preventDefault();
                 
-                const title = $('#addNoticeTitle').val();
-                const content = $('#addNoticeContent').val();
-                
-                console.log('Form submission - Title:', title, 'Content:', content);
+                const title = $('#addNoticeTitle').val().trim();
+                const content = $('#addNoticeContent').val().trim();
+                const isPinned = $('#isPinnedCheck').is(':checked');
+                const hasExpireDate = $('#hasExpireDateCheck').is(':checked');
+                const expireDate = hasExpireDate ? $('#expireDate').val() : null;
                 
                 // Validate fields
-                if (!title || title.trim() === '') {
-                    alert('Please enter a title.');
-                    $('#addNoticeTitle').focus();
+                if (!title) {
+                    showValidationError('Please enter a title.', '#addNoticeTitle');
                     return;
                 }
                 
-                if (!content || content.trim() === '') {
-                    alert('Please enter content.');
-                    $('#addNoticeContent').focus();
+                if (!content) {
+                    showValidationError('Please enter content.', '#addNoticeContent');
                     return;
+                }
+                
+                if (hasExpireDate && !expireDate) {
+                    showValidationError('Please select an expire date or uncheck the expire date option.', '#expireDate');
+                    return;
+                }
+                
+                // Validate expire date is in the future
+                if (expireDate) {
+                    const selectedDate = new Date(expireDate);
+                    const now = new Date();
+                    if (selectedDate <= now) {
+                        showValidationError('Expire date must be in the future.', '#expireDate');
+                        return;
+                    }
                 }
                 
                 // Create notice description (combine title and content)
-                const description = title.trim() + '\n\n' + content.trim();
+                const description = title + '\n\n' + content;
                 
-                console.log('Submitting notice with description:', description);
+                // Prepare request data
+                const requestData = {
+                    description: description,
+                    isPinned: isPinned,
+                    expireDate: expireDate
+                };
+                
+                console.log('Submitting notice:', requestData);
+                
+                // Show loading state
+                const submitBtn = $('#addNoticeForm button[type="submit"]');
+                const originalText = submitBtn.html();
+                submitBtn.html('<i class="spinner-border spinner-border-sm me-1"></i>Adding...').prop('disabled', true);
                 
                 // Submit the notice
                 $.ajax({
                     url: '@Url.Action("CreateNotice", "PlannedEvents")',
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({
-                        description: description,
-                        isPinned: false
-                    }),
+                    data: JSON.stringify(requestData),
                     success: function(response) {
-                        console.log('API Response:', response);
                         if (response.success) {
                             modal.hide();
-                            // Refresh the notice board
                             refreshNoticeBoard();
-                            
-                            // Show success message
-                            if (typeof toastr !== 'undefined') {
-                                toastr.success('Notice added successfully!');
-                            } else {
-                                alert('Notice added successfully!');
-                            }
+                            showSuccessMessage('Notice added successfully!');
                         } else {
-                            alert('Error adding notice: ' + (response.message || 'Unknown error'));
+                            showErrorMessage('Error adding notice: ' + (response.message || 'Unknown error'));
                         }
                     },
                     error: function(xhr, status, error) {
                         console.error('Error adding notice:', error);
-                        console.error('XHR:', xhr);
-                        alert('Error adding notice. Please try again. Details: ' + error);
+                        showErrorMessage('Error adding notice. Please try again.');
+                    },
+                    complete: function() {
+                        // Reset button state
+                        submitBtn.html(originalText).prop('disabled', false);
                     }
                 });
             });
@@ -1440,15 +1511,6 @@
             $('#addNoticeModal').on('hidden.bs.modal', function() {
                 $(this).remove();
             });
-        }
-        
-        function viewNoticeDetails(noticeId) {
-            // Placeholder for viewing notice details
-            // This could open a modal or navigate to a details page
-            console.log('Viewing notice details for ID:', noticeId);
-            
-            // For now, show a simple alert
-            alert('Notice details functionality will be implemented here.');
         }
         
         function refreshNoticeBoard() {
@@ -1474,34 +1536,79 @@
             noticeContent.empty();
             
             if (notices && notices.length > 0) {
-                notices.slice(0, 3).forEach(function(notice) { // Show only first 3 notices
+                notices.slice(0, 5).forEach(function(notice) { // Show only first 5 notices
                     // Split description to get title and content
                     const lines = notice.description.split('\n');
                     const title = lines[0] || 'Notice';
                     const content = lines.slice(2).join('\n') || notice.description; // Skip empty line
                     
-                    const isPinned = notice.isPinned;
-                    const borderClass = isPinned ? 'border-warning' : 'border-info';
-                    const pinIcon = isPinned ? '<i class="bi bi-pin-fill text-warning me-1"></i>' : '';
+                    const isPinned = notice.isPinned || false;
+                    const expireDate = notice.expireDate ? new Date(notice.expireDate) : null;
+                    const isExpiringSoon = expireDate && expireDate <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); // Within 2 days
+                    
+                    const pinIcon = isPinned ? '<i class="bi bi-pin-fill text-warning me-1" title="Pinned Notice"></i>' : '';
+                    const expireIcon = expireDate ? '<i class="bi bi-clock text-muted me-1" title="Expires: ' + expireDate.toLocaleDateString() + '"></i>' : '';
+                    const expireWarning = isExpiringSoon ? '<i class="bi bi-exclamation-triangle text-danger me-1" title="Expiring Soon!"></i>' : '';
+                    
+                    const borderColor = isPinned ? 'ffc107' : (isExpiringSoon ? 'dc3545' : '0dcaf0');
+                    const bgClass = isPinned ? 'bg-light' : '';
                     
                     const noticeHtml = `
-                        <div class="notice-item mb-2 p-2 border rounded ${borderClass}" style="border-left: 4px solid #${isPinned ? 'ffc107' : '0dcaf0'} !important;">
+                        <div class="notice-item mb-2 p-2 border rounded ${bgClass}" 
+                             style="border-left: 4px solid #${borderColor} !important; position: relative;"
+                             data-notice-id="${notice.id}">
                             <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">
-                                    ${pinIcon}${escapeHtml(title)}
-                                </h6>
-                                <small class="text-muted" style="font-size: 0.65rem;">${formatNoticeDate(notice.createdDate)}</small>
-                            </div>
-                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">${escapeHtml(content.substring(0, 100))}${content.length > 100 ? '...' : ''}</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" style="font-size: 0.65rem;">By: ${escapeHtml(notice.createdUserName)}</small>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        ${pinIcon}${expireWarning}${expireIcon}
+                                        <h6 class="notice-title mb-0" style="font-size: 0.8rem; font-weight: bold;">
+                                            ${escapeHtml(title)}
+                                        </h6>
+                                    </div>
+                                    <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2; color: #6c757d;">
+                                        ${escapeHtml(content.substring(0, 120))}${content.length > 120 ? '...' : ''}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted" style="font-size: 0.65rem;">
+                                            By: ${escapeHtml(notice.createdUserName)} • ${formatNoticeDate(notice.createdDate)}
+                                        </small>
+                                        ${expireDate ? `<small class="text-muted" style="font-size: 0.65rem;">Expires: ${expireDate.toLocaleDateString()}</small>` : ''}
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                        <li>
+                                            <button class="dropdown-item" onclick="togglePinNotice(${notice.id}, ${!isPinned})">
+                                                <i class="bi bi-pin${isPinned ? '-angle' : '-fill'} me-2"></i>
+                                                ${isPinned ? 'Unpin' : 'Pin'} Notice
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     `;
                     noticeContent.append(noticeHtml);
                 });
+                
+                // Add "View All" button if there are more notices
+                if (notices.length > 5) {
+                    noticeContent.append(`
+                        <div class="text-center mt-2">
+                            <small class="text-muted">${notices.length - 5} more notices...</small>
+                        </div>
+                    `);
+                }
             } else {
-                noticeContent.html('<div class="text-center text-muted p-3"><i class="bi bi-info-circle me-2"></i>No notices available</div>');
+                noticeContent.html(`
+                    <div class="text-center text-muted p-3">
+                        <i class="bi bi-info-circle me-2"></i>No notices available
+                        <br><small>Click the + button to add the first notice</small>
+                    </div>
+                `);
             }
         }
         
@@ -1530,6 +1637,97 @@
                 return `${diffDays - 1} days ago`;
             } else {
                 return date.toLocaleDateString();
+            }
+        }
+        
+        // Pin/Unpin notice functionality
+        function togglePinNotice(noticeId, shouldPin) {
+            if (!noticeId) {
+                showErrorMessage('Invalid notice ID');
+                return;
+            }
+            
+            const action = shouldPin ? 'pin' : 'unpin';
+            console.log(`${action}ning notice ${noticeId}`);
+            
+            $.ajax({
+                url: '@Url.Action("TogglePinNotice", "PlannedEvents")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    id: noticeId,
+                    isPinned: shouldPin
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        refreshNoticeBoard();
+                        showSuccessMessage(`Notice ${action}ned successfully!`);
+                    } else {
+                        showErrorMessage(`Error ${action}ning notice: ` + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error(`Error ${action}ning notice:`, error);
+                    showErrorMessage(`Error ${action}ning notice. Please try again.`);
+                }
+            });
+        }
+        
+        // Helper functions for validation and messaging
+        function showValidationError(message, fieldSelector) {
+            if (typeof toastr !== 'undefined') {
+                toastr.error(message);
+            } else {
+                alert(message);
+            }
+            
+            if (fieldSelector) {
+                $(fieldSelector).focus().addClass('is-invalid');
+                setTimeout(() => {
+                    $(fieldSelector).removeClass('is-invalid');
+                }, 3000);
+            }
+        }
+        
+        function showSuccessMessage(message) {
+            if (typeof toastr !== 'undefined') {
+                toastr.success(message);
+            } else {
+                // Create a custom success alert
+                const alertDiv = $(`
+                    <div class="alert alert-success alert-dismissible fade show position-fixed" 
+                         style="top: 20px; right: 20px; z-index: 9999; max-width: 300px;" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                $('body').append(alertDiv);
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    alertDiv.fadeOut();
+                }, 3000);
+            }
+        }
+        
+        function showErrorMessage(message) {
+            if (typeof toastr !== 'undefined') {
+                toastr.error(message);
+            } else {
+                // Create a custom error alert
+                const alertDiv = $(`
+                    <div class="alert alert-danger alert-dismissible fade show position-fixed" 
+                         style="top: 20px; right: 20px; z-index: 9999; max-width: 300px;" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                $('body').append(alertDiv);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    alertDiv.fadeOut();
+                }, 5000);
             }
         }
         
@@ -2228,5 +2426,120 @@
         font-weight: 700;
         font-size: 1.1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Notice Board Enhanced Styling */
+    .notice-item {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .notice-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .notice-item.bg-light {
+        background-color: #fff9e6 !important;
+    }
+
+    .notice-item .dropdown-toggle::after {
+        display: none;
+    }
+
+    .notice-item .btn-link {
+        text-decoration: none;
+    }
+
+    .notice-item .btn-link:hover {
+        color: #495057 !important;
+    }
+
+    /* Modal enhancements for add notice */
+    #addNoticeModal .modal-content {
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    #addNoticeModal .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    #addNoticeModal .form-check-input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+    #addNoticeModal .card {
+        transition: all 0.3s ease;
+    }
+
+    #addNoticeModal .form-check-input:checked + .form-check-label {
+        color: #007bff;
+        font-weight: 500;
+    }
+
+    /* Expire date animation */
+    #expireDateContainer {
+        transition: all 0.4s ease;
+    }
+
+    /* Alert positioning for success/error messages */
+    .position-fixed.alert {
+        animation: slideInRight 0.5s ease;
+    }
+
+    @@keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Notice icons styling */
+    .notice-item .bi-pin-fill {
+        animation: pinPulse 2s infinite;
+    }
+
+    @@keyframes pinPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .notice-item .bi-exclamation-triangle {
+        animation: warningBlink 1.5s infinite;
+    }
+
+    @@keyframes warningBlink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Dropdown menu styling */
+    .notice-item .dropdown-menu {
+        border: none;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    .notice-item .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .notice-item .dropdown-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(3px);
+    }
+
+    .notice-item .dropdown-item.text-danger:hover {
+        background-color: #f8d7da;
+        color: #721c24 !important;
     }
 </style>

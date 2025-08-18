@@ -2473,11 +2473,46 @@ namespace SFCDashboard.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<IActionResult> TogglePinNotice([FromBody] TogglePinNoticeRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return Json(new { success = false, message = "Invalid data provided" });
+                }
+
+                var currentUserId = await GetCurrentUserIdAsync();
+                var currentUser = await _usersApi.GetUserAsync(currentUserId);
+
+                var response = await _noticesApi.TogglePinNoticeAsync(
+                    request.Id,
+                    request.IsPinned,
+                    currentUserId,
+                    currentUser?.Name ?? "Unknown User"
+                );
+
+                return Json(new { success = response.Success, data = response.Data, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling pin status for notice {NoticeId}", request.Id);
+                return Json(new { success = false, message = "Error updating notice pin status" });
+            }
+        }
+
         public class CreateNoticeRequest
         {
             public string Description { get; set; } = string.Empty;
             public bool IsPinned { get; set; } = false;
             public DateTime? ExpireDate { get; set; }
+        }
+
+        public class TogglePinNoticeRequest
+        {
+            public int Id { get; set; }
+            public bool IsPinned { get; set; }
         }
     }
 }
