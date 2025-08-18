@@ -14,8 +14,8 @@ namespace SFCDashboard.Background.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly Timer _timer;
 
-        // Run every 10 minutes
-        private readonly TimeSpan _period = TimeSpan.FromMinutes(10);
+        // Run every hour
+        private readonly TimeSpan _period = TimeSpan.FromHours(1);
 
         public TaskQueueService(ILogger<TaskQueueService> logger, IServiceProvider serviceProvider)
         {
@@ -86,7 +86,7 @@ namespace SFCDashboard.Background.Services
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 📋 Loading workgroups...");
                 var workgroups = await context.WorkGroups.ToListAsync();
                 
-                // Get available years from PlannedEvents
+                // Get available years from PlannedEvents service required dates
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 📅 Loading available years...");
                 var availableYears = await context.PlannedEvents
                     .Where(pe => pe.ServiceRequiredDate.HasValue)
@@ -95,6 +95,11 @@ namespace SFCDashboard.Background.Services
                     .ToListAsync();
 
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ✅ Found {workgroups.Count} workgroups and {availableYears.Count} years to process");
+
+                // Clear all existing snapshots to ensure fresh generation
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 🗑️  Clearing all existing task queue snapshots...");
+                await context.Database.ExecuteSqlRawAsync("DELETE FROM TaskQueueSnapshots");
+                _logger.LogInformation("Cleared all existing task queue snapshots for fresh generation");
 
                 int totalOperations = workgroups.Count * availableYears.Count; // Only specific years, no null year
                 int currentOperation = 0;
@@ -106,12 +111,17 @@ namespace SFCDashboard.Background.Services
                     {
                         currentOperation++;
                         var progress = (double)currentOperation / totalOperations * 100;
-                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ⚙️  Processing Task Queue : ({progress:F1}% complete)");
+                        
+                        // Single line progress that updates in place
+                        Console.Write($"\r[{DateTime.Now:HH:mm:ss}] ⚙️  Processing Task Queue: WG {workgroup.Id} | Year {year} | {progress:F1}% ({currentOperation}/{totalOperations})");
                         
                         await RefreshTaskQueueForWorkgroupAndYearAsync(context, workgroup.Id, year);
                     }
                 }
 
+                // Add newline after progress updates
+                Console.WriteLine();
+                
                 stopwatch.Stop();
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ✅ Completed task queue snapshots refresh in {stopwatch.ElapsedMilliseconds}ms");
                 _logger.LogInformation("Completed task queue snapshots refresh in {elapsed}ms. Processed {workgroupCount} workgroups and {yearCount} years", 
@@ -131,19 +141,7 @@ namespace SFCDashboard.Background.Services
                 var yearDisplay = year?.ToString() ?? "all years";
                 _logger.LogDebug("Refreshing task queue for workgroup {workgroupId}, year {year}", workgroupId, year?.ToString() ?? "all");
 
-                // Delete existing snapshots for this workgroup and year using raw SQL to avoid concurrency issues
-                if (year.HasValue)
-                {
-                    await context.Database.ExecuteSqlRawAsync(
-                        "DELETE FROM TaskQueueSnapshots WHERE WorkGroupId = {0} AND Year = {1}", 
-                        workgroupId, year.Value);
-                }
-                else
-                {
-                    await context.Database.ExecuteSqlRawAsync(
-                        "DELETE FROM TaskQueueSnapshots WHERE WorkGroupId = {0} AND Year IS NULL", 
-                        workgroupId);
-                }
+                // No need to delete existing snapshots here - already cleared all at start
 
                 // Generate new task queue data
                 var taskQueueItems = await GenerateTaskQueueAsync(context, workgroupId, year);
@@ -171,7 +169,7 @@ namespace SFCDashboard.Background.Services
             catch (Exception ex)
             {
                 var yearDisplay = year?.ToString() ?? "all years";
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}]   ❌ ERROR refreshing workgroup {workgroupId}, {yearDisplay}: {ex.Message}");
+                // Log error but don't print to console to avoid interfering with progress line
                 _logger.LogError(ex, "Error refreshing task queue for workgroup {workgroupId}, year {year}", workgroupId, year?.ToString() ?? "all");
             }
         }
@@ -198,7 +196,7 @@ namespace SFCDashboard.Background.Services
             query = query.Where(t => t.PlannedEvent == null || 
                                 t.PlannedEvent.TaskWg == workgroup.Name);
 
-            // Filter by year if specified
+            // Filter by year if specified (based on service required date)
             if (year.HasValue)
             {
                 query = query.Where(t => t.PlannedEvent == null || 
@@ -258,10 +256,10 @@ namespace SFCDashboard.Background.Services
                 // Parse OLA from task list
                 var olaInDays = ParseOLAFromParameters(taskList.OLA_Parameters);
                 
-                // Calculate effective deadline
-                var effectiveDeadline = task.PlannedEvent?.ServiceRequiredDate?.AddDays(-olaInDays);
-                var daysUntilDue = effectiveDeadline.HasValue ? 
-                    (int)(effectiveDeadline.Value.Date - today).TotalDays : int.MaxValue;
+                // Calculate effective deadline using actual start date + OLA days
+                var actualStartDate = task.ActualTaskCreatedDate ?? task.TaskCreatedDate;
+                var effectiveDeadline = actualStartDate.AddDays(olaInDays);
+                var daysUntilDue = (int)(effectiveDeadline.Date - today).TotalDays;
 
                 // Calculate OLA percentage remaining
                 var olaPercentRemaining = CalculateOLAPercentRemaining(task, today, olaInDays);
@@ -324,13 +322,13 @@ namespace SFCDashboard.Background.Services
 
         private double CalculateOLAPercentRemaining(PETask task, DateTime today, int olaInDays)
         {
-            if (task.PlannedEvent?.ServiceRequiredDate == null || olaInDays <= 0)
+            if (olaInDays <= 0)
                 return 100.0;
 
-            var scheduledDate = task.PlannedEvent.ServiceRequiredDate.Value;
-            var olaStartDate = scheduledDate.AddDays(-olaInDays);
-            var totalOlaDays = (scheduledDate - olaStartDate).TotalDays;
-            var daysElapsed = (today - olaStartDate).TotalDays;
+            var actualStartDate = task.ActualTaskCreatedDate ?? task.TaskCreatedDate;
+            var effectiveDeadline = actualStartDate.AddDays(olaInDays);
+            var totalOlaDays = olaInDays;
+            var daysElapsed = (today - actualStartDate.Date).TotalDays;
 
             if (totalOlaDays <= 0)
                 return 100.0;
