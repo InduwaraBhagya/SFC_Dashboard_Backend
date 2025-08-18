@@ -190,7 +190,7 @@ namespace SFCDashboard.Controllers
                 var taskQueueItems = await _taskQueueApiClient.GetPrioritizedTasksAsync(
                     workgroupId: userWorkgroupId, 
                     year: DateTime.Now.Year, // Add current year parameter
-                    take: 5); // Load top 5 tasks initially
+                    take: 1); 
                 
                 ViewBag.NextTask = taskQueueItems;
                 ViewBag.HasNextTask = taskQueueItems.Any();

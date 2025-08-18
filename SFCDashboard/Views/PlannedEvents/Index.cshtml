@@ -196,7 +196,7 @@ else
                 <div class="card border-info h-100 shadow-sm">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <i class="bi bi-arrow-right-circle-fill me-2"></i> Next Task
+                            <i class="bi bi-arrow-right-circle-fill me-2"></i> Task Queue
                         </h5>
                         <div class="d-flex align-items-center gap-2">
                             <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-sm btn-light">
@@ -238,9 +238,6 @@ else
                                                             <strong>Customer:</strong> @task.Task.PlannedEvent?.Customer<br/>
                                                             <strong>Status:</strong> @task.DueStatus
                                                         </p>
-                                                        <div class="priority-score">
-                                                            <small class="text-muted">Priority Score: <strong>@task.PriorityScore.ToString("F1")</strong></small>
-                                                        </div>
                                                     </div>
                                                     <div class="task-actions">
                                                         <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" class="btn btn-sm btn-outline-primary">
@@ -254,9 +251,6 @@ else
                                             <a href="@Url.Action("TaskQueue", "PlannedEvents")" class="btn btn-outline-primary me-2">
                                                 <i class="bi bi-list-task me-1"></i> View Full Task Queue
                                             </a>
-                                            <a href="@Url.Action("Index", "PlannedEvents")" class="btn btn-outline-secondary">
-                                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-                                            </a>
                                         </div>
                                     </div>
                                 }
@@ -269,9 +263,6 @@ else
                                         <div class="d-flex justify-content-center gap-2">
                                             <a href="@Url.Action("TaskQueue", "PlannedEvents")" class="btn btn-outline-primary">
                                                 <i class="bi bi-list-task me-1"></i> View Task Queue
-                                            </a>
-                                            <a href="@Url.Action("Index", "PlannedEvents")" class="btn btn-outline-secondary">
-                                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
                                             </a>
                                         </div>
                                     </div>
