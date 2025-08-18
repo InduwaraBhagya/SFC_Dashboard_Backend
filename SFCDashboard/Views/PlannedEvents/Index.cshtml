@@ -405,9 +405,129 @@
                     </div>
                 </div>
 
-    <!-- Middle Column: BOQ Status (33% width) -->
+    <!-- Middle Column: Task Queue & BOQ Status (33% width) -->
     <div class="col-lg-4 mb-3">
-        <div class="card border-success shadow-sm" style="height: 300px;">
+        <!-- Task Queue Section -->
+        @if (shouldShowNextTask)
+        {
+            <!-- Next Task Card -->
+            <div class="card border-info shadow-sm" style="height: 250px;">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Next Task
+                    </h6>
+                    <div class="d-flex align-items-center gap-1">
+                        <button id="loadTaskBtn" class="btn btn-xs btn-success" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-play-circle me-1"></i> Load
+                        </button>
+                        <button id="refreshTaskBtn" class="btn btn-xs btn-warning" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-xs btn-light" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-list-task me-1"></i> All
+                        </a>
+                    </div>
+                </div>
+                
+                <div id="nextTaskContent">
+                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
+                        <div id="taskContent">
+                            <!-- Default state: Show load task button -->
+                            <div id="noTaskLoaded" class="text-center py-1">
+                                <i class="bi bi-hourglass-split text-muted" style="font-size: 1.2rem;"></i>
+                                <p class="mt-1 mb-1 text-muted small">Click "Load Task"</p>
+                                <button id="loadTaskMainBtn" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-play-circle me-1"></i> Load Task
+                                </button>
+                            </div>
+                            
+                            <!-- Loading state -->
+                            <div id="taskLoading" class="text-center py-1" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-1 mb-0 small">Loading...</p>
+                            </div>
+                            
+                            <!-- Task loaded state (will be populated via JavaScript) -->
+                            <div id="taskLoaded" style="display: none;">
+                                <!-- Content will be populated dynamically -->
+                            </div>
+                            
+                            <!-- No tasks available state -->
+                            <div id="noTaskAvailable" class="text-center py-1" style="display: none;">
+                                <i class="bi bi-check-circle text-success" style="font-size: 1.2rem;"></i>
+                                <p class="mt-1 mb-0 small">No pending tasks!</p>
+                                <small class="text-muted">Last updated: <span id="lastUpdateTime"></span></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Workgroup Filter for ViewAll Users -->
+            @if (ViewData["CanViewAll"] as bool? == true)
+            {
+                <div class="card border-primary shadow-sm" style="height: 250px;">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                        <h6 class="mb-0">
+                            <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
+                        </h6>
+                        <button class="btn btn-xs btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="collapse" id="filterContent">
+                        <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
+                            <form method="get" asp-action="Index">
+                                <div class="mb-1">
+                                    <label class="form-label mb-1 small" for="workgroupFilter">
+                                        <i class="bi bi-people-fill"></i>
+                                        Select a Workgroup
+                                    </label>
+                                    <div class="filter-row">
+                                        <div class="filter-select-container mb-1">
+                                            <select class="form-select form-select-sm" name="workgroupId" id="workgroupFilter">
+                                                @if (ViewData["CanViewAll"] as bool? == true)
+                                                {
+                                                    <option value="">All Workgroups</option>
+                                                }
+                                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                                {
+                                                    foreach (var workgroup in workgroups)
+                                                    {
+                                                        bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
+                                                                        ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
+                                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="filter-actions d-flex gap-1">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-funnel"></i> Apply
+                                            </button>
+                                            @if (ViewData["SelectedWorkgroupId"] != null)
+                                            {
+                                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="bi bi-x-circle"></i> Clear
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        
+        <!-- BOQ Status Section -->
+        <div class="card border-success shadow-sm mt-3" style="height: 300px;">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-1">
                 <h6 class="mb-0">
                     <i class="bi bi-clipboard-data me-1"></i>BOQ Status
@@ -489,125 +609,6 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Task Queue Section -->
-        @if (shouldShowNextTask)
-        {
-            <!-- Next Task Card -->
-            <div class="card border-info shadow-sm mt-3" style="height: 250px;">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
-                    <h6 class="mb-0">
-                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Next Task
-                    </h6>
-                    <div class="d-flex align-items-center gap-1">
-                        <button id="loadTaskBtn" class="btn btn-xs btn-success" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-play-circle me-1"></i> Load
-                        </button>
-                        <button id="refreshTaskBtn" class="btn btn-xs btn-warning" style="display: none; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                        <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-xs btn-light" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-list-task me-1"></i> All
-                        </a>
-                    </div>
-                </div>
-                
-                <div id="nextTaskContent">
-                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
-                        <div id="taskContent">
-                            <!-- Default state: Show load task button -->
-                            <div id="noTaskLoaded" class="text-center py-1">
-                                <i class="bi bi-hourglass-split text-muted" style="font-size: 1.2rem;"></i>
-                                <p class="mt-1 mb-1 text-muted small">Click "Load Task"</p>
-                                <button id="loadTaskMainBtn" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-play-circle me-1"></i> Load Task
-                                </button>
-                            </div>
-                            
-                            <!-- Loading state -->
-                            <div id="taskLoading" class="text-center py-1" style="display: none;">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-1 mb-0 small">Loading...</p>
-                            </div>
-                            
-                            <!-- Task loaded state (will be populated via JavaScript) -->
-                            <div id="taskLoaded" style="display: none;">
-                                <!-- Content will be populated dynamically -->
-                            </div>
-                            
-                            <!-- No tasks available state -->
-                            <div id="noTaskAvailable" class="text-center py-1" style="display: none;">
-                                <i class="bi bi-check-circle text-success" style="font-size: 1.2rem;"></i>
-                                <p class="mt-1 mb-0 small">No pending tasks!</p>
-                                <small class="text-muted">Last updated: <span id="lastUpdateTime"></span></small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-        else
-        {
-            <!-- Workgroup Filter for ViewAll Users -->
-            @if (ViewData["CanViewAll"] as bool? == true)
-            {
-                <div class="card border-primary shadow-sm mt-3" style="height: 250px;">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
-                        <h6 class="mb-0">
-                            <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
-                        </h6>
-                        <button class="btn btn-xs btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="collapse" id="filterContent">
-                        <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
-                            <form method="get" asp-action="Index">
-                                <div class="mb-1">
-                                    <label class="form-label mb-1 small" for="workgroupFilter">
-                                        <i class="bi bi-people-fill"></i>
-                                        Select a Workgroup
-                                    </label>
-                                    <div class="filter-row">
-                                        <div class="filter-select-container mb-1">
-                                            <select class="form-select form-select-sm" name="workgroupId" id="workgroupFilter">
-                                                @if (ViewData["CanViewAll"] as bool? == true)
-                                                {
-                                                    <option value="">All Workgroups</option>
-                                                }
-                                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                                {
-                                                    foreach (var workgroup in workgroups)
-                                                    {
-                                                        bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
-                                                                        ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
-                                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                                    }
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="filter-actions d-flex gap-1">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-funnel"></i> Apply
-                                            </button>
-                                            @if (ViewData["SelectedWorkgroupId"] != null)
-                                            {
-                                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                                                    <i class="bi bi-x-circle"></i> Clear
-                                                </a>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            }
-        }
     </div>
 
     <!-- Right Column: Notice Board (33% width) -->
