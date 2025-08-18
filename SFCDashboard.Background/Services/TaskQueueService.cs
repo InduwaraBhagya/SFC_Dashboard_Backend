@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,22 +13,29 @@ namespace SFCDashboard.Background.Services
     {
         private readonly ILogger<TaskQueueService> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IConfiguration _configuration;
         private readonly Timer _timer;
 
-        // Run every hour
-        private readonly TimeSpan _period = TimeSpan.FromHours(1);
+        // Get refresh interval from configuration, default to 1 hour
+        private readonly TimeSpan _period;
 
-        public TaskQueueService(ILogger<TaskQueueService> logger, IServiceProvider serviceProvider)
+        public TaskQueueService(ILogger<TaskQueueService> logger, IServiceProvider serviceProvider, IConfiguration configuration)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _configuration = configuration;
+            
+            // Read refresh interval from configuration
+            var refreshIntervalHours = _configuration.GetValue<int>("BackgroundServices:TaskQueueService:RefreshIntervalHours", 1);
+            _period = TimeSpan.FromHours(refreshIntervalHours);
+            
             _timer = new Timer(ExecuteTaskQueueRefresh, null, TimeSpan.Zero, _period);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 🚀 TaskQueue Background Service started");
-            _logger.LogInformation("TaskQueue Background Service started at: {time}", DateTimeOffset.Now);
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 🚀 TaskQueue Background Service started (refresh every {_period.TotalHours} hours)");
+            _logger.LogInformation("TaskQueue Background Service started at: {time} with refresh interval: {interval} hours", DateTimeOffset.Now, _period.TotalHours);
 
             while (!stoppingToken.IsCancellationRequested)
             {
