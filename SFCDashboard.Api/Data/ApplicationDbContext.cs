@@ -83,7 +83,8 @@ namespace SFCDashboard.Api.Data
             new Permission { Id = 7, Name = "CanReportIssues", Description = "Can report issues on Planned Events" },
             new Permission { Id = 8, Name = "ManageProjects", Description = "Can manage projects" },
             new Permission { Id = 9, Name = "ManageCustomerAssignments", Description = "Can manage customer assignments" },
-            new Permission { Id = 10, Name = "ManageDrawFiberPerms", Description = "Can manage draw fiber permissions for NET-PROJ-ACC-CABLE workgroup users" }
+            new Permission { Id = 10, Name = "ManageDrawFiberPerms", Description = "Can manage draw fiber permissions for NET-PROJ-ACC-CABLE workgroup users" },
+            new Permission { Id = 11, Name = "ManageNotices", Description = "Permission to manage notices - create, update, pin/unpin, and delete notices" }
             // Add other permissions here
             );
 

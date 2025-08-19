@@ -13,5 +13,6 @@ namespace SFCDashboard.Models
         public bool CanViewAll { get; set; }
         public bool CanReportIssues { get; set; }
         public bool ManageProjects { get; set; }
+        public bool CanManageNotices { get; set; }
     }
 }

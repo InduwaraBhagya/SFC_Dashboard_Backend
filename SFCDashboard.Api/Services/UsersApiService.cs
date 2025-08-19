@@ -381,7 +381,8 @@ namespace SFCDashboard.Api.Services
                     CanMakeTasksUrgent = user.UserRole?.HasPermission("CanMakeTasksUrgent") == true,
                     CanViewAll = user.UserRole?.HasPermission("ViewAll") == true,
                     CanReportIssues = user.UserRole?.HasPermission("CanReportIssues") == true,
-                    ManageProjects = user.UserRole?.HasPermission("ManageProjects") == true
+                    ManageProjects = user.UserRole?.HasPermission("ManageProjects") == true,
+                    CanManageNotices = user.UserRole?.HasPermission("ManageNotices") == true
                 };
             }
             catch (Exception ex)

@@ -11,12 +11,26 @@ namespace SFCDashboard.Api.Controllers
     public class NoticesApiController : ControllerBase
     {
         private readonly INoticesService _noticesService;
+        private readonly IPermissionsApiService _permissionsService;
         private readonly ILogger<NoticesApiController> _logger;
 
-        public NoticesApiController(INoticesService noticesService, ILogger<NoticesApiController> logger)
+        public NoticesApiController(
+            INoticesService noticesService, 
+            IPermissionsApiService permissionsService,
+            ILogger<NoticesApiController> logger)
         {
             _noticesService = noticesService;
+            _permissionsService = permissionsService;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Helper method to get current user's service ID from the identity
+        /// </summary>
+        private string GetCurrentUserServiceId()
+        {
+            var serviceId = User?.Identity?.Name ?? string.Empty;
+            return serviceId.Length > 6 ? serviceId.Substring(0, 6) : serviceId;
         }
 
         /// <summary>
@@ -69,6 +83,19 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
+                // Check if user has permission to create notices
+                var currentUserServiceId = GetCurrentUserServiceId();
+                if (string.IsNullOrEmpty(currentUserServiceId))
+                {
+                    return Unauthorized(new { success = false, message = "Unable to identify current user." });
+                }
+
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                if (!hasPermission)
+                {
+                    return Forbid("You do not have permission to create notices.");
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(new { success = false, message = "Invalid data provided.", errors = ModelState });
@@ -104,6 +131,19 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
+                // Check if user has permission to update notices
+                var currentUserServiceId = GetCurrentUserServiceId();
+                if (string.IsNullOrEmpty(currentUserServiceId))
+                {
+                    return Unauthorized(new { success = false, message = "Unable to identify current user." });
+                }
+
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                if (!hasPermission)
+                {
+                    return Forbid("You do not have permission to update notices.");
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(new { success = false, message = "Invalid data provided.", errors = ModelState });
@@ -133,6 +173,19 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
+                // Check if user has permission to pin/unpin notices
+                var currentUserServiceId = GetCurrentUserServiceId();
+                if (string.IsNullOrEmpty(currentUserServiceId))
+                {
+                    return Unauthorized(new { success = false, message = "Unable to identify current user." });
+                }
+
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                if (!hasPermission)
+                {
+                    return Forbid("You do not have permission to pin or unpin notices.");
+                }
+
                 var notice = await _noticesService.TogglePinNoticeAsync(id, request.IsPinned, request.UpdatedBy, request.UpdatedUserName);
 
                 if (notice == null)
@@ -162,6 +215,19 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
+                // Check if user has permission to delete notices
+                var currentUserServiceId = GetCurrentUserServiceId();
+                if (string.IsNullOrEmpty(currentUserServiceId))
+                {
+                    return Unauthorized(new { success = false, message = "Unable to identify current user." });
+                }
+
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                if (!hasPermission)
+                {
+                    return Forbid("You do not have permission to delete notices.");
+                }
+
                 var result = await _noticesService.DeleteNoticeAsync(id, request.UpdatedBy, request.UpdatedUserName);
 
                 if (!result)

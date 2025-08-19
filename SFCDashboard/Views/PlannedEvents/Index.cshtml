@@ -664,9 +664,12 @@
                 <h6 class="mb-0">
                     <i class="bi bi-megaphone me-1"></i>Notice Board
                 </h6>
-                <button class="btn btn-xs btn-outline-dark" id="addNoticeBtn" title="Add Notice" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                    <i class="bi bi-plus-circle"></i>
-                </button>
+                @if ((bool)(ViewData["CanManageNotices"] ?? false))
+                {
+                    <button class="btn btn-xs btn-outline-dark" id="addNoticeBtn" title="Add Notice" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                }
             </div>
             
             <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
@@ -1171,6 +1174,9 @@
         // Expose clearTaskCache globally for use by other scripts
         // window.clearTaskCache = clearTaskCache; // Commented out - function not defined
 
+        // User permissions for notice management
+        const canManageNotices = @Html.Raw(ViewData["CanManageNotices"]?.ToString().ToLower() ?? "false");
+
         // Notice Board Management
         function initializeNoticeBoard() {
             // Add click handlers for notice board buttons
@@ -1440,6 +1446,7 @@
                                         ${expireDate ? `<small class="text-muted" style="font-size: 0.65rem;">Expires: ${expireDate.toLocaleDateString()}</small>` : ''}
                                     </div>
                                 </div>
+                                ${canManageNotices ? `
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="bi bi-three-dots-vertical"></i>
@@ -1459,6 +1466,7 @@
                                         </li>
                                     </ul>
                                 </div>
+                                ` : ''}
                             </div>
                         </div>
                     `;
@@ -1474,10 +1482,13 @@
                     `);
                 }
             } else {
+                const noNoticesMessage = canManageNotices ? 
+                    '<i class="bi bi-info-circle me-2"></i>No notices available<br><small>Click the + button to add the first notice</small>' :
+                    '<i class="bi bi-info-circle me-2"></i>No notices available at the moment';
+                
                 noticeContent.html(`
                     <div class="text-center text-muted p-3">
-                        <i class="bi bi-info-circle me-2"></i>No notices available
-                        <br><small>Click the + button to add the first notice</small>
+                        ${noNoticesMessage}
                     </div>
                 `);
             }

@@ -20,6 +20,7 @@ namespace SFCDashboard.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ITaskQueueApiClient _taskQueueApiClient;
         private readonly INoticesApiClient _noticesApi;
+        private readonly IPermissionsApiClient _permissionsApi;
 
         public PlannedEventsController(
             IPlannedEventsApiClient plannedEventsApi,
@@ -35,7 +36,8 @@ namespace SFCDashboard.Controllers
             ILogger<PlannedEventsController> logger,
             IWebHostEnvironment webHostEnvironment,
             ITaskQueueApiClient taskQueueApiClient,
-            INoticesApiClient noticesApi) : base(usersApi)
+            INoticesApiClient noticesApi,
+            IPermissionsApiClient permissionsApi) : base(usersApi)
         {
             _plannedEventsApi = plannedEventsApi;
             _usersApi = usersApi;
@@ -51,6 +53,7 @@ namespace SFCDashboard.Controllers
             _webHostEnvironment = webHostEnvironment;
             _taskQueueApiClient = taskQueueApiClient;
             _noticesApi = noticesApi;
+            _permissionsApi = permissionsApi;
         }
 
         // GET: PlannedEvents/Index
@@ -2498,6 +2501,19 @@ namespace SFCDashboard.Controllers
         {
             try
             {
+                // Check if user has permission to create notices
+                var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
+                if (string.IsNullOrEmpty(serviceId))
+                {
+                    return Json(new { success = false, message = "Unable to identify current user." });
+                }
+
+                var hasPermission = await _permissionsApi.HasPermissionAsync(serviceId, "ManageNotices");
+                if (!hasPermission)
+                {
+                    return Json(new { success = false, message = "You do not have permission to create notices." });
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return Json(new { success = false, message = "Invalid data provided" });
@@ -2528,6 +2544,19 @@ namespace SFCDashboard.Controllers
         {
             try
             {
+                // Check if user has permission to pin/unpin notices
+                var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
+                if (string.IsNullOrEmpty(serviceId))
+                {
+                    return Json(new { success = false, message = "Unable to identify current user." });
+                }
+
+                var hasPermission = await _permissionsApi.HasPermissionAsync(serviceId, "ManageNotices");
+                if (!hasPermission)
+                {
+                    return Json(new { success = false, message = "You do not have permission to pin or unpin notices." });
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return Json(new { success = false, message = "Invalid data provided" });
@@ -2557,6 +2586,19 @@ namespace SFCDashboard.Controllers
         {
             try
             {
+                // Check if user has permission to delete notices
+                var serviceId = ExtractServiceId(User.Identity?.Name ?? string.Empty);
+                if (string.IsNullOrEmpty(serviceId))
+                {
+                    return Json(new { success = false, message = "Unable to identify current user." });
+                }
+
+                var hasPermission = await _permissionsApi.HasPermissionAsync(serviceId, "ManageNotices");
+                if (!hasPermission)
+                {
+                    return Json(new { success = false, message = "You do not have permission to delete notices." });
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return Json(new { success = false, message = "Invalid data provided" });

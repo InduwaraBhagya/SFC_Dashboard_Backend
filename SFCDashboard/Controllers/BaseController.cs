@@ -44,6 +44,7 @@ namespace SFCDashboard.Controllers
                         ViewData["CanViewAll"] = layoutData.CanViewAll;
                         ViewData["CanReportIssues"] = layoutData.CanReportIssues;
                         ViewData["ManageProjects"] = layoutData.ManageProjects;
+                        ViewData["CanManageNotices"] = layoutData.CanManageNotices;
                     }
                     else
                     {
@@ -74,6 +75,7 @@ namespace SFCDashboard.Controllers
             ViewData["CanViewAll"] = false;
             ViewData["CanReportIssues"] = false;
             ViewData["ManageProjects"] = false;
+            ViewData["CanManageNotices"] = false;
         }
 
         protected static string ExtractServiceId(string email)
