@@ -137,7 +137,7 @@ namespace SFCDashboard.Controllers
 
                 // Add headers
                 var headerFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 8);
-                var headers = new[] { "ID", "Province", "Region", "RTOM", "Contractor", "SO Number", "Customer", "PE Number", "PE Title", "PE Activity", "PE Nature" };
+                var headers = new[] { "ID", "Province", "Region", "RTOM", "Contractor", "SO Number", "Customer", "PE Number", "PE Title", "Task Name", "Task Workgroup" };
 
                 foreach (var header in headers)
                 {
@@ -163,8 +163,8 @@ namespace SFCDashboard.Controllers
                     table.AddCell(new PdfPCell(new Phrase(record.CUSTOMER ?? "", dataFont)) { Padding = 3 });
                     table.AddCell(new PdfPCell(new Phrase(record.PE_NUMBER ?? "", dataFont)) { Padding = 3 });
                     table.AddCell(new PdfPCell(new Phrase(record.PE_TITLE ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.PE_ACTIVITY ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.PE_NATURE ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.TASK_NAME ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.TASK_WG ?? "", dataFont)) { Padding = 3 });
                 }
 
                 document.Add(table);
@@ -190,7 +190,7 @@ namespace SFCDashboard.Controllers
                 var worksheet = workbook.Worksheets.Add("PE Records Report");
 
                 // Headers
-                var headers = new[] { "ID", "Province", "Region", "RTOM", "Contractor Name", "SO Number", "Customer", "PE Number", "PE Title", "PE Activity", "PE Nature" };
+                var headers = new[] { "ID", "Province", "Region", "RTOM", "Contractor Name", "SO Number", "Customer", "PE Number", "PE Title", "Task Name", "Task Workgroup" };
                 for (int i = 0; i < headers.Length; i++)
                 {
                     worksheet.Cell(1, i + 1).Value = headers[i];
@@ -211,8 +211,8 @@ namespace SFCDashboard.Controllers
                     worksheet.Cell(i + 2, 7).Value = record.CUSTOMER ?? "";
                     worksheet.Cell(i + 2, 8).Value = record.PE_NUMBER ?? "";
                     worksheet.Cell(i + 2, 9).Value = record.PE_TITLE ?? "";
-                    worksheet.Cell(i + 2, 10).Value = record.PE_ACTIVITY ?? "";
-                    worksheet.Cell(i + 2, 11).Value = record.PE_NATURE ?? "";
+                    worksheet.Cell(i + 2, 10).Value = record.TASK_NAME ?? "";
+                    worksheet.Cell(i + 2, 11).Value = record.TASK_WG ?? "";
                 }
 
                 // Auto-fit columns
@@ -313,7 +313,7 @@ namespace SFCDashboard.Controllers
                 canvas.DrawText(subtitle, (imageWidth - subtitleBounds.Width) / 2, padding + titleBounds.Height + 30, subtitlePaint);
 
                 // Draw headers
-                var headers = new[] { "ID", "Province", "Region", "RTOM", "Contractor", "SO Number", "Customer", "PE Number", "PE Title", "PE Activity", "PE Nature" };
+                var headers = new[] { "ID", "Province", "Region", "RTOM", "Contractor", "SO Number", "Customer", "PE Number", "PE Title", "Task Name", "Task Workgroup" };
                 var startY = padding + 60;
 
                 for (int i = 0; i < headers.Length; i++)
@@ -343,8 +343,8 @@ namespace SFCDashboard.Controllers
                         record.CUSTOMER ?? "",
                         record.PE_NUMBER ?? "",
                         record.PE_TITLE ?? "",
-                        record.PE_ACTIVITY ?? "",
-                        record.PE_NATURE ?? ""
+                        record.TASK_NAME ?? "",
+                        record.TASK_WG ?? ""
                     };
 
                     for (int colIndex = 0; colIndex < values.Length; colIndex++)
