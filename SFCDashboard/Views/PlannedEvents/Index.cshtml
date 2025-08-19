@@ -23,33 +23,45 @@
 <!-- Global Search Section -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body py-3">
+        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #0c1d83 100%) !important; border-radius: 15px !important;">
+            <div class="card-body py-3" style="background: transparent !important;">
                 <div class="d-flex align-items-center justify-content-between">
+                    <!-- Logo -->
+                    <div class="me-3 ms-3">
+                        <img src="~/images/logo.png" alt="Logo" height="60" class="d-inline-block" />
+                    </div>
+                    
                     <!-- Global Search Form -->
                     <form class="d-flex align-items-center justify-content-center flex-grow-1" method="get" asp-controller="PlannedEvents"
                         asp-action="GlobalSearch" role="search">
                         <div class="input-group" style="max-width: 600px;">
-                            <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px;">
+                            <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px; box-shadow: none !important; border-radius: 0.375rem 0 0 0.375rem;">
                                 <option value="peNumber" selected>PE Number</option>
                                 <option value="customer">Customer</option>
                                 <option value="jobReference">Job Reference</option>
                                 <option value="soNumber">SO Number</option>
                             </select>
                             <input class="form-control" type="search" name="peNumber" id="globalSearchInput"
-                                placeholder="Search PE Number" aria-label="Search" />
-                            <button class="btn btn-primary" type="submit">
+                                placeholder="Search PE Number" aria-label="Search" style="box-shadow: none !important; border-left: 0; border-right: 0;" />
+                            <button class="btn btn-primary" type="submit" style="box-shadow: none !important; border-left: 0; border-radius: 0 0.375rem 0.375rem 0; padding: 0.375rem 0.75rem; display: flex; align-items: center; justify-content: center;">
                                 <i class="bi bi-search me-1"></i>Search
                             </button>
                         </div>
                     </form>
                     
+                    <!-- Welcome Message -->
+                    <div class="mx-3">
+                        <span class="text-white fw-bold">
+                            👋 Hello, @(ViewData["CurrentUserName"]?.ToString() ?? "User")!
+                        </span>
+                    </div>
+                    
                     <!-- Reminder Notifications -->
-                    <div class="ms-3">
+                    <div class="ms-2">
                         <div class="dropdown">
-                            <button class="btn btn-outline-primary position-relative" type="button" id="reminderDropdown"
-                                data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem;">
-                                <i class="bi bi-bell" style="font-size: 1.2rem;"></i>
+                            <button class="btn position-relative" type="button" id="reminderDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem; background: transparent;">
+                                <i class="bi bi-bell" style="font-size: 1.2rem; color: white;"></i>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                                     id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
                             </button>
