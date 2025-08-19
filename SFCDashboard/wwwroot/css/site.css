@@ -679,3 +679,54 @@ body {
     border-bottom-right-radius: 0 !important;
 }
 
+/* Notice Board Enhanced Font Sizes */
+.notice-item .notice-title {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    margin-bottom: 8px !important;
+}
+
+.notice-item .notice-content {
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 8px !important;
+    color: #495057 !important;
+}
+
+.notice-item small {
+    font-size: 0.8rem !important;
+}
+
+.notice-item .badge {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+}
+
+/* Notice Board "No notices" message */
+.notice-item + .text-center p {
+    font-size: 0.95rem !important;
+    line-height: 1.4 !important;
+}
+
+/* Notice Board Header */
+.card-header h6 {
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+}
+
+/* Responsive adjustments for notice board */
+@media (max-width: 768px) {
+    .notice-item .notice-title {
+        font-size: 0.95rem !important;
+    }
+    
+    .notice-item .notice-content {
+        font-size: 0.85rem !important;
+    }
+    
+    .notice-item small {
+        font-size: 0.75rem !important;
+    }
+}
+

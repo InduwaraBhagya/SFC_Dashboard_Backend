@@ -370,8 +370,31 @@
                                 {
                                     foreach (var issue in inboxIssuesList)
                                     {
-                                        <div class="message-item @(issue.IsRead ? "read" : "unread") @(issue.IsResolutionRequest ? "resolution" : "")" 
-                                             data-message-id="issue-@issue.Id" data-pe-id="@issue.PlannedEventId">
+                                        <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
+                                             data-message-id="issue-@issue.CreatedAt.Ticks"
+                                             data-issue-id="@issue.Id"
+                                             data-pe-id="@issue.PlannedEventId"
+                                             data-sender="@issue.SenderName"
+                                             data-sender-id="@issue.SenderId"
+                                             data-issue-text="@issue.IssueText"
+                                             data-attachment="@issue.AttachmentPath"
+                                             data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
+                                             data-is-read="@issue.IsRead.ToString().ToLower()"
+                                             data-is-reply="@issue.IsReply.ToString().ToLower()"
+                                             data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
+                                             data-original-issue-id="@issue.OriginalIssueId"
+                                             @if (issue.IsResolutionRequest)
+                                             {
+                                                 <text>
+                                                 data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
+                                                 data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                                 onclick="showResolutionConfirm(this)"
+                                                 </text>
+                                             }
+                                             else
+                                             {
+                                                 <text>onclick="showIssueDetails(this)"</text>
+                                             }>
                                             <div class="message-indicator"></div>
                                             <div class="message-content">
                                                 <div class="d-flex justify-content-between align-items-start">
