@@ -105,37 +105,5 @@ namespace SFCDashboard.ApiClients
                 return new List<int> { DateTime.Now.Year };
             }
         }
-
-        public async Task<List<TaskQueueItem>> RefreshTaskQueueAsync(int? workgroupId = null, int? year = null, int take = 20)
-        {
-            try
-            {
-                var queryParams = new List<string>();
-                if (workgroupId.HasValue)
-                    queryParams.Add($"workgroupId={workgroupId}");
-                if (year.HasValue)
-                    queryParams.Add($"year={year}");
-                queryParams.Add($"take={take}");
-
-                var query = string.Join("&", queryParams);
-                var response = await _httpClient.PostAsync($"api/taskqueue/refresh?{query}", null);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<List<TaskQueueItem>>(content, _jsonOptions) ?? new List<TaskQueueItem>();
-                }
-                else
-                {
-                    _logger.LogWarning("Failed to refresh task queue. Status: {StatusCode}", response.StatusCode);
-                    return new List<TaskQueueItem>();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error refreshing task queue from API");
-                return new List<TaskQueueItem>();
-            }
-        }
     }
 }

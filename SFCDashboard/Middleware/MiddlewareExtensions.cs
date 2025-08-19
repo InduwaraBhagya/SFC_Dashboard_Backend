@@ -11,5 +11,10 @@ namespace SFCDashboard.Middleware
         {
             return builder.UseMiddleware<GlobalExceptionMiddleware>();
         }
+
+        public static IApplicationBuilder UseCookieClearing(this IApplicationBuilder builder)
+        {
+            return builder.UseMiddleware<CookieClearingMiddleware>();
+        }
     }
 }
