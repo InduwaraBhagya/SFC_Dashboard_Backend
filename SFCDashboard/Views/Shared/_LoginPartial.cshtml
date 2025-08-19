@@ -4,13 +4,13 @@
 @if (User.Identity?.IsAuthenticated == true)
 {
         <li class="nav-item">
-            <a class="nav-link " asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut" onclick="clearBrowserDataOnSignOut(event, this)">Sign out</a>
+            <a class="nav-link " asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut" >Sign out</a>
         </li>
 }
 else
 {
         <li class="nav-item">
-            <a class="nav-link" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignIn" onclick="clearBrowserDataBeforeLogin(event, this)">Sign in</a>
+            <a class="nav-link" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignIn">Sign in</a>
         </li>
 }
 </ul>
