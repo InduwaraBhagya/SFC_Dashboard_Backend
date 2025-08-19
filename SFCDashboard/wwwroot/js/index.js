@@ -287,6 +287,46 @@ function initializeMessageInbox() {
             showUrgentRequestModal('task', taskId);
         });
     });
+
+    // Handle issue message clicks
+    document.querySelectorAll('.message-item[data-message-id^="issue-"]').forEach(item => {
+        item.addEventListener('click', function() {
+            // Extract issue data from the element's data attributes and classes
+            const messageId = this.getAttribute('data-message-id');
+            const issueId = messageId.replace('issue-', '');
+            const peId = this.getAttribute('data-pe-id');
+            
+            // Get other data from the message content
+            const senderElement = this.querySelector('.message-sender');
+            const sender = senderElement ? senderElement.textContent.replace(/From\s+/, '').replace(/\s+$/, '') : 'Unknown';
+            
+            const subjectElement = this.querySelector('.message-subject');
+            const issueText = subjectElement ? subjectElement.textContent.replace(/^\s*(?:Issue|Reply|Resolution|Issue Fixed)\s*/, '') : '';
+            
+            const timeElement = this.querySelector('.message-time');
+            const date = timeElement ? timeElement.textContent : '';
+            
+            const isRead = !this.classList.contains('unread');
+            const isResolutionRequest = this.classList.contains('resolution');
+            
+            // Check for attachment
+            const attachmentElement = this.querySelector('.message-preview');
+            const hasAttachment = attachmentElement && attachmentElement.textContent.includes('Has attachment');
+            
+            // Set up data attributes for the showIssueDetails function
+            $(this).data('issue-id', issueId);
+            $(this).data('pe-id', peId);
+            $(this).data('sender', sender);
+            $(this).data('issue-text', issueText);
+            $(this).data('date', date);
+            $(this).data('is-read', isRead);
+            $(this).data('is-resolution-request', isResolutionRequest);
+            $(this).data('attachment', hasAttachment ? '/path/to/attachment' : null); // This would need to be populated from server data
+            
+            // Show issue details modal
+            showIssueDetails(this);
+        });
+    });
 }
 
 function showUrgentRequestModal(type, id) {

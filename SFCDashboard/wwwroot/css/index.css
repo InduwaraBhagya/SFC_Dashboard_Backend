@@ -220,6 +220,34 @@
     background-color: #ffc107;
 }
 
+/* Regular issue messages */
+.message-item[data-message-id^="issue-"]:not(.urgent-request):not(.task-urgent-request) {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-left: 3px solid #0d6efd;
+}
+
+.message-item[data-message-id^="issue-"]:not(.urgent-request):not(.task-urgent-request):hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15);
+}
+
+/* Resolution request specific styling */
+.message-item.resolution {
+    background-color: rgba(40, 167, 69, 0.05);
+    border-left: 3px solid #28a745;
+}
+
+.message-item.resolution:hover {
+    background-color: rgba(40, 167, 69, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.15);
+}
+
+.message-item.resolution.unread::before {
+    background-color: #28a745;
+}
+
 /* Workgroup filter styles */
 .workgroup-filter-section {
     background-color: #f8f9fa;
