@@ -174,34 +174,34 @@ body {
 }
 
 .dashboard-card.urgent-card {
-    background: linear-gradient(120deg, #ff896d 0%, #EA4444 100%, #ffb6b6 100%);
-    color: #fff;
-    box-shadow: 0 4px 24px rgba(255, 113, 113, 0.18), 0 1.5px 8px rgba(152, 32, 32, 0.12);
-    border: 1.5px solid #ffb6b6;
+    background: linear-gradient(120deg, #ffcccb 0%, #ff9999 100%);
+    color: #333;
+    box-shadow: 0 4px 24px rgba(255, 153, 153, 0.15), 0 1.5px 8px rgba(255, 204, 203, 0.1);
+    border: 1.5px solid #ffb3b3;
     backdrop-filter: blur(2px);
 }
 
 .dashboard-card.inprogress-card {
-    background: linear-gradient(120deg, #50d5b7 0%, #067d68 60%);
-    color: #fff;
-    box-shadow: 0 4px 24px rgba(7, 163, 130, 0.18), 0 1.5px 8px rgba(56, 217, 236, 0.12);
-    border: 1.5px solid #38D9ECC7;
+    background: linear-gradient(120deg, #b3e5b3 0%, #90d690 100%);
+    color: #333;
+    box-shadow: 0 4px 24px rgba(144, 214, 144, 0.15), 0 1.5px 8px rgba(179, 229, 179, 0.1);
+    border: 1.5px solid #c9f2c9;
     backdrop-filter: blur(2px);
 }
 
 .dashboard-card.ola-card {
-    background: linear-gradient(120deg, #8278da 0%, #121c84 80%);
-    color: #fff;
-    box-shadow: 0 4px 24px rgba(158, 186, 243, 0.18), 0 1.5px 8px rgba(17, 45, 96, 0.12);
-    border: 1.5px solid #9EBAF3;
+    background: linear-gradient(120deg, #b3d9ff 0%, #80ccff 100%);
+    color: #333;
+    box-shadow: 0 4px 24px rgba(128, 204, 255, 0.15), 0 1.5px 8px rgba(179, 217, 255, 0.1);
+    border: 1.5px solid #cce5ff;
     backdrop-filter: blur(2px);
 }
 
 .dashboard-card.hold-card {
-    background: linear-gradient(120deg, #f9e866 0%, #ffae00 80%);
-    color: #fff;
-    box-shadow: 0 4px 24px rgba(237, 118, 94, 0.18), 0 1.5px 8px rgba(254, 168, 88, 0.12);
-    border: 1.5px solid #fea858;
+    background: linear-gradient(120deg, #ffe6b3 0%, #ffcc80 100%);
+    color: #333;
+    box-shadow: 0 4px 24px rgba(255, 204, 128, 0.15), 0 1.5px 8px rgba(255, 230, 179, 0.1);
+    border: 1.5px solid #fff2d9;
     backdrop-filter: blur(2px);
 }
 
@@ -252,19 +252,23 @@ body {
 }
 
 .dashboard-card.urgent-card .badge {
-    color: #dc3545;
+    color: #d63384;
+    font-weight: 700;
 }
 
 .dashboard-card.inprogress-card .badge {
-    color: #28a745;
+    color: #198754;
+    font-weight: 700;
 }
 
 .dashboard-card.ola-card .badge {
-    color: #6f42c1;
+    color: #0d6efd;
+    font-weight: 700;
 }
 
 .dashboard-card.hold-card .badge {
     color: #fd7e14;
+    font-weight: 700;
 }
 
 /* Message Inbox Styling */
@@ -581,5 +585,53 @@ body {
 
 [data-theme="dark"] .btn-subtitle {
     color: #a0aec0;
+}
+
+/* BOQ Status Section Custom Styling */
+/* Blue gradient header for BOQ Status */
+.card-header.bg-success.boq-header {
+    background: linear-gradient(135deg, #6bb6ff 0%, #4a90e2 50%, #357abd 100%) !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
+}
+
+/* Light colored BOQ status boxes */
+.small-stat-card.bg-primary.boq-total {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+    color: #1565c0 !important;
+    border: 1px solid #90caf9;
+    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.1);
+}
+
+.small-stat-card.bg-success.boq-done {
+    background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%) !important;
+    color: #2e7d32 !important;
+    border: 1px solid #a5d6a7;
+    box-shadow: 0 2px 6px rgba(76, 175, 80, 0.1);
+}
+
+.small-stat-card.bg-warning.boq-progress {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%) !important;
+    color: #f57c00 !important;
+    border: 1px solid #ffe082;
+    box-shadow: 0 2px 6px rgba(255, 193, 7, 0.1);
+}
+
+.small-stat-card.bg-danger.boq-pending {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
+    color: #c62828 !important;
+    border: 1px solid #ef9a9a;
+    box-shadow: 0 2px 6px rgba(244, 67, 54, 0.1);
+}
+
+/* Hover effects for BOQ boxes */
+.small-stat-card.boq-total:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15); }
+.small-stat-card.boq-done:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15); }
+.small-stat-card.boq-progress:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15); }
+.small-stat-card.boq-pending:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(244, 67, 54, 0.15); }
+
+/* Transition effects */
+.small-stat-card {
+    transition: all 0.3s ease;
 }
 
