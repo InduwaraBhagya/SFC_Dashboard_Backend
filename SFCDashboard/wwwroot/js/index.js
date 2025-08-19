@@ -326,40 +326,55 @@ function initializeMessageInbox() {
         });
     });
 
-    // Handle issue message clicks
-    document.querySelectorAll('.message-item[data-message-id^="issue-"]').forEach(item => {
+    // Handle resolution request message clicks (these need special handling)
+    document.querySelectorAll('.message-item.resolution-request[data-message-id^="issue-"]').forEach(item => {
+        item.addEventListener('click', function() {
+            // Extract resolution request data from the element's data attributes
+            const issueId = this.getAttribute('data-issue-id');
+            const peId = this.getAttribute('data-pe-id');
+            const resolutionId = this.getAttribute('data-resolution-id');
+            const resolutionDetails = this.getAttribute('data-resolution-details');
+            
+            // Set up data attributes for the showResolutionConfirm function
+            $(this).data('issue-id', issueId);
+            $(this).data('pe-id', peId);
+            $(this).data('resolution-id', resolutionId);
+            $(this).data('resolution-details', resolutionDetails);
+            
+            // Show resolution confirmation modal directly
+            showResolutionConfirm(this);
+        });
+    });
+
+    // Handle regular issue message clicks (excluding resolution requests)
+    document.querySelectorAll('.message-item[data-message-id^="issue-"]:not(.resolution-request)').forEach(item => {
         item.addEventListener('click', function() {
             // Extract issue data from the element's data attributes and classes
             const messageId = this.getAttribute('data-message-id');
-            const issueId = messageId.replace('issue-', '');
+            const issueId = this.getAttribute('data-issue-id');
             const peId = this.getAttribute('data-pe-id');
             
-            // Get other data from the message content
-            const senderElement = this.querySelector('.message-sender');
-            const sender = senderElement ? senderElement.textContent.replace(/From\s+/, '').replace(/\s+$/, '') : 'Unknown';
-            
-            const subjectElement = this.querySelector('.message-subject');
-            const issueText = subjectElement ? subjectElement.textContent.replace(/^\s*(?:Issue|Reply|Resolution|Issue Fixed)\s*/, '') : '';
-            
-            const timeElement = this.querySelector('.message-time');
-            const date = timeElement ? timeElement.textContent : '';
-            
-            const isRead = !this.classList.contains('unread');
-            const isResolutionRequest = this.classList.contains('resolution');
-            
-            // Check for attachment
-            const attachmentElement = this.querySelector('.message-preview');
-            const hasAttachment = attachmentElement && attachmentElement.textContent.includes('Has attachment');
+            // Get other data from the element's data attributes
+            const sender = this.getAttribute('data-sender');
+            const senderId = this.getAttribute('data-sender-id');
+            const issueText = this.getAttribute('data-issue-text');
+            const attachment = this.getAttribute('data-attachment');
+            const date = this.getAttribute('data-date');
+            const isRead = this.getAttribute('data-is-read') === 'true';
+            const isResolutionRequest = this.getAttribute('data-is-resolution-request') === 'true';
+            const originalIssueId = this.getAttribute('data-original-issue-id');
             
             // Set up data attributes for the showIssueDetails function
             $(this).data('issue-id', issueId);
             $(this).data('pe-id', peId);
             $(this).data('sender', sender);
+            $(this).data('sender-id', senderId);
             $(this).data('issue-text', issueText);
+            $(this).data('attachment', attachment);
             $(this).data('date', date);
             $(this).data('is-read', isRead);
             $(this).data('is-resolution-request', isResolutionRequest);
-            $(this).data('attachment', hasAttachment ? '/path/to/attachment' : null); // This would need to be populated from server data
+            $(this).data('original-issue-id', originalIssueId);
             
             // Show issue details modal
             showIssueDetails(this);
