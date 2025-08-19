@@ -177,7 +177,7 @@ body {
     background: linear-gradient(120deg, #ffcccb 0%, #ff9999 100%);
     color: #333;
     box-shadow: 0 4px 24px rgba(255, 153, 153, 0.15), 0 1.5px 8px rgba(255, 204, 203, 0.1);
-    border: 1.5px solid #ffb3b3;
+    border: 3px solid #ad3b3b;
     backdrop-filter: blur(2px);
 }
 
@@ -185,7 +185,7 @@ body {
     background: linear-gradient(120deg, #b3e5b3 0%, #90d690 100%);
     color: #333;
     box-shadow: 0 4px 24px rgba(144, 214, 144, 0.15), 0 1.5px 8px rgba(179, 229, 179, 0.1);
-    border: 1.5px solid #c9f2c9;
+    border: 3px solid #279227;
     backdrop-filter: blur(2px);
 }
 
@@ -193,7 +193,7 @@ body {
     background: linear-gradient(120deg, #b3d9ff 0%, #80ccff 100%);
     color: #333;
     box-shadow: 0 4px 24px rgba(128, 204, 255, 0.15), 0 1.5px 8px rgba(179, 217, 255, 0.1);
-    border: 1.5px solid #cce5ff;
+    border: 3px solid #2663a1;
     backdrop-filter: blur(2px);
 }
 
@@ -201,7 +201,7 @@ body {
     background: linear-gradient(120deg, #ffe6b3 0%, #ffcc80 100%);
     color: #333;
     box-shadow: 0 4px 24px rgba(255, 204, 128, 0.15), 0 1.5px 8px rgba(255, 230, 179, 0.1);
-    border: 1.5px solid #fff2d9;
+    border: 3px solid #ae6e0d;
     backdrop-filter: blur(2px);
 }
 
@@ -633,5 +633,25 @@ body {
 /* Transition effects */
 .small-stat-card {
     transition: all 0.3s ease;
+}
+
+/* Fix for reminder dropdown z-index - ensure it appears above global search container */
+.notification-dropdown,
+.dropdown-menu {
+    z-index: 1060 !important;
+}
+
+/* Specific fix for reminder/notification dropdowns */
+#reminderDropdown + .dropdown-menu,
+.notification-bell + .dropdown-menu,
+.navbar .dropdown-menu {
+    z-index: 1070 !important;
+    position: relative !important;
+}
+
+/* Ensure global search container doesn't interfere with dropdowns */
+.card.border-0.shadow-sm {
+    z-index: 1;
+    position: relative;
 }
 
