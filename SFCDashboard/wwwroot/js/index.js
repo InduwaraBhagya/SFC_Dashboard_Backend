@@ -1,4 +1,7 @@
 $(document).ready(function() {
+    console.log('Document ready - jQuery version:', $.fn.jquery);
+    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+    
     // All initialization code consolidated here
     
     // Make the next task card clickable on mobile
@@ -16,6 +19,7 @@ $(document).ready(function() {
     }
 
     // Initialize message inbox
+    console.log('Initializing message inbox...');
     initializeMessageInbox();
     
     // Refresh inbox button
@@ -203,22 +207,56 @@ $(document).ready(function() {
 
 // Functions defined outside document ready to avoid scoping issues
 function initializeMessageInbox() {
+    console.log('Initializing message inbox...');
+    
     const messageItems = document.querySelectorAll('.message-item');
     const filterButtons = document.querySelectorAll('.inbox-filters button');
     const inboxSearch = document.querySelector('.inbox-search');
     
-    // Ensure all messages are visible on first load
+    console.log('Found message items:', messageItems.length);
+    console.log('Found filter buttons:', filterButtons.length);
+    console.log('Found inbox search:', !!inboxSearch);
+    
+    // Debug: log all message items
+    messageItems.forEach((item, index) => {
+        console.log(`Message ${index}:`, {
+            classes: item.className,
+            isUnread: item.classList.contains('unread'),
+            onclick: item.onclick,
+            hasDataAttrs: !!item.dataset.issueId
+        });
+    });
+    
+    // Check which filter button is initially active and apply the appropriate filter
+    const activeFilter = document.querySelector('.inbox-filters button.active');
+    const initialFilter = activeFilter ? activeFilter.getAttribute('data-filter') : 'unread';
+    
+    console.log('Initial filter:', initialFilter);
+    
+    // Apply initial filter
     messageItems.forEach(item => {
-        if (item.classList.contains('unread')) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
+        const isUnread = item.classList.contains('unread');
+        
+        switch(initialFilter) {
+            case 'unread':
+                item.style.display = isUnread ? 'flex' : 'none';
+                break;
+            case 'read':
+                item.style.display = !isUnread ? 'flex' : 'none';
+                break;
+            case 'all':
+                item.style.display = 'flex';
+                break;
+            default:
+                item.style.display = 'flex'; // Show all by default if no filter is active
         }
     });
 
     // Message filtering
     filterButtons.forEach(button => {
         button.addEventListener('click', function() {
+            console.log('Filter button clicked:', this.getAttribute('data-filter'));
+            
             // Remove active class from all buttons
             filterButtons.forEach(btn => btn.classList.remove('active'));
             // Add active class to clicked button
@@ -436,172 +474,214 @@ function showUrgentRequestModal(type, id) {
 }
 
 function showIssueDetails(element) {
-    // Extract issue data from the element's data attributes
-    const issueId = $(element).data('issue-id');
-    const peId = $(element).data('pe-id');
-    const sender = $(element).data('sender');
-    const senderId = $(element).data('sender-id');
-    const issueText = $(element).data('issue-text');
-    const attachment = $(element).data('attachment');
-    const date = $(element).data('date');
-    const isRead = $(element).data('is-read') === 'true';
-    const isResolutionRequest = $(element).data('is-resolution-request') === 'true';
-    const originalIssueId = $(element).data('original-issue-id');
-    
-    // Build the issue details content
-    let detailsHtml = `
-        <div class="message-detail-header">
-            <h5>${isResolutionRequest ? '<span class="badge bg-success">Resolution Request</span> ' : ''}${issueText}</h5>
-            <div class="message-info">
-                <span class="fw-bold">From:</span> ${sender} · 
-                <span class="fw-bold">Date:</span> ${date}
-            </div>
-        </div>
-        <div class="message-detail-body my-3">
-            <p>${issueText}</p>
-            ${attachment ? `<div class="attachment-section mt-3">
-                <h6 class="fw-bold">Attachment:</h6>
-                <a href="${attachment}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-paperclip me-2"></i>View Attachment
-                </a>
-            </div>` : ''}
-        </div>`;
-    
-    // Update the modal content
-    $('#issueDetailsContent').html(detailsHtml);
-    $('#viewPEDetailsBtn').attr('href', `/PlannedEvents/Details/${peId}`);
-    
-    // Set up the reply button data
-    $('#replyIssueBtn').data('issue-id', issueId);
-    $('#replyIssueBtn').data('pe-id', peId);
-    $('#replyIssueBtn').data('sender-id', senderId);
-    $('#replyIssueBtn').data('original-issue-id', originalIssueId);
-    
-    // Set up the resolve button data
-    $('#resolveIssueBtn').data('issue-id', issueId);
-    $('#resolveIssueBtn').data('pe-id', peId);
-    
-    // Handle resolution request specific UI
-    if (isResolutionRequest) {
-        $('#replyIssueBtn').addClass('d-none');
-        $('#resolveIssueBtn').addClass('d-none');
+    try {
+        // Extract issue data from the element's data attributes
+        const issueId = $(element).data('issue-id');
+        const peId = $(element).data('pe-id');
+        const sender = $(element).data('sender');
+        const senderId = $(element).data('sender-id');
+        const issueText = $(element).data('issue-text');
+        const attachment = $(element).data('attachment');
+        const date = $(element).data('date');
+        const isRead = $(element).data('is-read') === 'true';
+        const isResolutionRequest = $(element).data('is-resolution-request') === 'true';
+        const originalIssueId = $(element).data('original-issue-id');
         
-        // Check if there's a resolution record for this issue
-        $.get(`/Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
-            if (resolution && resolution.id) {
-                // Show resolution confirmation section
-                $('#resolutionConfirmationSection').removeClass('d-none');
-                $('#resolutionId').val(resolution.id);
+        console.log('Issue data:', {
+            issueId, peId, sender, senderId, issueText, attachment, date, isRead, isResolutionRequest, originalIssueId
+        });
+        
+        // Validate required data
+        if (!issueId || !peId || !sender) {
+            console.error('Missing required issue data:', { issueId, peId, sender });
+            alert('Error: Missing issue data. Please refresh the page and try again.');
+            return;
+        }
+        
+        // Build the issue details content
+        let detailsHtml = `
+            <div class="message-detail-header">
+                <h5>${isResolutionRequest ? '<span class="badge bg-success">Resolution Request</span> ' : ''}${issueText || 'No issue text available'}</h5>
+                <div class="message-info">
+                    <span class="fw-bold">From:</span> ${sender} · 
+                    <span class="fw-bold">Date:</span> ${date || 'Unknown date'}
+                </div>
+            </div>
+            <div class="message-detail-body my-3">
+                <p>${issueText || 'No issue text available'}</p>
+                ${attachment && attachment !== 'null' ? `<div class="attachment-section mt-3">
+                    <h6 class="fw-bold">Attachment:</h6>
+                    <a href="${attachment}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-paperclip me-2"></i>View Attachment
+                    </a>
+                </div>` : ''}
+            </div>`;
+        
+        // Update the modal content
+        $('#issueDetailsContent').html(detailsHtml);
+        $('#viewPEDetailsBtn').attr('href', `/PlannedEvents/Details/${peId}`);
+        
+        // Set up the reply button data
+        $('#replyIssueBtn').data('issue-id', issueId);
+        $('#replyIssueBtn').data('pe-id', peId);
+        $('#replyIssueBtn').data('sender-id', senderId);
+        $('#replyIssueBtn').data('original-issue-id', originalIssueId);
+        
+        // Set up the resolve button data
+        $('#resolveIssueBtn').data('issue-id', issueId);
+        $('#resolveIssueBtn').data('pe-id', peId);
+        
+        // Handle resolution request specific UI
+        if (isResolutionRequest) {
+            $('#replyIssueBtn').addClass('d-none');
+            $('#resolveIssueBtn').addClass('d-none');
+            
+            // Check if there's a resolution record for this issue
+            $.get(`/Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
+                if (resolution && resolution.id) {
+                    // Show resolution confirmation section
+                    $('#resolutionConfirmationSection').removeClass('d-none');
+                    $('#resolutionId').val(resolution.id);
+                }
+            }).fail(function(xhr, status, error) {
+                console.error('Error fetching resolution:', error);
+            });
+        } else {
+            $('#replyIssueBtn').removeClass('d-none');
+            $('#resolveIssueBtn').removeClass('d-none');
+            $('#resolutionConfirmationSection').addClass('d-none');
+        }
+        
+        // Fetch PE record details
+        fetchPEDetails(peId);
+        
+        // Mark as read if not already read
+        if (!isRead) {
+            markIssueAsRead(issueId);
+            $(element).removeClass('unread');
+            $(element).data('is-read', 'true');
+            
+            // Update unread count in the header
+            updateUnreadCount();
+        }
+        
+        // Show the modal with proper accessibility handling
+        const modalElement = document.getElementById('issueDetailsModal');
+        if (!modalElement) {
+            console.error('Issue details modal not found');
+            alert('Error: Modal not found. Please refresh the page.');
+            return;
+        }
+        
+        const modal = new bootstrap.Modal(modalElement);
+        
+        // Fix accessibility issue by ensuring aria-hidden is properly managed
+        modalElement.addEventListener('shown.bs.modal', function() {
+            // Remove aria-hidden when modal is fully shown to prevent accessibility conflicts
+            modalElement.removeAttribute('aria-hidden');
+            
+            // Focus on the first focusable element in the modal
+            const firstFocusable = modalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) {
+                firstFocusable.focus();
             }
         });
-    } else {
-        $('#replyIssueBtn').removeClass('d-none');
-        $('#resolveIssueBtn').removeClass('d-none');
-        $('#resolutionConfirmationSection').addClass('d-none');
-    }
-    
-    // Fetch PE record details
-    fetchPEDetails(peId);
-    
-    // Mark as read if not already read
-    if (!isRead) {
-        markIssueAsRead(issueId);
-        $(element).removeClass('unread');
-        $(element).data('is-read', 'true');
         
-        // Update unread count in the header
-        updateUnreadCount();
-    }
-    
-    // Show the modal with proper accessibility handling
-    const modalElement = document.getElementById('issueDetailsModal');
-    const modal = new bootstrap.Modal(modalElement);
-    
-    // Fix accessibility issue by ensuring aria-hidden is properly managed
-    modalElement.addEventListener('shown.bs.modal', function() {
-        // Remove aria-hidden when modal is fully shown to prevent accessibility conflicts
-        modalElement.removeAttribute('aria-hidden');
+        modalElement.addEventListener('hidden.bs.modal', function() {
+            // Restore aria-hidden when modal is hidden
+            modalElement.setAttribute('aria-hidden', 'true');
+        });
         
-        // Focus on the first focusable element in the modal
-        const firstFocusable = modalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
-        if (firstFocusable) {
-            firstFocusable.focus();
-        }
-    });
-    
-    modalElement.addEventListener('hidden.bs.modal', function() {
-        // Restore aria-hidden when modal is hidden
-        modalElement.setAttribute('aria-hidden', 'true');
-    });
-    
-    modal.show();
+        modal.show();
+    } catch (error) {
+        console.error('Error in showIssueDetails:', error);
+        alert('Error displaying issue details. Please refresh the page and try again.');
+    }
 }
 
 function showResolutionConfirm(element) {
-    const resolutionId = $(element).data('resolution-id');
-    const resolutionDetails = $(element).data('resolution-details');
-    const peId = $(element).data('pe-id');
-    const issueId = $(element).data('issue-id');
-    
-    console.log('Resolution data:', {
-        resolutionId,
-        resolutionDetails,
-        peId,
-        issueId
-    });
-    
-    // Always clear previous values and content
-    $('#directResolutionId').val('');
-    $('#resolutionDetailsText').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ms-2">Loading resolution details...</span>');
-    
-    // Check if we have the resolution ID from the data attribute
-    if (resolutionId && resolutionId !== '0') {
-        $('#directResolutionId').val(resolutionId);
+    try {
+        const resolutionId = $(element).data('resolution-id');
+        const resolutionDetails = $(element).data('resolution-details');
+        const peId = $(element).data('pe-id');
+        const issueId = $(element).data('issue-id');
         
-        // If we also have the details from the attribute, use them directly
-        if (resolutionDetails && String(resolutionDetails).trim() !== '') {
-            $('#resolutionDetailsText').text(String(resolutionDetails));
+        console.log('Resolution data:', {
+            resolutionId,
+            resolutionDetails,
+            peId,
+            issueId
+        });
+        
+        // Validate required data
+        if (!peId || !issueId) {
+            console.error('Missing required resolution data:', { peId, issueId });
+            alert('Error: Missing resolution data. Please refresh the page and try again.');
+            return;
+        }
+        
+        // Always clear previous values and content
+        $('#directResolutionId').val('');
+        $('#resolutionDetailsText').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ms-2">Loading resolution details...</span>');
+        
+        // Check if we have the resolution ID from the data attribute
+        if (resolutionId && resolutionId !== '0') {
+            $('#directResolutionId').val(resolutionId);
+            
+            // If we also have the details from the attribute, use them directly
+            if (resolutionDetails && String(resolutionDetails).trim() !== '') {
+                $('#resolutionDetailsText').text(String(resolutionDetails));
+            } else {
+                // Otherwise fetch the details for this resolution
+                fetchResolutionDetails(resolutionId);
+            }
         } else {
-            // Otherwise fetch the details for this resolution
-            fetchResolutionDetails(resolutionId);
+            // If no resolution ID from data attribute, query by issue ID
+            fetchResolutionByIssueId(issueId);
         }
-    } else {
-        // If no resolution ID from data attribute, query by issue ID
-        fetchResolutionByIssueId(issueId);
-    }
-    
-    // Set up other modal elements
-    $('#viewPEDetailsLink').attr('href', `/PlannedEvents/Details/${peId}`);
-    
-    // Show the modal with proper accessibility handling
-    const modalElement = document.getElementById('resolutionConfirmModal');
-    const modal = new bootstrap.Modal(modalElement);
-    
-    // Fix accessibility issue by ensuring aria-hidden is properly managed
-    modalElement.addEventListener('shown.bs.modal', function() {
-        // Remove aria-hidden when modal is fully shown to prevent accessibility conflicts
-        modalElement.removeAttribute('aria-hidden');
         
-        // Focus on the first focusable element in the modal
-        const firstFocusable = modalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
-        if (firstFocusable) {
-            firstFocusable.focus();
+        // Set up other modal elements
+        $('#viewPEDetailsLink').attr('href', `/PlannedEvents/Details/${peId}`);
+        
+        // Show the modal with proper accessibility handling
+        const modalElement = document.getElementById('resolutionConfirmModal');
+        if (!modalElement) {
+            console.error('Resolution confirm modal not found');
+            alert('Error: Modal not found. Please refresh the page.');
+            return;
         }
-    });
-    
-    modalElement.addEventListener('hidden.bs.modal', function() {
-        // Restore aria-hidden when modal is hidden
-        modalElement.setAttribute('aria-hidden', 'true');
-    });
-    
-    modal.show();
-    
-    // Mark as read
-    if (issueId) {
-        markIssueAsRead(issueId);
-        $(element).removeClass('unread');
-        $(element).data('is-read', 'true');
-        updateUnreadCount();
+        
+        const modal = new bootstrap.Modal(modalElement);
+        
+        // Fix accessibility issue by ensuring aria-hidden is properly managed
+        modalElement.addEventListener('shown.bs.modal', function() {
+            // Remove aria-hidden when modal is fully shown to prevent accessibility conflicts
+            modalElement.removeAttribute('aria-hidden');
+            
+            // Focus on the first focusable element in the modal
+            const firstFocusable = modalElement.querySelector('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) {
+                firstFocusable.focus();
+            }
+        });
+        
+        modalElement.addEventListener('hidden.bs.modal', function() {
+            // Restore aria-hidden when modal is hidden
+            modalElement.setAttribute('aria-hidden', 'true');
+        });
+        
+        modal.show();
+        
+        // Mark as read
+        if (issueId) {
+            markIssueAsRead(issueId);
+            $(element).removeClass('unread');
+            $(element).data('is-read', 'true');
+            updateUnreadCount();
+        }
+    } catch (error) {
+        console.error('Error in showResolutionConfirm:', error);
+        alert('Error displaying resolution confirmation. Please refresh the page and try again.');
     }
 }
 
@@ -754,3 +834,63 @@ function markIssueAsRead(issueId) {
     });
     updateUnreadCount();
 }
+
+// Debug function to test issue modal functionality
+window.testIssueModal = function() {
+    console.log('Testing issue modal...');
+    const testElement = {
+        dataset: {
+            issueId: '123',
+            peId: '456',
+            sender: 'Test User',
+            senderId: '789',
+            issueText: 'Test issue text',
+            date: 'Jan 01, 2024 10:00',
+            isRead: 'false',
+            isResolutionRequest: 'false'
+        }
+    };
+    
+    // Convert to jQuery-like data access
+    const $testElement = {
+        data: function(key) {
+            const dataKey = key.replace(/-([a-z])/g, function(match, letter) {
+                return letter.toUpperCase();
+            });
+            return testElement.dataset[dataKey];
+        }
+    };
+    
+    showIssueDetails($testElement);
+};
+
+// Debug function to check message items
+window.debugMessages = function() {
+    console.log('=== MESSAGE DEBUG ===');
+    const messageItems = document.querySelectorAll('.message-item');
+    console.log('Total message items found:', messageItems.length);
+    
+    messageItems.forEach((item, index) => {
+        console.log(`Message ${index}:`, {
+            element: item,
+            classes: item.className,
+            isUnread: item.classList.contains('unread'),
+            style: item.style.display,
+            onclick: item.onclick,
+            issueId: item.dataset.issueId,
+            peId: item.dataset.peId,
+            sender: item.dataset.sender,
+            allDataAttrs: Object.keys(item.dataset)
+        });
+    });
+    
+    console.log('=== FILTER BUTTONS ===');
+    const filterButtons = document.querySelectorAll('.inbox-filters button');
+    filterButtons.forEach((btn, index) => {
+        console.log(`Filter ${index}:`, {
+            text: btn.textContent,
+            filter: btn.getAttribute('data-filter'),
+            isActive: btn.classList.contains('active')
+        });
+    });
+};
