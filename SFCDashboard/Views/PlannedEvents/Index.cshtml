@@ -60,7 +60,8 @@
                     <div class="ms-2">
                         <div class="dropdown">
                             <button class="btn position-relative" type="button" id="reminderDropdown"
-                                data-bs-toggle="dropdown" aria-expanded="false" style="border: none; padding: 0.5rem; background: transparent;">
+                                data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport" data-bs-container="body"
+                                style="border: none; padding: 0.5rem; background: transparent;">
                                 <i class="bi bi-bell" style="font-size: 1.2rem; color: white;"></i>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                                     id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
@@ -1967,9 +1968,26 @@
             markAllRemindersAsRead();
         });
 
-        // Load reminders when dropdown is shown
+        // Load reminders when dropdown is shown and handle positioning
         document.getElementById('reminderDropdown')?.addEventListener('show.bs.dropdown', function () {
             loadReminders();
+            
+            // Move dropdown to body to avoid container clipping
+            setTimeout(() => {
+                const dropdown = document.querySelector('#reminderDropdown + .dropdown-menu');
+                if (dropdown && dropdown.parentElement !== document.body) {
+                    document.body.appendChild(dropdown);
+                }
+            }, 1);
+        });
+
+        // Clean up when dropdown is hidden
+        document.getElementById('reminderDropdown')?.addEventListener('hide.bs.dropdown', function () {
+            const dropdown = document.querySelector('.dropdown-menu[aria-labelledby="reminderDropdown"]');
+            const originalParent = document.querySelector('.dropdown:has(#reminderDropdown)');
+            if (dropdown && originalParent && dropdown.parentElement === document.body) {
+                originalParent.appendChild(dropdown);
+            }
         });
     });
 

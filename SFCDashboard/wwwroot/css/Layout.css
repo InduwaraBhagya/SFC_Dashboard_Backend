@@ -1089,6 +1089,26 @@ body {
   z-index: 1000 !important;
 }
 
+/* Fix reminder dropdown being cut off by navbar container */
+#reminderDropdown + .dropdown-menu {
+  z-index: 1055 !important;
+}
+
+/* Ensure containers containing the reminder dropdown don't clip it */
+.card:has(#reminderDropdown) {
+  overflow: visible !important;
+}
+
+.card-body:has(#reminderDropdown) {
+  overflow: visible !important;
+}
+
+/* Fallback for browsers that don't support :has() */
+.row.mb-4 .card,
+.row.mb-4 .card-body {
+  overflow: visible !important;
+}
+
 /* Ensure modal backdrop is behind modal content but above everything else */
 .modal-backdrop {
   position: fixed !important;
