@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SFCDashboard.Api.Data;
 using SFCDashboard.Api.Models;
+using SFCDashboard.Api.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace SFCDashboard.Api.Controllers
@@ -11,12 +10,12 @@ namespace SFCDashboard.Api.Controllers
     [Produces("application/json")]
     public class NoticesApiController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly INoticesService _noticesService;
         private readonly ILogger<NoticesApiController> _logger;
 
-        public NoticesApiController(ApplicationDbContext context, ILogger<NoticesApiController> logger)
+        public NoticesApiController(INoticesService noticesService, ILogger<NoticesApiController> logger)
         {
-            _context = context;
+            _noticesService = noticesService;
             _logger = logger;
         }
 
@@ -28,13 +27,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var currentDate = DateTime.Now.Date;
-                var notices = await _context.Notices
-                    .Where(n => n.IsActive && (n.ExpireDate == null || n.ExpireDate >= currentDate))
-                    .OrderByDescending(n => n.IsPinned)
-                    .ThenByDescending(n => n.CreatedDate)
-                    .ToListAsync();
-
+                var notices = await _noticesService.GetActiveNoticesAsync();
                 return Ok(new { success = true, data = notices });
             }
             catch (Exception ex)
@@ -52,8 +45,7 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var notice = await _context.Notices
-                    .FirstOrDefaultAsync(n => n.ID == id && n.IsActive);
+                var notice = await _noticesService.GetNoticeByIdAsync(id);
 
                 if (notice == null)
                 {
@@ -93,12 +85,9 @@ namespace SFCDashboard.Api.Controllers
                     IsActive = true
                 };
 
-                _context.Notices.Add(notice);
-                await _context.SaveChangesAsync();
+                var createdNotice = await _noticesService.CreateNoticeAsync(notice);
 
-                _logger.LogInformation("Notice created with ID {NoticeId} by user {UserId}", notice.ID, request.CreatedBy);
-
-                return Ok(new { success = true, data = notice, message = "Notice created successfully." });
+                return Ok(new { success = true, data = createdNotice, message = "Notice created successfully." });
             }
             catch (Exception ex)
             {
@@ -120,22 +109,12 @@ namespace SFCDashboard.Api.Controllers
                     return BadRequest(new { success = false, message = "Invalid data provided.", errors = ModelState });
                 }
 
-                var notice = await _context.Notices
-                    .FirstOrDefaultAsync(n => n.ID == id && n.IsActive);
+                var notice = await _noticesService.UpdateNoticeAsync(id, request.Description, request.UpdatedBy, request.UpdatedUserName);
 
                 if (notice == null)
                 {
                     return NotFound(new { success = false, message = "Notice not found." });
                 }
-
-                notice.Description = request.Description;
-                notice.UpdatedBy = request.UpdatedBy;
-                notice.UpdatedUserName = request.UpdatedUserName;
-                notice.UpdatedDate = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Notice {NoticeId} updated by user {UserId}", id, request.UpdatedBy);
 
                 return Ok(new { success = true, data = notice, message = "Notice updated successfully." });
             }
@@ -154,23 +133,12 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var notice = await _context.Notices
-                    .FirstOrDefaultAsync(n => n.ID == id && n.IsActive);
+                var notice = await _noticesService.TogglePinNoticeAsync(id, request.IsPinned, request.UpdatedBy, request.UpdatedUserName);
 
                 if (notice == null)
                 {
                     return NotFound(new { success = false, message = "Notice not found." });
                 }
-
-                notice.IsPinned = request.IsPinned;
-                notice.UpdatedBy = request.UpdatedBy;
-                notice.UpdatedUserName = request.UpdatedUserName;
-                notice.UpdatedDate = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Notice {NoticeId} pin status changed to {IsPinned} by user {UserId}",
-                    id, request.IsPinned, request.UpdatedBy);
 
                 return Ok(new
                 {
@@ -194,22 +162,12 @@ namespace SFCDashboard.Api.Controllers
         {
             try
             {
-                var notice = await _context.Notices
-                    .FirstOrDefaultAsync(n => n.ID == id && n.IsActive);
+                var result = await _noticesService.DeleteNoticeAsync(id, request.UpdatedBy, request.UpdatedUserName);
 
-                if (notice == null)
+                if (!result)
                 {
                     return NotFound(new { success = false, message = "Notice not found." });
                 }
-
-                notice.IsActive = false;
-                notice.UpdatedBy = request.UpdatedBy;
-                notice.UpdatedUserName = request.UpdatedUserName;
-                notice.UpdatedDate = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Notice {NoticeId} deleted by user {UserId}", id, request.UpdatedBy);
 
                 return Ok(new { success = true, message = "Notice deleted successfully." });
             }
