@@ -72,13 +72,22 @@
                                     class="btn btn-info" target="_blank">
                                     <i class="bi bi-eye"></i> View Detail
                                 </a>
-                                <button type="submit" name="urgentReason" value="@extractedReason"
+                                <button type="submit" name="urgentReason" value="@extractedReason" id="approveBtn"
                                     class="btn btn-success btn-lg">
-                                    <i class="bi bi-check-circle-fill me-2"></i> Approve
+                                    <i class="bi bi-check-circle-fill me-2"></i> 
+                                    <span class="btn-text">Approve</span>
+                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                 </button>
-                                <button type="submit" name="urgentReason" value="Reject" class="btn btn-danger btn-lg">
-                                    <i class="bi bi-x-circle-fill me-2"></i> Reject
+                                <button type="submit" name="urgentReason" value="Reject" id="rejectBtn" class="btn btn-danger btn-lg">
+                                    <i class="bi bi-x-circle-fill me-2"></i> 
+                                    <span class="btn-text">Reject</span>
+                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                 </button>
+                            </div>
+                            
+                            <!-- Processing status area -->
+                            <div id="statusMessage" class="mt-3 d-none">
+                                <div class="alert" role="alert"></div>
                             </div>
                         </div>
                     </form>
@@ -91,3 +100,94 @@
 <div class="alert alert-warning mt-4">
     <strong>Note:</strong> Making this Planned Event urgent will automatically mark all its tasks as urgent as well.
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('form').on('submit', function(e) {
+                e.preventDefault(); // Prevent default form submission
+                
+                var $form = $(this);
+                var $clickedBtn = $form.find('button[type="submit"]:focus');
+                var $statusMessage = $('#statusMessage');
+                var $statusAlert = $statusMessage.find('.alert');
+                
+                // If no button was focused, find the clicked button through the click event
+                if ($clickedBtn.length === 0) {
+                    $clickedBtn = $(e.originalEvent.submitter);
+                }
+                
+                var urgentReason = $clickedBtn.val();
+                var btnText = $clickedBtn.find('.btn-text');
+                var spinner = $clickedBtn.find('.spinner-border');
+                var originalText = btnText.text();
+                
+                // Show processing state
+                $clickedBtn.prop('disabled', true);
+                btnText.text('Processing...');
+                spinner.removeClass('d-none');
+                
+                // Hide any previous status messages
+                $statusMessage.addClass('d-none');
+                
+                // Prepare form data
+                var formData = $form.serializeArray();
+                // Make sure we include the clicked button's value
+                formData.push({name: 'urgentReason', value: urgentReason});
+                
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            $statusAlert.removeClass('alert-danger').addClass('alert-success');
+                            $statusAlert.html('<i class="bi bi-check-circle-fill me-2"></i>' + response.message);
+                            $statusMessage.removeClass('d-none');
+                            
+                            // Disable both buttons after successful processing
+                            $form.find('button[type="submit"]').prop('disabled', true);
+                            
+                            // Optionally redirect after a delay
+                            setTimeout(function() {
+                                window.location.href = '@Url.Action("UrgentRequestsList", "PlannedEvents")';
+                            }, 3000);
+                        } else {
+                            $statusAlert.removeClass('alert-success').addClass('alert-danger');
+                            $statusAlert.html('<i class="bi bi-exclamation-triangle-fill me-2"></i>' + response.message);
+                            $statusMessage.removeClass('d-none');
+                            
+                            // Reset button state on error
+                            $clickedBtn.prop('disabled', false);
+                            btnText.text(originalText);
+                            spinner.addClass('d-none');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        var errorMessage = 'An error occurred while processing the request.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        
+                        $statusAlert.removeClass('alert-success').addClass('alert-danger');
+                        $statusAlert.html('<i class="bi bi-exclamation-triangle-fill me-2"></i>' + errorMessage);
+                        $statusMessage.removeClass('d-none');
+                        
+                        // Reset button state on error
+                        $clickedBtn.prop('disabled', false);
+                        btnText.text(originalText);
+                        spinner.addClass('d-none');
+                    }
+                });
+            });
+            
+            // Handle button clicks to track which button was clicked
+            $('button[type="submit"]').on('click', function() {
+                $(this).focus();
+            });
+        });
+    </script>
+}

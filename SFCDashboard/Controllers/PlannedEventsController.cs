@@ -1475,12 +1475,15 @@ namespace SFCDashboard.Controllers
 
         // POST: PlannedEvents/ProcessUrgentRequest
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessUrgentRequest(int id, string urgentReason)
         {
             var plannedEvent = await _plannedEventsApi.GetPlannedEventAsync(id);
             if (plannedEvent == null || plannedEvent.PEStatus == "COMPLETED")
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Planned event not found or already completed." });
+                }
                 return NotFound();
             }
 
@@ -1514,6 +1517,10 @@ namespace SFCDashboard.Controllers
                     break;
 
                 default:
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = false, message = "Invalid option selected." });
+                    }
                     TempData["ErrorMessage"] = "Invalid option selected.";
                     return RedirectToAction(nameof(UrgentRequestsList));
             }
@@ -1522,6 +1529,10 @@ namespace SFCDashboard.Controllers
             var updatedEvent = await _plannedEventsApi.UpdatePlannedEventAsync(plannedEvent);
             if (updatedEvent == null)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Failed to update planned event." });
+                }
                 TempData["ErrorMessage"] = "Failed to update planned event.";
                 return RedirectToAction(nameof(UrgentRequestsList));
             }
@@ -1540,7 +1551,12 @@ namespace SFCDashboard.Controllers
                     if (string.IsNullOrEmpty(peNumber))
                     {
                         _logger.LogWarning("PE {id} has null or empty PeNumber, skipping task updates", id);
-                        TempData["SuccessMessage"] = "Planned Event updated successfully (no tasks to update).";
+                        var warningMessage = "Planned Event updated successfully (no tasks to update).";
+                        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        {
+                            return Json(new { success = true, message = warningMessage, isUrgent = markAsUrgent, priorityLevel = priorityLevel });
+                        }
+                        TempData["SuccessMessage"] = warningMessage;
                         return RedirectToAction(nameof(UrgentRequestsList));
                     }
 
@@ -1607,8 +1623,23 @@ namespace SFCDashboard.Controllers
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error updating tasks for PE {id}", id);
-                    TempData["ErrorMessage"] = "There was a problem updating the tasks. Please check the details.";
+                    var errorMessage = "There was a problem updating the tasks. Please check the details.";
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = false, message = errorMessage });
+                    }
+                    TempData["ErrorMessage"] = errorMessage;
                 }
+            }
+
+            // Check if this is an AJAX request
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                var message = markAsUrgent
+                    ? $"Planned Event marked as urgent with priority {priorityLevel}. All related tasks have also been marked as urgent."
+                    : "Urgent request processed.";
+                
+                return Json(new { success = true, message = message, isUrgent = markAsUrgent, priorityLevel = priorityLevel });
             }
 
             TempData["SuccessMessage"] = markAsUrgent
