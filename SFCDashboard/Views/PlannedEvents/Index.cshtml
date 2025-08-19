@@ -671,56 +671,12 @@
                     }
                     else
                     {
-                        <!-- Default notices when no data from backend -->
-                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #ffc107 !important;">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">System Maintenance</h6>
-                                <small class="text-muted" style="font-size: 0.65rem;">Aug 15</small>
-                            </div>
-                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
-                                Scheduled maintenance on Aug 20th from 2:00 AM to 4:00 AM. System will be temporarily unavailable.
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" style="font-size: 0.65rem;">By: System Admin</small>
-                                <span class="badge bg-danger" style="font-size: 0.6rem;">High Priority</span>
-                            </div>
-                        </div>
-                        
-                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #17a2b8 !important;">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">New Feature Release</h6>
-                                <small class="text-muted" style="font-size: 0.65rem;">Aug 12</small>
-                            </div>
-                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
-                                New report generation feature is now available. Check the Reports section in the navigation.
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" style="font-size: 0.65rem;">By: Development Team</small>
-                                <span class="badge bg-info" style="font-size: 0.6rem;">Normal</span>
-                            </div>
-                        </div>
-                        
-                        <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #28a745 !important;">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">Training Session</h6>
-                                <small class="text-muted" style="font-size: 0.65rem;">Aug 10</small>
-                            </div>
-                            <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">
-                                Join us for a training session on new dashboard features. Date: Aug 25th, 10:00 AM.
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" style="font-size: 0.65rem;">By: HR Department</small>
-                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Medium</span>
-                            </div>
+                        <!-- No notices available message -->
+                        <div class="text-center py-4">
+                            <i class="bi bi-journal-x text-muted" style="font-size: 2rem;"></i>
+                            <p class="mt-3 mb-0 text-muted" style="font-size: 0.8rem;">No notices available at the moment</p>
                         </div>
                     }
-                    
-                    <!-- Quick Actions -->
-                    <div class="d-grid gap-1 mt-2">
-                        <a href="@Url.Action("NoticeBoard", "Dashboard")" class="btn btn-outline-warning btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
-                            <i class="bi bi-eye me-1"></i> View All Notices
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1178,7 +1134,7 @@
         }
         
         // Expose clearTaskCache globally for use by other scripts
-        window.clearTaskCache = clearTaskCache;
+        // window.clearTaskCache = clearTaskCache; // Commented out - function not defined
 
         // Notice Board Management
         function initializeNoticeBoard() {
@@ -1350,8 +1306,6 @@
                     expireDate: expireDate
                 };
                 
-                console.log('Submitting notice:', requestData);
-                
                 // Show loading state
                 const submitBtn = $('#addNoticeForm button[type="submit"]');
                 const originalText = submitBtn.html();
@@ -1462,6 +1416,12 @@
                                                 ${isPinned ? 'Unpin' : 'Pin'} Notice
                                             </button>
                                         </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger" onclick="deleteNotice(${notice.id})">
+                                                <i class="bi bi-trash me-2"></i>Delete Notice
+                                            </button>
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
@@ -1545,6 +1505,48 @@
                 error: function(xhr, status, error) {
                     console.error(`Error ${action}ning notice:`, error);
                     showErrorMessage(`Error ${action}ning notice. Please try again.`);
+                }
+            });
+        }
+        
+        // Delete notice functionality
+        function deleteNotice(noticeId) {
+            if (!noticeId) {
+                showErrorMessage('Invalid notice ID');
+                return;
+            }
+            
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to delete this notice? This action cannot be undone.')) {
+                return;
+            }
+            
+            console.log('Deleting notice', noticeId);
+            
+            $.ajax({
+                url: '@Url.Action("DeleteNotice", "PlannedEvents")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    id: noticeId
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        refreshNoticeBoard();
+                        showSuccessMessage('Notice deleted successfully!');
+                    } else {
+                        showErrorMessage('Error deleting notice: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error deleting notice:', error);
+                    if (xhr.status === 404) {
+                        showErrorMessage('Notice not found or already deleted.');
+                    } else if (xhr.status === 401) {
+                        showErrorMessage('You are not authorized to delete this notice.');
+                    } else {
+                        showErrorMessage('Error deleting notice. Please try again.');
+                    }
                 }
             });
         }
@@ -1892,7 +1894,7 @@
 
 <script>
     // Reminder notification functionality
-    let currentReminderFilter = 'unread';
+    // currentReminderFilter already declared in previous script section
 
     $(document).ready(function() {
         // Load reminders on page load

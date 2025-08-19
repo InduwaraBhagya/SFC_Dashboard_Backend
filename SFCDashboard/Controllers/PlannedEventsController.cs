@@ -2521,6 +2521,34 @@ namespace SFCDashboard.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<IActionResult> DeleteNotice([FromBody] DeleteNoticeRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return Json(new { success = false, message = "Invalid data provided" });
+                }
+
+                var currentUserId = await GetCurrentUserIdAsync();
+                var currentUser = await _usersApi.GetUserAsync(currentUserId);
+
+                var response = await _noticesApi.DeleteNoticeAsync(
+                    request.Id,
+                    currentUserId,
+                    currentUser?.Name ?? "Unknown User"
+                );
+
+                return Json(new { success = response.Success, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting notice {NoticeId}", request.Id);
+                return Json(new { success = false, message = "Error deleting notice" });
+            }
+        }
+
         public class CreateNoticeRequest
         {
             public string Description { get; set; } = string.Empty;
@@ -2532,6 +2560,11 @@ namespace SFCDashboard.Controllers
         {
             public int Id { get; set; }
             public bool IsPinned { get; set; }
+        }
+
+        public class DeleteNoticeRequest
+        {
+            public int Id { get; set; }
         }
     }
 }
