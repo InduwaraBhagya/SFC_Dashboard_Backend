@@ -1,12 +1,14 @@
 @model AreaNetworkEngineer
 @{
-    ViewData["Title"] = Model.Id == 0 ? "Add Mapping" : "Edit Mapping";
+    ViewData["Title"] = Model.Id == 0 ? "Add Network Engineer Mapping" : "Edit Network Engineer Mapping";
 }
 
 <div class="container mt-4">
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">@ViewData["Title"]</h5>
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-plus-circle"></i> @ViewData["Title"]
+            </h5>
         </div>
         <div class="card-body">
             <form asp-action="@ViewContext.RouteData.Values["action"]" method="post">
@@ -14,23 +16,39 @@
                 {
                     <input type="hidden" asp-for="Id" />
                 }
+                
                 <div class="mb-3">
-                    <label asp-for="Area" class="form-label"></label>
-                    <input asp-for="Area" class="form-control" required />
+                    <label asp-for="Area" class="form-label">Area Code/Name</label>
+                    <input asp-for="Area" class="form-control" placeholder="Enter area code or name (e.g., NORTH, SOUTH, CENTRAL)" required />
                     <span asp-validation-for="Area" class="text-danger"></span>
+                    <div class="form-text">Enter the geographical area or zone identifier.</div>
                 </div>
+                
                 <div class="mb-3">
-                    <label asp-for="EngineerName" class="form-label"></label>
-                    <input asp-for="EngineerName" class="form-control" required />
+                    <label asp-for="EngineerName" class="form-label">Engineer Name</label>
+                    <input asp-for="EngineerName" class="form-control" placeholder="Enter engineer's full name" required />
                     <span asp-validation-for="EngineerName" class="text-danger"></span>
+                    <div class="form-text">Enter the full name of the network engineer responsible for this area.</div>
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-save"></i> Save
-                </button>
-                <a asp-action="Index" class="btn btn-secondary ms-2">
-                    <i class="bi bi-arrow-left"></i> Back to List
-                </a>
+                
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> @(Model.Id == 0 ? "Create Mapping" : "Update Mapping")
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary ms-2">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i> All fields are required
+                    </small>
+                </div>
             </form>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

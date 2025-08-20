@@ -78,12 +78,28 @@ namespace SFCDashboard.Controllers
             return RedirectToAction("ImportExcel");
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return RedirectToAction("ImportExcel");
+            try
+            {
+                _logger.LogInformation("Attempting to retrieve area network engineers list for Index view");
+                var mappings = (await _areaNetworkEngineersApiClient.GetAllAsync()).ToList();
+                _logger.LogInformation($"Successfully retrieved {mappings.Count} area network engineers for Index view");
+                return View(mappings);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load network engineers from API for Index view");
+                TempData["Error"] = $"Failed to load network engineers: {ex.Message}";
+                return View(new List<AreaNetworkEngineer>());
+            }
         }
 
-        public IActionResult Create() => View();
+        public IActionResult Create()
+        {
+            var model = new AreaNetworkEngineer();
+            return View(model);
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -112,7 +128,7 @@ namespace SFCDashboard.Controllers
             {
                 await _areaNetworkEngineersApiClient.UpdateAsync(model);
             }
-            return RedirectToAction("ImportExcel");
+            return RedirectToAction("Index");
         }
 
         public async Task<IActionResult> List()
