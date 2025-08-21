@@ -9,6 +9,35 @@ $(document).ready(function() {
                '';
     };
     
+    // Global modal cleanup function to fix backdrop issues
+    window.cleanupModalBackdrop = function() {
+        // Remove all modal backdrops
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        
+        // Remove modal-open class from body
+        document.body.classList.remove('modal-open');
+        
+        // Reset body styles that Bootstrap may have added
+        document.body.style.removeProperty('padding-right');
+        document.body.style.removeProperty('overflow');
+        
+        // Reset any modal states
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.setAttribute('aria-hidden', 'true');
+            modal.style.removeProperty('display');
+            modal.classList.remove('show');
+        });
+        
+        console.log('Modal backdrop cleanup completed');
+    };
+    
+    // Add global click handler to cleanup any stuck backdrops when clicking outside modals
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-backdrop')) {
+            setTimeout(cleanupModalBackdrop, 100);
+        }
+    });
+    
     // All initialization code consolidated here
     
     // Make the next task card clickable on mobile
@@ -146,6 +175,9 @@ $(document).ready(function() {
         
         replyModalElement.addEventListener('hidden.bs.modal', function() {
             replyModalElement.setAttribute('aria-hidden', 'true');
+            
+            // Use global cleanup function with a small delay
+            setTimeout(cleanupModalBackdrop, 50);
         });
         
         replyModal.show();
@@ -176,6 +208,9 @@ $(document).ready(function() {
         
         resolveModalElement.addEventListener('hidden.bs.modal', function() {
             resolveModalElement.setAttribute('aria-hidden', 'true');
+            
+            // Use global cleanup function with a small delay
+            setTimeout(cleanupModalBackdrop, 50);
         });
         
         resolveModal.show();
@@ -424,6 +459,9 @@ function showUrgentRequestModal(type, id) {
     modalElement.addEventListener('hidden.bs.modal', function() {
         // Restore aria-hidden when modal is hidden
         modalElement.setAttribute('aria-hidden', 'true');
+        
+        // Use global cleanup function with a small delay
+        setTimeout(cleanupModalBackdrop, 50);
     });
     
     modal.show();
@@ -481,18 +519,62 @@ function showUrgentRequestModal(type, id) {
         })
         .catch(error => {
             console.error('Error fetching urgent request details:', error);
-            document.getElementById('urgentRequestDetails').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Failed to load request details. Please try again.
-                </div>`;
+            
+            // If it's a PE request, try the fallback controller endpoint
+            if (type === 'pe') {
+                fetch(`/PlannedEvents/GetBasicDetails/${id}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Fallback endpoint also failed');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Update the modal with details from controller fallback
+                        let detailsHtml = `
+                    <div class="alert alert-info mb-3">
+                        <div class="row">
+                            <div class="col-sm-4 fw-bold">PE Number:</div>
+                            <div class="col-sm-8">${data.peNumber}</div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-sm-4 fw-bold">Customer:</div>
+                            <div class="col-sm-8">${data.customer || 'Not specified'}</div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-sm-4 fw-bold">Status:</div>
+                            <div class="col-sm-8"><span class="badge ${data.peStatus === 'Hold' ? 'bg-warning' : 'bg-primary'}">${data.peStatus}</span></div>
+                        </div>
+                    </div>`;
+                        
+                        document.getElementById('urgentRequestDetails').innerHTML = detailsHtml;
+                    })
+                    .catch(fallbackError => {
+                        console.error('Both urgent request endpoints failed:', fallbackError);
+                        document.getElementById('urgentRequestDetails').innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Failed to load request details. Please try again.
+                            </div>`;
+                    });
+            } else {
+                // For task requests, show error directly since no fallback is needed
+                document.getElementById('urgentRequestDetails').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Failed to load request details. Please try again.
+                    </div>`;
+            }
         });
 
-         if (type === 'pe') {
-        document.getElementById('urgentRequestViewDetailsBtn').href = '/PlannedEvents/Details/' + id;
-    } else {
-        document.getElementById('urgentRequestViewDetailsBtn').href = '/PETasks/Details/' + id;
-    }
+         const viewDetailsBtn = document.getElementById('urgentRequestViewDetailsBtn');
+         if (viewDetailsBtn) {
+             if (type === 'pe') {
+                 viewDetailsBtn.href = '/PlannedEvents/Details/' + id;
+             } else {
+                 viewDetailsBtn.href = '/PETasks/Details/' + id;
+             }
+         }
 }
 
 function showIssueDetails(element) {
@@ -612,6 +694,9 @@ function showIssueDetails(element) {
         modalElement.addEventListener('hidden.bs.modal', function() {
             // Restore aria-hidden when modal is hidden
             modalElement.setAttribute('aria-hidden', 'true');
+            
+            // Use global cleanup function with a small delay
+            setTimeout(cleanupModalBackdrop, 50);
         });
         
         modal.show();
@@ -690,6 +775,9 @@ function showResolutionConfirm(element) {
         modalElement.addEventListener('hidden.bs.modal', function() {
             // Restore aria-hidden when modal is hidden
             modalElement.setAttribute('aria-hidden', 'true');
+            
+            // Use global cleanup function with a small delay
+            setTimeout(cleanupModalBackdrop, 50);
         });
         
         modal.show();
@@ -806,7 +894,7 @@ function submitResolutionForm(isConfirmed) {
 }
 
 function fetchPEDetails(peId) {
-    // Fetch PE details using new secure API
+    // Try the new API endpoint first
     fetch(`/api/planned-events/${peId}/basic-details`, {
         method: 'GET',
         headers: {
@@ -841,25 +929,68 @@ function fetchPEDetails(peId) {
             $('#relatedPEDetails').html(peDetailsHtml);
         })
         .catch(error => {
-            console.error('Error fetching PE details:', error);
-            $('#relatedPEDetails').html(`
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Failed to load PE details. Please try again.
-                </div>`);
+            console.error('API endpoint failed, trying fallback controller endpoint:', error);
+            
+            // Fallback to controller endpoint
+            fetch(`/PlannedEvents/GetBasicDetails/${peId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Controller endpoint also failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update the PE details section with basic info from controller
+                    let peDetailsHtml = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-2"><strong>PE Number:</strong> ${data.peNumber}</div>
+                                <div class="mb-2"><strong>Customer:</strong> ${data.customer || 'N/A'}</div>
+                                <div class="mb-2"><strong>Status:</strong> <span class="badge ${data.peStatus === 'Hold' ? 'bg-warning' : 'bg-primary'}">${data.peStatus}</span></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2"><strong>Service Type:</strong> ${data.serviceType || 'N/A'}</div>
+                                <div class="mb-2"><strong>Task:</strong> ${data.taskName}</div>
+                                <div class="mb-2"><strong>Workgroup:</strong> ${data.taskWorkGroup || data.taskWg}</div>
+                            </div>
+                        </div>`;
+                    
+                    $('#relatedPEDetails').html(peDetailsHtml);
+                })
+                .catch(fallbackError => {
+                    console.error('Both API and controller endpoints failed:', fallbackError);
+                    $('#relatedPEDetails').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Failed to load PE details. Please try again.
+                        </div>`);
+                });
         });
 }
 
 function updateUnreadCount() {
-    const unreadBadge = document.querySelector('.inbox-header .badge');
-    const currentCount = parseInt(unreadBadge?.textContent) || 0;
+    // Count actual unread messages in the DOM
+    const unreadMessages = document.querySelectorAll('.message-item.unread');
+    const unreadCount = unreadMessages.length;
     
-    if (currentCount > 1) {
-        const newCount = currentCount - 1;
-        unreadBadge.textContent = `${newCount} Unread`;
-    } else if (currentCount === 1) {
-        unreadBadge.remove();
+    const inboxHeader = document.querySelector('.inbox-header h6');
+    if (inboxHeader) {
+        // Remove existing badge
+        const existingBadge = inboxHeader.querySelector('.badge');
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+        
+        // Add new badge if there are unread messages
+        if (unreadCount > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-warning text-dark ms-2';
+            badge.textContent = `${unreadCount} Unread`;
+            inboxHeader.appendChild(badge);
+        }
     }
+    
+    console.log(`Unread count updated: ${unreadCount}`);
 }
 
 function markIssueAsRead(issueId) {
@@ -872,17 +1003,73 @@ function markIssueAsRead(issueId) {
         }
     }).then(response => {
         if (!response.ok) {
-            console.error('Error marking issue as read');
+            throw new Error('API endpoint failed');
         }
         return response.json();
     }).then(data => {
         if (data && !data.success) {
             console.error('API error marking issue as read:', data.message);
+            throw new Error('API returned error');
+        } else {
+            // Successfully marked as read - update UI
+            updateMessageUIAsRead(issueId);
         }
     }).catch(error => {
-        console.error('Network error marking issue as read:', error);
+        console.error('API failed, trying fallback controller endpoint:', error);
+        
+        // Fallback to controller endpoint
+        fetch(`/Issues/MarkAsRead/${issueId}`, {
+            method: 'POST',
+            headers: {
+                'RequestVerificationToken': getCsrfToken()
+            }
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Controller endpoint also failed');
+            }
+            return response.json();
+        }).then(data => {
+            if (data && data.success) {
+                // Successfully marked as read via fallback - update UI
+                updateMessageUIAsRead(issueId);
+            } else {
+                console.error('Controller endpoint error:', data?.message || 'Unknown error');
+            }
+        }).catch(fallbackError => {
+            console.error('Both API and controller endpoints failed:', fallbackError);
+            // Still update UI optimistically
+            updateMessageUIAsRead(issueId);
+        });
     });
-    updateUnreadCount();
+}
+
+function updateMessageUIAsRead(issueId) {
+    // Find the message element for this issue
+    const messageElement = document.querySelector(`[data-issue-id="${issueId}"]`);
+    if (messageElement) {
+        // Remove unread class to mark as read
+        messageElement.classList.remove('unread');
+        
+        // Update the data attribute
+        messageElement.setAttribute('data-is-read', 'true');
+        
+        // Update the message content if needed (remove unread indicators)
+        const unreadIndicators = messageElement.querySelectorAll('.unread-indicator, .badge-warning');
+        unreadIndicators.forEach(indicator => {
+            indicator.remove();
+        });
+        
+        // If currently viewing "unread" filter, hide this message
+        const activeFilter = document.querySelector('.inbox-filters .btn.active');
+        if (activeFilter && activeFilter.getAttribute('data-filter') === 'unread') {
+            messageElement.style.display = 'none';
+        }
+        
+        // Update the unread count
+        updateUnreadCount();
+        
+        console.log(`Message ${issueId} marked as read in UI`);
+    }
 }
 
 // Debug function to test issue modal functionality

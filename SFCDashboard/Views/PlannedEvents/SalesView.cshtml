@@ -1,4 +1,4 @@
-@using System.Linq
+﻿@using System.Linq
 @using SFCDashboard.Models
 @model PaginatedList<SFCDashboard.Models.PlannedEvent>
 
@@ -12,591 +12,1515 @@
 
 @if (TempData["SuccessMessage"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+    <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
         @TempData["SuccessMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
 
-<div class="container-fluid mt-4">
-    <div class="row">
-        <!-- Left Column - Main Content -->
-        <div class="col-lg-8">
-        <div class="search-section mb-4">
-            <form method="get" asp-action="SalesView">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label for="searchType" class="form-label">Search By:</label>
-                            <select class="form-select shadow-sm" id="searchType" name="searchType" onchange="toggleSearchFields()">
-                                <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
-                                <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
-                                <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
-                                <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
-                            </select>
-                        </div>
+@{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
+
+<!-- Global Search Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #0c1d83 100%) !important; border-radius: 15px !important;">
+            <div class="card-body py-3" style="background: transparent !important;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <!-- Logo -->
+                    <div class="me-3 ms-3">
+                        <img src="~/images/logo.png" alt="Logo" height="60" class="d-inline-block" />
                     </div>
-                    <div class="col-md-7">
-                        <div class="form-group">
-                            <label for="indexSearchInput" class="form-label" id="indexSearchLabel">Search Term:</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control shadow-sm" id="indexSearchInput" 
-                                    name="@ViewData["SearchType"]" 
-                                    placeholder="Enter search term..."
-                                    value="@(ViewData[ViewData["SearchType"]?.ToString() + "Filter"])" required />
-                                <button class="btn btn-primary" type="submit">Search</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">&nbsp;</label>
-                        <a href="@Url.Action("SalesView")" class="btn btn-secondary w-100">
-                            <i class="bi bi-x-circle me-2"></i>Clear
-                        </a>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-                <div class="container-fluid mt-4">
-
-                @if (Model != null && Model.Any())
-                {
-                    @foreach (var item in Model)
-                    {
-                        <div class="card mb-3">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">PE Number: @item.PeNumber</h5>
-                                <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@item.PeNumber" aria-expanded="false">
-                                    Show Details
-                                </button>
-                            </div>
-                            <div id="@item.PeNumber">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <dl class="row">
-                                                <dt class="col-sm-4">Status</dt>
-                                                <dd class="col-sm-8">@item.PEStatus</dd>
-                                                <dt class="col-sm-4">Customer</dt>
-                                                <dd class="col-sm-8">@item.Customer</dd>
-                                                <dt class="col-sm-4">Service Type</dt>
-                                                <dd class="col-sm-8">@item.ServiceType</dd>
-                                            </dl>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <dl class="row">
-                                                <dt class="col-sm-4">Start Date</dt>
-                                                <dd class="col-sm-8">@item.PECreatedDate.ToString("dd/MM/yyyy")</dd>
-                                                <dt class="col-sm-4">Required Date</dt>
-                                                <dd class="col-sm-8">@item.ServiceRequiredDate?.ToString("dd/MM/yyyy")</dd>
-                                                <dt class="col-sm-4">SO Number</dt>
-                                                <dd class="col-sm-8">@item.SoNumber</dd>
-                                            </dl>
-                                        </div>
-                                    </div>
-
-                                    <div class="collapse" id="collapse-@item.PeNumber">
-                                        <hr class="details-divider" />
-
-                                        <div class="details-header mb-3">
-                                            <h5 class="details-title text-primary">
-                                                <i class="bi bi-file-earmark-text me-2"></i>
-                                                PE Details: <span class="text-dark">@item.PeNumber</span>
-                                            </h5>
-                                        </div>
-
-                                        <div class="details-content">
-                                            <div class="row g-4">
-                                                <!-- Location Details Card -->
-                                                <div class="col-md-6">
-                                                    <div class="details-card shadow-sm border-start border-4 border-info bg-light mb-3">
-                                                        <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
-                                                            <i class="bi bi-geo-alt me-2"></i>
-                                                            <span>Location Details</span>
-                                                        </div>
-                                                        <div class="details-card-body px-3 py-2">
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Province:</span> <span class="detail-value fw-semibold">@item.Province</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Region:</span> <span class="detail-value fw-semibold">@item.Region</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">RTOM:</span> <span class="detail-value fw-semibold">@item.Rtom</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">RTOM Description:</span> <span class="detail-value">@item.RtomDescription</span></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-card shadow-sm border-start border-4 border-success bg-light mb-3">
-                                                        <div class="details-card-header bg-success text-white rounded-top px-3 py-2">
-                                                            <i class="bi bi-clipboard-data me-2"></i>
-                                                            <span>Project Details</span>
-                                                        </div>
-                                                        <div class="details-card-body px-3 py-2">
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Job Reference:</span> <span class="detail-value">@item.JobReference</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Contractor:</span> <span class="detail-value">@item.ContractorName</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Activity:</span> <span class="detail-value">@item.PeActivity</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Nature:</span> <span class="detail-value">@item.PeNature</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Title:</span> <span class="detail-value">@item.PeTitle</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Objective:</span> <span class="detail-value">@item.PeObjective</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">PE Area:</span> <span class="detail-value">@item.PeArea</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="details-card shadow-sm border-start border-4 border-warning bg-light mb-3">
-                                                        <div class="details-card-header bg-warning text-dark rounded-top px-3 py-2">
-                                                            <i class="bi bi-list-task me-2"></i>
-                                                            <span>Task Information</span>
-                                                        </div>
-                                                        <div class="details-card-body px-3 py-2">
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Task Sequence:</span> <span class="detail-value">@item.TaskSeq</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Task Name:</span> <span class="detail-value">@item.TaskName</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Task Workgroup:</span> <span class="detail-value">@item.TaskWg</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Actual Start Date:</span> <span class="detail-value">@item.WoActualStartDate</span></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-card shadow-sm border-start border-4 border-primary bg-light mb-3">
-                                                        <div class="details-card-header bg-primary text-white rounded-top px-3 py-2">
-                                                            <i class="bi bi-gear-fill me-2"></i>
-                                                            <span>Service Details</span>
-                                                        </div>
-                                                        <div class="details-card-body px-3 py-2">
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Service Category:</span> <span class="detail-value">@item.ServiceCategory</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Service Speed:</span> <span class="detail-value">@item.ServiceSpeed</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Order Type:</span> <span class="detail-value">@item.OrderType</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">CRM Order:</span> <span class="detail-value">@item.CrmOrder</span></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-card shadow-sm border-start border-4 border-secondary bg-light mb-3">
-                                                        <div class="details-card-header bg-secondary text-white rounded-top px-3 py-2">
-                                                            <i class="bi bi-person me-2"></i>
-                                                            <span>Customer Information</span>
-                                                        </div>
-                                                        <div class="details-card-body px-3 py-2">
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Customer Type:</span> <span class="detail-value">@item.CusType</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Account Manager:</span> <span class="detail-value">@item.AccountManager</span></div>
-                                                            <div class="detail-item"><span class="detail-label text-secondary">Section Handled By:</span> <span class="detail-value">@item.SectionHandledBy</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- Location Information Section -->
-                                            <div class="details-card shadow-sm border-start border-4 border-info bg-light mt-3">
-                                                <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
-                                                    <i class="bi bi-pin-map me-2"></i>
-                                                    <span>Location Information</span>
-                                                </div>
-                                                <div class="details-card-body px-3 py-2">
-                                                    <div class="detail-item"><span class="detail-label text-secondary">Location A:</span> <span class="detail-value">@item.LocationAAddress</span></div>
-                                                    <div class="detail-item"><span class="detail-label text-secondary">Location B:</span> <span class="detail-value">@item.LocationBAddress</span></div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Comments Section (Only Show if Comments Exist) -->
-                                            @if (!string.IsNullOrEmpty(item.PeWoComments) || !string.IsNullOrEmpty(item.WoComments))
-                                            {
-                                                <div class="details-card mt-3">
-                                                    <div class="details-card-header">
-                                                        <i class="bi bi-chat-left-text me-2"></i>
-                                                        <h6>Comments</h6>
-                                                    </div>
-                                                    <div class="details-card-body">
-                                                        @if (!string.IsNullOrEmpty(item.PeWoComments))
-                                                        {
-                                                            <div class="comment-block">
-                                                                <div class="comment-header">PE Work Order Comments:</div>
-                                                                <div class="comment-content">@item.PeWoComments</div>
-                                                            </div>
-                                                        }
-                                                        @if (!string.IsNullOrEmpty(item.WoComments))
-                                                        {
-                                                            <div class="comment-block @(string.IsNullOrEmpty(item.PeWoComments) ? "" : "mt-3")">
-                                                                <div class="comment-header">Work Order Comments:</div>
-                                                                <div class="comment-content">@item.WoComments</div>
-                                                            </div>
-                                                        }
-                                                    </div>
-                                                </div>
-                                            }
-
-                                            <!-- PE Tasks Table -->
-                                            <div class="card mt-4">
-                                                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                                                    <h6 class="mb-0">PE Tasks</h6>
-                                                    @{
-                                                        var peTasks = ViewBag.PETasksByPeNumber != null && ViewBag.PETasksByPeNumber.ContainsKey(item.PeNumber)
-                                                        ? (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasksByPeNumber[item.PeNumber]
-                                                        : null;
-                                                    }
-                                                    @if (peTasks == null || !peTasks.Any())
-                                                    {
-                                                        <span class="badge bg-warning text-dark">No tasks found</span>
-                                                    }
-                                                </div>
-                                                <div class="card-body">
-                                                    @if (peTasks != null && peTasks.Any())
-                                                    {
-                                                        <div class="table-responsive">
-                                                            <table class="table table-hover task-table">
-                                                                <thead class="table-light">
-                                                                    <tr>
-                                                                        <th>Seq</th>
-                                                                        <th>Task</th>
-                                                                        <th>Workgroup</th>
-                                                                        <th>OLA</th>
-                                                                        <th>Status</th>
-                                                                        <th>Created Date</th>
-                                                                        <th>Target Date</th>
-                                                                        <th>Actual Date</th>
-                                                                        <th>Priority</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    @foreach (var task in peTasks)
-                                                                    {
-                                                                        <tr class="@(task.IsUrgent ? "table-warning" :
-                                                                        task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" :
-                                                                        task.TaskStatus?.ToLower() == "completed" ? "table-success" :
-                                                                        task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
-                                                                            <td>@task.TaskSeq</td>
-                                                                            <td>@task.Task</td>
-                                                                            <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
-                                                                            <td>@task.OLA days</td>
-                                                                            <td>
-                                                                                @{
-                                                                                    string taskStatusClass = task.TaskStatus?.ToLower() switch
-                                                                                    {
-                                                                                        "completed" => "badge bg-success",
-                                                                                        "inprogress" => "badge bg-warning text-dark",
-                                                                                        _ => "badge bg-secondary"
-                                                                                    };
-                                                                                }
-                                                                                <span class="@taskStatusClass">@task.TaskStatus</span>
-                                                                            </td>
-                                                                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
-                                                                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
-                                                                            <td>@(task.ACtualTaskCompleteDate != null ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd") : "-")</td>
-                                                                            <td>
-                                                                                @if (task.IsUrgent)
-                                                                                {
-                                                                                    <span class="badge bg-danger">URGENT</span>
-                                                                                }
-                                                                                @if (task.UrgentRequested && !task.IsUrgent)
-                                                                                {
-                                                                                    <span class="badge bg-warning">URGENT REQUESTED</span>
-                                                                                }
-                                                                                @if (!string.IsNullOrEmpty(task.Priority))
-                                                                                {
-                                                                                    <small class="d-block text-muted mt-1">@task.Priority</small>
-                                                                                }
-                                                                            </td>
-                                                                        </tr>
-                                                                    }
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="alert alert-info">
-                                                            <i class="bi bi-info-circle me-2"></i>
-                                                            No tasks have been assigned to this PE record yet.
-                                                        </div>
-                                                    }
-                                                </div>
-                                            </div>
-                                            <!-- End PE Tasks Table -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                }
-                else if (isSearchPerformed)
-                {
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        No records found.
-                    </div>
-                }
-
-                @if (Model != null && Model.Any())
-                {
-                    <!-- Pagination Controls -->
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination justify-content-center">
-                            <li class="page-item @(Model.PageIndex == 1 ? "disabled" : "")">
-                                <a class="page-link" href="?pageIndex=1&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">First</a>
-                            </li>
-                            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                                <a class="page-link" href="?pageIndex=@(Model.PageIndex - 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Previous</a>
-                            </li>
-                            <li class="page-item disabled">
-                                <span class="page-link">@Model.PageIndex</span>
-                            </li>
-                            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                                <a class="page-link" href="?pageIndex=@(Model.PageIndex + 1)&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Next</a>
-                            </li>
-                            <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : "")">
-                                <a class="page-link" href="?pageIndex=@Model.TotalPages&searchType=@ViewData["SearchType"]&peNumber=@ViewData["PENumberFilter"]&customer=@ViewData["CustomerFilter"]&jobReference=@ViewData["JobReferenceFilter"]&soNumber=@ViewData["SONumberFilter"]">Last</a>
-                            </li>
-                        </ul>
-                    </nav>
-                }
-
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <a href="@Url.Action("SalesUrgentRecords")" class="dashboard-card urgent-card">
-                            <div class="card-content">
-                                <h4>Urgent Records</h4>
-                                <div class="mt-2">
-                                    <span class="badge bg-light text-danger" style="font-size: 1.2rem;">
-                                        @ViewData["UrgentCount"] Tasks
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="img-container">
-                                <img src="~/images/urgent.png" alt="Urgent" class="dashboard-img" />
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <a href="@Url.Action("SalesInProgressRecords")" class="dashboard-card inprogress-card">
-                            <div class="card-content">
-                                <h4>Regular Records</h4>
-                                <div class="mt-2">
-                                    <span class="badge bg-light text-success" style="font-size: 1.2rem;">
-                                        @ViewData["InProgressCount"] Tasks
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="img-container">
-                                <img src="~/images/work-in-progress.png" alt="Regular Records" class="dashboard-img" />
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <a href="@Url.Action("SalesOLAViolateRecords")" class="dashboard-card ola-card">
-                            <div class="card-content">
-                                <h4>OLA Violations</h4>
-                                <div class="mt-2">
-                                    <span class="badge bg-light text-dark" style="font-size: 1.2rem;">
-                                        @ViewData["OLAViolateCount"] Tasks
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="img-container">
-                                <img src="~/images/ola _Validate.png" alt="OLA Violate" class="dashboard-img" />
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <a href="@Url.Action("SalesHoldRecords")" class="dashboard-card hold-card">
-                            <div class="card-content">
-                                <h4>Hold Records</h4>
-                                <div class="mt-2">
-                                    <span class="badge bg-light text-warning" style="font-size: 1.2rem;">
-                                        @ViewData["HoldCount"] Tasks
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="img-container">
-                                <img src="~/images/hold.png" alt="Hold Records" class="dashboard-img" />
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-            <!-- Right Column - Message Inbox -->
-            <div class="col-lg-4">
-                <div class="message-inbox-container">
-                    <div class="inbox-header">
-                        <h3>
-                            <i class="fas fa-inbox me-2"></i>Message Inbox
-                            @{
-                                var unreadCount = 0;
-                                
-                                // Count unread issues
-                                if (ViewData["InboxIssues"] != null)
-                                {
-                                    unreadCount += ((IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"]).Count(i => !i.IsRead);
-                                }
-                                
-                                // Count pending urgent PE requests
-                                if (ViewData["PendingUrgentRequests"] != null)
-                                {
-                                    unreadCount += ((IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"]).Count();
-                                }
-                                
-                                // Count pending urgent task requests
-                                if (ViewData["PendingTaskRequests"] != null)
-                                {
-                                    unreadCount += ((IEnumerable<PETask>)ViewData["PendingTaskRequests"]).Count();
-                                }
-                                
-                                if (unreadCount > 0)
-                                {
-                                    <span class="badge bg-danger rounded-pill ms-2">@unreadCount Unread</span>
-                                }
-                            }
-                        </h3>
-
-                                    <!-- Message search bar -->
-                                    <div class="inbox-search-container mt-3">
-                                        <div class="input-group">
-                                            <input type="text" class="form-control inbox-search" placeholder="Search messages..." aria-label="Search messages">
-                                        </div>
-                                    </div>
-
-                    <!-- Add this section after the inbox-search-container -->
-                    <div class="inbox-filters mt-3">
-                        <div class="btn-group w-100" role="group" aria-label="Message filters">
-                            <button type="button" class="btn btn-outline-primary active" data-filter="unread">Unread</button>
-                            <button type="button" class="btn btn-outline-primary" data-filter="read">Read</button>
-                            <button type="button" class="btn btn-outline-primary" data-filter="all">All</button>
-                        </div>
-                    </div>
-
-                    <div class="messages-container mt-3">
-                       @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
-                       {
-                    <!-- Urgent Request Confirmation Messages -->
-                    @if (ViewData["PendingUrgentRequests"] != null)
-                    {
-                        foreach (var request in (IEnumerable<PlannedEvent>)ViewData["PendingUrgentRequests"])
-                        {
-                            <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
-                                <div class="message-indicator"></div>
-                                <div class="message-content">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="message-sender">Urgent Request: @request.PeNumber</h6>
-                                        <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
-                                    </div>
-                                    <div class="message-subject">
-                                        <span class="badge bg-danger me-1">Action Required</span>
-                                        Confirm Urgent Status
-                                    </div>
-                                    <div class="message-preview">
-                                        Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }
                     
-                    <!-- Task Urgent Requests -->
-                    @if (ViewData["PendingTaskRequests"] != null)
-                    {
-                        foreach (var task in (IEnumerable<PETask>)ViewData["PendingTaskRequests"])
-                        {
-                            <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
-                                <div class="message-indicator"></div>
-                                <div class="message-content">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
-                                        <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
+                    <!-- Global Search Form -->
+                    <form class="d-flex align-items-center justify-content-center flex-grow-1" method="get" asp-controller="PlannedEvents"
+                        asp-action="GlobalSearch" role="search">
+                        <div class="input-group" style="max-width: 600px;">
+                            <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px; box-shadow: none !important; border-radius: 0.375rem 0 0 0.375rem;">
+                                <option value="peNumber" selected>PE Number</option>
+                                <option value="customer">Customer</option>
+                                <option value="jobReference">Job Reference</option>
+                                <option value="soNumber">SO Number</option>
+                            </select>
+                            <input class="form-control" type="search" name="peNumber" id="globalSearchInput"
+                                placeholder="Search PE Number" aria-label="Search" style="box-shadow: none !important; border-left: 0; border-right: 0;" />
+                            <button class="btn btn-primary" type="submit" style="box-shadow: none !important; border-left: 0; border-radius: 0 0.375rem 0.375rem 0; padding: 0.375rem 0.75rem; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Welcome Message -->
+                    <div class="mx-3">
+                        <span class="text-white fw-bold">
+                            👋 Hello, @(ViewData["CurrentUserName"]?.ToString() ?? "User")!
+                        </span>
+                    </div>
+                    
+                    <!-- Reminder Notifications -->
+                    <div class="ms-2">
+                        <div class="dropdown">
+                            <button class="btn position-relative" type="button" id="reminderDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport" data-bs-container="body"
+                                style="border: none; padding: 0.5rem; background: transparent;">
+                                <i class="bi bi-bell" style="font-size: 1.2rem; color: white;"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                    id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
+                                style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <div class="dropdown-header bg-primary text-white p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-bell me-2"></i>Reminders
+                                        </h6>
+                                        <div>
+                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
+                                                title="Mark all as read">
+                                                <i class="bi bi-check-all"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="message-subject">
-                                        <span class="badge bg-warning text-dark me-1">Task</span>
-                                        @task.Task Needs Priority
+                                    <div class="btn-group btn-group-sm w-100 mt-2">
+                                        <button type="button" class="btn btn-outline-light active"
+                                            data-filter="unread">Unread</button>
+                                        <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
                                     </div>
-                                    <div class="message-preview">
-                                        @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
-                                    </div>
+                                </div>
+                                <div id="reminderNotificationList" class="notification-list">
+                                    <!-- Reminders will be loaded here -->
                                 </div>
                             </div>
-                        }
-                    }
-                }
-                
-                        
-                        <!-- Issue Messages -->
-                        @if (ViewData["InboxIssues"] != null)
-                            {
-                                foreach (var issue in (IEnumerable<PEIssueViewModel>)ViewData["InboxIssues"])
-                            {
-            
-                            
-                                <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
-                                    data-message-id="issue-@issue.CreatedAt.Ticks"
-                                    data-issue-id="@issue.Id"
-                                    data-pe-id="@issue.PlannedEventId"
-                                    data-sender="@issue.SenderName"
-                                    data-sender-id="@issue.SenderId"
-                                    data-issue-text="@issue.IssueText"
-                                    data-attachment="@issue.AttachmentPath"
-                                    data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
-                                    data-is-read="@issue.IsRead.ToString().ToLower()"
-                                    data-is-reply="@issue.IsReply.ToString().ToLower()"
-                                    data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
-                                    data-original-issue-id="@issue.OriginalIssueId"
-                                    @if (issue.IsResolutionRequest)
-                                    {
-                                        <text>
-                                        data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
-                                        data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
-                                        onclick="showResolutionConfirm(this)"
-                                        </text>
-                                    }
-                                    else
-                                    {
-                                        <text>onclick="showIssueDetails(this)"</text>
-                                    }>
-                                    <div class="message-indicator"></div>
-                                    <div class="message-content">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <h6 class="message-sender">
-                                                @if (issue.IsResolutionRequest)
-                                                {
-                                                    <span class="badge bg-success me-1">Resolution</span>
-                                                }
-                                                From @issue.SenderName
-                                            </h6>
-                                            <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
-                                        </div>
-                                        <div class="message-subject">
-                                            @if (issue.IsResolutionRequest)
-                                            {
-                                                <span class="badge bg-success text-white me-1">Issue Fixed</span>
-                                            }
-                                            else if (issue.IsReply)
-                                            {
-                                                <span class="badge bg-info text-dark me-1">Reply</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-danger text-white me-1">Issue</span>
-                                            }
-                                            @issue.IssueText
-                                        </div>
-                                        <div class="message-preview">
-                                            @if (!string.IsNullOrEmpty(issue.AttachmentPath))
-                                            {
-                                                <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
-                                            }
-                                            else
-                                            {
-                                                <span>No attachment</span>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        }
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Dashboard Cards: 5 tiles with 4 primary operation tiles and 1 secondary tool -->
+<div class="container-fluid p-0 position-relative mb-4" style="z-index: 1;">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-center align-items-stretch gap-2 mt-0 mb-0">
+                <!-- Urgent Requests Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesUrgentRecords")" class="dashboard-card urgent-card">
+                        <div class="card-content">
+                            <h5>Urgent Records</h5>
+                            <span class="badge">@ViewData["UrgentCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/urgent.png" alt="Urgent" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- In Progress Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesInProgressRecords")" class="dashboard-card inprogress-card">
+                        <div class="card-content">
+                            <h5>Regular Records</h5>
+                            <span class="badge">@ViewData["InProgressCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/work-in-progress.png" alt="In Progress" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- OLA Violated Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesOLAViolateRecords")" class="dashboard-card ola-card">
+                        <div class="card-content">
+                            <h5>OLA Violations</h5>
+                            <span class="badge">@ViewData["OLAViolateCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/ola _Validate.png" alt="OLA Violated" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- Hold Records Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesHoldRecords")" class="dashboard-card hold-card">
+                        <div class="card-content">
+                            <h5>Hold Records</h5>
+                            <span class="badge">@(ViewData["HoldCount"] != null ? ViewData["HoldCount"] : 0)</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/hold.png" alt="Hold" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- Report Generator Card - Secondary Tool -->
+                <div class="dashboard-card-container secondary-tool" style="flex: 0 0 140px; min-width: 140px;">
+                    <a href="@Url.Action("Generate", "Reports")" class="dashboard-card report-card secondary-card">
+                        <div class="card-content">
+                            <h6>Reports</h6>
+                            <span class="badge secondary-badge">
+                                <i class="bi bi-file-earmark-bar-graph"></i>
+                            </span>
+                        </div>
+                        <div class="img-container secondary-icon">
+                            <i class="bi bi-tools" style="font-size: 1.8rem; color: #ffffff;"></i>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt-2">
+@{
+    var nextTask = ViewBag.NextTask as List<TaskQueueItem>;
+    var hasNextTask = ViewBag.HasNextTask;
+}
+
+@{
+    bool shouldShowNextTask = 
+        (ViewData["CanViewAll"] as bool? != true) && 
+        ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count <= 1);
+}
+
+
+<!-- Top Section: Dynamic Layout Based on Permissions -->
+@if (ViewData["CanViewAll"] as bool? == true)
+{
+    <!-- For ViewAll Users: Workgroup Filter and Search PE Side by Side -->
+    <div class="row mb-2">
+        <!-- Workgroup Filter Card -->
+        <div class="col-lg-6 mb-2">
+            <div class="card border-primary h-100 shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>Filter by Workgroup
+                    </h6>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="collapse" id="filterContent">
+                    <div class="card-body py-2">
+                        <form method="get" asp-action="SalesView" class="workgroup-filter-form">
+                            <div class="mb-3">
+                                <select class="form-select shadow-sm" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
+                                    <option value="">All Workgroups</option>
+                                    @if (ViewData["WorkGroups"] != null)
+                                    {
+                                        @if (ViewData["WorkGroups"] is IEnumerable<WorkGroup> workGroups)
+                                        {
+                                            @foreach (var workgroup in workGroups)
+                                            {
+                                            <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">@workgroup.Name</option>
+                                            }
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            @if (!string.IsNullOrEmpty(selectedName))
+                            {
+                                <div class="selected-workgroup-display">
+                                    <span class="badge bg-primary">Selected: @selectedName</span>
+                                    <a href="@Url.Action("SalesView")" class="btn btn-sm btn-outline-secondary ms-2">
+                                        <i class="bi bi-x-circle me-1"></i>Clear
+                                    </a>
+                                </div>
+                            }
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search PE Card -->
+        <div class="col-lg-6 mb-2">
+            <div class="card border-info h-100 shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Search PE Records
+                    </h6>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapseViewAll" aria-expanded="false">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="collapse" id="searchFormCollapseViewAll">
+                    <div class="card-body py-2">
+                        <form method="get" asp-action="SalesView">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="searchType" class="form-label">Search By:</label>
+                                        <select class="form-select shadow-sm" id="searchType" name="searchType" onchange="toggleSearchFields()">
+                                            <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
+                                            <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
+                                            <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
+                                            <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="indexSearchInput" class="form-label" id="indexSearchLabel">Search Term:</label>
+                                        <input type="text" class="form-control shadow-sm" id="indexSearchInput" 
+                                            name="@ViewData["SearchType"]" 
+                                            placeholder="Enter search term..."
+                                            value="@(ViewData[ViewData["SearchType"]?.ToString() + "Filter"])" required />
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-primary btn-sm flex-fill" type="submit">
+                                            <i class="bi bi-search me-1"></i>Search
+                                        </button>
+                                        <a href="@Url.Action("SalesView")" class="btn btn-secondary btn-sm">
+                                            <i class="bi bi-x-circle"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Message Inbox and Notice Board Section -->
+<div class="row mt-3">
+    <!-- Left Column: Message Inbox (40% width) -->
+    <div class="col-lg-4">
+        <div class="card border-info shadow-sm" style="height: 400px;">
+            <div class="card-header bg-info text-white py-1">
+                <h6 class="mb-0">
+                    <i class="fas fa-inbox me-1"></i>Message Inbox
+                        @{
+                            var unreadCount = 0;
+                            
+                            // Count unread issues
+                            if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssues)
+                            {
+                                unreadCount += inboxIssues.Count(i => !i.IsRead);
+                            }
+                            
+                            // Count pending urgent PE requests
+                            if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> urgentRequests)
+                            {
+                                unreadCount += urgentRequests.Count();
+                            }
+                            
+                            // Count pending urgent task requests
+                            if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> taskRequests)
+                            {
+                                unreadCount += taskRequests.Count();
+                            }
+                            
+                            if (unreadCount > 0)
+                            {
+                                <span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.6rem;">@unreadCount</span>
+                            }
+                        }
+                </h6>
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <!-- Message search bar -->
+                <div class="inbox-search-container mb-2">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control inbox-search" placeholder="Search..." aria-label="Search messages" style="font-size: 0.75rem;">
+                    </div>
+                </div>
+
+                <!-- Add this section after the inbox-search-container -->
+                <div class="inbox-filters mb-2">
+                    <div class="btn-group w-100" role="group" aria-label="Message filters">
+                        <button type="button" class="btn btn-outline-primary btn-sm active" data-filter="unread" style="font-size: 0.7rem; padding: 0.2rem;">Unread</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-filter="read" style="font-size: 0.7rem; padding: 0.2rem;">Read</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-filter="all" style="font-size: 0.7rem; padding: 0.2rem;">All</button>
+                    </div>
+                </div>
+
+                <div class="messages-container">
+                    @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
+                    {
+                        <!-- Urgent Request Confirmation Messages -->
+                        @if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> urgentRequestsList && urgentRequestsList.Any())
+                        {
+                            foreach (var request in urgentRequestsList)
+                            {
+                                <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender"><span class="badge bg-danger me-1">Urgent</span>
+                From @request.UrgentRequestedByName
+            </h6>
+                                            <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            <span class="badge bg-danger me-1">Action Required</span>
+                                            Confirm Urgent Status
+                                        </div>
+                                        <div class="message-preview">
+                                            Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        
+                        <!-- Task Urgent Requests -->
+                        @if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> pendingTasks)
+                        {
+                            foreach (var task in pendingTasks)
+                            {
+                                <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
+                                            <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            <span class="badge bg-danger me-1">Action Required</span>
+                                            Approve Urgent Task
+                                        </div>
+                                        <div class="message-preview">
+                                            Task: @task.Task - @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                    
+                    <!-- Issue Messages -->
+                    @if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssuesList && inboxIssuesList.Any())
+                    {
+                        foreach (var issue in inboxIssuesList)
+                        {
+                            <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
+                                 data-message-id="issue-@issue.CreatedAt.Ticks"
+                                 data-issue-id="@issue.Id"
+                                 data-pe-id="@issue.PlannedEventId"
+                                 data-sender="@issue.SenderName"
+                                 data-sender-id="@issue.SenderId"
+                                 data-issue-text="@issue.IssueText"
+                                 data-attachment="@issue.AttachmentPath"
+                                 data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
+                                 data-is-read="@issue.IsRead.ToString().ToLower()"
+                                 data-is-reply="@issue.IsReply.ToString().ToLower()"
+                                 data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
+                                 data-original-issue-id="@issue.OriginalIssueId"
+                                 @if (issue.IsResolutionRequest)
+                                 {
+                                     <text>
+                                     data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
+                                     data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                     onclick="showResolutionConfirm(this)"
+                                     </text>
+                                 }
+                                 else
+                                 {
+                                     <text>onclick="showIssueDetails(this)"</text>
+                                 }>
+                                <div class="message-indicator"></div>
+                                <div class="message-content">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="message-sender">
+                                            @if (issue.IsResolutionRequest)
+                                            {
+                                                <span class="badge bg-success me-1">Resolution</span>
+                                            }
+                                            From @issue.SenderName 
+                                        </h6>
+                                        <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                    </div>
+                                    <div class="message-subject">
+                                        @if (issue.IsResolutionRequest)
+                                        {
+                                            <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                        }
+                                        else if (issue.IsReply)
+                                        {
+                                            <span class="badge bg-info text-dark me-1">Reply</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger text-white me-1">Issue</span>
+                                        }
+                                        @issue.IssueText
+                                    </div>
+                                    <div class="message-preview">
+                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                        {
+                                            <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No attachment</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    
+                    @if (!((ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> checkInboxIssues && checkInboxIssues.Any()) ||
+                         (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> checkUrgentRequests && checkUrgentRequests.Any()) ||
+                         (ViewData["PendingTaskRequests"] is IEnumerable<PETask> checkTaskRequests && checkTaskRequests.Any())))
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            <p>No messages in your inbox</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle Column: Task Queue & BOQ Status (33% width) -->
+    <div class="col-lg-4 mb-3">
+        <!-- Task Queue Section -->
+        @if (shouldShowNextTask)
+        {
+            <!-- Next Task Card -->
+            <div class="card border-info shadow-sm" style="height: 160px;">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Next Task
+                    </h6>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#nextTaskContent" aria-expanded="false">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="collapse" id="nextTaskContent">
+                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 120px;">
+                        @if (nextTask != null && nextTask.Any())
+                        {
+                            var task = nextTask.First();
+                            <div class="next-task-item">
+                                <h6 class="text-primary mb-2">@task.Task.PENumber</h6>
+                                <p class="mb-1"><strong>Customer:</strong> @task.Task.PlannedEvent?.Customer</p>
+                                <p class="mb-1"><strong>Task:</strong> @task.Task.Task</p>
+                                <p class="mb-2"><strong>Status:</strong> @task.DueStatus</p>
+                                <div class="text-center">
+                                    <a href="@Url.Action("Details", new { id = task.Task.PlannedEvent?.Id })" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-play-fill me-1"></i>Start Task
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-3 text-muted">
+                                <i class="bi bi-check-circle fs-4 d-block mb-2"></i>
+                                <p class="mb-0">No pending tasks</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Search PE Card for non-ViewAll users -->
+            <div class="card border-info shadow-sm" style="height: 160px;">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Search PE Records
+                    </h6>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapseRegular" aria-expanded="false">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="collapse" id="searchFormCollapseRegular">
+                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 120px;">
+                        <form method="get" asp-action="SalesView">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <select class="form-select form-select-sm shadow-sm" id="searchTypeRegular" name="searchType" onchange="toggleSearchFields('regular')">
+                                            <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
+                                            <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
+                                            <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
+                                            <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <input type="text" class="form-control form-control-sm shadow-sm" id="indexSearchInputRegular" 
+                                            name="@ViewData["SearchType"]" 
+                                            placeholder="Enter search term..."
+                                            value="@(ViewData[ViewData["SearchType"]?.ToString() + "Filter"])" required />
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-primary btn-sm flex-fill" type="submit">
+                                            <i class="bi bi-search me-1"></i>Search
+                                        </button>
+                                        <a href="@Url.Action("SalesView")" class="btn btn-secondary btn-sm">
+                                            <i class="bi bi-x-circle"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+        
+        <!-- BOQ Status Section -->
+        <div class="card border-success shadow-sm" style="height: 220px;">
+            <div class="card-header bg-success boq-header text-white d-flex justify-content-between align-items-center py-1">
+                <h6 class="mb-0">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>BOQ Status
+                    @if (ViewData["BOQRecords"] != null)
+                    {
+                        var boqRecords = ViewData["BOQRecords"] as IEnumerable<object>;
+                        <span class="badge bg-light text-success ms-2">@(boqRecords?.Count() ?? 0) records</span>
+                    }
+                </h6>
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 180px;">
+                @if (ViewData["BOQRecords"] != null)
+                {
+                    var boqRecords = ViewData["BOQRecords"] as IEnumerable<object>;
+                    if (boqRecords?.Any() == true)
+                    {
+                        <div class="text-center py-3 text-muted">
+                            <i class="bi bi-file-earmark fs-4 d-block mb-2"></i>
+                            <p class="mb-0">@boqRecords.Count() BOQ records available</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-3 text-muted">
+                            <i class="bi bi-file-earmark fs-4 d-block mb-2"></i>
+                            <p class="mb-0">No BOQ records</p>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center py-3 text-muted">
+                        <i class="bi bi-file-earmark fs-4 d-block mb-2"></i>
+                        <p class="mb-0">No BOQ records</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Notice Board (33% width) -->
+    <div class="col-lg-4">
+        <!-- Notice Board Section -->
+        <div class="card border-warning shadow-sm" style="height: 400px;">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-1">
+                <h6 class="mb-0">
+                    <i class="bi bi-megaphone me-1"></i>Notice Board
+                </h6>
+                @if ((bool)(ViewData["CanManageNotices"] ?? false))
+                {
+                    <button class="btn btn-xs btn-outline-dark" id="addNoticeBtn" title="Add Notice" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                }
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <div id="noticeContent">
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading notices...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<!-- End of container-fluid -->
+
+</div>
+<!-- End of container-fluid -->
 @section Scripts {
     <link rel="stylesheet" href="~/lib/jquery-ui/themes/base/jquery-ui.css" asp-append-version="true">
     <script src="~/lib/jquery-ui/jquery-ui.min.js" asp-append-version="true"></script>
     <link href="~/lib/select2/css/select2.min.css" rel="stylesheet" asp-append-version="true" />
     <script src="~/lib/select2/js/select2.min.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2 with enhanced styling
+            $('#workgroupFilter').select2({
+                placeholder: "Select workgroup...",
+                allowClear: true,
+                theme: "bootstrap-5"
+            });
+            
+            // Enhanced search type toggle
+            function toggleSearchFields(formType = 'regular') {
+                let searchType, searchInput;
+                
+                if (formType === 'regular') {
+                    searchType = document.getElementById('searchTypeRegular').value;
+                    searchInput = document.getElementById('indexSearchInputRegular');
+                } else {
+                    searchType = document.getElementById('searchType') ? document.getElementById('searchType').value : 'peNumber';
+                    searchInput = document.getElementById('indexSearchInput');
+                }
+                
+                if (searchInput) {
+                    // Update input name and placeholder based on search type
+                    searchInput.name = searchType;
+                    
+                    switch (searchType) {
+                        case 'peNumber':
+                            searchInput.placeholder = 'Enter PE Number...';
+                            break;
+                        case 'customer':
+                            searchInput.placeholder = 'Enter Customer Name...';
+                            break;
+                        case 'jobReference':
+                            searchInput.placeholder = 'Enter Job Reference...';
+                            break;
+                        case 'soNumber':
+                            searchInput.placeholder = 'Enter SO Number...';
+                            break;
+                    }
+                }
+            }
+            
+            // Make toggleSearchFields available globally
+            window.toggleSearchFields = toggleSearchFields;
+            
+            // Initialize search fields based on current search type
+            toggleSearchFields();
+            
+            // Add keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    $('#indexSearchInput').focus();
+                }
+            });
+        });
+
+        // Reminder notification functionality similar to Index
+        $(document).ready(function() {
+            // Load reminders on page load
+            loadReminders();
+            
+            // Initialize notice board
+            initializeNoticeBoard();
+        });
+
+        function loadReminders() {
+            fetch('/PlannedEvents/GetReminders')
+                .then(response => response.json())
+                .then(data => {
+                    updateReminderDropdown(data);
+                })
+                .catch(error => {
+                    console.error('Error loading reminders:', error);
+                });
+        }
+
+        function updateReminderDropdown(reminders) {
+            const reminderList = document.getElementById('reminderNotificationList');
+            const reminderCount = document.getElementById('reminderCount');
+            
+            if (reminders && reminders.length > 0) {
+                const unreadCount = reminders.filter(r => !r.isRead).length;
+                if (unreadCount > 0) {
+                    reminderCount.textContent = unreadCount;
+                    reminderCount.style.display = 'inline';
+                } else {
+                    reminderCount.style.display = 'none';
+                }
+                
+                reminderList.innerHTML = reminders.map(reminder => `
+                    <div class="dropdown-item ${!reminder.isRead ? 'fw-bold' : ''}" style="cursor: pointer;"
+                         onclick="showReminderDetails('${reminder.id}', '${reminder.peId}', '${reminder.title}', '${reminder.message}', '${reminder.reminderDate}')">
+                        <i class="bi bi-bell me-2 text-warning"></i>
+                        <div>
+                            <div class="fw-bold">${reminder.title}</div>
+                            <small class="text-muted">${formatDate(new Date(reminder.reminderDate))}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                reminderCount.style.display = 'none';
+                reminderList.innerHTML = '<div class="dropdown-item-text text-center">No reminders</div>';
+            }
+        }
+
+        function formatDate(date) {
+            const now = new Date();
+            const diffInMs = now - date;
+            const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+            const diffInHours = diffInMs / (1000 * 60 * 60);
+
+            if (diffInMinutes < 60) {
+                return `${diffInMinutes} minutes ago`;
+            } else if (diffInHours < 24) {
+                return `${Math.floor(diffInHours)} hours ago`;
+            } else {
+                const diffInDays = Math.floor(diffInHours / 24);
+                return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+            }
+        }
+
+        // User permissions for notice management
+        const canManageNotices = @Html.Raw((ViewData["CanManageNotices"] as bool?)?.ToString().ToLower() ?? "false");
+
+        // Notice Board Management
+        function initializeNoticeBoard() {
+            // Add click handlers for notice board buttons
+            $('#addNoticeBtn').on('click', function() {
+                showAddNoticeModal();
+            });
+            
+            // Initialize notice board on page load
+            loadNoticeBoard();
+        }
+        
+        function loadNoticeBoard() {
+            // Load notice board data from API
+            refreshNoticeBoard();
+        }
+        
+        function refreshNoticeBoard() {
+            // Refresh notice board content via AJAX
+            $.ajax({
+                url: '@Url.Action("GetNotices", "PlannedEvents")',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        updateNoticeBoardContent(response.data);
+                    } else {
+                        console.error('Failed to refresh notice board:', response.message);
+                        $('#noticeContent').html(`
+                            <div class="text-center py-4 text-muted">
+                                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2"></i>
+                                <p>Failed to load notices</p>
+                            </div>
+                        `);
+                    }
+                },
+                error: function() {
+                    console.error('Network error while refreshing notice board');
+                    $('#noticeContent').html(`
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-wifi-off fs-2 d-block mb-2"></i>
+                            <p>Network error loading notices</p>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        function updateNoticeBoardContent(notices) {
+            const noticeContent = $('#noticeContent');
+            noticeContent.empty();
+            
+            if (notices && notices.length > 0) {
+                notices.slice(0, 5).forEach(function(notice) { // Show only first 5 notices
+                    // Split description to get title and content
+                    const lines = notice.description.split('\n');
+                    const title = lines[0] || 'Notice';
+                    const content = lines.slice(2).join('\n') || notice.description; // Skip empty line
+                    
+                    const isPinned = notice.isPinned || false;
+                    const expireDate = notice.expireDate ? new Date(notice.expireDate) : null;
+                    const isExpired = expireDate && expireDate < new Date();
+                    
+                    const noticeHtml = `
+                        <div class="notice-item mb-2 p-2 border rounded ${isExpired ? 'opacity-75' : ''}" 
+                             style="border-left: 4px solid ${isPinned ? '#007bff' : '#ffc107'} !important; ${isExpired ? 'filter: grayscale(50%);' : ''}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">
+                                        ${isPinned ? '<i class="bi bi-pin-fill text-primary me-1"></i>' : ''}
+                                        ${escapeHtml(title)}
+                                        ${isExpired ? '<small class="text-muted ms-1">(Expired)</small>' : ''}
+                                    </h6>
+                                    <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2; color: ${isExpired ? '#6c757d' : 'inherit'};">
+                                        ${escapeHtml(content)}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted" style="font-size: 0.65rem;">
+                                            By: ${escapeHtml(notice.createdUserName || 'System')} | 
+                                            ${formatNoticeDate(notice.createdDate)}
+                                        </small>
+                                        ${expireDate ? `<small class="text-muted" style="font-size: 0.6rem;">
+                                            Expires: ${expireDate.toLocaleDateString()}
+                                        </small>` : ''}
+                                    </div>
+                                </div>
+                                ${canManageNotices ? `
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                            data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <button class="dropdown-item" onclick="togglePinNotice(${notice.id}, ${!isPinned})">
+                                                <i class="bi bi-pin${isPinned ? '' : '-fill'} me-2"></i>
+                                                ${isPinned ? 'Unpin' : 'Pin'} Notice
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger" onclick="deleteNotice(${notice.id})">
+                                                <i class="bi bi-trash me-2"></i>Delete Notice
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    noticeContent.append(noticeHtml);
+                });
+                
+                // Add "View All" button if there are more notices
+                if (notices.length > 5) {
+                    noticeContent.append(`
+                        <div class="text-center mt-2">
+                            <small class="text-muted">${notices.length - 5} more notices...</small>
+                        </div>
+                    `);
+                }
+            } else {
+                const noNoticesMessage = canManageNotices ? 
+                    '<i class="bi bi-info-circle me-2"></i>No notices available<br><small>Click the + button to add the first notice</small>' :
+                    '<i class="bi bi-info-circle me-2"></i>No notices available at the moment';
+                
+                noticeContent.html(`
+                    <div class="text-center text-muted p-3">
+                        ${noNoticesMessage}
+                    </div>
+                `);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+        
+        function formatNoticeDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+            
+            if (diffDays === 0) {
+                if (diffHours === 0) {
+                    return 'Just now';
+                } else {
+                    return `${diffHours}h ago`;
+                }
+            } else if (diffDays === 1) {
+                return 'Yesterday';
+            } else if (diffDays < 7) {
+                return `${diffDays}d ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        function showAddNoticeModal() {
+            if (!canManageNotices) {
+                alert('You do not have permission to manage notices.');
+                return;
+            }
+            
+            // Create add notice modal with pin and expire date options
+            const modalHtml = `
+                <div class="modal fade" id="addNoticeModal" tabindex="-1" aria-labelledby="addNoticeModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title" id="addNoticeModalLabel">
+                                    <i class="bi bi-plus-circle me-2"></i>Add New Notice
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form id="addNoticeForm">
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label for="addNoticeTitle" class="form-label">
+                                                    <i class="bi bi-card-text me-1"></i>Title
+                                                </label>
+                                                <input type="text" class="form-control" id="addNoticeTitle" name="title" required maxlength="200"
+                                                    placeholder="Enter notice title...">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="addNoticeExpireDate" class="form-label">
+                                                    <i class="bi bi-calendar-event me-1"></i>Expire Date (Optional)
+                                                </label>
+                                                <input type="date" class="form-control" id="addNoticeExpireDate" name="expireDate">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="addNoticeContent" class="form-label">
+                                            <i class="bi bi-chat-text me-1"></i>Content
+                                        </label>
+                                        <textarea class="form-control" id="addNoticeContent" name="content" rows="6" required
+                                            placeholder="Enter notice content..."></textarea>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="addNoticePinned" name="isPinned">
+                                        <label class="form-check-label" for="addNoticePinned">
+                                            <i class="bi bi-pin me-1"></i>Pin this notice (appears at the top)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" id="submitNoticeBtn">
+                                        <i class="bi bi-plus-circle me-2"></i>Add Notice
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove any existing modal
+            $('#addNoticeModal').remove();
+            
+            // Add modal to body and show
+            $('body').append(modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('addNoticeModal'));
+            modal.show();
+            
+            // Handle form submission
+            $('#addNoticeForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const submitBtn = $('#submitNoticeBtn');
+                const originalText = submitBtn.html();
+                submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Adding...').prop('disabled', true);
+                
+                const formData = {
+                    title: $('#addNoticeTitle').val().trim(),
+                    content: $('#addNoticeContent').val().trim(),
+                    isPinned: $('#addNoticePinned').is(':checked'),
+                    expireDate: $('#addNoticeExpireDate').val() || null
+                };
+                
+                // Combine title and content for the description field
+                const description = formData.title + '\\n\\n' + formData.content;
+                
+                $.ajax({
+                    url: '@Url.Action("CreateNotice", "PlannedEvents")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        description: description,
+                        isPinned: formData.isPinned,
+                        expireDate: formData.expireDate
+                    }),
+                    success: function(response) {
+                        // Handle new API response format
+                        if (response.success !== false) {
+                            modal.hide();
+                            refreshNoticeBoard();
+                            showSuccessMessage(response.message || 'Notice added successfully!');
+                        } else {
+                            showErrorMessage('Error adding notice: ' + (response.message || 'Unknown error'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error adding notice:', error);
+                        showErrorMessage('Error adding notice. Please try again.');
+                    },
+                    complete: function() {
+                        // Reset button state
+                        submitBtn.html(originalText).prop('disabled', false);
+                    }
+                });
+            });
+            
+            // Clean up modal after hide
+            $('#addNoticeModal').on('hidden.bs.modal', function() {
+                $(this).remove();
+            });
+        }
+        
+        function togglePinNotice(noticeId, isPinned) {
+            if (!canManageNotices) {
+                alert('You do not have permission to manage notices.');
+                return;
+            }
+            
+            $.ajax({
+                url: '@Url.Action("TogglePinNotice", "PlannedEvents")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    id: noticeId,
+                    isPinned: isPinned
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        refreshNoticeBoard();
+                        showSuccessMessage(isPinned ? 'Notice pinned successfully!' : 'Notice unpinned successfully!');
+                    } else {
+                        showErrorMessage('Error updating notice: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error toggling pin notice:', error);
+                    showErrorMessage('Error updating notice. Please try again.');
+                }
+            });
+        }
+        
+        function deleteNotice(noticeId) {
+            if (!canManageNotices) {
+                alert('You do not have permission to manage notices.');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to delete this notice? This action cannot be undone.')) {
+                return;
+            }
+            
+            $.ajax({
+                url: '@Url.Action("DeleteNotice", "PlannedEvents")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    id: noticeId
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        refreshNoticeBoard();
+                        showSuccessMessage('Notice deleted successfully!');
+                    } else {
+                        showErrorMessage('Error deleting notice: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error deleting notice:', error);
+                    showErrorMessage('Error deleting notice. Please try again.');
+                }
+            });
+        }
+        
+        function showSuccessMessage(message) {
+            // Create toast notification
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+            
+            let toastContainer = $('.toast-container');
+            if (toastContainer.length === 0) {
+                toastContainer = createToastContainer();
+            }
+            
+            toastContainer.append(toast);
+            const bsToast = new bootstrap.Toast(toast[0]);
+            bsToast.show();
+        }
+        
+        function showErrorMessage(message) {
+            // Create toast notification
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-exclamation-triangle me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+            
+            let toastContainer = $('.toast-container');
+            if (toastContainer.length === 0) {
+                toastContainer = createToastContainer();
+            }
+            
+            toastContainer.append(toast);
+            const bsToast = new bootstrap.Toast(toast[0]);
+            bsToast.show();
+        }
+        
+        function createToastContainer() {
+            const container = $('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+            $('body').append(container);
+            return container;
+        }
+
+        function loadReminders() {
+            fetch('/PlannedEvents/GetReminders')
+                .then(response => response.json())
+                .then(data => {
+                    updateReminderDropdown(data);
+                })
+                .catch(error => {
+                    console.error('Error loading reminders:', error);
+                });
+        }
+
+        function updateReminderDropdown(reminders) {
+            const reminderList = document.getElementById('reminderNotificationList');
+            const reminderCount = document.getElementById('reminderCount');
+            
+            if (reminders && reminders.length > 0) {
+                const unreadCount = reminders.filter(r => !r.isRead).length;
+                if (unreadCount > 0) {
+                    reminderCount.textContent = unreadCount;
+                    reminderCount.style.display = 'inline';
+                } else {
+                    reminderCount.style.display = 'none';
+                }
+                
+                reminderList.innerHTML = reminders.map(reminder => `
+                    <div class="dropdown-item ${!reminder.isRead ? 'fw-bold' : ''}" style="cursor: pointer;"
+                         onclick="showReminderDetails(${JSON.stringify(reminder).replace(/"/g, '&quot;')})">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">${formatDate(new Date(reminder.createdAt))}</small>
+                            ${!reminder.isRead ? '<span class="badge bg-primary badge-sm">New</span>' : ''}
+                        </div>
+                        <div class="mt-1">${reminder.message}</div>
+                    </div>
+                `).join('');
+            } else {
+                reminderCount.style.display = 'none';
+                reminderList.innerHTML = '<div class="dropdown-item-text text-center">No reminders</div>';
+            }
+        }
+
+        function formatDate(date) {
+            const now = new Date();
+            const diffInMs = now - date;
+            const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+            const diffInHours = diffInMs / (1000 * 60 * 60);
+
+            if (diffInMinutes < 60) {
+                return `${diffInMinutes} minutes ago`;
+            } else if (diffInHours < 24) {
+                return `${Math.floor(diffInHours)} hours ago`;
+            } else {
+                const diffInDays = Math.floor(diffInHours / 24);
+                return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+            }
+        }
+    </script>
     <script src="~/js/index.js"></script> 
 }
 
+<style>
+    /* Secondary Tool Styling - Report Generator */
+    .dashboard-card-container.secondary-tool {
+        opacity: 0.8;
+        filter: grayscale(15%);
+        position: relative;
+    }
+
+    .dashboard-card.secondary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        box-shadow: 0 3px 6px rgba(102, 126, 234, 0.2);
+        transition: all 0.3s ease;
+        opacity: 0.95;
+    }
+
+    .dashboard-card.secondary-card:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        border-color: rgba(102, 126, 234, 0.6);
+        opacity: 1;
+        filter: grayscale(0%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .dashboard-card.secondary-card .card-content h6 {
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-card.secondary-card .badge.secondary-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        font-size: 1.1rem;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+    }
+
+    .dashboard-card.secondary-card .img-container.secondary-icon {
+        opacity: 0.8;
+    }
+
+    .dashboard-card.secondary-card:hover .img-container.secondary-icon {
+        opacity: 1;
+        color: #ffffff !important;
+    }
+
+    /* Visual separator for secondary tool */
+    .dashboard-card-container.secondary-tool::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 15%;
+        bottom: 15%;
+        width: 3px;
+        background: repeating-linear-gradient(
+            to bottom,
+            rgba(108, 117, 125, 0.3),
+            rgba(108, 117, 125, 0.3) 4px,
+            transparent 4px,
+            transparent 8px
+        );
+        border-radius: 2px;
+        opacity: 0.6;
+    }
+
+    /* Enhanced primary dashboard cards visual priority */
+    .dashboard-card:not(.secondary-card) {
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 2px solid transparent;
+    }
+
+    .dashboard-card:not(.secondary-card)::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        border-radius: inherit;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card:not(.secondary-card):hover::before {
+        opacity: 1;
+    }
+
+    .dashboard-card:not(.secondary-card):hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Subtle text label for secondary tools */
+    .dashboard-card-container.secondary-tool::after {
+        content: 'Generate Reports';
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        color: #6c757d;
+        background: rgba(248, 249, 250, 0.9);
+        padding: 2px 6px;
+        border-radius: 3px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card-container.secondary-tool:hover::after {
+        opacity: 1;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .dashboard-card-container.secondary-tool {
+            flex: 1 1 0 !important;
+            min-width: 120px !important;
+        }
+        
+        .dashboard-card.secondary-card .card-content h6 {
+            font-size: 0.75rem;
+        }
+
+        .dashboard-card-container.secondary-tool::before {
+            display: none;
+        }
+
+        .dashboard-card-container.secondary-tool::after {
+            display: none;
+        }
+    }
+
+    /* Subtle animation for all cards with staggered delay */
+    .dashboard-card-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .dashboard-card-container:nth-child(1) { animation-delay: 0.1s; }
+    .dashboard-card-container:nth-child(2) { animation-delay: 0.2s; }
+    .dashboard-card-container:nth-child(3) { animation-delay: 0.3s; }
+    .dashboard-card-container:nth-child(4) { animation-delay: 0.4s; }
+    .dashboard-card-container:nth-child(5) { animation-delay: 0.6s; }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Badge styling enhancement for primary cards */
+    .dashboard-card:not(.secondary-card) .badge {
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Message Inbox Enhanced Styling */
+    .message-item {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        border-left: 3px solid transparent;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.375rem;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .message-item:hover {
+        transform: translateX(3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .message-item.unread {
+        background-color: #f8f9ff;
+        border-left-color: #007bff;
+        font-weight: 500;
+    }
+
+    .message-item.important {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+
+    .message-item .message-sender {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .message-item .message-time {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+
+    .message-item .message-subject {
+        font-size: 0.85rem;
+        color: #495057;
+        margin-bottom: 0.25rem;
+    }
+
+    .message-item .message-preview {
+        font-size: 0.8rem;
+        color: #6c757d;
+        line-height: 1.3;
+    }
+
+    /* PE Records card styling */
+    .details-divider {
+        border-top: 2px solid #e9ecef;
+        margin: 1rem 0;
+    }
+
+    .details-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .details-card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .details-card-header {
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+    }
+
+    .details-card-body {
+        font-size: 0.85rem;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.25rem 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-weight: 500;
+        min-width: 120px;
+    }
+
+    .detail-value {
+        text-align: right;
+        word-break: break-word;
+    }
+</style>
 
 <!-- Simplify the modal with just Accept/Reject buttons -->
 <div class="modal fade" id="urgentRequestModal" tabindex="-1" aria-labelledby="urgentRequestModalLabel" aria-hidden="true">
@@ -620,6 +1544,9 @@
                 </form>
             </div>
             <div class="modal-footer">
+                <a id="urgentRequestViewDetailsBtn" href="#" class="btn btn-info me-auto" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>View Details
+                </a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-success" id="acceptUrgentRequestBtn">
                     <i class="fas fa-check-circle me-2"></i>Accept
@@ -739,26 +1666,26 @@
                 <h5 class="modal-title" id="issueReplyModalLabel">Reply to Issue</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-<form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
-    <div class="modal-body">
-        <input type="hidden" id="replyIssueId" name="issueId" />
-        <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
-        <input type="hidden" id="replyReceiverId" name="receiverId" />
-        
-        <div class="mb-3">
-            <label for="replyText" class="form-label">Reply</label>
-            <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
-        </div>
-        <div class="mb-3">
-            <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
-            <input type="file" class="form-control" id="replyAttachment" name="attachment" />
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary">Send Reply</button>
-    </div>
-</form>
+            <form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
+                <div class="modal-body">
+                    <input type="hidden" id="replyIssueId" name="issueId" />
+                    <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
+                    <input type="hidden" id="replyReceiverId" name="receiverId" />
+                    
+                    <div class="mb-3">
+                        <label for="replyText" class="form-label">Reply</label>
+                        <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
+                        <input type="file" class="form-control" id="replyAttachment" name="attachment" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send Reply</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -795,6 +1722,31 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reminder Details Modal -->
+<div class="modal fade" id="reminderDetailsModal" tabindex="-1" aria-labelledby="reminderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="reminderDetailsModalLabel">
+                    <i class="bi bi-bell me-2"></i>Reminder Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="reminderDetailsContent">
+                    <!-- Details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewPEDetailsBtn" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -847,3 +1799,6 @@
         }
     }
 }
+
+
+<!-- Simplify the modal with just Accept/Reject buttons -->

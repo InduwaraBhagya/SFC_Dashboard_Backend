@@ -187,78 +187,7 @@
 
 
 <!-- Top Section: Dynamic Layout Based on Permissions -->
-@if (ViewData["CanViewAll"] as bool? == true)
-{
-    <!-- For ViewAll Users: Workgroup Filter and Search PE Side by Side -->
-    <div class="row mb-2">
-        <!-- Workgroup Filter Card -->
-        <div class="col-lg-6 mb-2">
-            <div class="card border-primary h-100 shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="bi bi-funnel-fill me-2"></i> Filter by Workgroups
-                    </h5>
-                    <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent">
-                        <i class="bi bi-chevron-down"></i>
-                    </button>
-                </div>
-                
-                <div class="collapse" id="filterContent">
-                    <div class="card-body">
-                        <form method="get" asp-action="Index">
-                            <div class="mb-2">
-                                <label class="form-label" for="workgroupFilter">
-                                    <i class="bi bi-people-fill"></i>
-                                    Select a Workgroup
-                                    <span class="info-tooltip" data-tooltip="Select a workgroup to view records only assigned to that workgroup">
-                                        <i class="bi bi-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="filter-row">
-                                    <div class="filter-select-container mb-2">
-                                        <select class="form-select" name="workgroupId" id="workgroupFilter">
-                                            @if (ViewData["CanViewAll"] as bool? == true)
-                                            {
-                                                <option value="">All Workgroups</option>
-                                            }
-                                            @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                            {
-                                                foreach (var workgroup in workgroups)
-                                                {
-                                                    bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
-                                                                    ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
-                                                    <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                                }
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="filter-actions d-flex gap-2">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="bi bi-funnel-fill"></i>
-                                            Apply Filter
-                                        </button>
-                                        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-                                            <i class="bi bi-x-circle"></i>
-                                            Clear Filter
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                        
-                        @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
-                        {
-                            <div class="alert alert-info mb-0">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                Active filter: <strong>@ViewData["SelectedWorkgroupName"]</strong>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+@* First workgroup filter removed - moved to middle column section *@
 
 <!-- Message Inbox and Notice Board Section -->
 <div class="row mt-3">
@@ -520,56 +449,57 @@
             @if (ViewData["CanViewAll"] as bool? == true)
             {
                 <div class="card border-primary shadow-sm" style="height: 250px;">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                    <div class="card-header bg-primary text-white py-1">
                         <h6 class="mb-0">
                             <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
                         </h6>
-                        <button class="btn btn-xs btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false" aria-controls="filterContent" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
                     </div>
                     
-                    <div class="collapse" id="filterContent">
-                        <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
-                            <form method="get" asp-action="Index">
-                                <div class="mb-1">
-                                    <label class="form-label mb-1 small" for="workgroupFilter">
-                                        <i class="bi bi-people-fill"></i>
-                                        Select a Workgroup
-                                    </label>
-                                    <div class="filter-row">
-                                        <div class="filter-select-container mb-1">
-                                            <select class="form-select form-select-sm" name="workgroupId" id="workgroupFilter">
-                                                @if (ViewData["CanViewAll"] as bool? == true)
-                                                {
-                                                    <option value="">All Workgroups</option>
-                                                }
-                                                @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
-                                                {
-                                                    foreach (var workgroup in workgroups)
-                                                    {
-                                                        bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
-                                                                        ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
-                                                        <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
-                                                    }
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="filter-actions d-flex gap-1">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-funnel"></i> Apply
-                                            </button>
-                                            @if (ViewData["SelectedWorkgroupId"] != null)
+                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
+                        <form method="get" asp-action="Index">
+                            <div class="mb-2">
+                                <label class="form-label mb-1 small" for="workgroupFilter">
+                                    <i class="bi bi-people-fill"></i>
+                                    Select a Workgroup
+                                    <span class="info-tooltip" data-tooltip="Select a workgroup to view records only assigned to that workgroup">
+                                        <i class="bi bi-info-circle"></i>
+                                    </span>
+                                </label>
+                                <div class="filter-select-container mb-2">
+                                    <select class="form-select form-select-sm" name="workgroupId" id="workgroupFilter">
+                                        @if (ViewData["CanViewAll"] as bool? == true)
+                                        {
+                                            <option value="">All Workgroups</option>
+                                        }
+                                        @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                        {
+                                            foreach (var workgroup in workgroups)
                                             {
-                                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                                                    <i class="bi bi-x-circle"></i> Clear
-                                                </a>
+                                                bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
+                                                                ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
+                                                <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
                                             }
-                                        </div>
-                                    </div>
+                                        }
+                                    </select>
                                 </div>
-                            </form>
-                        </div>
+                                <div class="filter-actions d-flex gap-1">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-funnel-fill"></i> Apply Filter
+                                    </button>
+                                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-x-circle"></i> Clear Filter
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
+                        {
+                            <div class="alert alert-info mb-0 small">
+                                <i class="bi bi-check-circle-fill me-1"></i>
+                                Active filter: <strong>@ViewData["SelectedWorkgroupName"]</strong>
+                            </div>
+                        }
                     </div>
                 </div>
             }
