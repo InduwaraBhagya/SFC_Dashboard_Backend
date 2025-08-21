@@ -2,6 +2,13 @@ $(document).ready(function() {
     console.log('Document ready - jQuery version:', $.fn.jquery);
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
     
+    // Helper function to get CSRF token
+    window.getCsrfToken = function() {
+        return document.querySelector('input[name="__RequestVerificationToken"]')?.value || 
+               $('meta[name="csrf-token"]').attr('content') ||
+               '';
+    };
+    
     // All initialization code consolidated here
     
     // Make the next task card clickable on mobile
@@ -390,9 +397,9 @@ function showUrgentRequestModal(type, id) {
     // Fetch record details based on type (PE or Task)
     let url = '';
     if (type === 'pe') {
-        url = '/PlannedEvents/GetUrgentRequestDetails/' + id;
+        url = `/api/planned-events/${id}/basic-details`;
     } else {
-        url = '/PETasks/GetUrgentRequestDetails/' + id;
+        url = `/PETasks/GetUrgentRequestDetails/${id}`; // Keep existing for tasks until task API is ready
     }
     
     // Show loading indicator
@@ -701,14 +708,21 @@ function showResolutionConfirm(element) {
 }
 
 function fetchResolutionDetails(resolutionId) {
-    fetch(`/Issues/GetResolutionById/${resolutionId}`)
+    fetch(`/api/issues/resolution/${resolutionId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             return response.json();
         })
-        .then(data => {
+        .then(response => {
+            // Handle new API response format
+            const data = response.data || response;
             if (data && data.details) {
                 $('#resolutionDetailsText').text(data.details);
             } else {
@@ -722,14 +736,21 @@ function fetchResolutionDetails(resolutionId) {
 }
 
 function fetchResolutionByIssueId(issueId) {
-    fetch(`/Issues/GetResolution/${issueId}`)
+    fetch(`/api/issues/${issueId}/resolution`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             return response.json();
         })
-        .then(data => {
+        .then(response => {
+            // Handle new API response format
+            const data = response.data || response;
             if (data && data.id) {
                 $('#directResolutionId').val(data.id);
                 $('#resolutionDetailsText').text(data.details || 'No details provided');
@@ -785,15 +806,23 @@ function submitResolutionForm(isConfirmed) {
 }
 
 function fetchPEDetails(peId) {
-    // Fetch PE details
-    fetch(`/PlannedEvents/GetBasicDetails/${peId}`)
+    // Fetch PE details using new secure API
+    fetch(`/api/planned-events/${peId}/basic-details`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             return response.json();
         })
-        .then(data => {
+        .then(response => {
+            // Handle the new API response format
+            const data = response.data || response;
+            
             // Update the PE details section with basic info
             let peDetailsHtml = `
                 <div class="row">
@@ -805,7 +834,7 @@ function fetchPEDetails(peId) {
                     <div class="col-md-6">
                         <div class="mb-2"><strong>Service Type:</strong> ${data.serviceType || 'N/A'}</div>
                         <div class="mb-2"><strong>Task:</strong> ${data.taskName}</div>
-                        <div class="mb-2"><strong>Workgroup:</strong> ${data.taskWg}</div>
+                        <div class="mb-2"><strong>Workgroup:</strong> ${data.taskWorkGroup || data.taskWg}</div>
                     </div>
                 </div>`;
             
@@ -834,18 +863,24 @@ function updateUnreadCount() {
 }
 
 function markIssueAsRead(issueId) {
-    // Call API to mark issue as read
-    fetch(`/Issues/MarkAsRead/${issueId}`, {
+    // Call new secure API to mark issue as read
+    fetch(`/api/issues/${issueId}/mark-read`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            // Get the anti-forgery token from any form on the page
-            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            'RequestVerificationToken': getCsrfToken()
         }
     }).then(response => {
         if (!response.ok) {
             console.error('Error marking issue as read');
         }
+        return response.json();
+    }).then(data => {
+        if (data && !data.success) {
+            console.error('API error marking issue as read:', data.message);
+        }
+    }).catch(error => {
+        console.error('Network error marking issue as read:', error);
     });
     updateUnreadCount();
 }

@@ -208,6 +208,13 @@ else
 }
 
 // Add MVC Controllers with Conditional Authentication
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Configure JSON serialization for API responses
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    }); // Ensure API controllers are registered
 builder.Services.AddControllersWithViews(options =>
 {
     var policy = new AuthorizationPolicyBuilder()
@@ -256,6 +263,7 @@ app.UseAuthorization();
 app.UseUserRegistration();
 
 app.MapStaticAssets();
+app.MapControllers(); // Enable API controller routing for /api/* endpoints
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=PlannedEvents}/{action=Index}/{id?}")

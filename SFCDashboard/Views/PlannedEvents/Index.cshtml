@@ -1353,17 +1353,21 @@
                 const originalText = submitBtn.html();
                 submitBtn.html('<i class="spinner-border spinner-border-sm me-1"></i>Adding...').prop('disabled', true);
                 
-                // Submit the notice
+                // Submit the notice using new secure API
                 $.ajax({
-                    url: '@Url.Action("CreateNotice", "PlannedEvents")',
+                    url: `/api/planned-events/${peId}/notices`,
                     type: 'POST',
-                    contentType: 'application/json',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() || $('meta[name="csrf-token"]').attr('content') || ''
+                    },
                     data: JSON.stringify(requestData),
                     success: function(response) {
-                        if (response.success) {
+                        // Handle new API response format
+                        if (response.success !== false) {
                             modal.hide();
                             refreshNoticeBoard();
-                            showSuccessMessage('Notice added successfully!');
+                            showSuccessMessage(response.message || 'Notice added successfully!');
                         } else {
                             showErrorMessage('Error adding notice: ' + (response.message || 'Unknown error'));
                         }
@@ -1533,18 +1537,24 @@
             const action = shouldPin ? 'pin' : 'unpin';
             console.log(`${action}ning notice ${noticeId}`);
             
+            // Get PE ID from current page context
+            const peId = window.location.pathname.split('/').pop();
+            
             $.ajax({
-                url: '@Url.Action("TogglePinNotice", "PlannedEvents")',
-                type: 'POST',
-                contentType: 'application/json',
+                url: `/api/planned-events/${peId}/notices/${noticeId}/pin`,
+                type: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() || $('meta[name="csrf-token"]').attr('content') || ''
+                },
                 data: JSON.stringify({
-                    id: noticeId,
                     isPinned: shouldPin
                 }),
                 success: function(response) {
-                    if (response.success) {
+                    // Handle new API response format
+                    if (response.success !== false) {
                         refreshNoticeBoard();
-                        showSuccessMessage(`Notice ${action}ned successfully!`);
+                        showSuccessMessage(response.message || `Notice ${action}ned successfully!`);
                     } else {
                         showErrorMessage(`Error ${action}ning notice: ` + (response.message || 'Unknown error'));
                     }
@@ -1570,17 +1580,21 @@
             
             console.log('Deleting notice', noticeId);
             
+            // Get PE ID from current page context
+            const peId = window.location.pathname.split('/').pop();
+            
             $.ajax({
-                url: '@Url.Action("DeleteNotice", "PlannedEvents")',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    id: noticeId
-                }),
+                url: `/api/planned-events/${peId}/notices/${noticeId}`,
+                type: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() || $('meta[name="csrf-token"]').attr('content') || ''
+                },
                 success: function(response) {
-                    if (response.success) {
+                    // Handle new API response format
+                    if (response.success !== false) {
                         refreshNoticeBoard();
-                        showSuccessMessage('Notice deleted successfully!');
+                        showSuccessMessage(response.message || 'Notice deleted successfully!');
                     } else {
                         showErrorMessage('Error deleting notice: ' + (response.message || 'Unknown error'));
                     }

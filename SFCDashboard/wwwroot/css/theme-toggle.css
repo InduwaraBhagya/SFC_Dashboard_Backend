@@ -1,0 +1,890 @@
+/* ========================================================
+   COMPREHENSIVE DARK MODE STYLES FOR SFC DASHBOARD
+   ======================================================== */
+
+/* Root Variables for Theme Support */
+:root {
+    /* Light Mode Colors (Default) */
+    --primary-bg: #ffffff;
+    --secondary-bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --text-muted: #adb5bd;
+    --border-color: #dee2e6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --input-bg: #ffffff;
+    --input-border: #ced4da;
+    --modal-bg: #ffffff;
+    --modal-header-bg: #f8f9fa;
+    --dropdown-bg: #ffffff;
+    --notice-bg: #ffffff;
+    --inbox-sender-color: #495057;
+    --notice-text-color: #212529;
+    --boq-text-color: #212529;
+    --reminder-bg: #fff3cd;
+    --reminder-border: #ffeaa7;
+    --reminder-text: #856404;
+}
+
+/* Dark Mode Variables */
+[data-theme="dark"], 
+[data-bs-theme="dark"] {
+    /* Dark Mode Colors */
+    --primary-bg: #1a1a1a;
+    --secondary-bg: #2d2d2d;
+    --card-bg: #2d2d2d;
+    --text-primary: #ffffff;
+    --text-secondary: #e9ecef;
+    --text-muted: #adb5bd;
+    --border-color: #495057;
+    --shadow-color: rgba(255, 255, 255, 0.1);
+    --input-bg: #374151;
+    --input-border: #6b7280;
+    --modal-bg: #2d2d2d;
+    --modal-header-bg: #374151;
+    --dropdown-bg: #374151;
+    --notice-bg: #374151;
+    --inbox-sender-color: #e9ecef;
+    --notice-text-color: #ffffff;
+    --boq-text-color: #ffffff;
+    --reminder-bg: #4a3b1c;
+    --reminder-border: #6b5b00;
+    --reminder-text: #ffd60a;
+}
+
+/* ========================================================
+   DASHBOARD INBOX MESSAGE FIXES
+   ======================================================== */
+
+/* Inbox Container */
+[data-theme="dark"] .message-inbox-container,
+[data-bs-theme="dark"] .message-inbox-container {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Inbox Header */
+[data-theme="dark"] .inbox-header,
+[data-bs-theme="dark"] .inbox-header {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .inbox-header h5,
+[data-bs-theme="dark"] .inbox-header h5,
+[data-theme="dark"] .inbox-header h6,
+[data-bs-theme="dark"] .inbox-header h6 {
+    color: var(--text-primary) !important;
+}
+
+/* Inbox Messages */
+[data-theme="dark"] .inbox-message,
+[data-bs-theme="dark"] .inbox-message,
+[data-theme="dark"] .message-item,
+[data-bs-theme="dark"] .message-item {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Inbox Message Sender Names - Multiple selectors for different structures */
+[data-theme="dark"] .message-sender,
+[data-bs-theme="dark"] .message-sender,
+[data-theme="dark"] .inbox-message .sender-name,
+[data-bs-theme="dark"] .inbox-message .sender-name,
+[data-theme="dark"] .inbox-message .message-header strong,
+[data-bs-theme="dark"] .inbox-message .message-header strong,
+[data-theme="dark"] .message-item .message-sender,
+[data-bs-theme="dark"] .message-item .message-sender,
+[data-theme="dark"] .message-content .message-sender,
+[data-bs-theme="dark"] .message-content .message-sender,
+[data-theme="dark"] h6.message-sender,
+[data-bs-theme="dark"] h6.message-sender {
+    color: var(--inbox-sender-color) !important;
+    font-weight: 600 !important;
+}
+
+/* Message Subject and Preview */
+[data-theme="dark"] .message-subject,
+[data-bs-theme="dark"] .message-subject,
+[data-theme="dark"] .message-preview,
+[data-bs-theme="dark"] .message-preview {
+    color: var(--text-secondary) !important;
+}
+
+/* Inbox Message Content */
+[data-theme="dark"] .inbox-message .message-content,
+[data-bs-theme="dark"] .inbox-message .message-content,
+[data-theme="dark"] .inbox-message .message-body,
+[data-bs-theme="dark"] .inbox-message .message-body,
+[data-theme="dark"] .message-item .message-content,
+[data-bs-theme="dark"] .message-item .message-content {
+    color: var(--text-secondary) !important;
+}
+
+/* Inbox Message Timestamps */
+[data-theme="dark"] .inbox-message .message-time,
+[data-bs-theme="dark"] .inbox-message .message-time,
+[data-theme="dark"] .inbox-message .timestamp,
+[data-bs-theme="dark"] .inbox-message .timestamp,
+[data-theme="dark"] .message-item .message-time,
+[data-bs-theme="dark"] .message-item .message-time,
+[data-theme="dark"] .message-time,
+[data-bs-theme="dark"] .message-time {
+    color: var(--text-muted) !important;
+}
+
+/* Inbox Search Input */
+[data-theme="dark"] .inbox-search,
+[data-bs-theme="dark"] .inbox-search {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .inbox-search::placeholder,
+[data-bs-theme="dark"] .inbox-search::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Inbox Filter Buttons */
+[data-theme="dark"] .inbox-filters .btn,
+[data-bs-theme="dark"] .inbox-filters .btn {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .inbox-filters .btn:hover,
+[data-bs-theme="dark"] .inbox-filters .btn:hover {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   NOTICE BOARD FIXES
+   ======================================================== */
+
+/* Notice Board Container */
+[data-theme="dark"] .notice-board,
+[data-bs-theme="dark"] .notice-board,
+[data-theme="dark"] .notice-container,
+[data-bs-theme="dark"] .notice-container {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Notice Board Header */
+[data-theme="dark"] .notice-header,
+[data-bs-theme="dark"] .notice-header {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* Individual Notices */
+[data-theme="dark"] .notice-item,
+[data-bs-theme="dark"] .notice-item,
+[data-theme="dark"] .notice,
+[data-bs-theme="dark"] .notice {
+    background-color: var(--notice-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--notice-text-color) !important;
+}
+
+/* Notice Title */
+[data-theme="dark"] .notice-title,
+[data-bs-theme="dark"] .notice-title,
+[data-theme="dark"] .notice h5,
+[data-bs-theme="dark"] .notice h5,
+[data-theme="dark"] .notice h6,
+[data-bs-theme="dark"] .notice h6,
+[data-theme="dark"] h6.notice-title,
+[data-bs-theme="dark"] h6.notice-title {
+    color: var(--text-primary) !important;
+}
+
+/* Notice Content/Body */
+[data-theme="dark"] .notice-content,
+[data-bs-theme="dark"] .notice-content,
+[data-theme="dark"] .notice-body,
+[data-bs-theme="dark"] .notice-body,
+[data-theme="dark"] .notice p,
+[data-bs-theme="dark"] .notice p,
+[data-theme="dark"] p.notice-content,
+[data-bs-theme="dark"] p.notice-content {
+    color: var(--text-secondary) !important;
+}
+
+/* Add New Notice Form */
+[data-theme="dark"] .add-notice-form,
+[data-bs-theme="dark"] .add-notice-form {
+    background-color: var(--card-bg) !important;
+}
+
+/* Add New Notice Input Fields */
+[data-theme="dark"] .add-notice-form input,
+[data-bs-theme="dark"] .add-notice-form input,
+[data-theme="dark"] .add-notice-form textarea,
+[data-bs-theme="dark"] .add-notice-form textarea,
+[data-theme="dark"] .add-notice-form select,
+[data-bs-theme="dark"] .add-notice-form select {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .add-notice-form input::placeholder,
+[data-bs-theme="dark"] .add-notice-form input::placeholder,
+[data-theme="dark"] .add-notice-form textarea::placeholder,
+[data-bs-theme="dark"] .add-notice-form textarea::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Notice Options/Types Dropdown */
+[data-theme="dark"] .notice-type-select,
+[data-bs-theme="dark"] .notice-type-select,
+[data-theme="dark"] .notice-options,
+[data-bs-theme="dark"] .notice-options {
+    background-color: var(--dropdown-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .notice-type-select option,
+[data-bs-theme="dark"] .notice-type-select option {
+    background-color: var(--dropdown-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   BOQ/BOQList VIEW FIXES
+   ======================================================== */
+
+/* BOQ Container */
+[data-theme="dark"] .boq-container,
+[data-bs-theme="dark"] .boq-container,
+[data-theme="dark"] .boq-summary,
+[data-bs-theme="dark"] .boq-summary {
+    background-color: var(--card-bg) !important;
+    color: var(--boq-text-color) !important;
+}
+
+/* BOQ Development Page Text */
+[data-theme="dark"] .card-title-modern,
+[data-bs-theme="dark"] .card-title-modern,
+[data-theme="dark"] .lead,
+[data-bs-theme="dark"] .lead {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .text-muted,
+[data-bs-theme="dark"] .text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* BOQ Summary Table */
+[data-theme="dark"] .boq-summary table,
+[data-bs-theme="dark"] .boq-summary table,
+[data-theme="dark"] .boq-table,
+[data-bs-theme="dark"] .boq-table {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* BOQ Table Headers */
+[data-theme="dark"] .boq-table th,
+[data-bs-theme="dark"] .boq-table th,
+[data-theme="dark"] .boq-summary th,
+[data-bs-theme="dark"] .boq-summary th {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* BOQ Table Cells */
+[data-theme="dark"] .boq-table td,
+[data-bs-theme="dark"] .boq-table td,
+[data-theme="dark"] .boq-summary td,
+[data-bs-theme="dark"] .boq-summary td {
+    background-color: var(--card-bg) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* BOQ List Items */
+[data-theme="dark"] .boq-list-item,
+[data-bs-theme="dark"] .boq-list-item,
+[data-theme="dark"] .boq-item,
+[data-bs-theme="dark"] .boq-item {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* BOQ Text Elements */
+[data-theme="dark"] .boq-description,
+[data-bs-theme="dark"] .boq-description,
+[data-theme="dark"] .boq-details,
+[data-bs-theme="dark"] .boq-details,
+[data-theme="dark"] .boq-text,
+[data-bs-theme="dark"] .boq-text {
+    color: var(--text-secondary) !important;
+}
+
+/* BOQ Headers and Titles */
+[data-theme="dark"] .boq-header,
+[data-bs-theme="dark"] .boq-header,
+[data-theme="dark"] .boq-title,
+[data-bs-theme="dark"] .boq-title {
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   REMINDER FIXES (Unified for Light and Dark)
+   ======================================================== */
+
+/* Base Reminder Styles */
+.reminder,
+.reminder-item,
+.alert.reminder {
+    background-color: var(--reminder-bg) !important;
+    border-color: var(--reminder-border) !important;
+    color: var(--reminder-text) !important;
+}
+
+/* Reminder Text */
+[data-theme="dark"] .reminder,
+[data-bs-theme="dark"] .reminder,
+[data-theme="dark"] .reminder-item,
+[data-bs-theme="dark"] .reminder-item,
+[data-theme="dark"] .alert.reminder,
+[data-bs-theme="dark"] .alert.reminder {
+    background-color: var(--reminder-bg) !important;
+    border-color: var(--reminder-border) !important;
+    color: var(--reminder-text) !important;
+}
+
+/* Reminder Content */
+[data-theme="dark"] .reminder-content,
+[data-bs-theme="dark"] .reminder-content,
+[data-theme="dark"] .reminder-text,
+[data-bs-theme="dark"] .reminder-text {
+    color: var(--reminder-text) !important;
+}
+
+/* Ensure alert colors are applied in both modes */
+[data-theme="light"] .alert.reminder,
+[data-bs-theme="light"] .alert.reminder {
+    background-color: #fff3cd !important;
+    border-color: #ffeaa7 !important;
+    color: #856404 !important;
+}
+
+/* ========================================================
+   SPECIFIC TEXT COLOR FIXES FOR TYPING/INPUT AREAS
+   ======================================================== */
+
+/* Input text in dark mode */
+[data-theme="dark"] input[type="text"],
+[data-bs-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-bs-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-bs-theme="dark"] input[type="password"],
+[data-theme="dark"] textarea,
+[data-bs-theme="dark"] textarea {
+    color: var(--text-primary) !important;
+    background-color: var(--input-bg) !important;
+}
+
+/* Placeholder text */
+[data-theme="dark"] input::placeholder,
+[data-bs-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-bs-theme="dark"] textarea::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.8;
+}
+
+/* Select options */
+[data-theme="dark"] select,
+[data-bs-theme="dark"] select {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] option,
+[data-bs-theme="dark"] option {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   GENERAL FORM AND INPUT FIXES
+   ======================================================== */
+
+/* Form Controls */
+[data-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-select {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus,
+[data-bs-theme="dark"] .form-select:focus {
+    background-color: var(--input-bg) !important;
+    border-color: #86b7fe !important;
+    color: var(--text-primary) !important;
+}
+
+/* Form Labels */
+[data-theme="dark"] .form-label,
+[data-bs-theme="dark"] .form-label,
+[data-theme="dark"] label,
+[data-bs-theme="dark"] label {
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   MODAL FIXES
+   ======================================================== */
+
+/* Modal Content */
+[data-theme="dark"] .modal-content,
+[data-bs-theme="dark"] .modal-content {
+    background-color: var(--modal-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Modal Header */
+[data-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-header {
+    background-color: var(--modal-header-bg) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* Modal Title */
+[data-theme="dark"] .modal-title,
+[data-bs-theme="dark"] .modal-title {
+    color: var(--text-primary) !important;
+}
+
+/* Modal Body */
+[data-theme="dark"] .modal-body,
+[data-bs-theme="dark"] .modal-body {
+    color: var(--text-secondary) !important;
+}
+
+/* Modal Footer */
+[data-theme="dark"] .modal-footer,
+[data-bs-theme="dark"] .modal-footer {
+    border-top-color: var(--border-color) !important;
+}
+
+/* ========================================================
+   DROPDOWN FIXES
+   ======================================================== */
+
+/* Dropdown Menu */
+[data-theme="dark"] .dropdown-menu,
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: var(--dropdown-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Dropdown Items */
+[data-theme="dark"] .dropdown-item,
+[data-bs-theme="dark"] .dropdown-item {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+[data-bs-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .dropdown-item:focus,
+[data-bs-theme="dark"] .dropdown-item:focus {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   CARD FIXES
+   ======================================================== */
+
+/* General Card */
+[data-theme="dark"] .card,
+[data-bs-theme="dark"] .card {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Card Header */
+[data-theme="dark"] .card-header,
+[data-bs-theme="dark"] .card-header {
+    background-color: var(--secondary-bg) !important;
+    border-bottom-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Card Body */
+[data-theme="dark"] .card-body,
+[data-bs-theme="dark"] .card-body {
+    color: var(--text-secondary) !important;
+}
+
+/* Card Title */
+[data-theme="dark"] .card-title,
+[data-bs-theme="dark"] .card-title {
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   TABLE FIXES
+   ======================================================== */
+
+/* General Tables */
+[data-theme="dark"] .table,
+[data-bs-theme="dark"] .table {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .table th,
+[data-bs-theme="dark"] .table th {
+    background-color: var(--secondary-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .table td,
+[data-bs-theme="dark"] .table td {
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ========================================================
+   PINNED NOTICE FIXES (Blue Background in Dark Mode)
+   ======================================================== */
+
+/* Pinned notices with blue backgrounds in dark mode for better readability */
+[data-theme="dark"] .notice-item.bg-light,
+[data-bs-theme="dark"] .notice-item.bg-light,
+[data-theme="dark"] .notice-item.pinned,
+[data-bs-theme="dark"] .notice-item.pinned,
+[data-theme="dark"] .notice.pinned,
+[data-bs-theme="dark"] .notice.pinned,
+[data-theme="dark"] .notice-item[style*="background-color: #fff3cd"],
+[data-bs-theme="dark"] .notice-item[style*="background-color: #fff3cd"],
+[data-theme="dark"] .notice-item[style*="background: #fff3cd"],
+[data-bs-theme="dark"] .notice-item[style*="background: #fff3cd"] {
+    background-color: #1e40af !important; /* Dark blue background */
+    color: #ffffff !important; /* White text */
+    border-color: #3b82f6 !important; /* Blue border */
+}
+
+/* All text elements inside pinned notices in dark mode */
+[data-theme="dark"] .notice-item.bg-light *,
+[data-bs-theme="dark"] .notice-item.bg-light *,
+[data-theme="dark"] .notice-item.pinned *,
+[data-bs-theme="dark"] .notice-item.pinned * {
+    color: #ffffff !important;
+}
+
+/* Pinned notice titles in dark mode */
+[data-theme="dark"] .notice-item.bg-light .notice-title,
+[data-bs-theme="dark"] .notice-item.bg-light .notice-title,
+[data-theme="dark"] .notice-item.bg-light h6,
+[data-bs-theme="dark"] .notice-item.bg-light h6,
+[data-theme="dark"] .notice-item.pinned .notice-title,
+[data-bs-theme="dark"] .notice-item.pinned .notice-title,
+[data-theme="dark"] .notice.pinned .notice-title,
+[data-bs-theme="dark"] .notice.pinned .notice-title,
+[data-theme="dark"] .notice-item.pinned h6,
+[data-bs-theme="dark"] .notice-item.pinned h6,
+[data-theme="dark"] .notice-item[style*="background-color: #fff3cd"] .notice-title,
+[data-bs-theme="dark"] .notice-item[style*="background-color: #fff3cd"] .notice-title,
+[data-theme="dark"] .notice-item[style*="background-color: #fff3cd"] h6,
+[data-bs-theme="dark"] .notice-item[style*="background-color: #fff3cd"] h6 {
+    color: #ffffff !important; /* White title text */
+    font-weight: bold !important;
+}
+
+/* Pinned notice content in dark mode */
+[data-theme="dark"] .notice-item.bg-light .notice-content,
+[data-bs-theme="dark"] .notice-item.bg-light .notice-content,
+[data-theme="dark"] .notice-item.bg-light p,
+[data-bs-theme="dark"] .notice-item.bg-light p,
+[data-theme="dark"] .notice-item.pinned .notice-content,
+[data-bs-theme="dark"] .notice-item.pinned .notice-content,
+[data-theme="dark"] .notice.pinned .notice-content,
+[data-bs-theme="dark"] .notice.pinned .notice-content,
+[data-theme="dark"] .notice-item.pinned p,
+[data-bs-theme="dark"] .notice-item.pinned p,
+[data-theme="dark"] .notice-item[style*="background-color: #fff3cd"] .notice-content,
+[data-bs-theme="dark"] .notice-item[style*="background-color: #fff3cd"] .notice-content,
+[data-theme="dark"] .notice-item[style*="background-color: #fff3cd"] p,
+[data-bs-theme="dark"] .notice-item[style*="background-color: #fff3cd"] p {
+    color: #e5e7eb !important; /* Light gray text for content */
+}
+
+/* Pinned notice metadata (date, author) in dark mode */
+[data-theme="dark"] .notice-item.bg-light small,
+[data-bs-theme="dark"] .notice-item.bg-light small,
+[data-theme="dark"] .notice-item.bg-light .text-muted,
+[data-bs-theme="dark"] .notice-item.bg-light .text-muted,
+[data-theme="dark"] .notice-item.pinned small,
+[data-bs-theme="dark"] .notice-item.pinned small,
+[data-theme="dark"] .notice.pinned small,
+[data-bs-theme="dark"] .notice.pinned small,
+[data-theme="dark"] .notice-item[style*="background-color: #fff3cd"] small,
+[data-bs-theme="dark"] .notice-item[style*="background-color: #fff3cd"] small {
+    color: #d1d5db !important; /* Lighter gray for metadata */
+}
+
+/* Light mode - keep original yellow styling for pinned notices */
+[data-theme="light"] .notice-item.pinned,
+[data-bs-theme="light"] .notice-item.pinned,
+[data-theme="light"] .notice.pinned,
+[data-bs-theme="light"] .notice.pinned {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+    border-color: #ffeaa7 !important;
+}
+
+[data-theme="light"] .notice-item.pinned .notice-title,
+[data-bs-theme="light"] .notice-item.pinned .notice-title,
+[data-theme="light"] .notice-item.pinned h6,
+[data-bs-theme="light"] .notice-item.pinned h6 {
+    color: #664d03 !important;
+}
+
+[data-theme="light"] .notice-item.pinned .notice-content,
+[data-bs-theme="light"] .notice-item.pinned .notice-content,
+[data-theme="light"] .notice-item.pinned p,
+[data-bs-theme="light"] .notice-item.pinned p {
+    color: #856404 !important;
+}
+
+/* Ensure small text elements are visible in dark mode */
+[data-theme="dark"] small,
+[data-bs-theme="dark"] small,
+[data-theme="dark"] .small,
+[data-bs-theme="dark"] .small {
+    color: var(--text-muted) !important;
+}
+
+/* Badge text fixes */
+[data-theme="dark"] .badge,
+[data-bs-theme="dark"] .badge {
+    color: #000 !important; /* Keep badges readable */
+}
+
+/* Link colors in dark mode */
+[data-theme="dark"] a,
+[data-bs-theme="dark"] a {
+    color: #66b3ff !important;
+}
+
+[data-theme="dark"] a:hover,
+[data-bs-theme="dark"] a:hover {
+    color: #99ccff !important;
+}
+
+/* ========================================================
+   ESCALATION PAGE DARK MODE STYLES
+   ======================================================== */
+
+/* Escalation table styling in dark mode */
+[data-theme="dark"] .table,
+[data-bs-theme="dark"] .table {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Table headers in dark mode */
+[data-theme="dark"] .table thead th,
+[data-bs-theme="dark"] .table thead th,
+[data-theme="dark"] .table-light,
+[data-bs-theme="dark"] .table-light {
+    background-color: #374151 !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Table cells in dark mode */
+[data-theme="dark"] .table td,
+[data-bs-theme="dark"] .table td,
+[data-theme="dark"] .table th,
+[data-bs-theme="dark"] .table th {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Escalation table danger rows (unread) in dark mode */
+[data-theme="dark"] .table-danger,
+[data-bs-theme="dark"] .table-danger,
+[data-theme="dark"] .table-danger td,
+[data-bs-theme="dark"] .table-danger td,
+[data-theme="dark"] .table-danger th,
+[data-bs-theme="dark"] .table-danger th {
+    background-color: #7f1d1d !important; /* Dark red background */
+    color: #fef2f2 !important; /* Light red text */
+    border-color: #991b1b !important;
+}
+
+/* Table hover effects in dark mode */
+[data-theme="dark"] .table-hover tbody tr:hover,
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: #475569 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Escalation badges in dark mode */
+[data-theme="dark"] .badge.bg-danger,
+[data-bs-theme="dark"] .badge.bg-danger {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .badge.bg-info,
+[data-bs-theme="dark"] .badge.bg-info {
+    background-color: #0ea5e9 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .badge.bg-dark,
+[data-bs-theme="dark"] .badge.bg-dark {
+    background-color: #64748b !important;
+    color: #ffffff !important;
+}
+
+/* Navigation tabs in dark mode */
+[data-theme="dark"] .nav-tabs,
+[data-bs-theme="dark"] .nav-tabs {
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link,
+[data-bs-theme="dark"] .nav-tabs .nav-link {
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+    border-color: transparent transparent var(--border-color) !important;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link:hover,
+[data-bs-theme="dark"] .nav-tabs .nav-link:hover {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) var(--border-color) var(--border-color) !important;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active,
+[data-bs-theme="dark"] .nav-tabs .nav-link.active {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) var(--border-color) var(--card-bg) !important;
+}
+
+/* Tab content in dark mode */
+[data-theme="dark"] .tab-content,
+[data-bs-theme="dark"] .tab-content {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Alert styling in escalations */
+[data-theme="dark"] .alert-info,
+[data-bs-theme="dark"] .alert-info {
+    background-color: #1e3a5f !important;
+    color: #bfdbfe !important;
+    border-color: #1e40af !important;
+}
+
+/* Button styling in escalations */
+[data-theme="dark"] .btn-primary,
+[data-bs-theme="dark"] .btn-primary {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-primary:hover,
+[data-bs-theme="dark"] .btn-primary:hover {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+[data-theme="dark"] .btn-outline-light,
+[data-bs-theme="dark"] .btn-outline-light {
+    background-color: transparent !important;
+    border-color: #e5e7eb !important;
+    color: #e5e7eb !important;
+}
+
+[data-theme="dark"] .btn-outline-light:hover,
+[data-bs-theme="dark"] .btn-outline-light:hover {
+    background-color: #e5e7eb !important;
+    border-color: #e5e7eb !important;
+    color: #1f2937 !important;
+}
+
+[data-theme="dark"] .btn-info,
+[data-bs-theme="dark"] .btn-info {
+    background-color: #0ea5e9 !important;
+    border-color: #0ea5e9 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-info:hover,
+[data-bs-theme="dark"] .btn-info:hover {
+    background-color: #0284c7 !important;
+    border-color: #0284c7 !important;
+}
+
+/* Input group styling in escalations */
+[data-theme="dark"] .input-group-text,
+[data-bs-theme="dark"] .input-group-text {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+[data-theme="dark"] .btn-outline-secondary,
+[data-bs-theme="dark"] .btn-outline-secondary {
+    background-color: transparent !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover,
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+    background-color: var(--secondary-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ========================================================
+   TRANSITION ANIMATIONS
+   ======================================================== */
+
+/* Smooth transitions for theme switching */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* Ensure no flashing during theme switch */
+html[data-theme="dark"],
+html[data-bs-theme="dark"] {
+    color-scheme: dark;
+}
+
+html[data-theme="light"],
+html[data-bs-theme="light"] {
+    color-scheme: light;
+}
