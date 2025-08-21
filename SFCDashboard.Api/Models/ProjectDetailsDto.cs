@@ -14,8 +14,6 @@ namespace SFCDashboard.Api.Models
         public int PlannedEventId { get; set; }
         public PlannedEvent PlannedEvent { get; set; } = null!;
         public string? CurrentTask { get; set; }
-        public decimal ProgressPercent { get; set; }
-        public string ProgressClass { get; set; } = string.Empty;
     }
 }
 
