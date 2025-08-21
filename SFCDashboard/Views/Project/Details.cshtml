@@ -64,102 +64,100 @@
         <div class="card-body">
             @if (Model.ProjectPEs != null && Model.ProjectPEs.Any())
             {
-                <div class="table-responsive">
-                    <table class="table" id="assignedPEsTable">
-                        <thead>
+                <div class="fixed-header-table-container">
+                    <table class="table table-fixed-header" id="assignedPEsTable">
+                        <thead class="table-header-fixed">
                             <tr>
+                                <th>Status</th>
                                 <th>PE Number</th>
                                 <th>Customer</th>
                                 <th>Job Reference</th>
                                 <th>Required Date</th>
                                 <th>Current Task</th> <!-- Add this column -->
                                 <th>Current WG</th>
-                                @if (canManageProjects)
-                                {
-                                    <th>Actions</th>
-                                }
+                                <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach (var pe in Model.ProjectPEs)
-                            {
+                    </table>
+                    <div class="table-body-scrollable">
+                        <table class="table table-body-content">
+                            <tbody>
+                                @foreach (var pe in Model.ProjectPEs)
+                                {
 
 
 
-                                <tr>
-                                    <td>@pe.PlannedEvent.PeNumber</td>
-                                    <td>@pe.PlannedEvent.Customer</td>
-                                    <td>@pe.PlannedEvent.JobReference</td>
-                                    <td>
-                                        @if (pe.PlannedEvent.ServiceRequiredDate.HasValue)
-                                        {
-                                            @pe.PlannedEvent.ServiceRequiredDate.Value.ToString("yyyy-MM-dd")
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">-</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(pe.CurrentTask))
-                                        {
-                                            <div class="current-task-text-display">
-                                                <i class="bi bi-gear-fill me-1"></i>
-                                                <span class="task-name">@pe.CurrentTask</span>
+                                    <tr>
+                                        <td>
+                                            <div class="pe-status-indicator" style="background-color: @pe.StatusColor"
+                                                data-bs-toggle="tooltip" data-bs-placement="top" title="@pe.StatusDisplayText">
                                             </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="current-task-text-display task-inactive">
-                                                <i class="bi bi-dash-circle me-1"></i>
-                                                <span class="task-name">No Active Task</span>
-                                            </div>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(pe.PlannedEvent.TaskWg))
-                                        {
-                                            <div class="workgroup-text-display" data-wg="@pe.PlannedEvent.TaskWg">
-                                                <i class="bi bi-people-fill me-1"></i>
-                                                <span class="workgroup-name">@pe.PlannedEvent.TaskWg</span>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="workgroup-text-display workgroup-unassigned">
-                                                <i class="bi bi-dash-circle me-1"></i>
-                                                <span class="workgroup-name">Not Assigned</span>
-                                            </div>
-                                        }
-                                    </td>
-                                    @if (canManageProjects)
-                                    {
+                                        </td>
+                                        <td>@pe.PlannedEvent.PeNumber</td>
+                                        <td>@pe.PlannedEvent.Customer</td>
+                                        <td>@pe.PlannedEvent.JobReference</td>
+                                        <td>
+                                            @if (pe.PlannedEvent.ServiceRequiredDate.HasValue)
+                                            {
+                                                @pe.PlannedEvent.ServiceRequiredDate.Value.ToString("yyyy-MM-dd")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(pe.CurrentTask))
+                                            {
+                                                <div class="current-task-text-display">
+                                                    <i class="bi bi-gear-fill me-1"></i>
+                                                    <span class="task-name">@pe.CurrentTask</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="current-task-text-display task-inactive">
+                                                    <i class="bi bi-dash-circle me-1"></i>
+                                                    <span class="task-name">No Active Task</span>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(pe.PlannedEvent.TaskWg))
+                                            {
+                                                <div class="workgroup-text-display" data-wg="@pe.PlannedEvent.TaskWg">
+                                                    <i class="bi bi-people-fill me-1"></i>
+                                                    <span class="workgroup-name">@pe.PlannedEvent.TaskWg</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="workgroup-text-display workgroup-unassigned">
+                                                    <i class="bi bi-dash-circle me-1"></i>
+                                                    <span class="workgroup-name">Not Assigned</span>
+                                                </div>
+                                            }
+                                        </td>
                                         <td>
                                             <div class="btn-group">
                                                 <a href="@Url.Action("Details", "PlannedEvents", new { id = pe.PlannedEventId })"
                                                     class="btn btn-sm btn-info me-2" target="_blank">
                                                     <i class="bi bi-eye"></i> View Details
                                                 </a>
-                                                <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
-                                                    data-pe-number="@pe.PlannedEvent.PeNumber">
-                                                    <i class="bi bi-trash"></i> Remove
-                                                </button>
+                                                @if (canManageProjects)
+                                                {
+                                                    <button class="btn btn-sm btn-danger remove-pe" data-pe-id="@pe.PlannedEventId"
+                                                        data-pe-number="@pe.PlannedEvent.PeNumber">
+                                                        <i class="bi bi-trash"></i> Remove
+                                                    </button>
+                                                }
                                             </div>
                                         </td>
-                                    }
-                                    else
-                                    {
-                                        <td>
-                                            <a href="@Url.Action("Details", "PlannedEvents", new { id = pe.PlannedEventId })"
-                                                class="btn btn-sm btn-info" target="_blank">
-                                                <i class="bi bi-eye"></i> View Details
-                                            </a>
-                                        </td>
-                                    }
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             }
             else
@@ -244,7 +242,7 @@
                 $.get('/Project/Search', {
                     searchTerm: searchTerm,
                     projectId: @Model.Id
-                                                        })
+                                                                                    })
                     .done(function (data) {
                         if (data.items && data.items.length > 0) {
                             var html = '<div class="table-responsive">';
@@ -255,13 +253,13 @@
                             data.items.forEach(function (pe) {
                                 var isChecked = selectedPEs.has(pe.id);
                                 html += `<tr>
-                                                                <td>${!pe.isAssigned ?
+                                                                                            <td>${!pe.isAssigned ?
                                         `<input type="checkbox" class="pe-checkbox" data-pe-id="${pe.id}" ${isChecked ? 'checked' : ''}>` :
                                         ''}
-                                                                </td>
-                                                                <td>${pe.peNumber}</td>
-                                                                <td>${pe.customer}</td>
-                                                            </tr>`;
+                                                                                            </td>
+                                                                                            <td>${pe.peNumber}</td>
+                                                                                            <td>${pe.customer}</td>
+                                                                                        </tr>`;
                             });
 
                             html += '</tbody></table></div>';
@@ -365,7 +363,7 @@
                     $.post('/Project/RemovePEFromProject', {
                         plannedEventId: peToDelete.id,
                         projectId: @Model.Id
-                                                    })
+                                                                                })
                         .done(function (response) {
                             if (response.success) {
                                 deleteModal.hide();
@@ -378,17 +376,17 @@
                 });
             });
 
-                                        // Pagination for assigned PEs - Commented out until GetAssignedPEs endpoint is implemented
-                                        /*
-                                        $(document).on('click', '.pagination .page-link', function (e) {
-                                            e.preventDefault();
-                                            var page = $(this).data('page');
-                                            loadAssignedPEs(page);
-                                        });
+                                                                    // Pagination for assigned PEs - Commented out until GetAssignedPEs endpoint is implemented
+                                                                    /*
+                                                                    $(document).on('click', '.pagination .page-link', function (e) {
+                                                                        e.preventDefault();
+                                                                        var page = $(this).data('page');
+                                                                        loadAssignedPEs(page);
+                                                                    });
 
-                                        function loadAssignedPEs(page) {
-                                            $.get('/Project/GetAssignedPEs', {
-                                                projectId: @Model.Id,
+                                                                    function loadAssignedPEs(page) {
+                                                                        $.get('/Project/GetAssignedPEs', {
+                                                                            projectId: @Model.Id,
             page: page
         })
             .done(function (data) {
@@ -396,68 +394,68 @@
                     var html = '';
                     data.assignedPEs.forEach(function (pe) {
                         html += `<tr>
-                                                                                                    <td>${pe.peNumber}</td>
-                                                                                                    <td>${pe.customer}</td>
-                                                                                                    <td>${pe.jobReference || ''}</td>
-                                                                                                    <td>${pe.requiredDate ? new Date(pe.requiredDate).toLocaleDateString() : '<span class="text-muted">-</span>'}</td>
-                                                                                                    <td>
-                                                                                                        ${pe.currentTask ?
+                                                                                                                                <td>${pe.peNumber}</td>
+                                                                                                                                <td>${pe.customer}</td>
+                                                                                                                                <td>${pe.jobReference || ''}</td>
+                                                                                                                                <td>${pe.requiredDate ? new Date(pe.requiredDate).toLocaleDateString() : '<span class="text-muted">-</span>'}</td>
+                                                                                                                                <td>
+                                                                                                                                    ${pe.currentTask ?
                                 `<span class="badge bg-info">${pe.currentTask}</span>` :
                                 '<span class="badge bg-secondary">No Active Task</span>'}
-                                                                                                    </td>
-                                                                                                    <td>
-                                                                                                        ${pe.taskWg ?
+                                                                                                                                </td>
+                                                                                                                                <td>
+                                                                                                                                    ${pe.taskWg ?
                                 `<div class="workgroup-badge" data-wg="${pe.taskWg}">
-                                                            <i class="bi bi-people-fill me-1"></i>
-                                                            <span class="workgroup-text">${pe.taskWg}</span>
-                                                            <div class="workgroup-glow"></div>
-                                                        </div>` :
+                                                                                        <i class="bi bi-people-fill me-1"></i>
+                                                                                        <span class="workgroup-text">${pe.taskWg}</span>
+                                                                                        <div class="workgroup-glow"></div>
+                                                                                    </div>` :
                                 `<div class="workgroup-badge workgroup-empty">
-                                                            <i class="bi bi-dash-circle me-1"></i>
-                                                            <span class="workgroup-text">Not Assigned</span>
-                                                        </div>`}
-                                                                                                    </td>
-                                                                                                    <td>
-                                                                                                        <div class="btn-group">
-                                                                                                            <a href="/PlannedEvents/Details/${pe.id}"
-                                                                                                                class="btn btn-sm btn-info me-2" target="_blank">
-                                                                                                                <i class="bi bi-eye"></i> View Details
-                                                                                                            </a>
-                                                                                                            ${canManageProjects ?
+                                                                                        <i class="bi bi-dash-circle me-1"></i>
+                                                                                        <span class="workgroup-text">Not Assigned</span>
+                                                                                    </div>`}
+                                                                                                                                </td>
+                                                                                                                                <td>
+                                                                                                                                    <div class="btn-group">
+                                                                                                                                        <a href="/PlannedEvents/Details/${pe.id}"
+                                                                                                                                            class="btn btn-sm btn-info me-2" target="_blank">
+                                                                                                                                            <i class="bi bi-eye"></i> View Details
+                                                                                                                                        </a>
+                                                                                                                                        ${canManageProjects ?
                                 `<button class="btn btn-sm btn-danger remove-pe"
-                                                                                                                    data-pe-id="${pe.id}"
-                                                                                                                    data-pe-number="${pe.peNumber}">
-                                                                                                                    <i class="bi bi-trash"></i> Remove
-                                                                                                                </button>` : ''
+                                                                                                                                                data-pe-id="${pe.id}"
+                                                                                                                                                data-pe-number="${pe.peNumber}">
+                                                                                                                                                <i class="bi bi-trash"></i> Remove
+                                                                                                                                            </button>` : ''
                             }
-                                                                                                        </div>
-                                                                                                    </td>
-                                                                                                </tr>`;
+                                                                                                                                    </div>
+                                                                                                                                </td>
+                                                                                                                            </tr>`;
                     });
 
                     $('#assignedPEsTable tbody').html(html);
                     updatePagination(data.totalPages, data.currentPage);
                 }
             });
-                                        }
-                                        */
+                                                                    }
+                                                                    */
 
         function updatePagination(totalPages, currentPage) {
             var html = '<nav aria-label="Page navigation"><ul class="pagination justify-content-center">';
 
             // First page button
             html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                                                                        <a class="page-link" href="#" data-page="1" aria-label="First">
-                                                                            <i class="bi bi-chevron-double-left"></i>
-                                                                        </a>
-                                                                    </li>`;
+                                                                                                    <a class="page-link" href="#" data-page="1" aria-label="First">
+                                                                                                        <i class="bi bi-chevron-double-left"></i>
+                                                                                                    </a>
+                                                                                                </li>`;
 
             // Previous button
             html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                                                                        <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
-                                                                            <i class="bi bi-chevron-left"></i>
-                                                                        </a>
-                                                                    </li>`;
+                                                                                                    <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                                                                                                        <i class="bi bi-chevron-left"></i>
+                                                                                                    </a>
+                                                                                                </li>`;
 
             // Calculate page range
             let startPage = Math.max(1, currentPage - 2);
@@ -470,8 +468,8 @@
             // Page numbers
             for (var i = startPage; i <= endPage; i++) {
                 html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
-                                                                            <a class="page-link" href="#" data-page="${i}">${i}</a>
-                                                                        </li>`;
+                                                                                                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                                                                                                    </li>`;
             }
 
             if (endPage < totalPages) {
@@ -480,17 +478,17 @@
 
             // Next button
             html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                                                                        <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
-                                                                            <i class="bi bi-chevron-right"></i>
-                                                                        </a>
-                                                                    </li>`;
+                                                                                                    <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                                                                                                        <i class="bi bi-chevron-right"></i>
+                                                                                                    </a>
+                                                                                                </li>`;
 
             // Last page button
             html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                                                                        <a class="page-link" href="#" data-page="${totalPages}" aria-label="Last">
-                                                                            <i class="bi bi-chevron-double-right"></i>
-                                                                        </a>
-                                                                    </li>`;
+                                                                                                    <a class="page-link" href="#" data-page="${totalPages}" aria-label="Last">
+                                                                                                        <i class="bi bi-chevron-double-right"></i>
+                                                                                                    </a>
+                                                                                                </li>`;
 
             html += '</ul></nav>';
             $('.pagination').html(html);
@@ -498,7 +496,7 @@
 
         // Load first page initially
         loadAssignedPEs(1);
-                                    });
+                                                                });
     </script>
 }
 
@@ -709,6 +707,208 @@
 
     .current-task-text-display.task-inactive {
         color: #6c757d;
+    }
+
+    /* PE Status Indicator Styling */
+    .pe-status-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: inline-block;
+        cursor: help;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        margin: 0 auto;
+    }
+
+    .pe-status-indicator:hover {
+        transform: scale(1.2);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Status column centered alignment */
+    .pe-status-indicator {
+        display: block;
+        margin: 0 auto;
+    }
+
+    td:first-child {
+        text-align: center;
+        width: 60px;
+    }
+
+    /* Fixed Header Table Styling */
+    .fixed-header-table-container {
+        position: relative;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        overflow: hidden;
+        background-color: white;
+    }
+
+    .table-fixed-header {
+        margin-bottom: 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: white;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table-header-fixed {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table-header-fixed th {
+        border-bottom: 2px solid #dee2e6 !important;
+        background-color: #f8f9fa !important;
+        position: sticky;
+        top: 0;
+        z-index: 11;
+        font-weight: 600;
+        padding: 8px 8px;
+        white-space: nowrap;
+    }
+
+    .table-body-scrollable {
+        max-height: 500px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-top: none;
+    }
+
+    .table-body-content {
+        margin-bottom: 0;
+        border-top: none;
+    }
+
+    .table-body-content tbody tr:first-child td {
+        border-top: none;
+    }
+
+    /* Ensure consistent column widths between header and body */
+
+    /* Enforce fixed layout and consistent widths for perfect alignment */
+    .table-fixed-header,
+    .table-body-content {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .table-fixed-header th,
+    .table-body-content td {
+        white-space: nowrap;
+        padding-left: 8px;
+        padding-right: 8px;
+        vertical-align: middle;
+        box-sizing: border-box;
+    }
+
+    .table-fixed-header th:nth-child(1),
+    .table-body-content td:nth-child(1) {
+        width: 70px;
+        text-align: center;
+    }
+
+    .table-fixed-header th:nth-child(2),
+    .table-body-content td:nth-child(2) {
+        width: 140px;
+    }
+
+    .table-fixed-header th:nth-child(3),
+    .table-body-content td:nth-child(3) {
+        width: 180px;
+    }
+
+    .table-fixed-header th:nth-child(4),
+    .table-body-content td:nth-child(4) {
+        width: 95px;
+    }
+
+    .table-fixed-header th:nth-child(5),
+    .table-body-content td:nth-child(5) {
+        width: 110px;
+    }
+
+    .table-fixed-header th:nth-child(6),
+    .table-body-content td:nth-child(6) {
+        width: 160px;
+    }
+
+    .table-fixed-header th:nth-child(7),
+    .table-body-content td:nth-child(7) {
+        width: 170px;
+    }
+
+    .table-fixed-header th:nth-child(8),
+    .table-body-content td:nth-child(8) {
+        width: 140px;
+    }
+
+    /* Remove extra margin/padding from table rows */
+    .table-fixed-header tr,
+    .table-body-content tr {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Dark mode support for fixed header table */
+    [data-theme="dark"] .fixed-header-table-container {
+        border-color: var(--border-color);
+        background-color: var(--card-bg);
+    }
+
+    [data-theme="dark"] .table-fixed-header {
+        background-color: var(--card-bg);
+        border-bottom-color: var(--border-color);
+    }
+
+    [data-theme="dark"] .table-header-fixed {
+        background-color: var(--card-bg);
+        border-bottom-color: var(--border-color);
+    }
+
+    [data-theme="dark"] .table-header-fixed th {
+        background-color: var(--card-bg) !important;
+        border-bottom-color: var(--border-color) !important;
+        color: var(--text-color);
+    }
+
+    [data-theme="dark"] .table-body-content {
+        background-color: var(--card-bg);
+    }
+
+    /* Custom scrollbar for table body */
+    .table-body-scrollable::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .table-body-scrollable::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .table-body-scrollable::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+
+    .table-body-scrollable::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    [data-theme="dark"] .table-body-scrollable::-webkit-scrollbar-track {
+        background: var(--card-bg);
+    }
+
+    [data-theme="dark"] .table-body-scrollable::-webkit-scrollbar-thumb {
+        background: #555;
+    }
+
+    [data-theme="dark"] .table-body-scrollable::-webkit-scrollbar-thumb:hover {
+        background: #777;
     }
 
     /* Enhanced Export Button Styling */
@@ -976,6 +1176,15 @@
 </style>
 
 <script>
+    // Initialize tooltips when document is ready
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Bootstrap tooltips for status indicators
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
     // Export functions
     function exportToExcel() {
         const projectId = @Model.Id;

@@ -150,15 +150,16 @@ public class ProjectController : BaseController
         var worksheet = workbook.Worksheets.Add("Assigned PEs");
 
         // Set up headers
-        worksheet.Cell(1, 1).Value = "PE Number";
-        worksheet.Cell(1, 2).Value = "Customer";
-        worksheet.Cell(1, 3).Value = "Job Reference";
-        worksheet.Cell(1, 4).Value = "Required Date";
-        worksheet.Cell(1, 5).Value = "Current Task";
-        worksheet.Cell(1, 6).Value = "Current WG";
+        worksheet.Cell(1, 1).Value = "Status";
+        worksheet.Cell(1, 2).Value = "PE Number";
+        worksheet.Cell(1, 3).Value = "Customer";
+        worksheet.Cell(1, 4).Value = "Job Reference";
+        worksheet.Cell(1, 5).Value = "Required Date";
+        worksheet.Cell(1, 6).Value = "Current Task";
+        worksheet.Cell(1, 7).Value = "Current WG";
 
         // Style headers
-        var headerRange = worksheet.Range(1, 1, 1, 6);
+        var headerRange = worksheet.Range(1, 1, 1, 7);
         headerRange.Style.Font.Bold = true;
         headerRange.Style.Fill.BackgroundColor = XLColor.LightBlue;
         headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thick;
@@ -167,12 +168,22 @@ public class ProjectController : BaseController
         var row = 2;
         foreach (var pe in projectDetails.ProjectPEs)
         {
-            worksheet.Cell(row, 1).Value = pe.PlannedEvent.PeNumber;
-            worksheet.Cell(row, 2).Value = pe.PlannedEvent.Customer ?? "";
-            worksheet.Cell(row, 3).Value = pe.PlannedEvent.JobReference ?? "";
-            worksheet.Cell(row, 4).Value = pe.PlannedEvent.ServiceRequiredDate?.ToString("yyyy-MM-dd") ?? "";
-            worksheet.Cell(row, 5).Value = pe.CurrentTask ?? "No Active Task";
-            worksheet.Cell(row, 6).Value = pe.PlannedEvent.TaskWg ?? "Not Assigned";
+            // Create view model to get status
+            var viewModel = new ProjectPEViewModel
+            {
+                Id = pe.Id,
+                PlannedEventId = pe.PlannedEventId,
+                PlannedEvent = pe.PlannedEvent,
+                CurrentTask = pe.CurrentTask
+            };
+
+            worksheet.Cell(row, 1).Value = viewModel.StatusDisplayText;
+            worksheet.Cell(row, 2).Value = pe.PlannedEvent.PeNumber;
+            worksheet.Cell(row, 3).Value = pe.PlannedEvent.Customer ?? "";
+            worksheet.Cell(row, 4).Value = pe.PlannedEvent.JobReference ?? "";
+            worksheet.Cell(row, 5).Value = pe.PlannedEvent.ServiceRequiredDate?.ToString("yyyy-MM-dd") ?? "";
+            worksheet.Cell(row, 6).Value = pe.CurrentTask ?? "No Active Task";
+            worksheet.Cell(row, 7).Value = pe.PlannedEvent.TaskWg ?? "Not Assigned";
             row++;
         }
 
@@ -220,11 +231,12 @@ public class ProjectController : BaseController
         document.Add(new Paragraph(" ")); // Empty line
 
         // Create table
-        var table = new PdfPTable(6);
+        var table = new PdfPTable(7);
         table.WidthPercentage = 100;
-        table.SetWidths(new float[] { 15, 25, 20, 15, 15, 10 });
+        table.SetWidths(new float[] { 12, 15, 23, 18, 13, 13, 6 });
 
         // Add headers
+        table.AddCell(new PdfPCell(new Phrase("Status", headerFont)) { BackgroundColor = BaseColor.LightGray });
         table.AddCell(new PdfPCell(new Phrase("PE Number", headerFont)) { BackgroundColor = BaseColor.LightGray });
         table.AddCell(new PdfPCell(new Phrase("Customer", headerFont)) { BackgroundColor = BaseColor.LightGray });
         table.AddCell(new PdfPCell(new Phrase("Job Reference", headerFont)) { BackgroundColor = BaseColor.LightGray });
@@ -235,6 +247,16 @@ public class ProjectController : BaseController
         // Add data
         foreach (var pe in projectDetails.ProjectPEs)
         {
+            // Create view model to get status
+            var viewModel = new ProjectPEViewModel
+            {
+                Id = pe.Id,
+                PlannedEventId = pe.PlannedEventId,
+                PlannedEvent = pe.PlannedEvent,
+                CurrentTask = pe.CurrentTask
+            };
+
+            table.AddCell(new Phrase(viewModel.StatusDisplayText, normalFont));
             table.AddCell(new Phrase(pe.PlannedEvent.PeNumber, normalFont));
             table.AddCell(new Phrase(pe.PlannedEvent.Customer ?? "", normalFont));
             table.AddCell(new Phrase(pe.PlannedEvent.JobReference ?? "", normalFont));
