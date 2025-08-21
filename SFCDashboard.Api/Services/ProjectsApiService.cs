@@ -70,7 +70,7 @@ namespace SFCDashboard.Api.Services
                 {
                     var peNumber = pe.PlannedEvent?.PeNumber;
                     if (string.IsNullOrEmpty(peNumber)) continue;
-                    
+
                     var tasks = peTasksDict.TryGetValue(peNumber, out var tlist) && tlist != null ? tlist.ToList() : new List<PETask>();
 
                     // Get current task (first not completed by TaskSeq)
@@ -79,38 +79,12 @@ namespace SFCDashboard.Api.Services
                         .OrderBy(t => t.TaskSeq)
                         .FirstOrDefault();
 
-                    // Progress calculation
-                    decimal totalOLA = tasks.Sum(t => decimal.TryParse(t.OLA, out var ola) ? ola : 0);
-                    decimal completedOLA = tasks
-                        .Where(t => string.Equals(t.TaskStatus, "completed", StringComparison.OrdinalIgnoreCase))
-                        .Sum(t => decimal.TryParse(t.OLA, out var ola) ? ola : 0);
-                    var progressPercent = totalOLA > 0 ? Math.Round((completedOLA / totalOLA) * 100, 2) : 0;
-
-                    // Exceeded OLA
-                    var exceededOLA = tasks.Any(t =>
-                        string.Equals(t.TaskStatus, "completed", StringComparison.OrdinalIgnoreCase) &&
-                        t.ActualTaskCreatedDate.HasValue &&
-                        t.ACtualTaskCompleteDate.HasValue &&
-                        ((decimal)(t.ACtualTaskCompleteDate.Value - t.ActualTaskCreatedDate.Value).TotalDays) >
-                        (decimal.TryParse(t.OLA, out var ola) ? ola : 0)
-                    );
-
-                    var progressClass = exceededOLA ? "bg-danger" : progressPercent switch
-                    {
-                        100 => "bg-success",
-                        var p when p > 60 => "bg-info",
-                        var p when p > 30 => "bg-warning",
-                        _ => "bg-danger"
-                    };
-
                     peViewModels.Add(new ProjectPEViewModelDto
                     {
                         Id = pe.Id,
                         PlannedEventId = pe.PlannedEventId,
                         PlannedEvent = pe.PlannedEvent!,
-                        CurrentTask = currentTask?.Task,
-                        ProgressPercent = progressPercent,
-                        ProgressClass = progressClass
+                        CurrentTask = currentTask?.Task
                     });
                 }
 
