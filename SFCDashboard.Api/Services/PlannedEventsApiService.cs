@@ -790,11 +790,31 @@ namespace SFCDashboard.Api.Services
 
                 if (!canViewAll)
                 {
-                    // Apply workgroup filtering first
-                    query = query.Where(p => salesWorkgroups.Any(wg =>
-                        (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                        (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                    ));
+                    // Case-insensitive lists
+                    var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
+                    // Build acceptable SectionHandledBy prefixes from user workgroups (e.g., SALES-WSALE-DOM-ACCM -> SALES, SALES-WSALE, SALES-WSALE-DOM, ...)
+                    var sectionHandledByPrefixes = lowerSalesWorkgroups
+                        .SelectMany(wg =>
+                        {
+                            var parts = wg.Split('-', StringSplitOptions.RemoveEmptyEntries);
+                            var prefixes = new List<string>();
+                            for (int i = 0; i < parts.Length; i++)
+                            {
+                                prefixes.Add(string.Join("-", parts.Take(i + 1)));
+                            }
+                            return prefixes;
+                        })
+                        .Distinct()
+                        .ToList();
+
+                    // Apply workgroup filtering: TaskWg matches user WG (equals or contains), OR SectionHandledBy is a prefix of a user's WG
+                    query = query.Where(p =>
+                        (p.TaskWg != null && lowerSalesWorkgroups.Any(wg =>
+                            p.TaskWg.ToLower() == wg || p.TaskWg.ToLower().Contains(wg)
+                        ))
+                        ||
+                        (p.SectionHandledBy != null && sectionHandledByPrefixes.Contains(p.SectionHandledBy.ToLower()))
+                    );
 
                     // If user has assigned customers, further filter by those customers
                     if (assignedCustomers.Any())
@@ -1204,13 +1224,31 @@ namespace SFCDashboard.Api.Services
 
                 var query = _context.PlannedEvents.AsQueryable();
 
-                // Apply sales workgroup filter - check both TaskWg and SectionHandledBy
+                // Apply sales workgroup filter - TaskWg matches user WG (equals/contains) OR SectionHandledBy is a prefix of user's WG
                 if (salesWorkgroups.Any())
                 {
-                    query = query.Where(p => salesWorkgroups.Any(wg =>
-                        (p.TaskWg != null && p.TaskWg.Contains(wg)) ||
-                        (p.SectionHandledBy != null && p.SectionHandledBy.Contains(wg))
-                    ));
+                    var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
+                    var sectionHandledByPrefixes = lowerSalesWorkgroups
+                        .SelectMany(wg =>
+                        {
+                            var parts = wg.Split('-', StringSplitOptions.RemoveEmptyEntries);
+                            var prefixes = new List<string>();
+                            for (int i = 0; i < parts.Length; i++)
+                            {
+                                prefixes.Add(string.Join("-", parts.Take(i + 1)));
+                            }
+                            return prefixes;
+                        })
+                        .Distinct()
+                        .ToList();
+
+                    query = query.Where(p =>
+                        (p.TaskWg != null && lowerSalesWorkgroups.Any(wg =>
+                            p.TaskWg.ToLower() == wg || p.TaskWg.ToLower().Contains(wg)
+                        ))
+                        ||
+                        (p.SectionHandledBy != null && sectionHandledByPrefixes.Contains(p.SectionHandledBy.ToLower()))
+                    );
                 }
 
                 // Apply search filters based on type
@@ -1531,16 +1569,28 @@ namespace SFCDashboard.Api.Services
                 // Convert workgroups to lowercase for comparison
                 var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
 
-                query = query.Where(p => lowerSalesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && (
-                        p.TaskWg.ToLower() == wg ||
-                        p.TaskWg.ToLower().Contains(wg)
-                    )) ||
-                    (p.SectionHandledBy != null && (
-                        p.SectionHandledBy.ToLower() == wg ||
-                        p.SectionHandledBy.ToLower().Contains(wg)
+                // Build acceptable SectionHandledBy prefixes from user workgroups
+                var sectionHandledByPrefixes = lowerSalesWorkgroups
+                    .SelectMany(wg =>
+                    {
+                        var parts = wg.Split('-', StringSplitOptions.RemoveEmptyEntries);
+                        var prefixes = new List<string>();
+                        for (int i = 0; i < parts.Length; i++)
+                        {
+                            prefixes.Add(string.Join("-", parts.Take(i + 1)));
+                        }
+                        return prefixes;
+                    })
+                    .Distinct()
+                    .ToList();
+
+                query = query.Where(p =>
+                    (p.TaskWg != null && lowerSalesWorkgroups.Any(wg =>
+                        p.TaskWg.ToLower() == wg || p.TaskWg.ToLower().Contains(wg)
                     ))
-                ));
+                    ||
+                    (p.SectionHandledBy != null && sectionHandledByPrefixes.Contains(p.SectionHandledBy.ToLower()))
+                );
 
                 // If user has assigned customers, further filter by those customers
                 if (assignedCustomers.Any())

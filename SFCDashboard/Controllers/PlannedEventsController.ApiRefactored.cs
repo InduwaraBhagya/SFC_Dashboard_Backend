@@ -124,17 +124,29 @@ namespace SFCDashboard.Controllers
                 // Convert workgroups to lowercase for comparison
                 var lowerSalesWorkgroups = salesWorkgroups.Select(wg => wg.ToLower()).ToList();
 
+                // Build acceptable SectionHandledBy prefixes from user workgroups
+                var sectionHandledByPrefixes = lowerSalesWorkgroups
+                    .SelectMany(wg =>
+                    {
+                        var parts = wg.Split('-', StringSplitOptions.RemoveEmptyEntries);
+                        var prefixes = new List<string>();
+                        for (int i = 0; i < parts.Length; i++)
+                        {
+                            prefixes.Add(string.Join("-", parts.Take(i + 1)));
+                        }
+                        return prefixes;
+                    })
+                    .Distinct()
+                    .ToList();
+
                 var beforeFilterCount = query.Count();
-                query = query.Where(p => lowerSalesWorkgroups.Any(wg =>
-                    (p.TaskWg != null && (
-                        p.TaskWg.ToLower() == wg ||
-                        p.TaskWg.ToLower().Contains(wg)
-                    )) ||
-                    (p.SectionHandledBy != null && (
-                        p.SectionHandledBy.ToLower() == wg ||
-                        p.SectionHandledBy.ToLower().Contains(wg)
+                query = query.Where(p =>
+                    (p.TaskWg != null && lowerSalesWorkgroups.Any(wg =>
+                        p.TaskWg.ToLower() == wg || p.TaskWg.ToLower().Contains(wg)
                     ))
-                ));
+                    ||
+                    (p.SectionHandledBy != null && sectionHandledByPrefixes.Contains(p.SectionHandledBy.ToLower()))
+                );
                 var afterWorkgroupFilterCount = query.Count();
 
                 // If user has assigned customers, further filter by those customers
