@@ -40,18 +40,18 @@
                 <div class="card-body">
                     <div class="row">
                         <!-- Search Form -->
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <form method="get" asp-action="Index">
                                 <div class="input-group">
                                     <input type="text" class="form-control" name="searchTerm" 
-                                           value="@Model.SearchTerm" placeholder="Search by customer, user name, or service ID...">
+                                           value="@Model.SearchTerm" placeholder="Search...">
                                     <button class="btn btn-outline-secondary" type="submit">
-                                        <i class="fas fa-search"></i> Search
+                                        <i class="fas fa-search"></i>
                                     </button>
                                     @if (!string.IsNullOrEmpty(Model.SearchTerm))
                                     {
                                         <a href="@Url.Action("Index")" class="btn btn-outline-danger">
-                                            <i class="fas fa-times"></i> Clear
+                                            <i class="fas fa-times"></i>
                                         </a>
                                     }
                                 </div>
@@ -59,34 +59,40 @@
                         </div>
 
                         <!-- Add New Assignment Form -->
-                        <div class="col-md-6">
+                        <div class="col-md-9">
                             @if (Model.AvailableCustomers.Any())
                             {
-                                <form method="post" asp-action="Create" class="d-flex gap-2">
+                                <form method="post" asp-action="Create" class="row g-2 align-items-end">
                                     @Html.AntiForgeryToken()
-                                    <select name="Customer" id="customerSelect" class="form-select searchable-select" required
-                                            title="Search and select a customer to assign"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top">
-                                        <option value="">Select Customer...</option>
-                                        @foreach (var customer in Model.AvailableCustomers)
-                                        {
-                                            <option value="@customer">@customer</option>
-                                        }
-                                    </select>
-                                    <select name="UserId" id="userSelect" class="form-select searchable-select" required
-                                            title="Search and select a sales user"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top">
-                                        <option value="">Select User...</option>
-                                        @foreach (var user in Model.SalesUsers)
-                                        {
-                                            <option value="@user.Id">@user.Name (@user.ServiceId)</option>
-                                        }
-                                    </select>
-                                    <button type="submit" class="btn btn-success" title="Create new assignment">
-                                        <i class="fas fa-plus"></i> Add
-                                    </button>
+                                    <div class="col-md-4">
+                                        <select name="Customer" id="customerSelect" class="form-select searchable-select" required
+                                                title="Search and select a customer to assign"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top">
+                                            <option value="">Select Customer...</option>
+                                            @foreach (var customer in Model.AvailableCustomers)
+                                            {
+                                                <option value="@customer">@customer</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select name="UserId" id="userSelect" class="form-select searchable-select" required
+                                                title="Search and select a sales user"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top">
+                                            <option value="">Select User...</option>
+                                            @foreach (var user in Model.SalesUsers)
+                                            {
+                                                <option value="@user.Id">@user.Name (@user.ServiceId)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 ms-3">
+                                        <button type="submit" class="btn btn-primary px-4 py-2" title="Create new assignment">
+                                            <i class="fas fa-plus"></i> Add
+                                        </button>
+                                    </div>
                                 </form>
                             }
                             else
@@ -273,16 +279,31 @@
     <style>
         .select2-container--default .select2-selection--single {
             height: 38px;
-            width: 260px;
             border: 1px solid #ced4da;
             border-radius: 0.375rem;
+            padding-right: 30px;
         }
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             line-height: 36px;
             padding-left: 12px;
+            padding-right: 30px;
         }
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             height: 36px;
+            right: 5px;
+            width: 20px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            border-color: #999 transparent transparent transparent;
+            border-style: solid;
+            border-width: 5px 4px 0 4px;
+            height: 0;
+            left: 50%;
+            margin-left: -4px;
+            margin-top: -2px;
+            position: absolute;
+            top: 50%;
+            width: 0;
         }
         .select2-dropdown {
             border: 1px solid #ced4da;

@@ -96,9 +96,9 @@
                                 <td>@item.Customer</td>
                                 <td>@item.TaskName</td>
                                 <td>
-                                    @if (!string.IsNullOrEmpty(item.AccessMediumAEnd))
+                                    @if (!string.IsNullOrEmpty(item.LocationAAddress))
                                     {
-                                        @item.AccessMediumAEnd
+                                        @item.LocationAAddress
                                     }
                                     else
                                     {
@@ -106,9 +106,9 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (!string.IsNullOrEmpty(item.AccessMediumBEnd))
+                                    @if (!string.IsNullOrEmpty(item.LocationBAddress))
                                     {
-                                        @item.AccessMediumBEnd
+                                        @item.LocationBAddress
                                     }
                                     else
                                     {
