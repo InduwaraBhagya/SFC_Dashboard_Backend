@@ -1,4 +1,4 @@
-@model List<SFCDB.Models.PERecord>
+@model List<SFCDashboard.Models.PlannedEvent>
 @{
     ViewData["Title"] = "Report Generator";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -10,7 +10,7 @@
             <div class="card shadow-sm">
                 <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <h3 class="card-title text-white mb-0">
-                        <i class="bi bi-file-earmark-bar-graph me-2"></i>PE Records Report Generator
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Planned Events Report Generator
                     </h3>
                 </div>
                 <div class="card-body">
@@ -20,22 +20,22 @@
                             <h5><i class="bi bi-funnel me-2"></i>Filters</h5>
                             <form id="filterForm" class="row g-3">
                                 <div class="col-md-2">
-                                    <label for="provinceFilter" class="form-label">Province</label>
-                                    <select class="form-select" id="provinceFilter" name="province">
-                                        <option value="">All Provinces</option>
-                                        @foreach (var province in ViewBag.Provinces as List<string>)
+                                    <label for="regionFilter" class="form-label">Region</label>
+                                    <select class="form-select" id="regionFilter" name="region">
+                                        <option value="">All Regions</option>
+                                        @foreach (var region in (ViewBag.Regions as List<string> ?? new List<string>()))
                                         {
-                                            <option value="@province">@province</option>
+                                            <option value="@region">@region</option>
                                         }
                                     </select>
                                 </div>
                                 <div class="col-md-2">
-                                    <label for="regionFilter" class="form-label">Region</label>
-                                    <select class="form-select" id="regionFilter" name="region">
-                                        <option value="">All Regions</option>
-                                        @foreach (var region in ViewBag.Regions as List<string>)
+                                    <label for="provinceFilter" class="form-label">Province</label>
+                                    <select class="form-select" id="provinceFilter" name="province">
+                                        <option value="">All Provinces</option>
+                                        @foreach (var province in (ViewBag.Provinces as List<string> ?? new List<string>()))
                                         {
-                                            <option value="@region">@region</option>
+                                            <option value="@province">@province</option>
                                         }
                                     </select>
                                 </div>
@@ -60,12 +60,12 @@
                                     </select>
                                 </div>
                                 <div class="col-md-2">
-                                    <label for="soNumberFilter" class="form-label">SO Number</label>
-                                    <select class="form-select" id="soNumberFilter" name="soNumber">
-                                        <option value="">All SO Numbers</option>
-                                        @foreach (var soNumber in ViewBag.SONumbers as List<string>)
+                                    <label for="peNumberFilter" class="form-label">PE Number</label>
+                                    <select class="form-select" id="peNumberFilter" name="peNumber">
+                                        <option value="">All PE Numbers</option>
+                                        @foreach (var peNumber in ViewBag.PENumbers as List<string>)
                                         {
-                                            <option value="@soNumber">@soNumber</option>
+                                            <option value="@peNumber">@peNumber</option>
                                         }
                                     </select>
                                 </div>
@@ -78,6 +78,14 @@
                                             <option value="@customer">@customer</option>
                                         }
                                     </select>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="urgentOnlyFilter" name="urgentOnly" value="true">
+                                        <label class="form-check-label" for="urgentOnlyFilter">
+                                            Urgent only
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="col-12">
                                     <button type="button" class="btn btn-primary" onclick="applyFilters()">
@@ -140,18 +148,18 @@
                                     <tbody id="recordsTableBody">
                                         @foreach (var record in Model)
                                         {
-                                            <tr>
-                                                <td>@record.ID</td>
-                                                <td>@(record.PROVINCE ?? "")</td>
-                                                <td>@(record.REGION ?? "")</td>
-                                                <td>@(record.RTOM ?? "")</td>
-                                                <td>@(record.CONTRACTOR_NAME ?? "")</td>
-                                                <td>@(record.SO_NUMBER ?? "")</td>
-                                                <td>@(record.CUSTOMER ?? "")</td>
-                                                <td>@(record.PE_NUMBER ?? "")</td>
-                                                <td>@(record.PE_TITLE ?? "")</td>
-                                                <td>@(record.TASK_NAME ?? "")</td>
-                                                <td>@(record.TASK_WG ?? "")</td>
+                                            <tr data-pe-status="@record.PEStatus">
+                                            <td>@record.Id</td>
+                                            <td>@(record.Province ?? "")</td>
+                                            <td>@(record.Region ?? "")</td>
+                                            <td>@(record.Rtom ?? "")</td>
+                                            <td>@(record.ContractorName ?? "")</td>
+                                            <td>@(record.SoNumber ?? "")</td>
+                                            <td>@(record.Customer ?? "")</td>
+                                            <td>@(record.PeNumber ?? "")</td>
+                                            <td>@(record.PeTitle ?? "")</td>
+                                            <td>@(record.TaskName ?? "")</td>
+                                            <td>@(record.TaskWg ?? "")</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -186,6 +194,8 @@
         // Store all data for fast client-side filtering
         let allRecords = [];
         let filteredRecords = [];
+    // Preserve the initial default option text for each select (e.g., "All Provinces")
+    const selectDefaults = {};
 
         // Initialize data from the table
         document.addEventListener('DOMContentLoaded', function () {
@@ -212,11 +222,34 @@
                     pe_title: cells[8].textContent.trim(),
                     task_name: cells[9].textContent.trim(),
                     task_wg: cells[10].textContent.trim(),
+                    pe_status: (row.dataset.peStatus || '').trim(),
                     element: row // Keep reference to DOM element for fast manipulation
                 };
             });
 
             filteredRecords = [...allRecords];
+
+            // Cache default option labels so we can rebuild selects consistently
+            cacheSelectDefaults([
+                'provinceFilter',
+                'regionFilter',
+                'rtomFilter',
+                'contractorFilter',
+                'peNumberFilter',
+                'customerFilter'
+            ]);
+
+            // Ensure dropdowns reflect the available values from all records on load
+            updateAllDropdownOptions(getCurrentFilters());
+        }
+
+        function cacheSelectDefaults(ids) {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const first = el.options?.[0]?.text || 'All';
+                selectDefaults[id] = first;
+            });
         }
 
         function setupRealTimeFiltering() {
@@ -263,15 +296,7 @@
         }
 
         function performClientSideFilter() {
-            const filters = {
-                province: document.getElementById('provinceFilter').value.toLowerCase(),
-                region: document.getElementById('regionFilter').value.toLowerCase(),
-                rtom: document.getElementById('rtomFilter').value.toLowerCase(),
-                contractor: document.getElementById('contractorFilter')?.value.toLowerCase() || '',
-                soNumber: document.getElementById('soNumberFilter')?.value.toLowerCase() || '',
-                customer: document.getElementById('customerFilter')?.value.toLowerCase() || '',
-                peNumber: document.getElementById('peNumberFilter')?.value.toLowerCase() || ''
-            };
+            const filters = getCurrentFilters();
 
             // Filter records instantly
             filteredRecords = allRecords.filter(record => {
@@ -279,13 +304,109 @@
                     (!filters.region || record.region.toLowerCase().includes(filters.region)) &&
                     (!filters.rtom || record.rtom.toLowerCase().includes(filters.rtom)) &&
                     (!filters.contractor || record.contractor_name.toLowerCase().includes(filters.contractor)) &&
-                    (!filters.soNumber || record.so_number.toLowerCase().includes(filters.soNumber)) &&
                     (!filters.customer || record.customer.toLowerCase().includes(filters.customer)) &&
-                    (!filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber));
+                    (!filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber)) &&
+                    (!filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent');
             });
 
             updateTableInstant();
             updateRecordsCount(filteredRecords.length);
+
+            // After filtering rows, repopulate dropdowns to only values present in filtered set
+            updateAllDropdownOptions(filters);
+        }
+
+        function getCurrentFilters() {
+            return {
+                province: document.getElementById('provinceFilter')?.value.toLowerCase() || '',
+                region: document.getElementById('regionFilter')?.value.toLowerCase() || '',
+                rtom: document.getElementById('rtomFilter')?.value.toLowerCase() || '',
+                contractor: document.getElementById('contractorFilter')?.value.toLowerCase() || '',
+                soNumber: '',
+                customer: document.getElementById('customerFilter')?.value.toLowerCase() || '',
+                peNumber: document.getElementById('peNumberFilter')?.value.toLowerCase() || '',
+                urgentOnly: document.getElementById('urgentOnlyFilter')?.checked || false
+            };
+        }
+
+        function updateAllDropdownOptions(currentFilters) {
+            // For better UX, compute each dropdown's options using all other filters except itself
+            updateOneDropdown('provinceFilter', 'province', 'province', currentFilters);
+            updateOneDropdown('regionFilter', 'region', 'region', currentFilters);
+            updateOneDropdown('rtomFilter', 'rtom', 'rtom', currentFilters);
+            updateOneDropdown('contractorFilter', 'contractor', 'contractor_name', currentFilters);
+            updateOneDropdown('peNumberFilter', 'peNumber', 'pe_number', currentFilters);
+            updateOneDropdown('customerFilter', 'customer', 'customer', currentFilters);
+        }
+
+        function updateOneDropdown(selectId, filterKey, recordProp, currentFilters) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            const selectedValue = (select.value || '').toLowerCase();
+
+            // Build the set of records matching all filters except the one tied to this select
+            const recordsForThisSelect = allRecords.filter(r => matchesFiltersExcept(r, currentFilters, filterKey));
+            const values = distinctValues(recordsForThisSelect.map(r => (r[recordProp] || '').trim()))
+                .filter(v => v !== '');
+
+            // If currently selected value isn't in the new list but is non-empty, include it to avoid abrupt clearing
+            const hasSelected = selectedValue && values.some(v => v.toLowerCase() === selectedValue);
+            const finalValues = hasSelected ? values : values;
+
+            setSelectOptions(select, finalValues, selectedValue, selectDefaults[selectId] || 'All');
+        }
+
+        function matchesFiltersExcept(record, filters, exceptKey) {
+            // Check each filter except the specified one
+            const checks = [
+                exceptKey === 'province' || !filters.province || record.province.toLowerCase().includes(filters.province),
+                exceptKey === 'region' || !filters.region || record.region.toLowerCase().includes(filters.region),
+                exceptKey === 'rtom' || !filters.rtom || record.rtom.toLowerCase().includes(filters.rtom),
+                exceptKey === 'contractor' || !filters.contractor || record.contractor_name.toLowerCase().includes(filters.contractor),
+                true, // soNumber no longer used
+                exceptKey === 'customer' || !filters.customer || record.customer.toLowerCase().includes(filters.customer),
+                exceptKey === 'peNumber' || !filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber),
+                // urgentOnly is a boolean flag; apply it regardless of exceptKey
+                !filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent'
+            ];
+            return checks.every(Boolean);
+        }
+
+        function distinctValues(arr) {
+            const set = new Set();
+            arr.forEach(v => {
+                if (typeof v === 'string') {
+                    const trimmed = v.trim();
+                    if (trimmed.length > 0) set.add(trimmed);
+                }
+            });
+            return Array.from(set).sort((a, b) => a.localeCompare(b));
+        }
+
+        function setSelectOptions(select, values, selectedLower, defaultText) {
+            // Rebuild options: first the default, then sorted distinct values
+            const prevScrollTop = select.scrollTop;
+            const frag = document.createDocumentFragment();
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = defaultText || 'All';
+            frag.appendChild(defaultOpt);
+
+            values.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                if (selectedLower && val.toLowerCase() === selectedLower) opt.selected = true;
+                frag.appendChild(opt);
+            });
+
+            // Replace options efficiently
+            select.innerHTML = '';
+            select.appendChild(frag);
+            // Restore scroll position if the list was long
+            select.scrollTop = prevScrollTop;
         }
 
         function updateTableInstant() {
@@ -307,6 +428,8 @@
             filteredRecords = [...allRecords];
             updateTableInstant();
             updateRecordsCount(allRecords.length);
+            // Reset dropdowns to full available values
+            updateAllDropdownOptions(getCurrentFilters());
         }
 
         function updateRecordsCount(count) {

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using SFCDB.Models;
+using SFCDashboard.Models;
 using SFCDashboard.ApiClients;
 using System.Text;
 using ClosedXML.Excel;
@@ -13,17 +13,17 @@ namespace SFCDashboard.Controllers
 {
     public class ReportsController : BaseController
     {
-        private readonly ILogger<ReportsController> _logger;
-        private readonly IPERecordsApiClient _peRecordsApiClient;
+    private readonly ILogger<ReportsController> _logger;
+    private readonly IPlannedEventsApiClient _plannedEventsApiClient;
 
         public ReportsController(
             ILogger<ReportsController> logger,
-            IPERecordsApiClient peRecordsApiClient,
+            IPlannedEventsApiClient plannedEventsApiClient,
             IUsersApiClient usersApiClient)
             : base(usersApiClient)
         {
             _logger = logger;
-            _peRecordsApiClient = peRecordsApiClient;
+            _plannedEventsApiClient = plannedEventsApiClient;
         }
 
         // GET: Reports/Generate
@@ -31,61 +31,39 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                _logger.LogInformation("Loading PE Records for report generation");
+                _logger.LogInformation("Loading Planned Events for report generation");
 
-                // Get PE Records from API
-                var response = await _peRecordsApiClient.GetPERecordsAsync(1, 10000); // Get large number for filtering
+                // Get all Planned Events from API
+                var plannedEvents = (await _plannedEventsApiClient.GetPlannedEventsAsync()).ToList();
 
-                if (response.Success && response.Data != null)
-                {
-                    var peRecords = response.Data.Items;
+                // Get unique values for filter dropdowns
+                ViewBag.Provinces = plannedEvents.Select(x => x.Province).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
+                ViewBag.Regions = plannedEvents.Select(x => x.Region).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
+                ViewBag.RTOMs = plannedEvents.Select(x => x.Rtom).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
+                ViewBag.ContractorNames = plannedEvents.Select(x => x.ContractorName).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
+                ViewBag.PENumbers = plannedEvents.Select(x => x.PeNumber).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
+                ViewBag.Customers = plannedEvents.Select(x => x.Customer).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
 
-                    // Get unique values for filter dropdowns
-                    ViewBag.Provinces = peRecords.Select(x => x.PROVINCE).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
-                    ViewBag.Regions = peRecords.Select(x => x.REGION).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
-                    ViewBag.RTOMs = peRecords.Select(x => x.RTOM).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
-                    ViewBag.ContractorNames = peRecords.Select(x => x.CONTRACTOR_NAME).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
-                    ViewBag.SONumbers = peRecords.Select(x => x.SO_NUMBER).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
-                    ViewBag.Customers = peRecords.Select(x => x.CUSTOMER).Distinct().Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x).ToList();
-
-                    return View(peRecords);
-                }
-                else
-                {
-                    TempData["Error"] = response.Message ?? "Failed to retrieve PE Records.";
-                    return View(new List<PERecord>());
-                }
+                return View(plannedEvents);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading reports page");
                 TempData["Error"] = "An error occurred while loading the reports page.";
-                return View(new List<PERecord>());
+                return View(new List<PlannedEvent>());
             }
         }
 
         // POST: Reports/FilterRecords - AJAX endpoint for filtering
         [HttpPost]
         public async Task<IActionResult> FilterRecords(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string soNumber = "", string customer = "")
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
         {
             try
             {
-                var response = await _peRecordsApiClient.GetFilteredPERecordsAsync(
-                    string.IsNullOrWhiteSpace(province) ? null : province,
-                    string.IsNullOrWhiteSpace(region) ? null : region,
-                    string.IsNullOrWhiteSpace(rtom) ? null : rtom,
-                    string.IsNullOrWhiteSpace(contractorName) ? null : contractorName,
-                    string.IsNullOrWhiteSpace(soNumber) ? null : soNumber,
-                    string.IsNullOrWhiteSpace(customer) ? null : customer
-                );
-
-                if (response.Success && response.Data != null)
-                {
-                    return Json(new { success = true, data = response.Data });
-                }
-
-                return Json(new { success = false, message = response.Message });
+                var all = (await _plannedEventsApiClient.GetPlannedEventsAsync()).ToList();
+                var filtered = ApplyPlannedEventFilters(all, province, region, rtom, contractorName, peNumber, customer, urgentOnly);
+                return Json(new { success = true, data = filtered });
             }
             catch (Exception ex)
             {
@@ -96,11 +74,11 @@ namespace SFCDashboard.Controllers
 
         // GET: Reports/ExportPDF
         public async Task<IActionResult> ExportPDF(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string soNumber = "", string customer = "")
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
         {
             try
             {
-                var filteredRecords = await GetFilteredRecords(province, region, rtom, contractorName, soNumber, customer);
+                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly);
 
                 using var stream = new MemoryStream();
                 var document = new Document(PageSize.A4.Rotate(), 25, 25, 30, 30);
@@ -110,7 +88,7 @@ namespace SFCDashboard.Controllers
 
                 // Add title
                 var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16);
-                var title = new Paragraph("PE Records Report", titleFont)
+                var title = new Paragraph("Planned Events Report", titleFont)
                 {
                     Alignment = Element.ALIGN_CENTER,
                     SpacingAfter = 20
@@ -154,23 +132,23 @@ namespace SFCDashboard.Controllers
                 var dataFont = FontFactory.GetFont(FontFactory.HELVETICA, 7);
                 foreach (var record in filteredRecords)
                 {
-                    table.AddCell(new PdfPCell(new Phrase(record.ID.ToString(), dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.PROVINCE ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.REGION ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.RTOM ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.CONTRACTOR_NAME ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.SO_NUMBER ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.CUSTOMER ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.PE_NUMBER ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.PE_TITLE ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.TASK_NAME ?? "", dataFont)) { Padding = 3 });
-                    table.AddCell(new PdfPCell(new Phrase(record.TASK_WG ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.Id.ToString(), dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.Province ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.Region ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.Rtom ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.ContractorName ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.SoNumber ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.Customer ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.PeNumber ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.PeTitle ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.TaskName ?? "", dataFont)) { Padding = 3 });
+                    table.AddCell(new PdfPCell(new Phrase(record.TaskWg ?? "", dataFont)) { Padding = 3 });
                 }
 
                 document.Add(table);
                 document.Close();
 
-                return File(stream.ToArray(), "application/pdf", $"PE_Records_Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+                return File(stream.ToArray(), "application/pdf", $"Planned_Events_Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
             }
             catch (Exception ex)
             {
@@ -180,14 +158,14 @@ namespace SFCDashboard.Controllers
             }
         }        // GET: Reports/ExportExcel
         public async Task<IActionResult> ExportExcel(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string soNumber = "", string customer = "")
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
         {
             try
             {
-                var filteredRecords = await GetFilteredRecords(province, region, rtom, contractorName, soNumber, customer);
+                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly);
 
                 using var workbook = new XLWorkbook();
-                var worksheet = workbook.Worksheets.Add("PE Records Report");
+                var worksheet = workbook.Worksheets.Add("Planned Events Report");
 
                 // Headers
                 var headers = new[] { "ID", "Province", "Region", "RTOM", "Contractor Name", "SO Number", "Customer", "PE Number", "PE Title", "Task Name", "Task Workgroup" };
@@ -202,17 +180,17 @@ namespace SFCDashboard.Controllers
                 for (int i = 0; i < filteredRecords.Count; i++)
                 {
                     var record = filteredRecords[i];
-                    worksheet.Cell(i + 2, 1).Value = record.ID;
-                    worksheet.Cell(i + 2, 2).Value = record.PROVINCE ?? "";
-                    worksheet.Cell(i + 2, 3).Value = record.REGION ?? "";
-                    worksheet.Cell(i + 2, 4).Value = record.RTOM ?? "";
-                    worksheet.Cell(i + 2, 5).Value = record.CONTRACTOR_NAME ?? "";
-                    worksheet.Cell(i + 2, 6).Value = record.SO_NUMBER ?? "";
-                    worksheet.Cell(i + 2, 7).Value = record.CUSTOMER ?? "";
-                    worksheet.Cell(i + 2, 8).Value = record.PE_NUMBER ?? "";
-                    worksheet.Cell(i + 2, 9).Value = record.PE_TITLE ?? "";
-                    worksheet.Cell(i + 2, 10).Value = record.TASK_NAME ?? "";
-                    worksheet.Cell(i + 2, 11).Value = record.TASK_WG ?? "";
+                    worksheet.Cell(i + 2, 1).Value = record.Id;
+                    worksheet.Cell(i + 2, 2).Value = record.Province ?? "";
+                    worksheet.Cell(i + 2, 3).Value = record.Region ?? "";
+                    worksheet.Cell(i + 2, 4).Value = record.Rtom ?? "";
+                    worksheet.Cell(i + 2, 5).Value = record.ContractorName ?? "";
+                    worksheet.Cell(i + 2, 6).Value = record.SoNumber ?? "";
+                    worksheet.Cell(i + 2, 7).Value = record.Customer ?? "";
+                    worksheet.Cell(i + 2, 8).Value = record.PeNumber ?? "";
+                    worksheet.Cell(i + 2, 9).Value = record.PeTitle ?? "";
+                    worksheet.Cell(i + 2, 10).Value = record.TaskName ?? "";
+                    worksheet.Cell(i + 2, 11).Value = record.TaskWg ?? "";
                 }
 
                 // Auto-fit columns
@@ -223,7 +201,7 @@ namespace SFCDashboard.Controllers
                 stream.Position = 0;
 
                 return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    $"PE_Records_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+                    $"Planned_Events_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
             }
             catch (Exception ex)
             {
@@ -235,11 +213,11 @@ namespace SFCDashboard.Controllers
 
         // GET: Reports/ExportPNG - Export filtered table as PNG image
         public async Task<IActionResult> ExportPNG(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string soNumber = "", string customer = "")
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
         {
             try
             {
-                var filteredRecords = await GetFilteredRecords(province, region, rtom, contractorName, soNumber, customer);
+                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly);
 
                 // Calculate image dimensions
                 const int headerHeight = 80;
@@ -295,7 +273,7 @@ namespace SFCDashboard.Controllers
                 };
 
                 // Draw title
-                var title = "PE Records Report";
+                var title = "Planned Events Report";
                 var titleBounds = new SKRect();
                 titlePaint.MeasureText(title, ref titleBounds);
                 canvas.DrawText(title, (imageWidth - titleBounds.Width) / 2, padding + titleBounds.Height, titlePaint);
@@ -334,17 +312,17 @@ namespace SFCDashboard.Controllers
                     var rowY = startY + headerHeight + (rowIndex * rowHeight);
 
                     var values = new[] {
-                        record.ID.ToString(),
-                        record.PROVINCE ?? "",
-                        record.REGION ?? "",
-                        record.RTOM ?? "",
-                        record.CONTRACTOR_NAME ?? "",
-                        record.SO_NUMBER ?? "",
-                        record.CUSTOMER ?? "",
-                        record.PE_NUMBER ?? "",
-                        record.PE_TITLE ?? "",
-                        record.TASK_NAME ?? "",
-                        record.TASK_WG ?? ""
+                        record.Id.ToString(),
+                        record.Province ?? "",
+                        record.Region ?? "",
+                        record.Rtom ?? "",
+                        record.ContractorName ?? "",
+                        record.SoNumber ?? "",
+                        record.Customer ?? "",
+                        record.PeNumber ?? "",
+                        record.PeTitle ?? "",
+                        record.TaskName ?? "",
+                        record.TaskWg ?? ""
                     };
 
                     for (int colIndex = 0; colIndex < values.Length; colIndex++)
@@ -365,7 +343,7 @@ namespace SFCDashboard.Controllers
                 using var stream = new MemoryStream();
                 data.SaveTo(stream);
 
-                return File(stream.ToArray(), "image/png", $"PE_Records_Report_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                return File(stream.ToArray(), "image/png", $"Planned_Events_Report_{DateTime.Now:yyyyMMdd_HHmmss}.png");
             }
             catch (Exception ex)
             {
@@ -374,27 +352,37 @@ namespace SFCDashboard.Controllers
                 return RedirectToAction("Generate");
             }
         }
-        private async Task<List<PERecord>> GetFilteredRecords(string province, string region, string rtom,
-            string contractorName, string soNumber, string customer)
+        private async Task<List<PlannedEvent>> GetFilteredPlannedEvents(string province, string region, string rtom,
+            string contractorName, string peNumber, string customer, bool urgentOnly)
         {
-            var response = await _peRecordsApiClient.GetFilteredPERecordsAsync(
-                string.IsNullOrWhiteSpace(province) ? null : province,
-                string.IsNullOrWhiteSpace(region) ? null : region,
-                string.IsNullOrWhiteSpace(rtom) ? null : rtom,
-                string.IsNullOrWhiteSpace(contractorName) ? null : contractorName,
-                string.IsNullOrWhiteSpace(soNumber) ? null : soNumber,
-                string.IsNullOrWhiteSpace(customer) ? null : customer
-            );
-
-            if (response.Success && response.Data != null)
-            {
-                return response.Data;
-            }
-
-            return new List<PERecord>();
+            var all = (await _plannedEventsApiClient.GetPlannedEventsAsync()).ToList();
+            return ApplyPlannedEventFilters(all, province, region, rtom, contractorName, peNumber, customer, urgentOnly);
         }
 
-        private string GenerateReportContent(List<PERecord> records, string format)
+        private static List<PlannedEvent> ApplyPlannedEventFilters(List<PlannedEvent> source, string province, string region, string rtom,
+            string contractorName, string peNumber, string customer, bool urgentOnly)
+        {
+            IEnumerable<PlannedEvent> query = source;
+
+            if (!string.IsNullOrWhiteSpace(province))
+                query = query.Where(x => (x.Province ?? string.Empty).Contains(province, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(region))
+                query = query.Where(x => (x.Region ?? string.Empty).Contains(region, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(rtom))
+                query = query.Where(x => (x.Rtom ?? string.Empty).Contains(rtom, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(contractorName))
+                query = query.Where(x => (x.ContractorName ?? string.Empty).Contains(contractorName, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(peNumber))
+                query = query.Where(x => (x.PeNumber ?? string.Empty).Contains(peNumber, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(customer))
+                query = query.Where(x => (x.Customer ?? string.Empty).Contains(customer, StringComparison.OrdinalIgnoreCase));
+            if (urgentOnly)
+                query = query.Where(x => string.Equals(x.PEStatus ?? string.Empty, "URGENT", StringComparison.OrdinalIgnoreCase));
+
+            return query.ToList();
+        }
+
+        private string GenerateReportContent(List<PlannedEvent> records, string format)
         {
             var content = new StringBuilder();
             content.AppendLine($"PE Records Report - {format} Export");
@@ -405,15 +393,15 @@ namespace SFCDashboard.Controllers
 
             foreach (var record in records)
             {
-                content.AppendLine($"ID: {record.ID}");
-                content.AppendLine($"Province: {record.PROVINCE}");
-                content.AppendLine($"Region: {record.REGION}");
-                content.AppendLine($"RTOM: {record.RTOM}");
-                content.AppendLine($"Contractor: {record.CONTRACTOR_NAME}");
-                content.AppendLine($"SO Number: {record.SO_NUMBER}");
-                content.AppendLine($"Customer: {record.CUSTOMER}");
-                content.AppendLine($"PE Number: {record.PE_NUMBER}");
-                content.AppendLine($"PE Title: {record.PE_TITLE}");
+                content.AppendLine($"ID: {record.Id}");
+                content.AppendLine($"Province: {record.Province}");
+                content.AppendLine($"Region: {record.Region}");
+                content.AppendLine($"RTOM: {record.Rtom}");
+                content.AppendLine($"Contractor: {record.ContractorName}");
+                content.AppendLine($"SO Number: {record.SoNumber}");
+                content.AppendLine($"Customer: {record.Customer}");
+                content.AppendLine($"PE Number: {record.PeNumber}");
+                content.AppendLine($"PE Title: {record.PeTitle}");
                 content.AppendLine(new string('-', 40));
             }
 
