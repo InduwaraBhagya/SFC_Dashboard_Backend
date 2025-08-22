@@ -21,6 +21,7 @@ namespace SFCDashboard.Controllers
         private readonly ITaskQueueApiClient _taskQueueApiClient;
         private readonly INoticesApiClient _noticesApi;
         private readonly IPermissionsApiClient _permissionsApi;
+        private readonly IProjectsApiClient _projectsApi;
 
         public PlannedEventsController(
             IPlannedEventsApiClient plannedEventsApi,
@@ -37,7 +38,8 @@ namespace SFCDashboard.Controllers
             IWebHostEnvironment webHostEnvironment,
             ITaskQueueApiClient taskQueueApiClient,
             INoticesApiClient noticesApi,
-            IPermissionsApiClient permissionsApi) : base(usersApi)
+            IPermissionsApiClient permissionsApi,
+            IProjectsApiClient projectsApi) : base(usersApi)
         {
             _plannedEventsApi = plannedEventsApi;
             _usersApi = usersApi;
@@ -54,6 +56,7 @@ namespace SFCDashboard.Controllers
             _taskQueueApiClient = taskQueueApiClient;
             _noticesApi = noticesApi;
             _permissionsApi = permissionsApi;
+            _projectsApi = projectsApi;
         }
 
         // GET: PlannedEvents/Index
@@ -194,13 +197,13 @@ namespace SFCDashboard.Controllers
             try
             {
                 var taskQueueItems = await _taskQueueApiClient.GetPrioritizedTasksAsync(
-                    workgroupId: userWorkgroupId, 
+                    workgroupId: userWorkgroupId,
                     year: DateTime.Now.Year, // Add current year parameter
-                    take: 1); 
-                
+                    take: 1);
+
                 ViewBag.NextTask = taskQueueItems;
                 ViewBag.HasNextTask = taskQueueItems.Any();
-                
+
                 // Set task queue statistics
                 ViewBag.TaskQueueUrgentCount = taskQueueItems.Count(t => t.Task.IsUrgent);
                 ViewBag.TaskQueueOLACount = taskQueueItems.Count(t => t.Task.IsOLAViolate && !t.Task.IsUrgent);
@@ -471,7 +474,7 @@ namespace SFCDashboard.Controllers
         }
 
         public async Task<IActionResult> SalesView(string searchType, string peNumber, string customer,
-        string jobReference, string soNumber, int? pageIndex = 1)
+        string jobReference, string soNumber, string query, int? pageIndex = 1)
         {
             var currentUserId = await GetCurrentUserIdAsync();
 
@@ -508,6 +511,25 @@ namespace SFCDashboard.Controllers
             ViewData["OLAViolateCount"] = await _plannedEventsApi.GetSalesOLAViolateCountAsync();
             ViewData["HoldCount"] = await _plannedEventsApi.GetSalesHoldCountAsync();
 
+            // Handle project search
+            if (!string.IsNullOrEmpty(query))
+            {
+                try
+                {
+                    var projects = await _projectsApi.GetAllProjectsAsync();
+                    var filteredProjects = projects.Where(p =>
+                        p.ProjectName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        p.Id.ToString().Contains(query)
+                    ).ToList();
+
+                    ViewBag.ProjectResults = filteredProjects;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error searching projects with query: {Query}", query);
+                    ViewBag.ProjectResults = new List<Project>();
+                }
+            }
 
             // Get pending urgent requests
             var pendingUrgentRequests = await _plannedEventsApi.GetPendingUrgentRequestsAsync(10);
@@ -625,6 +647,13 @@ namespace SFCDashboard.Controllers
             ViewBag.IssuesByPlannedEventId = issuesByPlannedEventId;
 
             return View(paginatedList);
+        }
+
+        [HttpGet]
+        public IActionResult ProjectSearch(string query)
+        {
+            // Simply redirect to SalesView with the query parameter
+            return RedirectToAction("SalesView", new { query = query });
         }
 
         //here this part for handle reminder as notification
@@ -1641,7 +1670,7 @@ namespace SFCDashboard.Controllers
                 var message = markAsUrgent
                     ? $"Planned Event marked as urgent with priority {priorityLevel}. All related tasks have also been marked as urgent."
                     : "Urgent request processed.";
-                
+
                 return Json(new { success = true, message = message, isUrgent = markAsUrgent, priorityLevel = priorityLevel });
             }
 
@@ -2366,7 +2395,7 @@ namespace SFCDashboard.Controllers
             {
                 // Get user's primary workgroup ID for the task queue
                 var (userWorkgroupId, _) = await GetCurrentUserWorkGroupAsync();
-                
+
                 // Get fresh data from the background service snapshots
                 var nextTaskList = await _taskQueueApiClient.GetPrioritizedTasksAsync(workgroupId: userWorkgroupId, take: 1);
                 var hasNextTask = nextTaskList?.Any() == true;
