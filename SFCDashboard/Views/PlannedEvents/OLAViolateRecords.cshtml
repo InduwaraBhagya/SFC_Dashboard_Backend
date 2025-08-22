@@ -64,24 +64,35 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover" style="font-size: 0.8rem;">
+                    <thead style="font-size: 0.75rem;">
                         <tr>
-                            <th>PE Number</th>
-                            <th>Customer</th>
-                            <th>Request Reference</th>
-                            <th>Current Task</th>
-                            <th>Workgroup</th>
-                            <th>Actions</th>
+                            <th style="width: 12%;">PE Number</th>
+                            <th style="width: 15%;">Customer</th>
+                            <th style="width: 15%;">Request Reference</th>
+                            <th style="width: 12%;">Job Reference</th>
+                            <th style="width: 15%;">Current Task</th>
+                            <th style="width: 8%;">Workgroup</th>
+                            <th style="width: 12%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            <tr>
+                            <tr style="font-size: 0.8rem;">
                                 <td>@item.PeNumber</td>
                                 <td>@item.Customer</td>
                                 <td>@item.RequestReferenceNo</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.JobReference))
+                                    {
+                                        @item.JobReference
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
                                 <td>@item.TaskName</td>
                                 <td>@item.TaskWg</td>
                                 <td>
