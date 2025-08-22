@@ -23,18 +23,18 @@
             <form id="searchForm" class="row g-3" method="get">
                 <div class="col-md-3">
                     <label for="searchPeNumber" class="form-label">PE Number</label>
-                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber" 
-                           value="@ViewData["SearchPeNumber"]">
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber"
+                        value="@ViewData["SearchPeNumber"]">
                 </div>
                 <div class="col-md-3">
                     <label for="searchReference" class="form-label">Request Reference</label>
-                    <input type="text" class="form-control" id="searchReference" name="reference" 
-                           value="@ViewData["SearchReference"]">
+                    <input type="text" class="form-control" id="searchReference" name="reference"
+                        value="@ViewData["SearchReference"]">
                 </div>
                 <div class="col-md-3">
                     <label for="searchCustomer" class="form-label">Customer</label>
-                    <input type="text" class="form-control" id="searchCustomer" name="customer" 
-                           value="@ViewData["SearchCustomer"]">
+                    <input type="text" class="form-control" id="searchCustomer" name="customer"
+                        value="@ViewData["SearchCustomer"]">
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <div class="btn-group w-100">
@@ -62,33 +62,58 @@
         <div class="card-header bg-danger text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Urgent Records</h5>
-                <span class="badge bg-light text-dark" id="recordCount">Showing @Model.Count() of @Model.Count() Records</span>
+                <span class="badge bg-light text-dark" id="recordCount">Showing @Model.Count() of @Model.Count()
+                    Records</span>
             </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-light">
+                <table class="table table-striped table-hover" style="font-size: 0.8rem;">
+                    <thead class="table-light" style="font-size: 0.75rem;">
                         <tr>
-                            <th>#</th>
-                            <th>PE Number</th>
-                            <th>Request Reference</th>
-                            <th>Customer</th>
-                            <th>Required Date</th>
-                            <th>Priority</th>
-                            <th>Actions</th>
+                            <th style="width: 3%;">#</th>
+                            <th style="width: 8%;">PE Number</th>
+                            <th style="width: 12%;">Request Reference</th>
+                            <th style="width: 12%;">Customer</th>
+                            <th style="width: 8%;">Required Date</th>
+                            <th style="width: 10%;">Location A</th>
+                            <th style="width: 10%;">Location B</th>
+                            <th style="width: 12%;">Priority</th>
+                            <th style="width: 15%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @{ int rowNumber = 1; }
+                        @{
+                            int rowNumber = 1;
+                        }
                         @foreach (var item in Model)
                         {
-                            <tr>
+                            <tr style="font-size: 0.8rem;">
                                 <td>@(rowNumber++)</td>
                                 <td>@item.PeNumber</td>
                                 <td>@item.RequestReferenceNo</td>
                                 <td>@item.Customer</td>
                                 <td>@item.ServiceRequiredDate?.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.AccessMediumAEnd))
+                                    {
+                                        @item.AccessMediumAEnd
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.AccessMediumBEnd))
+                                    {
+                                        @item.AccessMediumBEnd
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
                                 <td>
                                     @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
                                     {
@@ -198,7 +223,7 @@
             });
 
             // Prevent form submission (using real-time filter instead)
-            searchForm.addEventListener('submit', function(e) {
+            searchForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 filterTable();
             });

@@ -164,7 +164,7 @@
                             </span>
                         </div>
                         <div class="img-container secondary-icon">
-                            <i class="bi bi-tools" style="font-size: 1.8rem; color: #ffffff;"></i>
+                            <i class="bi bi-file-earmark-text" style="font-size: 1.8rem; color: #ffffff;"></i>
                         </div>
                     </a>
                 </div>
@@ -235,59 +235,97 @@
             </div>
         </div>
         
-        <!-- Search PE Card -->
+        <!-- Project Search Card -->
         <div class="col-lg-6 mb-2">
-            <div class="card border-info h-100 shadow-sm">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-1">
+            <div class="card border-primary shadow-sm" style="height: 180px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
                     <h6 class="mb-0">
-                        <i class="bi bi-search me-2"></i>Search PE Records
+                        <i class="bi bi-search me-2"></i>Quick Find Projects
                     </h6>
-                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapseViewAll" aria-expanded="false">
-                        <i class="bi bi-chevron-down"></i>
-                    </button>
                 </div>
-                <div class="collapse" id="searchFormCollapseViewAll">
-                    <div class="card-body py-2">
-                        <form method="get" asp-action="SalesView">
+                <div class="card-body py-2">
+                        <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchForm">
                             <div class="row g-2">
-                                <div class="col-md-4">
+                                <div class="col-12">
                                     <div class="form-group">
-                                        <label for="searchType" class="form-label">Search By:</label>
-                                        <select class="form-select shadow-sm" id="searchType" name="searchType" onchange="toggleSearchFields()">
-                                            <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
-                                            <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
-                                            <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
-                                            <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="indexSearchInput" class="form-label" id="indexSearchLabel">Search Term:</label>
-                                        <input type="text" class="form-control shadow-sm" id="indexSearchInput" 
-                                            name="@ViewData["SearchType"]" 
-                                            placeholder="Enter search term..."
-                                            value="@(ViewData[ViewData["SearchType"]?.ToString() + "Filter"])" required />
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label">&nbsp;</label>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-primary btn-sm flex-fill" type="submit">
-                                            <i class="bi bi-search me-1"></i>Search
-                                        </button>
-                                        <a href="@Url.Action("SalesView")" class="btn btn-secondary btn-sm">
-                                            <i class="bi bi-x-circle"></i>
-                                        </a>
+                                        <label for="projectSearchInput" class="form-label">Project Name or Code</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control shadow-sm" id="projectSearchInput" 
+                                                name="query" placeholder="Search projects..." 
+                                                value="@Context.Request.Query["query"]" autocomplete="off" />
+                                            <button class="btn btn-primary" type="submit">
+                                                <i class="bi bi-search"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </form>
+                        
+                        <!-- Project Search Results -->
+                        <div id="projectSearchResults" class="mt-3" style="max-height: 90px; overflow-y: auto;">
+                            @if (ViewBag.ProjectResults != null)
+                            {
+                                var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
+                                if (results != null && results.Any())
+                                {
+                                    <div class="project-results-container">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="text-muted">Found @results.Count() project(s)</small>
+                                        </div>
+                                        <div class="list-group list-group-flush">
+                                            @foreach (var project in results.Take(10))
+                                            {
+                                                <div class="list-group-item list-group-item-action p-2 border-0 border-bottom">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
+                                                            <small class="text-muted">ID: @project.Id</small>
+                                                        </div>
+                                                        <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
+                                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (results.Count() > 10)
+                                        {
+                                            <div class="text-center mt-2">
+                                                <small class="text-muted">Showing first 10 of @results.Count() results</small>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                                {
+                                    <div class="text-center py-3 text-muted">
+                                        <i class="bi bi-search fs-4 d-block mb-2"></i>
+                                        <p class="mb-0">No projects found for "@Context.Request.Query["query"]"</p>
+                                    </div>
+                                }
+                            }
+                            else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                            {
+                                <div class="text-center py-3 text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <span>Searching...</span>
+                                </div>
+                            }
+                        </div>
+                        
+                        <!-- View All Projects Button -->
+                        <div class="mt-2 pt-2 border-top">
+                            <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="bi bi-list-ul me-1"></i>View All Projects
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    
 }
 
 <!-- Message Inbox and Notice Board Section -->
@@ -529,94 +567,132 @@
         }
         else
         {
-            <!-- Search PE Card for non-ViewAll users -->
-            <div class="card border-info shadow-sm" style="height: 160px;">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-1">
+            <!-- Quick Find Projects Card for non-ViewAll users -->
+            <div class="card border-primary shadow-sm" style="height: 180px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
                     <h6 class="mb-0">
-                        <i class="bi bi-search me-2"></i>Search PE Records
+                        <i class="bi bi-search me-2"></i>Quick Find Projects
                     </h6>
-                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#searchFormCollapseRegular" aria-expanded="false">
-                        <i class="bi bi-chevron-down"></i>
-                    </button>
                 </div>
-                <div class="collapse" id="searchFormCollapseRegular">
-                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 120px;">
-                        <form method="get" asp-action="SalesView">
-                            <div class="row g-2">
-                                <div class="col-12">
-                                    <div class="form-group">
-                                        <select class="form-select form-select-sm shadow-sm" id="searchTypeRegular" name="searchType" onchange="toggleSearchFields('regular')">
-                                            <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
-                                            <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
-                                            <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
-                                            <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-group">
-                                        <input type="text" class="form-control form-control-sm shadow-sm" id="indexSearchInputRegular" 
-                                            name="@ViewData["SearchType"]" 
-                                            placeholder="Enter search term..."
-                                            value="@(ViewData[ViewData["SearchType"]?.ToString() + "Filter"])" required />
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-primary btn-sm flex-fill" type="submit">
-                                            <i class="bi bi-search me-1"></i>Search
-                                        </button>
-                                        <a href="@Url.Action("SalesView")" class="btn btn-secondary btn-sm">
-                                            <i class="bi bi-x-circle"></i>
-                                        </a>
-                                    </div>
+                <div class="card-body py-2 px-3" style="overflow-y: auto; max-height: 140px;">
+                        <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchFormRegular">
+                            <div class="mb-2">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control shadow-sm" id="projectSearchInputRegular" 
+                                        name="query" placeholder="Search projects..." 
+                                        value="@Context.Request.Query["query"]" autocomplete="off" />
+                                    <button class="btn btn-primary btn-sm" type="submit">
+                                        <i class="bi bi-search"></i>
+                                    </button>
                                 </div>
                             </div>
                         </form>
+                        
+                        <!-- Project Search Results -->
+                        <div id="projectSearchResultsRegular" style="max-height: 90px; overflow-y: auto;">
+                            @if (ViewBag.ProjectResults != null)
+                            {
+                                var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
+                                if (results != null && results.Any())
+                                {
+                                    <div class="project-results-container">
+                                        <small class="text-muted d-block mb-2">@results.Count() project(s) found</small>
+                                        <div class="list-group list-group-flush">
+                                            @foreach (var project in results.Take(5))
+                                            {
+                                                <div class="list-group-item list-group-item-action p-1 border-0 border-bottom" style="font-size: 0.85rem;">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div class="flex-grow-1" style="min-width: 0;">
+                                                            <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
+                                                            <small class="text-muted">ID: @project.Id</small>
+                                                        </div>
+                                                        <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
+                                                           class="btn btn-xs btn-outline-primary ms-1" title="View Details" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (results.Count() > 5)
+                                        {
+                                            <div class="text-center mt-1">
+                                                <small class="text-muted" style="font-size: 0.75rem;">+@(results.Count() - 5) more</small>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                                {
+                                    <div class="text-center py-2 text-muted">
+                                        <i class="bi bi-search"></i>
+                                        <small class="d-block">No projects found</small>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <!-- View All Projects Button -->
+                        <div class="mt-2 pt-2 border-top">
+                            <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100" style="font-size: 0.8rem;">
+                                <i class="bi bi-list-ul me-1"></i>View All Projects
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
         }
         
         <!-- BOQ Status Section -->
-        <div class="card border-success shadow-sm" style="height: 220px;">
-            <div class="card-header bg-success boq-header text-white d-flex justify-content-between align-items-center py-1">
+        @{
+            var boqRecords = ViewData["BOQRecords"] as IEnumerable<dynamic>;
+            int total = boqRecords?.Count() ?? 0;
+            int done = boqRecords?.Count(x => x.Status == "Done") ?? 0;
+            int progress = boqRecords?.Count(x => x.Status == "In Progress") ?? 0;
+            int pending = boqRecords?.Count(x => x.Status == "Pending") ?? 0;
+        }
+        <div class="card border-success shadow-sm boq-summary-card" style="height: 200px;">
+            <div class="card-header boq-header text-white d-flex justify-content-between align-items-center py-1 px-3" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important; border-radius: 12px 12px 0 0; border: none;">
                 <h6 class="mb-0">
-                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>BOQ Status
-                    @if (ViewData["BOQRecords"] != null)
-                    {
-                        var boqRecords = ViewData["BOQRecords"] as IEnumerable<object>;
-                        <span class="badge bg-light text-success ms-2">@(boqRecords?.Count() ?? 0) records</span>
-                    }
+                    <i class="bi bi-graph-up me-1"></i>BOQ Status
                 </h6>
+                <button class="btn btn-sm btn-outline-light" style="border-radius: 50%; padding: 0.2rem 0.5rem; opacity: 0.7;" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
-            
-            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 180px;">
-                @if (ViewData["BOQRecords"] != null)
-                {
-                    var boqRecords = ViewData["BOQRecords"] as IEnumerable<object>;
-                    if (boqRecords?.Any() == true)
-                    {
-                        <div class="text-center py-3 text-muted">
-                            <i class="bi bi-file-earmark fs-4 d-block mb-2"></i>
-                            <p class="mb-0">@boqRecords.Count() BOQ records available</p>
+            <div class="card-body p-2" style="background: #f8fafc; border-radius: 0 0 12px 12px;">
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <div class="small-stat-card boq-total text-center w-100 py-1" style="background: #e3f2fd; color: #1976d2; border-radius: 4px; border: 1px solid #bbdefb; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@total</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Total</div>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-3 text-muted">
-                            <i class="bi bi-file-earmark fs-4 d-block mb-2"></i>
-                            <p class="mb-0">No BOQ records</p>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="text-center py-3 text-muted">
-                        <i class="bi bi-file-earmark fs-4 d-block mb-2"></i>
-                        <p class="mb-0">No BOQ records</p>
                     </div>
-                }
+                    <div class="col-6">
+                        <div class="small-stat-card boq-done text-center w-100 py-1" style="background: #e8f5e9; color: #388e3c; border-radius: 4px; border: 1px solid #a5d6a7; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@done</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Done</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <div class="small-stat-card boq-progress text-center w-100 py-1" style="background: #fffde7; color: #fbc02d; border-radius: 4px; border: 1px solid #ffe082; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@progress</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Progress</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small-stat-card boq-pending text-center w-100 py-1" style="background: #ffebee; color: #d32f2f; border-radius: 4px; border: 1px solid #ef9a9a; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@pending</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Pending</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-12">
+                        <a href="@Url.Action("BOQList", "BOQ")" class="d-block text-center py-1" style="border: 1px solid #b3c6e6; border-radius: 6px; background: #fff; color: #357abd; font-weight: 500; text-decoration: none; transition: background 0.2s; font-size: 0.9rem;">
+                            <i class="bi bi-list-task me-1"></i> View All
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

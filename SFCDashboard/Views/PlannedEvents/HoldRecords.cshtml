@@ -64,17 +64,18 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-light">
+                <table class="table table-striped table-hover" style="font-size: 0.8rem;">
+                    <thead class="table-light" style="font-size: 0.75rem;">
                         <tr>
-                            <th style="width: 5%;">#</th>
-                            <th style="width: 10%;">PE Number</th>
-                            <th style="width: 10%;">Region</th>
-                            <th style="width: 15%;">Request Reference</th>
-                            <th style="width: 15%;">Customer</th>
-                            <th style="width: 15%;">Required Date</th>
-                            <th style="width: 10%;">Priority</th>
-                            <th style="width: 10%;">Actions</th>
+                            <th style="width: 3%;">#</th>
+                            <th style="width: 8%;">PE Number</th>
+                            <th style="width: 6%;">Region</th>
+                            <th style="width: 12%;">Request Reference</th>
+                            <th style="width: 10%;">Job Reference</th>
+                            <th style="width: 12%;">Customer</th>
+                            <th style="width: 10%;">Required Date</th>
+                            <th style="width: 8%;">Priority</th>
+                            <th style="width: 12%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -83,11 +84,21 @@
                         }
                         @foreach (var item in Model)
                         {
-                            <tr>
+                            <tr style="font-size: 0.8rem;">
                                 <td>@(rowNumber++)</td>
                                 <td>@item.PeNumber</td>
                                 <td>@item.Region</td>
                                 <td>@item.RequestReferenceNo</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.JobReference))
+                                    {
+                                        @item.JobReference
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
                                 <td>@item.Customer</td>
                                 <td>
                                     @if (item.ServiceRequiredDate.HasValue)
