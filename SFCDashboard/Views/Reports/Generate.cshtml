@@ -79,6 +79,14 @@
                                         }
                                     </select>
                                 </div>
+                                <div class="col-md-2">
+                                    <label for="startDateFilter" class="form-label">Service Required From</label>
+                                    <input type="date" class="form-control" id="startDateFilter" name="startDate" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="endDateFilter" class="form-label">Service Required To</label>
+                                    <input type="date" class="form-control" id="endDateFilter" name="endDate" />
+                                </div>
                                 <div class="col-md-2 d-flex align-items-end">
                                     <div class="form-check mt-2">
                                         <input class="form-check-input" type="checkbox" id="urgentOnlyFilter" name="urgentOnly" value="true">
@@ -148,7 +156,7 @@
                                     <tbody id="recordsTableBody">
                                         @foreach (var record in Model)
                                         {
-                                            <tr data-pe-status="@record.PEStatus">
+                                            <tr data-pe-status="@record.PEStatus" data-srd="@record.ServiceRequiredDate?.ToString("yyyy-MM-dd")">
                                             <td>@record.Id</td>
                                             <td>@(record.Province ?? "")</td>
                                             <td>@(record.Region ?? "")</td>
@@ -223,6 +231,7 @@
                     task_name: cells[9].textContent.trim(),
                     task_wg: cells[10].textContent.trim(),
                     pe_status: (row.dataset.peStatus || '').trim(),
+                    service_required_date: (row.dataset.srd || '').trim(),
                     element: row // Keep reference to DOM element for fast manipulation
                 };
             });
@@ -300,13 +309,33 @@
 
             // Filter records instantly
             filteredRecords = allRecords.filter(record => {
+                const inDateRange = () => {
+                    const s = (filters.startDate || '').trim();
+                    const e = (filters.endDate || '').trim();
+                    if (!s && !e) return true;
+                    const rec = record.service_required_date;
+                    if (!rec) return false;
+                    const recTime = Date.parse(rec);
+                    if (isNaN(recTime)) return false;
+                    if (s) {
+                        const sTime = Date.parse(s);
+                        if (!isNaN(sTime) && recTime < sTime) return false;
+                    }
+                    if (e) {
+                        // add 1 day to include end date fully
+                        const eTime = Date.parse(e);
+                        if (!isNaN(eTime) && recTime > (eTime + 24*60*60*1000 - 1)) return false;
+                    }
+                    return true;
+                };
                 return (!filters.province || record.province.toLowerCase().includes(filters.province)) &&
                     (!filters.region || record.region.toLowerCase().includes(filters.region)) &&
                     (!filters.rtom || record.rtom.toLowerCase().includes(filters.rtom)) &&
                     (!filters.contractor || record.contractor_name.toLowerCase().includes(filters.contractor)) &&
                     (!filters.customer || record.customer.toLowerCase().includes(filters.customer)) &&
                     (!filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber)) &&
-                    (!filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent');
+                    (!filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent') &&
+                    inDateRange();
             });
 
             updateTableInstant();
@@ -325,7 +354,9 @@
                 soNumber: '',
                 customer: document.getElementById('customerFilter')?.value.toLowerCase() || '',
                 peNumber: document.getElementById('peNumberFilter')?.value.toLowerCase() || '',
-                urgentOnly: document.getElementById('urgentOnlyFilter')?.checked || false
+                urgentOnly: document.getElementById('urgentOnlyFilter')?.checked || false,
+                startDate: document.getElementById('startDateFilter')?.value || '',
+                endDate: document.getElementById('endDateFilter')?.value || ''
             };
         }
 
@@ -368,7 +399,26 @@
                 exceptKey === 'customer' || !filters.customer || record.customer.toLowerCase().includes(filters.customer),
                 exceptKey === 'peNumber' || !filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber),
                 // urgentOnly is a boolean flag; apply it regardless of exceptKey
-                !filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent'
+                !filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent',
+                // date range applies regardless of exceptKey
+                (function() {
+                    const s = (filters.startDate || '').trim();
+                    const e = (filters.endDate || '').trim();
+                    if (!s && !e) return true;
+                    const rec = record.service_required_date;
+                    if (!rec) return false;
+                    const recTime = Date.parse(rec);
+                    if (isNaN(recTime)) return false;
+                    if (s) {
+                        const sTime = Date.parse(s);
+                        if (!isNaN(sTime) && recTime < sTime) return false;
+                    }
+                    if (e) {
+                        const eTime = Date.parse(e);
+                        if (!isNaN(eTime) && recTime > (eTime + 24*60*60*1000 - 1)) return false;
+                    }
+                    return true;
+                })()
             ];
             return checks.every(Boolean);
         }

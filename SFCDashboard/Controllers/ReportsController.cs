@@ -57,12 +57,13 @@ namespace SFCDashboard.Controllers
         // POST: Reports/FilterRecords - AJAX endpoint for filtering
         [HttpPost]
         public async Task<IActionResult> FilterRecords(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false,
+            string? startDate = null, string? endDate = null)
         {
             try
             {
                 var all = (await _plannedEventsApiClient.GetPlannedEventsAsync()).ToList();
-                var filtered = ApplyPlannedEventFilters(all, province, region, rtom, contractorName, peNumber, customer, urgentOnly);
+                var filtered = ApplyPlannedEventFilters(all, province, region, rtom, contractorName, peNumber, customer, urgentOnly, startDate, endDate);
                 return Json(new { success = true, data = filtered });
             }
             catch (Exception ex)
@@ -74,11 +75,12 @@ namespace SFCDashboard.Controllers
 
         // GET: Reports/ExportPDF
         public async Task<IActionResult> ExportPDF(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false,
+            string? startDate = null, string? endDate = null)
         {
             try
             {
-                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly);
+                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly, startDate, endDate);
 
                 using var stream = new MemoryStream();
                 var document = new Document(PageSize.A4.Rotate(), 25, 25, 30, 30);
@@ -158,11 +160,12 @@ namespace SFCDashboard.Controllers
             }
         }        // GET: Reports/ExportExcel
         public async Task<IActionResult> ExportExcel(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false,
+            string? startDate = null, string? endDate = null)
         {
             try
             {
-                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly);
+                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly, startDate, endDate);
 
                 using var workbook = new XLWorkbook();
                 var worksheet = workbook.Worksheets.Add("Planned Events Report");
@@ -213,11 +216,12 @@ namespace SFCDashboard.Controllers
 
         // GET: Reports/ExportPNG - Export filtered table as PNG image
         public async Task<IActionResult> ExportPNG(string province = "", string region = "", string rtom = "",
-            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false)
+            string contractorName = "", string peNumber = "", string customer = "", bool urgentOnly = false,
+            string? startDate = null, string? endDate = null)
         {
             try
             {
-                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly);
+                var filteredRecords = await GetFilteredPlannedEvents(province, region, rtom, contractorName, peNumber, customer, urgentOnly, startDate, endDate);
 
                 // Calculate image dimensions
                 const int headerHeight = 80;
@@ -353,14 +357,14 @@ namespace SFCDashboard.Controllers
             }
         }
         private async Task<List<PlannedEvent>> GetFilteredPlannedEvents(string province, string region, string rtom,
-            string contractorName, string peNumber, string customer, bool urgentOnly)
+            string contractorName, string peNumber, string customer, bool urgentOnly, string? startDate, string? endDate)
         {
             var all = (await _plannedEventsApiClient.GetPlannedEventsAsync()).ToList();
-            return ApplyPlannedEventFilters(all, province, region, rtom, contractorName, peNumber, customer, urgentOnly);
+            return ApplyPlannedEventFilters(all, province, region, rtom, contractorName, peNumber, customer, urgentOnly, startDate, endDate);
         }
 
         private static List<PlannedEvent> ApplyPlannedEventFilters(List<PlannedEvent> source, string province, string region, string rtom,
-            string contractorName, string peNumber, string customer, bool urgentOnly)
+            string contractorName, string peNumber, string customer, bool urgentOnly, string? startDate, string? endDate)
         {
             IEnumerable<PlannedEvent> query = source;
 
@@ -378,6 +382,19 @@ namespace SFCDashboard.Controllers
                 query = query.Where(x => (x.Customer ?? string.Empty).Contains(customer, StringComparison.OrdinalIgnoreCase));
             if (urgentOnly)
                 query = query.Where(x => string.Equals(x.PEStatus ?? string.Empty, "URGENT", StringComparison.OrdinalIgnoreCase));
+
+            // Date range filter on ServiceRequiredDate (inclusive of end date)
+            if (!string.IsNullOrWhiteSpace(startDate) || !string.IsNullOrWhiteSpace(endDate))
+            {
+                DateTime? start = null;
+                DateTime? end = null;
+                if (DateTime.TryParse(startDate, out var s)) start = s.Date;
+                if (DateTime.TryParse(endDate, out var e)) end = e.Date.AddDays(1).AddTicks(-1);
+                if (start.HasValue)
+                    query = query.Where(x => x.ServiceRequiredDate.HasValue && x.ServiceRequiredDate.Value >= start.Value);
+                if (end.HasValue)
+                    query = query.Where(x => x.ServiceRequiredDate.HasValue && x.ServiceRequiredDate.Value <= end.Value);
+            }
 
             return query.ToList();
         }
