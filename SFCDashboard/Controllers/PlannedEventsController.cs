@@ -1678,7 +1678,7 @@ namespace SFCDashboard.Controllers
                 ? $"Planned Event marked as urgent with priority {priorityLevel}. All related tasks have also been marked as urgent."
                 : "Urgent request processed.";
 
-            return RedirectToAction("Details", new { id = plannedEvent.Id });
+            return RedirectToAction("SalesInProgressRecords");
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -1729,7 +1729,7 @@ namespace SFCDashboard.Controllers
             {
                 _logger.LogError("No service ID found for current user when requesting urgent status for PE {id}", id);
                 TempData["ErrorMessage"] = "Unable to identify current user.";
-                return RedirectToAction("InProgressRecords");
+                return RedirectToAction("SalesInProgressRecords");
             }
 
             // Extract service ID properly (first 6 characters)
@@ -1741,7 +1741,7 @@ namespace SFCDashboard.Controllers
             {
                 _logger.LogError("User not found with service ID {serviceId} when requesting urgent status for PE {id}", serviceIdShort, id);
                 TempData["ErrorMessage"] = "User information not found.";
-                return RedirectToAction("InProgressRecords");
+                return RedirectToAction("SalesInProgressRecords");
             }
 
             _logger.LogInformation("Found user: {userName} (ID: {userId}) requesting urgent status for PE {id}",
@@ -1766,7 +1766,7 @@ namespace SFCDashboard.Controllers
 
                 default:
                     TempData["ErrorMessage"] = "Invalid urgency reason selected.";
-                    return RedirectToAction("InProgressRecords");
+                    return RedirectToAction("SalesInProgressRecords");
             }
 
             var updatedEvent = await _plannedEventsApi.UpdatePlannedEventAsync(plannedEvent);
@@ -1774,14 +1774,14 @@ namespace SFCDashboard.Controllers
             {
                 _logger.LogError("Failed to update PE {id} with urgent request by user {userId}", id, currentUser.Id);
                 TempData["ErrorMessage"] = "Failed to submit urgent request.";
-                return RedirectToAction("InProgressRecords");
+                return RedirectToAction("SalesInProgressRecords");
             }
 
             _logger.LogInformation("PE ID {id} marked with urgent request flag with reason: {reason} by user {userName} (ID: {userId})",
                 id, urgentReason, currentUser.Name, currentUser.Id);
             TempData["SuccessMessage"] = "Urgent request submitted for approval.";
 
-            return RedirectToAction("InProgressRecords");
+            return RedirectToAction("SalesInProgressRecords");
         }
 
         [HttpPost]
