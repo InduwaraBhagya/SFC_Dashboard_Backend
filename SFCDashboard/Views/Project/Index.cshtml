@@ -278,7 +278,7 @@
                 const projectName = $(this).data('project-name');
 
                 if (confirm(`Are you sure you want to delete project "${projectName}"? This action cannot be undone.`)) {
-                    $.post('/Project/Delete/' + projectId)
+                    $.post('@Url.Action("Delete","Project")/' + projectId)
                         .done(function (response) {
                             if (response.success) {
                                 location.reload();

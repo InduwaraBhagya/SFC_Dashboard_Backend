@@ -415,7 +415,7 @@
 
         function disableEscalationsForTask(taskId) {
             // API call or database update to stop future escalations for this task
-            return fetch('/api/tasks/updateEscalationSettings', {
+            return fetch(`${APP_BASE}api/tasks/updateEscalationSettings`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

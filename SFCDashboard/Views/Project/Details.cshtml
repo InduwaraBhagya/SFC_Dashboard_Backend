@@ -239,7 +239,7 @@
                 var searchTerm = $('#searchInput').val().trim();
                 var searchResults = $('#searchResults');
 
-                $.get('/Project/Search', {
+                $.get('@Url.Action("Search","Project")', {
                     searchTerm: searchTerm,
                     projectId: @Model.Id
                                                                                     })
@@ -324,7 +324,7 @@
                 };
 
                 $.ajax({
-                    url: '/Project/AssignMultiplePEsToProject',
+                    url: '@Url.Action("AssignMultiplePEsToProject","Project")',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(data),
@@ -360,7 +360,7 @@
                 $('#confirmDelete').on('click', function () {
                     if (!peToDelete) return;
 
-                    $.post('/Project/RemovePEFromProject', {
+                    $.post('@Url.Action("RemovePEFromProject","Project")', {
                         plannedEventId: peToDelete.id,
                         projectId: @Model.Id
                                                                                 })
@@ -385,7 +385,7 @@
                                                                     });
 
                                                                     function loadAssignedPEs(page) {
-                                                                        $.get('/Project/GetAssignedPEs', {
+                                                                        $.get('@Url.Action("GetAssignedPEs","Project")', {
                                                                             projectId: @Model.Id,
             page: page
         })
@@ -417,7 +417,7 @@
                                                                                                                                 </td>
                                                                                                                                 <td>
                                                                                                                                     <div class="btn-group">
-                                                                                                                                        <a href="/PlannedEvents/Details/${pe.id}"
+                                                                                                                                        <a href="${APP_BASE}PlannedEvents/Details/${pe.id}"
                                                                                                                                             class="btn btn-sm btn-info me-2" target="_blank">
                                                                                                                                             <i class="bi bi-eye"></i> View Details
                                                                                                                                         </a>
@@ -1197,7 +1197,7 @@
         btn.disabled = true;
 
         // Make the export request
-        fetch(`/Project/ExportToExcel/${projectId}`)
+    fetch(`@Url.Action("ExportToExcel","Project")/${projectId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Export failed');
@@ -1237,7 +1237,7 @@
         btn.disabled = true;
 
         // Make the export request
-        fetch(`/Project/ExportToPdf/${projectId}`)
+    fetch(`@Url.Action("ExportToPdf","Project")/${projectId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Export failed');

@@ -1286,7 +1286,7 @@
                 
                 // Submit the notice using new secure API
                 $.ajax({
-                    url: `/api/planned-events/${peId}/notices`,
+                    url: `${APP_BASE}api/planned-events/${peId}/notices`,
                     type: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1472,7 +1472,7 @@
             const peId = window.location.pathname.split('/').pop();
             
             $.ajax({
-                url: `/api/planned-events/${peId}/notices/${noticeId}/pin`,
+                url: `${APP_BASE}api/planned-events/${peId}/notices/${noticeId}/pin`,
                 type: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1515,7 +1515,7 @@
             const peId = window.location.pathname.split('/').pop();
             
             $.ajax({
-                url: `/api/planned-events/${peId}/notices/${noticeId}`,
+                url: `${APP_BASE}api/planned-events/${peId}/notices/${noticeId}`,
                 type: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1937,7 +1937,7 @@
     });
 
     function loadReminders() {
-        fetch('/PlannedEvents/GetReminders')
+    fetch(`${APP_BASE}PlannedEvents/GetReminders`)
             .then(response => response.json())
             .then(data => {
                 console.log('Loaded reminders data:', data);
@@ -2059,7 +2059,7 @@
 
         // Debug the PE ID and URL construction
         const peId = reminder.plannedEventId;
-        const detailsUrl = `/PlannedEvents/Details/${peId}`;
+    const detailsUrl = `${APP_BASE}PlannedEvents/Details/${peId}`;
         console.log('Setting PE details URL to:', detailsUrl);
 
         document.getElementById('viewPEDetailsBtn').href = detailsUrl;
@@ -2081,7 +2081,7 @@
     }
 
     function markReminderAsRead(reminderId) {
-        fetch('/PlannedEvents/MarkReminderAsRead', {
+    fetch(`${APP_BASE}PlannedEvents/MarkReminderAsRead`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2104,7 +2104,7 @@
     }
 
     function markAllRemindersAsRead() {
-        fetch('/PlannedEvents/MarkAllRemindersAsRead', {
+    fetch(`${APP_BASE}PlannedEvents/MarkAllRemindersAsRead`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

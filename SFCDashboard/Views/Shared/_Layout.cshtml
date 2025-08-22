@@ -245,6 +245,10 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Base path for this app (handles sub-path hosting)
+        window.APP_BASE = '@Url.Content("~/")';
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
     <script>
@@ -268,7 +272,7 @@
 
             function loadEscalations() {
                 $.ajax({
-                    url: '/Escalation/GetUserEscalations',
+                    url: '@Url.Action("GetUserEscalations","Escalation")',
                     type: 'GET',
                     data: { filter: currentFilter || 'unread' },
                     success: function (data) {
@@ -322,7 +326,7 @@
                         var timeAgo = timeSince(createdAt);
 
                         var html = `
-                    <a href="/Escalation/Details/${escalation.id}" class="dropdown-item escalation-item ${escalationClass}">
+                    <a href="${APP_BASE}Escalation/Details/${escalation.id}" class="dropdown-item escalation-item ${escalationClass}">
                         <div class="d-flex justify-content-between align-items-start">
                             <h6 class="escalation-title">Task #${escalation.taskId} OLA Violation</h6>
                             <span class="escalation-time">${timeAgo}</span>
@@ -476,7 +480,7 @@
 
                 // Debug the PE ID and URL construction
                 const peId = reminder.plannedEventId;
-                const detailsUrl = `/PlannedEvents/Details/${peId}`;
+                const detailsUrl = `${APP_BASE}PlannedEvents/Details/${peId}`;
                 console.log('Setting PE details URL to:', detailsUrl);
 
                 document.getElementById('viewPEDetailsBtn').href = detailsUrl;
@@ -498,7 +502,7 @@
             }
 
             function markReminderAsRead(reminderId) {
-                fetch('/PlannedEvents/MarkReminderAsRead', {
+                fetch(`${APP_BASE}PlannedEvents/MarkReminderAsRead`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -515,7 +519,7 @@
             }
 
             function markAllRemindersAsRead() {
-                fetch('/PlannedEvents/MarkAllRemindersAsRead', {
+                fetch(`${APP_BASE}PlannedEvents/MarkAllRemindersAsRead`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -531,7 +535,7 @@
             }
 
             function viewPEDetails(peId) {
-                window.open(`/PlannedEvents/Details/${peId}`, '_blank');
+                window.open(`${APP_BASE}PlannedEvents/Details/${peId}`, '_blank');
             }
 
             function formatDate(date) {

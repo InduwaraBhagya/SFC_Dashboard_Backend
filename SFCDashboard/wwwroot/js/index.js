@@ -124,9 +124,9 @@ $(document).ready(function() {
         form.find('input[name="urgentReason"]').remove();
         $('<input>').attr({type: 'hidden', name: 'urgentReason', value: urgentReason}).appendTo(form);
         if (requestType === 'pe') {
-            form.attr('action', '/PlannedEvents/ProcessUrgentRequest');
+            form.attr('action', APP_BASE + 'PlannedEvents/ProcessUrgentRequest');
         } else {
-            form.attr('action', '/PETasks/ProcessUrgentRequest');
+            form.attr('action', APP_BASE + 'PETasks/ProcessUrgentRequest');
         }
         form.submit();
     });
@@ -139,9 +139,9 @@ $(document).ready(function() {
         form.find('input[name="urgentReason"]').remove();
         $('<input>').attr({type: 'hidden', name: 'urgentReason', value: 'Reject'}).appendTo(form);
         if (requestType === 'pe') {
-            form.attr('action', '/PlannedEvents/ProcessUrgentRequest');
+            form.attr('action', APP_BASE + 'PlannedEvents/ProcessUrgentRequest');
         } else {
-            form.attr('action', '/PETasks/ProcessUrgentRequest');
+            form.attr('action', APP_BASE + 'PETasks/ProcessUrgentRequest');
         }
         form.submit();
     });
@@ -432,9 +432,9 @@ function showUrgentRequestModal(type, id) {
     // Fetch record details based on type (PE or Task)
     let url = '';
     if (type === 'pe') {
-        url = `/api/planned-events/${id}/basic-details`;
+    url = `${APP_BASE}api/planned-events/${id}/basic-details`;
     } else {
-        url = `/PETasks/GetUrgentRequestDetails/${id}`; // Keep existing for tasks until task API is ready
+    url = `${APP_BASE}PETasks/GetUrgentRequestDetails/${id}`; // Keep existing for tasks until task API is ready
     }
     
     // Show loading indicator
@@ -522,7 +522,7 @@ function showUrgentRequestModal(type, id) {
             
             // If it's a PE request, try the fallback controller endpoint
             if (type === 'pe') {
-                fetch(`/PlannedEvents/GetBasicDetails/${id}`)
+                fetch(`${APP_BASE}PlannedEvents/GetBasicDetails/${id}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('Fallback endpoint also failed');
@@ -570,9 +570,9 @@ function showUrgentRequestModal(type, id) {
          const viewDetailsBtn = document.getElementById('urgentRequestViewDetailsBtn');
          if (viewDetailsBtn) {
              if (type === 'pe') {
-                 viewDetailsBtn.href = '/PlannedEvents/Details/' + id;
+                 viewDetailsBtn.href = APP_BASE + 'PlannedEvents/Details/' + id;
              } else {
-                 viewDetailsBtn.href = '/PETasks/Details/' + id;
+                 viewDetailsBtn.href = APP_BASE + 'PETasks/Details/' + id;
              }
          }
 }
@@ -623,7 +623,7 @@ function showIssueDetails(element) {
         
         // Update the modal content
         $('#issueDetailsContent').html(detailsHtml);
-        $('#viewPEDetailsBtn').attr('href', `/PlannedEvents/Details/${peId}`);
+    $('#viewPEDetailsBtn').attr('href', `${APP_BASE}PlannedEvents/Details/${peId}`);
         
         // Set up the reply button data
         $('#replyIssueBtn').data('issue-id', issueId);
@@ -641,7 +641,7 @@ function showIssueDetails(element) {
             $('#resolveIssueBtn').addClass('d-none');
             
             // Check if there's a resolution record for this issue
-            $.get(`/Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
+            $.get(`${APP_BASE}Issues/GetResolution/${originalIssueId || issueId}`, function(resolution) {
                 if (resolution && resolution.id) {
                     // Show resolution confirmation section
                     $('#resolutionConfirmationSection').removeClass('d-none');
@@ -748,7 +748,7 @@ function showResolutionConfirm(element) {
         }
         
         // Set up other modal elements
-        $('#viewPEDetailsLink').attr('href', `/PlannedEvents/Details/${peId}`);
+    $('#viewPEDetailsLink').attr('href', `${APP_BASE}PlannedEvents/Details/${peId}`);
         
         // Show the modal with proper accessibility handling
         const modalElement = document.getElementById('resolutionConfirmModal');
@@ -796,7 +796,7 @@ function showResolutionConfirm(element) {
 }
 
 function fetchResolutionDetails(resolutionId) {
-    fetch(`/api/issues/resolution/${resolutionId}`, {
+    fetch(`${APP_BASE}api/issues/resolution/${resolutionId}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -824,7 +824,7 @@ function fetchResolutionDetails(resolutionId) {
 }
 
 function fetchResolutionByIssueId(issueId) {
-    fetch(`/api/issues/${issueId}/resolution`, {
+    fetch(`${APP_BASE}api/issues/${issueId}/resolution`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -895,7 +895,7 @@ function submitResolutionForm(isConfirmed) {
 
 function fetchPEDetails(peId) {
     // Try the new API endpoint first
-    fetch(`/api/planned-events/${peId}/basic-details`, {
+    fetch(`${APP_BASE}api/planned-events/${peId}/basic-details`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -932,7 +932,7 @@ function fetchPEDetails(peId) {
             console.error('API endpoint failed, trying fallback controller endpoint:', error);
             
             // Fallback to controller endpoint
-            fetch(`/PlannedEvents/GetBasicDetails/${peId}`)
+            fetch(`${APP_BASE}PlannedEvents/GetBasicDetails/${peId}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Controller endpoint also failed');
@@ -995,7 +995,7 @@ function updateUnreadCount() {
 
 function markIssueAsRead(issueId) {
     // Call new secure API to mark issue as read
-    fetch(`/api/issues/${issueId}/mark-read`, {
+    fetch(`${APP_BASE}api/issues/${issueId}/mark-read`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1018,7 +1018,7 @@ function markIssueAsRead(issueId) {
         console.error('API failed, trying fallback controller endpoint:', error);
         
         // Fallback to controller endpoint
-        fetch(`/Issues/MarkAsRead/${issueId}`, {
+    fetch(`${APP_BASE}Issues/MarkAsRead/${issueId}`, {
             method: 'POST',
             headers: {
                 'RequestVerificationToken': getCsrfToken()

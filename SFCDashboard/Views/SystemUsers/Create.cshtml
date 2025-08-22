@@ -129,7 +129,7 @@
                 allowClear: true,
                 minimumInputLength: 2,
                 ajax: {
-                    url: '/SystemUsers/SearchWorkgroups',
+                    url: '@Url.Action("SearchWorkgroups","SystemUsers")',
                     dataType: 'json',
                     delay: 250,
                     data: function (params) {
@@ -146,6 +146,9 @@
                                 };
                             })
                         };
+                    },
+                    error: function (xhr) {
+                        console.error('SearchWorkgroups failed:', xhr.status, xhr.responseText);
                     },
                     cache: true
                 },

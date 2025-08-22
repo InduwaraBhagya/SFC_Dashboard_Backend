@@ -729,7 +729,7 @@
         });
 
         function loadReminders() {
-            fetch('/PlannedEvents/GetReminders')
+            fetch(`${APP_BASE}PlannedEvents/GetReminders`)
                 .then(response => response.json())
                 .then(data => {
                     updateReminderDropdown(data);
@@ -1193,7 +1193,7 @@
         }
 
         function loadReminders() {
-            fetch('/PlannedEvents/GetReminders')
+            fetch(`${APP_BASE}PlannedEvents/GetReminders`)
                 .then(response => response.json())
                 .then(data => {
                     updateReminderDropdown(data);

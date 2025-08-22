@@ -196,7 +196,7 @@
             $("#workgroup-search").autocomplete({
                 source: function(request, response) {
                     $.ajax({
-                        url: "/SystemUsers/SearchWorkgroups",
+                        url: "@Url.Action("SearchWorkgroups","SystemUsers")",
                         data: { term: request.term },
                         type: "GET",
                         success: function(data) {

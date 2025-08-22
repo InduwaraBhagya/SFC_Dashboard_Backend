@@ -1016,7 +1016,7 @@ if (estimatedTimeForm) {
         $(document).ready(function () {
 
             // Get current user info and populate sender fields
-            $.get('/SystemUsers/GetCurrentUser', function (user) {
+            $.get('@Url.Action("GetCurrentUser","SystemUsers")', function (user) {
                 if (user) {
                     $('#senderName').val(user.name);
                     $('#senderId').val(user.id);
@@ -1024,14 +1024,14 @@ if (estimatedTimeForm) {
             });
 
             // Populate receiver dropdown
-            $.get('/SystemUsers/GetAll', function (users) {
+            $.get('@Url.Action("GetAll","SystemUsers")', function (users) {
                 users.forEach(function (user) {
                     $('#receiverId').append($('<option>', { value: user.id, text: user.name }));
                 });
             });
 
             // Populate task list dropdown
-            $.get('/PlannedEvents/GetPETaskListsForPE', { peId: '@Model.Id' }, function (tasks) {
+            $.get('@Url.Action("GetPETaskListsForPE","PlannedEvents")', { peId: '@Model.Id' }, function (tasks) {
                 tasks.forEach(function (task) {
                     $('#taskListId').append($('<option>', { value: task.id, text: task.name }));
                 });
@@ -1042,7 +1042,7 @@ if (estimatedTimeForm) {
                 var taskListId = $(this).val();
                 $('#issueSuggestions').empty();
                 if (taskListId) {
-                    $.get('/Issues/GetIssueSuggestions', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
+                    $.get('@Url.Action("GetIssueSuggestions","Issues")', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
                         issues.forEach(function (issue) {
                             $('#issueSuggestions').append($('<option>', { value: issue.text }));
                         });
@@ -1063,10 +1063,10 @@ if (estimatedTimeForm) {
                 var peTaskName = '@Model.TaskName';
 
                 // First get the matching PETaskList ID
-                $.get('/Issues/GetTaskListIdByName', { taskName: peTaskName }, function (taskListId) {
+                $.get('@Url.Action("GetTaskListIdByName","Issues")', { taskName: peTaskName }, function (taskListId) {
                     if (taskListId > 0) {
                         // Then get suggestions for that task
-                        $.get('/Issues/GetIssueSuggestions', { taskId: taskListId }, function (data) {
+                        $.get('@Url.Action("GetIssueSuggestions","Issues")', { taskId: taskListId }, function (data) {
                             // Check if we have suggestions
                             if (data && (data.commonIssues.length > 0 || data.recentIssues.length > 0)) {
 
@@ -1134,7 +1134,7 @@ if (estimatedTimeForm) {
             modal.show();
             
             // Fetch history data
-            fetch(`/PETasks/GetEstimationHistory/${taskId}`)
+            fetch(`@Url.Action("GetEstimationHistory","PETasks")/${taskId}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
