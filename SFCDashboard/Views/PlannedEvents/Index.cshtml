@@ -505,86 +505,165 @@
             }
         }
         
-        <!-- BOQ Status Section -->
-        <div class="card border-success shadow-sm" style="height: 220px;">
-            <div class="card-header bg-success boq-header text-white d-flex justify-content-between align-items-center py-1">
-                <h6 class="mb-0">
-                    <i class="bi bi-clipboard-data me-1"></i>BOQ Status
-                </h6>
-                <button class="btn btn-xs btn-outline-light" id="refreshBoqBtn" title="Refresh BOQ Status" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </button>
-            </div>
-            
-            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 180px;">
-                <div id="boqStatusContent">
-                    @{
-                        // BOQ Status data from ViewBag
-                        var boqData = ViewBag.BOQStatus as dynamic;
-                        var totalBOQs = ViewBag.TotalBOQs as int? ?? 0;
-                        var completedBOQs = ViewBag.CompletedBOQs as int? ?? 0;
-                        var pendingBOQs = ViewBag.PendingBOQs as int? ?? 0;
-                        var inProgressBOQs = ViewBag.InProgressBOQs as int? ?? 0;
-                    }
-                    
-                    <!-- BOQ Summary Cards -->
-                    <div class="row g-1 mb-2">
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-primary boq-total text-white rounded">
-                                <div class="fw-bold h6 mb-0">@totalBOQs</div>
-                                <small style="font-size: 0.7rem;">Total</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-success boq-done text-white rounded">
-                                <div class="fw-bold h6 mb-0">@completedBOQs</div>
-                                <small style="font-size: 0.7rem;">Done</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row g-1 mb-2">
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-warning boq-progress text-dark rounded">
-                                <div class="fw-bold h6 mb-0">@inProgressBOQs</div>
-                                <small style="font-size: 0.7rem;">Progress</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="small-stat-card text-center p-1 bg-danger boq-pending text-white rounded">
-                                <div class="fw-bold h6 mb-0">@pendingBOQs</div>
-                                <small style="font-size: 0.7rem;">Pending</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Progress Bar -->
-                    @if (totalBOQs > 0)
-                    {
-                        var completionPercentage = Math.Round((double)completedBOQs / totalBOQs * 100, 1);
+        @if (ViewData["HasDrawFiberAccess"] as bool? == true)
+        {
+            <!-- Quick Find Projects Card (shown instead of BOQ for Draw Fiber users) -->
+            <div class="card border-primary shadow-sm" style="height: 180px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Quick Find Projects
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3" style="overflow-y: auto; max-height: 140px;">
+                    <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchFormRegular">
                         <div class="mb-2">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <small class="text-muted" style="font-size: 0.7rem;">Progress</small>
-                                <small class="fw-bold" style="font-size: 0.7rem;">@completionPercentage%</small>
-                            </div>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar bg-success" role="progressbar" 
-                                     style="width: @completionPercentage%" 
-                                     aria-valuenow="@completionPercentage" aria-valuemin="0" aria-valuemax="100">
-                                </div>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control shadow-sm" id="projectSearchInputRegular" 
+                                       name="query" placeholder="Search projects..." 
+                                       value="@Context.Request.Query["query"]" autocomplete="off" />
+                                <button class="btn btn-primary btn-sm" type="submit">
+                                    <i class="bi bi-search"></i>
+                                </button>
                             </div>
                         </div>
-                    }
+                    </form>
                     
-                    <!-- Quick Actions -->
-                    <div class="d-grid gap-1">
-                        <a href="@Url.Action("BOQList", "BOQ")" class="btn btn-outline-success btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
-                            <i class="bi bi-list-ul me-1"></i> View All
+                    <!-- Project Search Results -->
+                    <div id="projectSearchResultsRegular" style="max-height: 90px; overflow-y: auto;">
+                        @if (ViewBag.ProjectResults != null)
+                        {
+                            var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
+                            if (results != null && results.Any())
+                            {
+                                <div class="project-results-container">
+                                    <small class="text-muted d-block mb-2">@results.Count() project(s) found</small>
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var project in results.Take(5))
+                                        {
+                                            <div class="list-group-item list-group-item-action p-1 border-0 border-bottom" style="font-size: 0.85rem;">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1" style="min-width: 0;">
+                                                        <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
+                                                        <small class="text-muted">ID: @project.Id</small>
+                                                    </div>
+                                                    <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
+                                                       class="btn btn-xs btn-outline-primary ms-1" title="View Details" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    @if (results.Count() > 5)
+                                    {
+                                        <div class="text-center mt-1">
+                                            <small class="text-muted" style="font-size: 0.75rem;">+@(results.Count() - 5) more</small>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                            {
+                                <div class="text-center py-2 text-muted">
+                                    <i class="bi bi-search"></i>
+                                    <small class="d-block">No projects found</small>
+                                </div>
+                            }
+                        }
+                    </div>
+                    
+                    <!-- View All Projects Button -->
+                    <div class="mt-2 pt-2 border-top">
+                        <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100" style="font-size: 0.8rem;">
+                            <i class="bi bi-list-ul me-1"></i>View All Projects
                         </a>
                     </div>
                 </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <!-- BOQ Status Section -->
+            <div class="card border-success shadow-sm" style="height: 220px;">
+                <div class="card-header bg-success boq-header text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clipboard-data me-1"></i>BOQ Status
+                    </h6>
+                    <button class="btn btn-xs btn-outline-light" id="refreshBoqBtn" title="Refresh BOQ Status" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+                
+                <div class="card-body py-1 px-2" style="overflow-y: auto; height: 180px;">
+                    <div id="boqStatusContent">
+                        @{
+                            // BOQ Status data from ViewBag
+                            var boqData = ViewBag.BOQStatus as dynamic;
+                            var totalBOQs = ViewBag.TotalBOQs as int? ?? 0;
+                            var completedBOQs = ViewBag.CompletedBOQs as int? ?? 0;
+                            var pendingBOQs = ViewBag.PendingBOQs as int? ?? 0;
+                            var inProgressBOQs = ViewBag.InProgressBOQs as int? ?? 0;
+                        }
+                        
+                        <!-- BOQ Summary Cards -->
+                        <div class="row g-1 mb-2">
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-primary boq-total text-white rounded">
+                                    <div class="fw-bold h6 mb-0">@totalBOQs</div>
+                                    <small style="font-size: 0.7rem;">Total</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-success boq-done text-white rounded">
+                                    <div class="fw-bold h6 mb-0">@completedBOQs</div>
+                                    <small style="font-size: 0.7rem;">Done</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-1 mb-2">
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-warning boq-progress text-dark rounded">
+                                    <div class="fw-bold h6 mb-0">@inProgressBOQs</div>
+                                    <small style="font-size: 0.7rem;">Progress</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-danger boq-pending text-white rounded">
+                                    <div class="fw-bold h6 mb-0">@pendingBOQs</div>
+                                    <small style="font-size: 0.7rem;">Pending</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        @if (totalBOQs > 0)
+                        {
+                            var completionPercentage = Math.Round((double)completedBOQs / totalBOQs * 100, 1);
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted" style="font-size: 0.7rem;">Progress</small>
+                                    <small class="fw-bold" style="font-size: 0.7rem;">@completionPercentage%</small>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: @completionPercentage%" 
+                                         aria-valuenow="@completionPercentage" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        <!-- Quick Actions -->
+                        <div class="d-grid gap-1">
+                            <a href="@Url.Action("BOQList", "BOQ")" class="btn btn-outline-success btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                                <i class="bi bi-list-ul me-1"></i> View All
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 
     <!-- Right Column: Notice Board (33% width) -->
@@ -1107,7 +1186,7 @@
         // window.clearTaskCache = clearTaskCache; // Commented out - function not defined
 
         // User permissions for notice management
-        const canManageNotices = @Html.Raw(ViewData["CanManageNotices"]?.ToString().ToLower() ?? "false");
+    const canManageNotices = @( (ViewData["CanManageNotices"] as bool? == true) ? "true" : "false" );
 
         // Notice Board Management
         function initializeNoticeBoard() {
