@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using SFCDashboard.ApiClients;
 
@@ -22,7 +23,14 @@ namespace SFCDashboard.Controllers
 
             if (string.IsNullOrEmpty(serviceId))
             {
-                context.Result = RedirectToAction("Index", "PlannedEvents");
+                if (IsAjaxRequest(context.HttpContext.Request))
+                {
+                    context.Result = new StatusCodeResult(StatusCodes.Status403Forbidden);
+                }
+                else
+                {
+                    context.Result = RedirectToAction("Index", "PlannedEvents");
+                }
                 return;
             }
 
@@ -36,7 +44,14 @@ namespace SFCDashboard.Controllers
                 
                 if (!isAdmin)
                 {
-                    context.Result = RedirectToAction("Index", "PlannedEvents");
+                    if (IsAjaxRequest(context.HttpContext.Request))
+                    {
+                        context.Result = new StatusCodeResult(StatusCodes.Status403Forbidden);
+                    }
+                    else
+                    {
+                        context.Result = RedirectToAction("Index", "PlannedEvents");
+                    }
                     return;
                 }
                 
@@ -46,9 +61,37 @@ namespace SFCDashboard.Controllers
             catch (Exception)
             {
                 // On error, default to no access for security
-                context.Result = RedirectToAction("Index", "PlannedEvents");
+                if (IsAjaxRequest(context.HttpContext.Request))
+                {
+                    context.Result = new StatusCodeResult(StatusCodes.Status403Forbidden);
+                }
+                else
+                {
+                    context.Result = RedirectToAction("Index", "PlannedEvents");
+                }
                 return;
             }
+        }
+
+        private static bool IsAjaxRequest(HttpRequest request)
+        {
+            if (request == null) return false;
+            if (request.Headers.TryGetValue("X-Requested-With", out var value))
+            {
+                return string.Equals(value, "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+            }
+            // Also treat JSON Accept header as AJAX-like
+            if (request.Headers.TryGetValue("Accept", out var acceptValues))
+            {
+                foreach (var a in acceptValues)
+                {
+                    if (!string.IsNullOrEmpty(a) && a.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 }

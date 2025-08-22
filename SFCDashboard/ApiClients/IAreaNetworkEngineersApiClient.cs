@@ -8,5 +8,6 @@ namespace SFCDashboard.ApiClients
         Task<AreaNetworkEngineer> UpdateAsync(AreaNetworkEngineer areaNetworkEngineer);
         Task DeleteAsync(int id);
         Task<string?> GetEngineerNameByAreaAsync(string area);
+    Task<string> ImportExcelAsync(Stream excelStream, string fileName, CancellationToken cancellationToken = default);
     }
 }

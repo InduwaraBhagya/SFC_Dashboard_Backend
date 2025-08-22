@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SFCDashboard.Api.Configuration;
 using DotNetEnv;
 using System.Text.Json;
+using Microsoft.AspNetCore.HttpOverrides;
 
 // Load environment variables from .env file
 Env.Load();
@@ -241,6 +242,12 @@ if (app.Environment.IsDevelopment())
 
 // Add global exception handler
 app.UseGlobalExceptionHandler();
+
+// Honor reverse-proxy headers (X-Forwarded-For/Proto) for correct scheme/hosts behind load balancers
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseHttpsRedirection();
 

@@ -141,5 +141,21 @@ namespace SFCDashboard.ApiClients
                 return null;
             }
         }
+
+        public async Task<string> ImportExcelAsync(Stream excelStream, string fileName, CancellationToken cancellationToken = default)
+        {
+            using var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(excelStream);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            content.Add(fileContent, "excelFile", fileName);
+
+            var response = await _httpClient.PostAsync("api/areanetworkengineers/import-excel", content, cancellationToken);
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Import failed: {(int)response.StatusCode} {response.ReasonPhrase} - {responseContent}");
+            }
+            return responseContent;
+        }
     }
 }

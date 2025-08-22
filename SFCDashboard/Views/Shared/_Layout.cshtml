@@ -67,6 +67,7 @@
 </head>
 
 <body>
+    @Html.AntiForgeryToken()
     @if (!isHomePage)
     {
         <!-- Side Navigation -->
@@ -248,6 +249,8 @@
     <script>
         // Base path for this app (handles sub-path hosting)
         window.APP_BASE = '@Url.Content("~/")';
+    // Grab the anti-forgery token emitted above for AJAX calls
+    window.ANTI_FORGERY_TOKEN = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
@@ -264,6 +267,22 @@
         }
 
         $(document).ready(function () {
+            // Global jQuery AJAX setup to include anti-forgery token and handle 401/403 without HTML redirects
+            if ($ && $.ajaxSetup) {
+                $.ajaxSetup({
+                    beforeSend: function (xhr, settings) {
+                        // Only add token for unsafe methods
+                        const method = (settings.type || 'GET').toUpperCase();
+                        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+                            xhr.setRequestHeader('RequestVerificationToken', window.ANTI_FORGERY_TOKEN || '');
+                        }
+                    },
+                    statusCode: {
+                        401: function () { window.location.href = `${APP_BASE}MicrosoftIdentity/Account/SignIn`; },
+                        403: function () { alert('You do not have permission to perform this action.'); }
+                    }
+                });
+            }
             // Load escalations when page is loaded
             loadEscalations();
 
@@ -501,12 +520,12 @@
                 return match ? match[1].trim() : 'N/A';
             }
 
-            function markReminderAsRead(reminderId) {
-                fetch(`${APP_BASE}PlannedEvents/MarkReminderAsRead`, {
+        function markReminderAsRead(reminderId) {
+        fetch(`${APP_BASE}PlannedEvents/MarkReminderAsRead`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': window.ANTI_FORGERY_TOKEN || ''
                     },
                     body: JSON.stringify({ id: reminderId })
                 })
@@ -519,11 +538,11 @@
             }
 
             function markAllRemindersAsRead() {
-                fetch(`${APP_BASE}PlannedEvents/MarkAllRemindersAsRead`, {
+        fetch(`${APP_BASE}PlannedEvents/MarkAllRemindersAsRead`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': window.ANTI_FORGERY_TOKEN || ''
                     }
                 })
                     .then(response => response.json())

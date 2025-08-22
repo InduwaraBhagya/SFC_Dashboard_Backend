@@ -33,40 +33,11 @@ namespace SFCDashboard.Controllers
             try
             {
                 _logger.LogInformation("Starting Excel import for Area Network Engineers");
-                
-                // Use the configured API base URL from HttpClient
-                using (var httpClient = new HttpClient())
-                using (var content = new MultipartFormDataContent())
                 using (var stream = excelFile.OpenReadStream())
                 {
-                    var fileContent = new StreamContent(stream);
-                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-                    content.Add(fileContent, "excelFile", excelFile.FileName);
-
-                    // Get the API base URL from configuration
-                    var apiBaseUrl = HttpContext.RequestServices.GetRequiredService<IConfiguration>()["ApiSettings:BaseUrl"];
-                    if (string.IsNullOrEmpty(apiBaseUrl))
-                    {
-                        // Fallback to local API
-                        apiBaseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}";
-                    }
-                    
-                    var apiUrl = $"{apiBaseUrl}/api/areanetworkengineers/import-excel";
-                    _logger.LogInformation($"Posting to API URL: {apiUrl}");
-                    
-                    var response = await httpClient.PostAsync(apiUrl, content);
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    
-                    if (response.IsSuccessStatusCode)
-                    {
-                        _logger.LogInformation($"Import successful: {responseContent}");
-                        TempData["Message"] = $"Import successful! {responseContent}";
-                    }
-                    else
-                    {
-                        _logger.LogError($"Import failed with status {response.StatusCode}: {responseContent}");
-                        TempData["Message"] = $"Import failed: {response.ReasonPhrase} - {responseContent}";
-                    }
+                    var resultMessage = await _areaNetworkEngineersApiClient.ImportExcelAsync(stream, excelFile.FileName, HttpContext.RequestAborted);
+                    _logger.LogInformation($"Import successful: {resultMessage}");
+                    TempData["Message"] = $"Import successful! {resultMessage}";
                 }
             }
             catch (Exception ex)
@@ -206,29 +177,21 @@ namespace SFCDashboard.Controllers
         {
             try
             {
-                var apiBaseUrl = HttpContext.RequestServices.GetRequiredService<IConfiguration>()["ApiSettings:BaseUrl"];
-                if (string.IsNullOrEmpty(apiBaseUrl))
+                // Compose a client using the same pipeline (base address + auth handler)
+                var clientFactory = HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
+                var client = clientFactory.CreateClient(nameof(AreaNetworkEngineersApiClient));
+                var request = new HttpRequestMessage(HttpMethod.Options, "api/areanetworkengineers/import-excel");
+                var response = await client.SendAsync(request, HttpContext.RequestAborted);
+
+                var result = new
                 {
-                    apiBaseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}";
-                }
-                
-                var apiUrl = $"{apiBaseUrl}/api/areanetworkengineers/import-excel";
-                
-                using (var httpClient = new HttpClient())
-                {
-                    // Test if the endpoint exists with a HEAD request
-                    var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Options, apiUrl));
-                    
-                    var result = new
-                    {
-                        Success = response.IsSuccessStatusCode,
-                        Message = $"Excel import endpoint test: {response.StatusCode}",
-                        Url = apiUrl,
-                        ResponseHeaders = response.Headers.ToString()
-                    };
-                    
-                    return Json(result);
-                }
+                    Success = response.IsSuccessStatusCode,
+                    Message = $"Excel import endpoint test: {response.StatusCode}",
+                    Url = client.BaseAddress is null ? "/api/areanetworkengineers/import-excel" : new Uri(client.BaseAddress, "api/areanetworkengineers/import-excel").ToString(),
+                    ResponseHeaders = response.Headers.ToString()
+                };
+
+                return Json(result);
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
@@ -10,6 +11,9 @@ using SFCDashboard.Services;
 using SFCDashboard.Handlers;
 using SFCDashboard.Configuration;
 using DotNetEnv;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Antiforgery;
 
 // Load environment variables from .env file
 Env.Load();
@@ -207,6 +211,46 @@ else
         .AddScheme<AuthenticationSchemeOptions, DummyAuthenticationHandler>("DummyScheme", options => { });
 }
 
+// Ensure AJAX/XHR requests get 401/403 instead of HTML redirects
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events = new CookieAuthenticationEvents
+    {
+        OnRedirectToLogin = context =>
+        {
+            var accept = context.Request.Headers["Accept"].ToString();
+            var isAjax = string.Equals(context.Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase)
+                         || accept.Contains("application/json", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(context.Request.Headers["Sec-Fetch-Mode"], "cors", StringComparison.OrdinalIgnoreCase);
+
+            if (isAjax)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        },
+        OnRedirectToAccessDenied = context =>
+        {
+            var accept = context.Request.Headers["Accept"].ToString();
+            var isAjax = string.Equals(context.Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase)
+                         || accept.Contains("application/json", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(context.Request.Headers["Sec-Fetch-Mode"], "cors", StringComparison.OrdinalIgnoreCase);
+
+            if (isAjax)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
+});
+
 // Add MVC Controllers with Conditional Authentication
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -221,6 +265,8 @@ builder.Services.AddControllersWithViews(options =>
         .RequireAuthenticatedUser()
         .Build();
     options.Filters.Add(new AuthorizeFilter(policy));
+    // Enforce anti-forgery validation on unsafe HTTP methods for MVC actions
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
 });
 
 // Add Razor Pages
@@ -249,6 +295,12 @@ if (!isDevelopment)
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+// Honor reverse-proxy headers (X-Forwarded-For/Proto) for correct scheme/hosts behind load balancers
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
