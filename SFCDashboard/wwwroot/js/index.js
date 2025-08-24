@@ -1,7 +1,4 @@
 $(document).ready(function() {
-    console.log('Document ready - jQuery version:', $.fn.jquery);
-    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
-    
     // Helper function to get CSRF token
     window.getCsrfToken = function() {
         return document.querySelector('input[name="__RequestVerificationToken"]')?.value || 
@@ -28,7 +25,6 @@ $(document).ready(function() {
             modal.classList.remove('show');
         });
         
-        console.log('Modal backdrop cleanup completed');
     };
     
     // Add global click handler to cleanup any stuck backdrops when clicking outside modals
@@ -55,7 +51,6 @@ $(document).ready(function() {
     }
 
     // Initialize message inbox
-    console.log('Initializing message inbox...');
     initializeMessageInbox();
     
     // Refresh inbox button
@@ -117,7 +112,6 @@ $(document).ready(function() {
         } else if (normPriority.includes('priority1') || normPriority.includes('openingceremony')) {
             urgentReason = 'OpeningCeremony';
         }
-        console.log('Priority text:', priorityText, '| Normalized:', normPriority, '| Urgent reason:', urgentReason);
 
         const form = $('#urgentRequestForm');
         // Remove any previous urgentReason fields
@@ -231,9 +225,6 @@ $(document).ready(function() {
         
         // Actually submit the form
         form.submit();
-        
-        // Log the submission for debugging
-        console.log('Submitting confirmation form with resolution ID:', $('#resolutionId').val());
     });
     
     $('#rejectResolutionBtn').on('click', function() {
@@ -249,31 +240,13 @@ $(document).ready(function() {
 
 // Functions defined outside document ready to avoid scoping issues
 function initializeMessageInbox() {
-    console.log('Initializing message inbox...');
-    
     const messageItems = document.querySelectorAll('.message-item');
     const filterButtons = document.querySelectorAll('.inbox-filters button');
     const inboxSearch = document.querySelector('.inbox-search');
     
-    console.log('Found message items:', messageItems.length);
-    console.log('Found filter buttons:', filterButtons.length);
-    console.log('Found inbox search:', !!inboxSearch);
-    
-    // Debug: log all message items
-    messageItems.forEach((item, index) => {
-        console.log(`Message ${index}:`, {
-            classes: item.className,
-            isUnread: item.classList.contains('unread'),
-            onclick: item.onclick,
-            hasDataAttrs: !!item.dataset.issueId
-        });
-    });
-    
     // Check which filter button is initially active and apply the appropriate filter
     const activeFilter = document.querySelector('.inbox-filters button.active');
     const initialFilter = activeFilter ? activeFilter.getAttribute('data-filter') : 'unread';
-    
-    console.log('Initial filter:', initialFilter);
     
     // Apply initial filter
     messageItems.forEach(item => {
@@ -297,7 +270,6 @@ function initializeMessageInbox() {
     // Message filtering
     filterButtons.forEach(button => {
         button.addEventListener('click', function() {
-            console.log('Filter button clicked:', this.getAttribute('data-filter'));
             
             // Remove active class from all buttons
             filterButtons.forEach(btn => btn.classList.remove('active'));
@@ -591,10 +563,6 @@ function showIssueDetails(element) {
         const isResolutionRequest = $(element).data('is-resolution-request') === 'true';
         const originalIssueId = $(element).data('original-issue-id');
         
-        console.log('Issue data:', {
-            issueId, peId, sender, senderId, issueText, attachment, date, isRead, isResolutionRequest, originalIssueId
-        });
-        
         // Validate required data
         if (!issueId || !peId || !sender) {
             console.error('Missing required issue data:', { issueId, peId, sender });
@@ -712,13 +680,6 @@ function showResolutionConfirm(element) {
         const resolutionDetails = $(element).data('resolution-details');
         const peId = $(element).data('pe-id');
         const issueId = $(element).data('issue-id');
-        
-        console.log('Resolution data:', {
-            resolutionId,
-            resolutionDetails,
-            peId,
-            issueId
-        });
         
         // Validate required data
         if (!peId || !issueId) {
@@ -860,8 +821,6 @@ function submitResolutionForm(isConfirmed) {
     
     // Get the resolution ID and validate it
     const resolutionId = $('#directResolutionId').val();
-    console.log('Submitting form with Resolution ID:', resolutionId);
-    console.log('Is Confirmed:', isConfirmed);
     
     if (!resolutionId || resolutionId === '0') {
         alert('Error: No resolution ID found. Please refresh the page and try again.');
@@ -989,8 +948,6 @@ function updateUnreadCount() {
             inboxHeader.appendChild(badge);
         }
     }
-    
-    console.log(`Unread count updated: ${unreadCount}`);
 }
 
 function markIssueAsRead(issueId) {
@@ -1067,14 +1024,11 @@ function updateMessageUIAsRead(issueId) {
         
         // Update the unread count
         updateUnreadCount();
-        
-        console.log(`Message ${issueId} marked as read in UI`);
     }
 }
 
 // Debug function to test issue modal functionality
 window.testIssueModal = function() {
-    console.log('Testing issue modal...');
     const testElement = {
         dataset: {
             issueId: '123',
@@ -1103,31 +1057,14 @@ window.testIssueModal = function() {
 
 // Debug function to check message items
 window.debugMessages = function() {
-    console.log('=== MESSAGE DEBUG ===');
     const messageItems = document.querySelectorAll('.message-item');
-    console.log('Total message items found:', messageItems.length);
     
     messageItems.forEach((item, index) => {
-        console.log(`Message ${index}:`, {
-            element: item,
-            classes: item.className,
-            isUnread: item.classList.contains('unread'),
-            style: item.style.display,
-            onclick: item.onclick,
-            issueId: item.dataset.issueId,
-            peId: item.dataset.peId,
-            sender: item.dataset.sender,
-            allDataAttrs: Object.keys(item.dataset)
-        });
+        // Message debug info removed
     });
     
-    console.log('=== FILTER BUTTONS ===');
     const filterButtons = document.querySelectorAll('.inbox-filters button');
     filterButtons.forEach((btn, index) => {
-        console.log(`Filter ${index}:`, {
-            text: btn.textContent,
-            filter: btn.getAttribute('data-filter'),
-            isActive: btn.classList.contains('active')
-        });
+        // Filter button debug info removed
     });
 };
