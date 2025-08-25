@@ -11,6 +11,7 @@
     var canManageCustomerAssignments = ViewData["CanManageCustomerAssignments"] as bool? ?? false;
     var canManageDrawFiberPerms = ViewData["CanManageDrawFiberPerms"] as bool? ?? false;
     var currentUserName = ViewData["CurrentUserName"] as string ?? "Guest";
+    var isAuthenticated = HttpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
     var isHomePage = ViewContext.RouteData.Values["controller"]?.ToString() == "Home" &&
     ViewContext.RouteData.Values["action"]?.ToString() == "Index";
 }
@@ -71,7 +72,7 @@
     @if (!isHomePage)
     {
         <!-- Side Navigation -->
-        <nav class="sidebar" id="sidebar">
+    <nav class="sidebar collapsed" id="sidebar">
             <!-- Sidebar Toggle Arrow -->
             <button class="sidebar-toggle-arrow" id="sidebarToggle">
                 <i class="bi bi-chevron-left"></i>
@@ -190,7 +191,7 @@
                 </ul>
 
                 <!-- Bottom Section: Notifications, Dark Mode, User -->
-                <div class="sidebar-bottom">
+                <div class="sidebar-bottom text-start">
                     <!-- Dark Mode Toggle -->
                     <div class="nav-item">
                         <div class="nav-link theme-toggle-item">
@@ -201,35 +202,33 @@
                                     <div class="slider round"></div>
                                 </label>
                             </div>
-                            <span class="nav-text">Dark Mode</span>
                         </div>
                     </div>
 
                     <!-- User Profile -->
                     <div class="nav-item">
-                        <div class="nav-link user-profile" data-bs-toggle="dropdown" style="cursor: pointer;">
+                        <div class="nav-link user-profile" style="cursor: default;">
                             <div class="user-avatar">
                                 <i class="bi bi-person-circle" style="font-size: 24px;"></i>
                             </div>
                             <span class="nav-text">@currentUserName</span>
                         </div>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <partial name="_LoginPartial" />
-                            </li>
-                        </ul>
+                    </div>
+                    <div class="nav-item">
+                        <partial name="_LoginPartial" />
                     </div>
                 </div>
 
                 <!-- Hidden logout form -->
                 <form id="logoutForm" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut"
                     method="post" style="display: none;">
+                    @Html.AntiForgeryToken()
                 </form>
             </div>
         </nav>
 
         <!-- Main Content Area -->
-        <div class="main-content" id="mainContent" style="background: transparent;">
+    <div class="main-content sidebar-collapsed" id="mainContent" style="background: transparent;">
             <main role="main" class="pb-3">
                 @RenderBody()
             </main>
@@ -723,12 +722,11 @@
                 localStorage.setItem('sidebarCollapsed', isCollapsed);
             });
 
-            // Restore sidebar state from localStorage
-            const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-            if (sidebarCollapsed) {
-                $('#sidebar').addClass('collapsed');
-                $('#mainContent').addClass('sidebar-collapsed');
-            }
+            // Restore sidebar state from localStorage (default collapsed when unset)
+            const sidebarPref = localStorage.getItem('sidebarCollapsed');
+            const shouldCollapse = (sidebarPref === null) ? true : (sidebarPref === 'true');
+            $('#sidebar').toggleClass('collapsed', shouldCollapse);
+            $('#mainContent').toggleClass('sidebar-collapsed', shouldCollapse);
 
             // Set active navigation item
             function setActiveNavItem() {
@@ -789,6 +787,25 @@
                     globalSearchInput.name = globalSearchType.value;
                     switch (globalSearchType.value) {
                         case "peNumber":
+
+            // Sidebar auth links behavior (from _LoginPartial)
+            const $sbAuth = $('.sidebar-bottom .navbar-nav');
+            if ($sbAuth.length) {
+                $sbAuth.on('click', 'a', function (e) {
+                    const href = (this.getAttribute('href') || '').toLowerCase();
+                    if (href.includes('/microsoftidentity/account/signout')) {
+                        // Use POST form + clear data
+                        e.preventDefault();
+                        try { if (typeof clearBrowserDataOnSignOut === 'function') clearBrowserDataOnSignOut(e, this); } catch (_) { }
+                        const form = document.getElementById('logoutForm');
+                        if (form) form.submit(); else window.location.href = this.href;
+                    } else if (href.includes('/microsoftidentity/account/signin')) {
+                        // Clear before login
+                        try { if (typeof clearBrowserDataBeforeLogin === 'function') clearBrowserDataBeforeLogin(e, this); } catch (_) { }
+                        // allow default navigation
+                    }
+                });
+            }
                             globalSearchInput.placeholder = "Search PE Number";
                             break;
                         case "customer":

@@ -41,7 +41,7 @@
 }
 
 .sidebar-logo {
-  margin-right: 0.75rem;
+  display: block;
   flex-shrink: 0;
 }
 
@@ -133,6 +133,7 @@
 /* Sidebar collapse improvements for perfect icon alignment */
 .sidebar.collapsed .sidebar-nav .nav-item {
   margin-bottom: 0.25rem;
+  width: 100%;
   display: flex;
   justify-content: center;
   width: 100%;
@@ -178,6 +179,7 @@
 }
 
 .sidebar.collapsed .nav-text {
+/* Style the _LoginPartial when rendered inside the sidebar bottom */
   opacity: 0;
   pointer-events: none;
 }
@@ -201,6 +203,7 @@
 }
 
 .sidebar.collapsed .nav-link i {
+/* Collapsed behavior for login partial link */
   margin: 0 !important;
   width: auto !important;
   font-size: 1.2rem;
@@ -226,11 +229,11 @@
 .submenu .nav-link {
   padding-left: 3rem;
   font-size: 0.9rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .submenu .nav-link:hover {
-  color: #6b7280;
+  color: #4c4f53;
 }
 
 .sidebar.collapsed .submenu {
@@ -247,7 +250,7 @@
 .sidebar-bottom .nav-item {
   margin-bottom: 0.25rem;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
 }
 
@@ -267,6 +270,68 @@
 .sidebar-bottom .nav-link:hover {
   color: #374151;
   background: #f3f4f6;
+}
+
+/* Ensure the login partial stacks vertically under the user profile */
+.sidebar-bottom .navbar-nav {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-left: 0;
+  margin: 0;
+}
+
+.sidebar-bottom .navbar-nav .nav-item {
+  width: 100%;
+}
+
+.sidebar-bottom .navbar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  color: #6b7280;
+  transition: all 0.3s ease;
+}
+
+.sidebar-bottom .navbar-nav .nav-link:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+/* Make bottom section buttons match main navigation buttons */
+.sidebar-bottom .nav-link.active {
+  color: #3b82f6;
+  background: #eff6ff;
+  border-right: 3px solid #3b82f6;
+}
+
+.sidebar-bottom .nav-link i {
+  font-size: 1.1rem;
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-bottom .nav-item {
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+/* Ensure user avatar aligns like an icon in bottom section */
+.sidebar-bottom .user-avatar {
+  width: 20px;
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Perfect alignment for collapsed bottom section */
@@ -547,6 +612,12 @@
 [data-theme="dark"] .sidebar-bottom .nav-link:hover {
   color: #f9fafb;
   background: #374151;
+}
+
+[data-theme="dark"] .sidebar-bottom .nav-link.active {
+  color: #60a5fa;
+  background: #1e3a8a;
+  border-right-color: #60a5fa;
 }
 
 [data-theme="dark"] .main-content {
