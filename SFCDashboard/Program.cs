@@ -45,6 +45,20 @@ apiSettingsSection["BaseUrl"] = Environment.GetEnvironmentVariable("API_BASE_URL
 
 builder.Services.AddControllersWithViews();
 
+// Enforce HTTPS: configure HSTS (sent only over HTTPS) and permanent HTTPS redirects
+builder.Services.AddHsts(options =>
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(365); // 1 year; consider 2 years if confident
+});
+
+builder.Services.AddHttpsRedirection(options =>
+{
+    options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
+    // options.HttpsPort = 443; // uncomment and set if running on a non-standard port
+});
+
 // Add memory cache
 builder.Services.AddMemoryCache();
 

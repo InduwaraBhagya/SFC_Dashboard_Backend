@@ -64,6 +64,20 @@ builder.Services.AddControllers(options =>
 // Add memory cache
 builder.Services.AddMemoryCache();
 
+// Enforce HTTPS: configure HSTS (sent only over HTTPS) and permanent HTTPS redirects
+builder.Services.AddHsts(options =>
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(365); // 1 year; consider 2 years if confident
+});
+
+builder.Services.AddHttpsRedirection(options =>
+{
+    options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
+    // options.HttpsPort = 443; // uncomment and set if running on a non-standard port
+});
+
 // Add database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
@@ -248,6 +262,12 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
+
+if (!app.Environment.IsDevelopment())
+{
+    // Send the Strict-Transport-Security header to instruct browsers to always use HTTPS
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
 
