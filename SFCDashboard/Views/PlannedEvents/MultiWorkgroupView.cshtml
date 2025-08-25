@@ -1038,6 +1038,51 @@
     
     .boq-status-pending { background-color: #ffebee !important; border-color: #ef9a9a !important; }
     .boq-status-pending .boq-number { color: #c62828 !important; }
+    
+    /* Select2 workgroup filter styling - align tags to left */
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+        min-height: 50px !important;
+    }
+    
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        justify-content: flex-start !important;
+        padding: 2px 5px !important;
+        margin: 0 !important;
+    }
+    
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #6f42c1 !important;
+        border: 1px solid #6f42c1 !important;
+        color: #fff !important;
+        padding: 2px 8px !important;
+        margin: 2px 2px 2px 0 !important;
+        border-radius: 4px !important;
+        font-size: 0.75rem !important;
+        align-self: flex-start !important;
+    }
+    
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #fff !important;
+        margin-right: 5px !important;
+    }
+    
+    .select2-container--default .select2-selection--multiple .select2-search--inline {
+        margin: 0 !important;
+        padding: 0 !important;
+        align-self: flex-start !important;
+    }
+    
+    .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field {
+        margin: 2px 0 !important;
+        padding: 3px 5px !important;
+        font-size: 0.75rem !important;
+        min-width: 60px !important;
+    }
 </style>
 
 @* Simplify the modal with just Accept/Reject buttons *@
