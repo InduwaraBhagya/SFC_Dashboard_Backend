@@ -186,7 +186,7 @@
                         }
                     </h6>
                 </div>
-                <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <div class="card-body py-1 px-2" style="height: 360px;">
                     <div class="inbox-search-container mb-2">
                         <div class="input-group input-group-sm">
                             <input type="text" class="form-control inbox-search" placeholder="Search..." aria-label="Search messages" style="font-size: 0.75rem;">
@@ -324,15 +324,15 @@
 
         <!-- Middle Column: Workgroup Filter (card like Index) -->
         <div class="col-lg-4 mb-3">
-            <div class="card border-primary shadow-sm" style="height: 200px;">
+            <div class="card border-primary shadow-sm" style="height: 160px;">
                 <div class="card-header bg-primary text-white py-1">
                     <h6 class="mb-0">
                         <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
                     </h6>
                 </div>
-                <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
+                <div class="card-body py-2 px-2" style="overflow-y: auto;">
                     <form method="get" asp-action="MultiWorkgroupView">
-                        <div class="mb-2">
+                        <div class="mb-1">
                             <label class="form-label mb-1 small" for="workgroupsFilter">
                                 <i class="bi bi-people-fill"></i>
                                 Select Workgroups
@@ -340,8 +340,8 @@
                                     <i class="bi bi-info-circle"></i>
                                 </span>
                             </label>
-                            <div class="filter-select-container mb-2">
-                                <select class="form-select form-select-sm" name="workgroupIds" id="workgroupsFilter" multiple>
+                            <div class="filter-select-container mb-2" style="min-height: 60px;">
+                                <select class="form-select form-select-sm" name="workgroupIds" id="workgroupsFilter" multiple style="min-height: 50px;">
                                     @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
                                     {
                                         foreach (var workgroup in workgroups)
@@ -353,11 +353,11 @@
                                 </select>
                             </div>
                             <div class="filter-actions d-flex gap-1">
-                                <button type="submit" class="btn btn-primary btn-sm btn-filter-apply">
-                                    <i class="bi bi-funnel-fill"></i> Apply Filter
+                                <button type="submit" class="btn btn-primary btn-sm btn-filter-apply" style="font-size: 0.75rem;">
+                                    <i class="bi bi-funnel-fill"></i> Apply
                                 </button>
-                                <a href="@Url.Action("MultiWorkgroupView", new { searchType = ViewData["SearchType"], peNumber = ViewData["PENumberFilter"], customer = ViewData["CustomerFilter"], jobReference = ViewData["JobReferenceFilter"], soNumber = ViewData["SONumberFilter"] })" class="btn btn-outline-secondary btn-sm btn-filter-clear">
-                                    <i class="bi bi-x-circle"></i> Clear Filter
+                                <a href="@Url.Action("MultiWorkgroupView", new { searchType = ViewData["SearchType"], peNumber = ViewData["PENumberFilter"], customer = ViewData["CustomerFilter"], jobReference = ViewData["JobReferenceFilter"], soNumber = ViewData["SONumberFilter"] })" class="btn btn-outline-secondary btn-sm btn-filter-clear" style="font-size: 0.75rem;">
+                                    <i class="bi bi-x-circle"></i> Clear
                                 </a>
                             </div>
                         </div>
@@ -372,88 +372,49 @@
                 </div>
             </div>
             
-            <!-- Project Search Card -->
-            <div class="card border-primary shadow-sm mt-3" style="height: 180px;">
-                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
-                    <h6 class="mb-0">
-                        <i class="bi bi-search me-2"></i>Quick Find Projects
+            <!-- BOQ Status Box -->
+            <div class="card shadow-sm mt-3" style="height: 220px; border: 2px solid #4a90e2; border-radius: 10px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%); border-radius: 8px 8px 0 0;">
+                    <h6 class="mb-0 d-flex align-items-center" style="font-size: 0.9rem;">
+                        <i class="bi bi-clipboard-data me-1" style="font-size: 0.9rem;"></i>BOQ Status
+                        <i class="bi bi-question-circle ms-auto" style="font-size: 0.8rem; cursor: pointer;" title="BOQ Status Information"></i>
                     </h6>
                 </div>
-                <div class="card-body py-2">
-                    <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchForm">
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <div class="form-group">
-                                    <label for="projectSearchInput" class="form-label">Project Name or Code</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control shadow-sm" id="projectSearchInput" 
-                                            name="query" placeholder="Search projects..." 
-                                            value="@Context.Request.Query["query"]" autocomplete="off" />
-                                        <button class="btn btn-primary" type="submit">
-                                            <i class="bi bi-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
+                <div class="card-body p-2">
+                    <div class="row g-1">
+                        <!-- Total -->
+                        <div class="col-6">
+                            <div class="boq-status-item" style="background-color: #e3f2fd; border: 1px solid #bbdefb; border-radius: 6px; padding: 8px; text-align: center;">
+                                <div class="boq-number" style="font-size: 1.1rem; font-weight: bold; color: #1976d2;">0</div>
+                                <div class="boq-label" style="font-size: 0.65rem; color: #666; margin-top: 2px;">Total</div>
                             </div>
                         </div>
-                    </form>
-                    <!-- Project Search Results -->
-                    <div id="projectSearchResults" class="mt-3" style="max-height: 90px; overflow-y: auto;">
-                        @if (ViewBag.ProjectResults != null)
-                        {
-                            var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
-                            if (results != null && results.Any())
-                            {
-                                <div class="project-results-container">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <small class="text-muted">Found @results.Count() project(s)</small>
-                                    </div>
-                                    <div class="list-group list-group-flush">
-                                        @foreach (var project in results.Take(10))
-                                        {
-                                            <div class="list-group-item list-group-item-action p-2 border-0 border-bottom">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <div class="flex-grow-1">
-                                                        <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
-                                                        <small class="text-muted">ID: @project.Id</small>
-                                                    </div>
-                                                    <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
-                                                       class="btn btn-sm btn-outline-primary" title="View Details">
-                                                        <i class="bi bi-eye"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                    @if (results.Count() > 10)
-                                    {
-                                        <div class="text-center mt-2">
-                                            <small class="text-muted">Showing first 10 of @results.Count() results</small>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
-                            {
-                                <div class="text-center py-3 text-muted">
-                                    <i class="bi bi-search fs-4 d-block mb-2"></i>
-                                    <p class="mb-0">No projects found for "@Context.Request.Query["query"]"</p>
-                                </div>
-                            }
-                        }
-                        else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
-                        {
-                            <div class="text-center py-3 text-muted">
-                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                                <span>Searching...</span>
+                        <!-- Done -->
+                        <div class="col-6">
+                            <div class="boq-status-item" style="background-color: #e8f5e8; border: 1px solid #c8e6c8; border-radius: 6px; padding: 8px; text-align: center;">
+                                <div class="boq-number" style="font-size: 1.1rem; font-weight: bold; color: #2e7d32;">0</div>
+                                <div class="boq-label" style="font-size: 0.65rem; color: #666; margin-top: 2px;">Done</div>
                             </div>
-                        }
+                        </div>
+                        <!-- Progress -->
+                        <div class="col-6">
+                            <div class="boq-status-item" style="background-color: #fff3e0; border: 1px solid #ffcc02; border-radius: 6px; padding: 8px; text-align: center;">
+                                <div class="boq-number" style="font-size: 1.1rem; font-weight: bold; color: #f57c00;">0</div>
+                                <div class="boq-label" style="font-size: 0.65rem; color: #666; margin-top: 2px;">Progress</div>
+                            </div>
+                        </div>
+                        <!-- Pending -->
+                        <div class="col-6">
+                            <div class="boq-status-item" style="background-color: #ffebee; border: 1px solid #ffcdd2; border-radius: 6px; padding: 8px; text-align: center;">
+                                <div class="boq-number" style="font-size: 1.1rem; font-weight: bold; color: #d32f2f;">0</div>
+                                <div class="boq-label" style="font-size: 0.65rem; color: #666; margin-top: 2px;">Pending</div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <!-- View All Projects Button -->
-                    <div class="mt-2 pt-2 border-top">
-                        <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100">
-                            <i class="bi bi-list-ul me-1"></i>View All Projects
+                    <!-- View All Button -->
+                    <div class="mt-3">
+                        <a href="@Url.Action("BOQList", "BOQ")" class="btn btn-outline-primary btn-sm w-100" style="border-radius: 4px; font-size: 0.75rem; padding: 4px 8px;">
+                            <i class="bi bi-list-ul me-1"></i>View All
                         </a>
                     </div>
                 </div>
@@ -474,7 +435,7 @@
                         </button>
                     } *@
                 </div>
-                <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <div class="card-body py-1 px-2" style="height: 360px;">
                     <div id="noticeContent">
                         @{
                             var notices = ViewBag.Notices as List<dynamic> ?? new List<dynamic>();
@@ -1044,6 +1005,39 @@
     .hold-card { background: linear-gradient(135deg, #485563, #29323c); color: #fff; }
     .dashboard-card .img-container { display: flex; align-items: center; }
     .dashboard-card .card-content h5 { margin: 0; }
+
+    /* BOQ Status Card Styling */
+    .boq-status-item {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .boq-status-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .boq-number {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 700 !important;
+        line-height: 1.2;
+    }
+    .boq-label {
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Specific status colors matching the image */
+    .boq-status-total { background-color: #e3f2fd !important; border-color: #90caf9 !important; }
+    .boq-status-total .boq-number { color: #1565c0 !important; }
+    
+    .boq-status-done { background-color: #e8f5e8 !important; border-color: #a5d6a7 !important; }
+    .boq-status-done .boq-number { color: #2e7d32 !important; }
+    
+    .boq-status-progress { background-color: #fff8e1 !important; border-color: #ffcc02 !important; }
+    .boq-status-progress .boq-number { color: #ef6c00 !important; }
+    
+    .boq-status-pending { background-color: #ffebee !important; border-color: #ef9a9a !important; }
+    .boq-status-pending .boq-number { color: #c62828 !important; }
 </style>
 
 @* Simplify the modal with just Accept/Reject buttons *@
