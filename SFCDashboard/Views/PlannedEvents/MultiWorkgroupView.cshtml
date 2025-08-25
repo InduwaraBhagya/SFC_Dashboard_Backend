@@ -324,7 +324,7 @@
 
         <!-- Middle Column: Workgroup Filter (card like Index) -->
         <div class="col-lg-4 mb-3">
-            <div class="card border-primary shadow-sm" style="height: 250px;">
+            <div class="card border-primary shadow-sm" style="height: 200px;">
                 <div class="card-header bg-primary text-white py-1">
                     <h6 class="mb-0">
                         <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
@@ -369,6 +369,93 @@
                             Active filter: <strong>@ViewData["FilteredWorkgroups"]</strong>
                         </div>
                     }
+                </div>
+            </div>
+            
+            <!-- Project Search Card -->
+            <div class="card border-primary shadow-sm mt-3" style="height: 180px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Quick Find Projects
+                    </h6>
+                </div>
+                <div class="card-body py-2">
+                    <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchForm">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="projectSearchInput" class="form-label">Project Name or Code</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control shadow-sm" id="projectSearchInput" 
+                                            name="query" placeholder="Search projects..." 
+                                            value="@Context.Request.Query["query"]" autocomplete="off" />
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    <!-- Project Search Results -->
+                    <div id="projectSearchResults" class="mt-3" style="max-height: 90px; overflow-y: auto;">
+                        @if (ViewBag.ProjectResults != null)
+                        {
+                            var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
+                            if (results != null && results.Any())
+                            {
+                                <div class="project-results-container">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-muted">Found @results.Count() project(s)</small>
+                                    </div>
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var project in results.Take(10))
+                                        {
+                                            <div class="list-group-item list-group-item-action p-2 border-0 border-bottom">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="flex-grow-1">
+                                                        <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
+                                                        <small class="text-muted">ID: @project.Id</small>
+                                                    </div>
+                                                    <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
+                                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    @if (results.Count() > 10)
+                                    {
+                                        <div class="text-center mt-2">
+                                            <small class="text-muted">Showing first 10 of @results.Count() results</small>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                            {
+                                <div class="text-center py-3 text-muted">
+                                    <i class="bi bi-search fs-4 d-block mb-2"></i>
+                                    <p class="mb-0">No projects found for "@Context.Request.Query["query"]"</p>
+                                </div>
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                        {
+                            <div class="text-center py-3 text-muted">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                <span>Searching...</span>
+                            </div>
+                        }
+                    </div>
+                    
+                    <!-- View All Projects Button -->
+                    <div class="mt-2 pt-2 border-top">
+                        <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="bi bi-list-ul me-1"></i>View All Projects
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
