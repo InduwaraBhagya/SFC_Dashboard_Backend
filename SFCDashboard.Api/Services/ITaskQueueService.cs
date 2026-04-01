@@ -1,0 +1,16 @@
+using SFCDashboard.Api.Models;
+
+namespace SFCDashboard.Api.Services
+{
+    public interface ITaskQueueService
+    {
+        Task<List<TaskQueueItem>> GetPrioritizedTasksAsync(int? workgroupId = null, int? year = null, int take = 20);
+        Task<TaskQueueItem?> GetNextTaskAsync(int? workgroupId = null, int? year = null);
+        Task<List<int>> GetAvailableYearsAsync();
+        void ClearTaskQueueCache(int? workgroupId = null);
+        void ClearAllTaskQueueCache();
+        Task RefreshTaskQueueSnapshotsAsync(int? workgroupId = null, int? year = null);
+    }
+}
+
+

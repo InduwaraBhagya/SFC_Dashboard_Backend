@@ -1,0 +1,1240 @@
+﻿@model SFCDashboard.Models.PlannedEvent
+
+@{
+    ViewData["Title"] = "PE Record Details";
+    // Find the ongoing task (first one if multiple)
+    var ongoingTask = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+    .FirstOrDefault(t => t.TaskStatus?.Trim().ToLower() == "ongoing");
+
+    var startDate = ongoingTask?.TaskCreatedDate ?? Model.PECreatedDate;
+    var targetDate = ongoingTask?.TaskCompleteDate ?? (Model.ServiceRequiredDate ?? Model.PECreatedDate.AddDays(7));
+    var today = DateTime.Now.Date;
+
+    var totalDays = (targetDate - startDate).TotalDays;
+    var daysPassed = (today - startDate).TotalDays;
+    var daysLeft = (targetDate - today).TotalDays;
+    var isViolated = today > targetDate;
+    var daysExceeded = isViolated ? (today - targetDate).TotalDays : 0;
+
+    // Clamp progress between 0 and 100
+    var progressPercent = totalDays > 0 ? Math.Min(100, Math.Max(0, Math.Round((daysPassed / totalDays) * 100))) : 0;
+}
+
+<!-- Estimated Time Section (Moved to Top) -->
+@{
+    var drawFiberTasks = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+    .Where(t => t.Task?.Trim().ToLower() == "draw fiber")
+    .ToList();
+}
+
+
+@if (drawFiberTasks.Any() && ViewData["CanManageEstimatedTime"] as bool? == true)
+{
+    <div class="card shadow-sm border-0 mb-4 rounded-3 overflow-hidden">
+    <div class="card-header bg-gradient text-white d-flex align-items-center" 
+         style="background-color: #4285F4;">
+        <i class="bi bi-clock me-2"></i>
+        <strong>Estimate Task Completion</strong>
+    </div>
+    <div class="card-body p-4">
+        <form id="estimatedTimeForm" asp-controller="PETasks" asp-action="UpdateEstimatedTime" 
+              method="post" class="row g-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="taskId" value="@drawFiberTasks.First().Id" />
+
+            <div class="col-md-8">
+                <label for="estimatedTime" class="form-label fw-semibold text-muted small">
+                    ESTIMATED COMPLETION DATE
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="bi bi-calendar3"></i>
+                    </span>
+                    <input type="date" 
+                           name="estimatedTime" 
+                           id="estimatedTime" 
+                           class="form-control border-start-0 shadow-none ps-0" 
+                           value="@(drawFiberTasks.First().EstimatedTime?.ToString("yyyy-MM-dd") ?? "")"
+                           required />
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-check2 me-2"></i> Save Estimate
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+}
+
+<!-- Timeline/Gantt Chart Section (Updated) -->
+<div class="timeline-container mb-4">
+    <div class="timeline-labels d-flex justify-content-between mb-1">
+        <span>
+            <i class="bi bi-flag-fill text-success"></i>
+            Start: @startDate.ToString("yyyy-MM-dd")
+        </span>
+        <span>
+            <i class="bi bi-calendar-event text-primary"></i>
+            Today: @today.ToString("yyyy-MM-dd")
+        </span>
+        <span>
+            <i class="bi bi-flag-fill text-danger"></i>
+            Target: @targetDate.ToString("yyyy-MM-dd")
+        </span>
+    </div>
+    <div class="timeline-bar position-relative" style="height: 32px;">
+        <!-- Background bar -->
+        <div style="position:absolute;left:0;top:12px;width:100%;height:8px;background:#e9ecef;border-radius:4px;">
+        </div>
+        <!-- Progress bar -->
+        <div style="position:absolute;left:0;top:12px;height:8px;
+            background:@(isViolated ? "#dc3545" : "#198754");
+            border-radius:4px;
+            width:@progressPercent%;"></div>
+        <!-- Today marker -->
+        <div style="position:absolute;top:0;left:@progressPercent%;transform:translateX(-50%);">
+            <span class="badge bg-primary">Today</span>
+        </div>
+        <!-- Target marker -->
+        <div style="position:absolute;top:24px;left:100%;transform:translateX(-50%);">
+            <span class="badge bg-danger">Deadline</span>
+        </div>
+        <!-- Start marker -->
+        <div style="position:absolute;top:24px;left:0;">
+            <span class="badge bg-success">Start</span>
+        </div>
+    </div>
+    <div class="timeline-info mt-3">
+        @if (!isViolated)
+        {
+            <span class="text-success">
+                <i class="bi bi-hourglass-split"></i>
+                @if (daysPassed < 1)
+                {
+                    <strong>Just started!</strong>
+                }
+                else
+                {
+                    <strong>@daysPassed.ToString("0") days passed</strong>
+                }
+                &nbsp;|&nbsp;
+                <strong>@daysLeft.ToString("0") days left</strong> until deadline.
+            </span>
+        }
+        else
+        {
+            <span class="text-danger fw-bold">
+                <i class="bi bi-exclamation-triangle"></i>
+                Unable to complete task within deadline, exceeded by <strong>@daysExceeded.ToString("0") days</strong>.
+            </span>
+        }
+    </div>
+</div>
+<style>
+    .timeline-container {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem 1rem 1rem 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .timeline-labels span {
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+
+    .timeline-bar {
+        min-width: 250px;
+        margin-bottom: 0.5rem;
+    }
+
+    .timeline-info {
+        font-size: 1.1rem;
+    }
+
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 1rem);
+    }
+
+    .modal-content {
+        border-radius: 1rem;
+        border: none;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+        padding: 1rem 1.5rem;
+    }
+
+    .btn-lg {
+        border-radius: 0.5rem;
+        font-weight: 500;
+        min-width: 120px;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+
+    .table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
+
+    /* Estimation History Modal Text Colors */
+    /* Light mode - ensure dark text is visible */
+    #estimationHistoryModal .text-dark {
+        color: #212529 !important;
+    }
+    
+    #estimationHistoryModal .table thead th {
+        color: #212529 !important;
+        background-color: #f8f9fa !important;
+    }
+    
+    #estimationHistoryModal .table tbody td {
+        color: #212529 !important;
+    }
+    
+    #estimationHistoryModal .table tbody td .text-dark {
+        color: #212529 !important;
+    }
+
+    /* Estimation created at text styling */
+    .estimation-created-at {
+        color: #1a365d !important; /* Dark blue for light mode */
+    }
+
+    /* Estimation header text styling */
+    .estimation-header-text {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+    }
+
+    /* Dark mode specific styling for estimation history */
+    [data-theme="dark"] #estimationHistoryModal .text-dark {
+        color: #ffffff !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table tbody td {
+        color: var(--text-color) !important;
+    }
+
+    [data-theme="dark"] #estimationHistoryModal .table thead th {
+        background-color: var(--hover-bg) !important;
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] #estimationHistoryModal .table tbody td .text-dark {
+        color: var(--text-color) !important;
+    }
+
+    /* Dark mode styling for estimation created at text */
+    [data-theme="dark"] .estimation-created-at {
+        color: #60a5fa !important; /* Light blue for dark mode */
+    }
+
+    /* Dark mode styling for estimation header text */
+    [data-theme="dark"] .estimation-header-text {
+        color: #60a5fa !important; /* Light blue for dark mode */
+        font-weight: 600 !important;
+    }
+
+    /* PETask table header styling for light mode */
+    .task-table thead.table-light th {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+        background-color: #76a7d8 !important;
+    }
+
+    /* Ensure PETask table column names are visible in light mode */
+    .table.task-table .table-light th {
+        color: #1a365d !important; /* Dark blue for better visibility */
+        font-weight: 600 !important;
+    }
+
+    /* Dark mode styling for PETask table headers */
+    [data-theme="dark"] .task-table thead.table-light th,
+    [data-theme="dark"] .table.task-table .table-light th {
+        color: var(--text-color) !important; /* Use theme text color for dark mode */
+        background-color: var(--hover-bg) !important;
+    }
+
+    /* Issue table header styling for light mode */
+    .table.table-bordered.table-striped thead th {
+        color: #1a365d !important; /* Dark blue for light mode */
+        font-weight: 600 !important;
+        background-color: #e1c425 !important;
+    }
+
+    /* Dark mode styling for issue table headers */
+    [data-theme="dark"] .table.table-bordered.table-striped thead th {
+        color: var(--text-color) !important; /* Use theme text color for dark mode */
+        background-color: var(--hover-bg) !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">PE Record Details</h2>
+            <div>                
+                <button type="button" class="btn btn-sm btn-light" onclick="javascript:history.back()">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <tbody>
+                        <tr>
+                            <th class="bg-light text-primary" style="width: 25%">PE Number (PK)</th>
+                            <td>@Html.DisplayFor(model => model.PeNumber)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Job Reference Number</th>
+                            <td>@Html.DisplayFor(model => model.JobReference)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">SO Number</th>
+                            <td>@Html.DisplayFor(model => model.SoNumber)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Region</th>
+                            <td>@Html.DisplayFor(model => model.Region)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Area</th>
+                            <td>@Html.DisplayFor(model => model.PeArea)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Task</th>
+                            <td>@Html.DisplayFor(model => model.TaskName)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Status</th>
+                            <td>
+                                @{
+                                    string statusClass;
+                                    string displayStatus;
+
+                                    if (Model.IsHold)
+                                    {
+                                        // If IsHold is true, always show "Hold" status with warning class
+                                        statusClass = "badge bg-warning text-dark";
+                                        displayStatus = "Hold";
+                                    }
+                                    else
+                                    {
+                                        // Otherwise show the actual PEStatus from database with appropriate styling
+                                        statusClass = Model.PEStatus?.ToLower() switch
+                                        {
+                                            "completed" => "badge bg-success",
+                                            "in progress" => "badge bg-warning text-dark",
+                                            "ongoing" => "badge bg-success", // Changed bg-info to bg-success for regular tasks
+                                            "pending" => "badge bg-secondary",
+                                            _ => "badge bg-secondary"
+                                        };
+                                        displayStatus = Model.PEStatus?.ToLower() == "ongoing" ? "Regular" : (Model.PEStatus ?? "Unknown");
+                                    }
+                                }
+                                <span class="@statusClass">@displayStatus</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Start Time</th>
+                            <td>@Html.DisplayFor(model => model.WoStartDate)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">End Time</th>
+                            <td>@Html.DisplayFor(model => model.WoActualStartDate)</td>
+                        </tr>
+
+                        <tr>
+                            <th class="bg-light text-primary">RTOM</th>
+                            <td>@Html.DisplayFor(model => model.Rtom)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Contractor Name</th>
+                            <td>@Html.DisplayFor(model => model.ContractorName)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">PE Objective</th>
+                            <td>@Html.DisplayFor(model => model.PeObjective)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Order Type</th>
+                            <td>@Html.DisplayFor(model => model.OrderType)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Pending Task Name</th>
+                            <td>@Html.DisplayFor(model => model.PendingTaskName)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Pending Workgroup</th>
+                            <td>@Html.DisplayFor(model => model.PendingWg)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Network Engineer</th>
+                            <td>@ViewBag.NetworkEngineer</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Account Manager</th>
+                            <td>@Html.DisplayFor(model => model.AccountManager)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Section Handled By</th>
+                            <td>@Html.DisplayFor(model => model.SectionHandledBy)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Service Required Date</th>
+                            <td>@Html.DisplayFor(model => model.ServiceRequiredDate)</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light text-primary">Fiber PE Task Workgroup</th>
+                            <td>@Html.DisplayFor(model => model.FiberPeTaskWg)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PE Tasks Section -->
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">PE Tasks</h3>
+            @if (ViewBag.PETasks == null || ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Count() == 0)
+            {
+                <span class="badge bg-warning text-dark">No tasks found</span>
+            }
+        </div>
+        <div class="card-body">
+
+            @* Show estimated time summary for "Draw Fiber" task(s) *@
+            @{
+                var drawFiberTasksWithEstimate = ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+                .Where(t => t.Task?.Trim().ToLower() == "draw fiber" && t.EstimatedTime.HasValue)
+                .ToList();
+            }
+            @if (drawFiberTasksWithEstimate.Any())
+            {
+                <div class="alert alert-secondary mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Estimated Time for "Draw Fiber":</strong>
+                            @foreach (var t in drawFiberTasksWithEstimate)
+                            {
+                                <span class="badge bg-primary mx-1">@(t.EstimatedTime?.ToString("yyyy-MM-dd") ?? "N/A")</span>
+                                <button type="button" 
+                                        class="btn btn-sm btn-primary ms-2"
+                                        onclick="showEstimationHistory(@t.Id)"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="View previous estimation dates">
+                                    <i class="bi bi-clock-history"></i> 
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+            }
+
+            @if (ViewBag.PETasks != null && ((IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks).Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover task-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Seq</th>
+                                <th>Task</th>
+                                <th>Priority</th>
+                                <th>Workgroup</th>
+                                <th>OLA</th>
+                                <th>Status</th>
+                                <th>Created Date</th>
+                                <th>Target Date</th>
+                                <th>Actual Start Date</th>
+                                <th>Actual End Date</th>
+                                @if (ViewData["CanMakeTasksUrgent"] as bool? == true)
+                                {
+                                    <th>Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasks)
+                            {
+                                <tr class="@(task.IsUrgent ? "table-warning" : 
+                                                                       task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                                                       task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                                                       task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                            <td>@task.TaskSeq</td>
+                            <td>@task.Task</td>
+                            <td> <!-- Priority column moved here -->
+                                @if (task.IsUrgent)
+                                        {
+                                            <span class="badge bg-danger">URGENT</span>
+                                            @if (task.UrgentMarkedDate.HasValue)
+                                            {
+                                                <small class="text-danger d-block">
+                                                    <i class="bi bi-clock-history"></i> Marked on: @task.UrgentMarkedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                                </small>
+                                            }
+                                        }
+                                        @if (task.UrgentRequested && !task.IsUrgent)
+                                        {
+                                            <span class="badge bg-warning">URGENT REQUESTED</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(task.Priority))
+                                        {
+                                            <small class="d-block text-muted mt-1">@task.Priority</small>
+                                        }
+                                    </td>
+                                    <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                    <td>@task.OLA days</td>
+                                    <td>
+                                        @{
+                                            string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                            {
+                                                "completed" => "badge bg-success",
+                                                "inprogress" => "badge bg-warning text-dark",
+                                                "ongoing" => "badge bg-primary", // Ongoing is now blue
+                                                _ => "badge bg-secondary"
+                                            };
+
+                                    // OLA color logic for completed tasks
+                                    if (task.TaskStatus?.ToLower() == "completed" && task.ActualTaskCreatedDate.HasValue && task.ACtualTaskCompleteDate.HasValue)
+                                    {
+                                        int olaDays = 0;
+                                        int.TryParse(task.OLA, out olaDays);
+                                        var actualDays = (task.ACtualTaskCompleteDate.Value.Date - task.ActualTaskCreatedDate.Value.Date).TotalDays;
+                                        if (actualDays > olaDays)
+                                        {
+                                            // Completed but OLA violated
+                                            taskStatusClass = "badge bg-danger";
+                                        }
+                                        else
+                                        {
+                                            // Completed within OLA
+                                            taskStatusClass = "badge bg-success";
+                                        }
+                                    }
+                                }
+                                <span class="@(task.IsOLAViolate ? "badge bg-danger" : taskStatusClass)">
+                                    @(task.IsOLAViolate ? "ONGOING" : task.TaskStatus)
+                                </span>
+                            </td>
+                            <td>@task.TaskCreatedDate.ToString("yyyy-MM-dd")</td>
+                            <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                @(task.ActualTaskCreatedDate != null
+                                    ? task.ActualTaskCreatedDate.Value.ToString("yyyy-MM-dd")
+                                    : "-")
+                            </td>
+                            <td>
+                                @(task.ACtualTaskCompleteDate != null
+                                    ? task.ACtualTaskCompleteDate.Value.ToString("yyyy-MM-dd")
+                                    : "-")
+                            </td>
+                            @if (ViewData["CanMakeTasksUrgent"] as bool? == true)
+                            {
+                                <td>
+                                    @if (task.UrgentRequested && !task.IsUrgent)
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-hourglass-split"></i> Awaiting Approval
+                                        </span>
+                                    }
+                                    else if (task.TaskStatus?.ToUpper() == "ONGOING" && !task.IsUrgent)
+                                    {
+                                        <form asp-controller="PETasks" asp-action="MarkAsUrgent" method="post" 
+                                              onsubmit="return confirmUrgent(event, '@task.Task')">
+                                            <input type="hidden" name="id" value="@task.Id" />
+                                            <button type="submit" class="btn btn-warning btn-sm w-100">
+                                                <i class="bi bi-exclamation-triangle"></i> Mark as Urgent
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No tasks have been assigned to this PE record yet.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Reported Issues Section -->
+    @if (ViewBag.PEReportedIssues != null &&
+        ((IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues).Any())
+    {
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-exclamation-triangle me-2"></i> Reported Issues (Subtasks)
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Reported By</th>
+                            <th>Receiver</th>
+                            <th>Issue</th>
+                            <th>Attachment</th>
+                            <th>Date</th>
+                            <th>Status</th> <!-- Add this new column -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var issue in (IEnumerable<SFCDashboard.Models.PEIssueViewModel>)ViewBag.PEReportedIssues)
+                        {
+                            <tr>
+                                <td>@issue.SenderName</td>
+                                <td>@issue.ReceiverName</td>
+                                <td>@issue.IssueText</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                    {
+                                        <a href="@issue.AttachmentPath" target="_blank">View</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    @if (issue.IsHiddenFromInbox)
+                                    {
+                                        <span class="badge bg-success">Fixed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Open</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mt-4">
+            <i class="bi bi-info-circle me-2"></i> No issues reported for this PE.
+        </div>
+    }
+</div>
+
+<!-- Urgent Request Modal for Planned Event -->
+<div class="modal fade" id="urgentPEModal" tabindex="-1" aria-labelledby="urgentPEModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="urgentPEModalLabel">Request Urgent Status for Planned Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>PE Number:</strong> <span id="modalPeNumberValue"></span><br>
+                    <strong>Customer:</strong> <span id="modalCustomerValue"></span>
+                </div>
+                <form id="urgentPERequestForm" method="post">
+                    <input type="hidden" name="id" id="peIdField" />
+
+                    <div class="form-group mb-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="openingCeremony"
+                                value="OpeningCeremony" required />
+                            <label class="form-check-label" for="openingCeremony">
+                                <strong>Opening Ceremony</strong> [Priority 1]
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="criticalCustomer"
+                                value="CriticalCustomer" />
+                            <label class="form-check-label" for="criticalCustomer">
+                                <strong>Critical Customer</strong> [Priority 2]
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmPEUrgentRequest">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Issue Button -->
+@if (!Model.IsHold && (ViewData["CanReportIssues"] as bool? == true))
+{
+    <button class="btn btn-danger my-3" data-bs-toggle="modal" data-bs-target="#reportIssueModal">
+        <i class="bi bi-flag"></i> Report Issue
+    </button>
+}
+<!-- Report Issue Modal -->
+<div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="reportIssueForm" enctype="multipart/form-data" method="post" asp-controller="Issues"
+                asp-action="CreateForPE">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportIssueModalLabel">Report Issue</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="PlannedEventId" value="@Model.Id" />
+
+                    <!-- Add Sender Info -->
+                    <div class="mb-3">
+                        <label class="form-label">Sender</label>
+                        <input type="text" class="form-control" id="senderName" readonly />
+                        <input type="hidden" id="senderId" name="SenderId" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="receiverId" class="form-label">Receiver</label>
+                        <select class="form-select" id="receiverId" name="ReceiverId" required>
+                            <option value="">Select User</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="issueText" class="form-label">Issue</label>
+
+                        <input type="text" class="form-control" id="issueText" name="IssueText"
+                            placeholder="Describe the issue" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="attachment" class="form-label">Attachment (Optional)</label>
+                        <input type="file" class="form-control" id="attachment" name="Attachment" />
+                        <small class="text-muted">Supported formats: PDF, Word, Excel, Images</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Urgent Request Modal for Task *@
+<div class="modal fade" id="urgentTaskModal" tabindex="-1" aria-labelledby="urgentTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="urgentTaskModalLabel">Request Urgent Status for Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>PE Number:</strong> <span id="modalTaskPeNumberValue"></span><br>
+                    <strong>Task Name:</strong> <span id="modalTaskNameValue"></span>
+                </div>
+                <form id="urgentTaskRequestForm" method="post">
+                    <input type="hidden" name="id" id="taskIdField" />
+                    <div class="form-group mb-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="taskOpeningCeremony"
+                                value="OpeningCeremony" required />
+                            <label class="form-check-label" for="taskOpeningCeremony">
+                                <strong>Opening Ceremony</strong> [Priority 1]
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="urgentReason" id="taskCriticalCustomer"
+                                value="CriticalCustomer" />
+                            <label class="form-check-label" for="taskCriticalCustomer">
+                                <strong>Critical Customer</strong> [Priority 2]
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmTaskUrgentRequest">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Improved Estimation History Modal -->
+<div class="modal fade" id="estimationHistoryModal" tabindex="-1" aria-labelledby="estimationHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="estimationHistoryModalLabel">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Estimation Date History
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="loadingSpinner" class="text-center my-4 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="noHistoryAlert" class="alert alert-info d-none">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No estimation history available.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="estimation-header-text">
+                                    <i class="bi bi-calendar-date me-2"></i>
+                                    Estimated Date
+                                </th>
+                                <th scope="col" class="estimation-header-text">
+                                    <i class="bi bi-clock me-2"></i>
+                                    Created At
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="estimationHistoryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+           
+        </div>
+    </div>
+</div>
+
+<!-- Task Urgent Confirmation Modal -->
+<div class="modal fade" id="taskUrgentConfirmModal" tabindex="-1" aria-labelledby="taskUrgentConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark py-2">
+                <h5 class="modal-title fs-6" id="taskUrgentConfirmModalLabel">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Confirm Action
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <h6 class="mb-0">Do you want to mark this task as urgent?</h6>
+                <form id="markUrgentForm" method="post">
+                    <input type="hidden" name="id" id="confirmTaskId" />
+                </form>
+            </div>
+            <div class="modal-footer justify-content-center py-2 border-0">
+                <button type="button" class="btn btn-sm btn-success" onclick="submitUrgentForm()">
+                    <i class="bi bi-check-circle me-1"></i>Yes
+                </button>
+                <button type="button" class="btn btn-sm btn-danger" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>No
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this section to your Planned Event Details view -->
+
+</div>
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle showing the PE urgent modal (for the whole Planned Event)
+            document.querySelectorAll('.show-pe-urgent-modal').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const peId = this.getAttribute('data-pe-id');
+                    const peNumber = this.getAttribute('data-pe-number');
+                    const customer = this.getAttribute('data-customer');
+
+                    document.getElementById('peIdField').value = peId;
+                    document.getElementById('modalPeNumberValue').textContent = peNumber;
+                    document.getElementById('modalCustomerValue').textContent = customer;
+
+                    const modal = new bootstrap.Modal(document.getElementById('urgentPEModal'));
+                    modal.show();
+                });
+            });
+
+            // Handle showing the Task urgent modal (for individual tasks)
+            document.querySelectorAll('.show-urgent-modal').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const taskId = this.getAttribute('data-task-id');
+                    const peNumber = this.getAttribute('data-pe-number');
+                    const taskName = this.getAttribute('data-task-name');
+
+                    document.getElementById('taskIdField').value = taskId;
+                    document.getElementById('modalTaskPeNumberValue').textContent = peNumber;
+                    document.getElementById('modalTaskNameValue').textContent = taskName;
+
+                    const modal = new bootstrap.Modal(document.getElementById('urgentTaskModal'));
+                    modal.show();
+                });
+            });
+
+            // Handle form submission from the PE modal
+            document.getElementById('confirmPEUrgentRequest').addEventListener('click', function () {
+                // Check if a radio button is selected
+                const selectedReason = document.querySelector('#urgentPERequestForm input[name="urgentReason"]:checked');
+                if (!selectedReason) {
+                    alert('Please select a reason for the urgent request.');
+                    return;
+                }
+
+                // Submit the form
+                const form = document.getElementById('urgentPERequestForm');
+                form.action = '@Url.Action("RequestUrgentWithReason", "PlannedEvents")';
+                form.submit();
+            });
+
+            // Handle form submission from the Task modal
+            document.getElementById('confirmTaskUrgentRequest').addEventListener('click', function () {
+                // Check if a radio button is selected
+                const selectedReason = document.querySelector('#urgentTaskRequestForm input[name="urgentReason"]:checked');
+                if (!selectedReason) {
+                    alert('Please select a reason for the urgent request.');
+                    return;
+                }
+
+                // Submit the form
+                const form = document.getElementById('urgentTaskRequestForm');
+                form.action = '@Url.Action("RequestUrgentWithReason", "PETasks")';
+                form.submit();
+            });
+
+            // AJAX for Estimated Time Save
+const estimatedTimeForm = document.getElementById('estimatedTimeForm');
+if (estimatedTimeForm) {
+    estimatedTimeForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        
+        const taskId = document.querySelector('input[name="taskId"]').value;
+        const estimatedTime = document.querySelector('input[name="estimatedTime"]').value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        
+        if (!estimatedTime) {
+            alert('Please select an estimated completion date.');
+            return;
+        }
+        
+        // Create the request data
+        const requestData = {
+            taskId: parseInt(taskId),
+            estimatedTime: estimatedTime,
+            __RequestVerificationToken: token
+        };
+        
+        fetch(estimatedTimeForm.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams(requestData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(text || 'Failed to save estimated time.');
+            });
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Estimated time updated successfully!');
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to save estimated time.');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert(error.message || 'Failed to save estimated time.');
+        });
+    });
+}
+            // Set min date for estimatedTime input to today
+            var estimatedTimeInput = document.getElementById('estimatedTime');
+            if (estimatedTimeInput) {
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                var minDate = yyyy + '-' + mm + '-' + dd;
+                estimatedTimeInput.setAttribute('min', minDate);
+            }
+        });
+        $(document).ready(function () {
+
+            // Get current user info and populate sender fields
+            $.get('@Url.Action("GetCurrentUser","SystemUsers")', function (user) {
+                if (user) {
+                    $('#senderName').val(user.name);
+                    $('#senderId').val(user.id);
+                }
+            });
+
+            // Populate receiver dropdown
+            $.get('@Url.Action("GetAll","SystemUsers")', function (users) {
+                users.forEach(function (user) {
+                    $('#receiverId').append($('<option>', { value: user.id, text: user.name }));
+                });
+            });
+
+            // Populate task list dropdown
+            $.get('@Url.Action("GetPETaskListsForPE","PlannedEvents")', { peId: '@Model.Id' }, function (tasks) {
+                tasks.forEach(function (task) {
+                    $('#taskListId').append($('<option>', { value: task.id, text: task.name }));
+                });
+            });
+
+            // Populate issue suggestions (existing issues for this PE/tasklist)
+            $('#taskListId').on('change', function () {
+                var taskListId = $(this).val();
+                $('#issueSuggestions').empty();
+                if (taskListId) {
+                    $.get('@Url.Action("GetIssueSuggestions","Issues")', { peId: '@Model.Id', taskListId: taskListId }, function (issues) {
+                        issues.forEach(function (issue) {
+                            $('#issueSuggestions').append($('<option>', { value: issue.text }));
+                        });
+                    });
+                }
+            });
+
+            // When the modal is shown, fetch suggestions
+            $('#reportIssueModal').on('shown.bs.modal', function () {
+                // Clear previous suggestions
+                $('#issueSelect').empty();
+                $('#issueSelect').append($('<option>', {
+                    value: "",
+                    text: "-- Select from previous issues or type a new one --"
+                }));
+
+                // Get the taskId from PE's TaskName
+                var peTaskName = '@Model.TaskName';
+
+                // First get the matching PETaskList ID
+                $.get('@Url.Action("GetTaskListIdByName","Issues")', { taskName: peTaskName }, function (taskListId) {
+                    if (taskListId > 0) {
+                        // Then get suggestions for that task
+                        $.get('@Url.Action("GetIssueSuggestions","Issues")', { taskId: taskListId }, function (data) {
+                            // Check if we have suggestions
+                            if (data && (data.commonIssues.length > 0 || data.recentIssues.length > 0)) {
+
+                                // Show suggestion container
+                                $('.suggestion-container').show();
+
+                                // Add common issues
+                                if (data.commonIssues && data.commonIssues.length > 0) {
+                                    var commonGroup = $('<optgroup label="Common Issues"></optgroup>');
+                                    data.commonIssues.forEach(function (issue) {
+                                        var frequencyText = issue.frequency > 1 ?
+                                            ` (Reported ${issue.frequency} times)` : '';
+                                        commonGroup.append($('<option>', {
+                                            value: issue.issueText,
+                                            text: issue.issueText + frequencyText
+                                        }));
+                                    });
+                                    $('#issueSelect').append(commonGroup);
+                                }
+
+                                // Add recent issues
+                                if (data.recentIssues && data.recentIssues.length > 0) {
+                                    var recentGroup = $('<optgroup label="Recent Issues"></optgroup>');
+                                    data.recentIssues.forEach(function (issue) {
+                                        var status = issue.isHiddenFromInbox ? '[FIXED] ' : '';
+                                        recentGroup.append($('<option>', {
+                                            value: issue.issueText,
+                                            text: status + issue.issueText + ' (by ' + issue.reportedBy + ')'
+                                        }));
+                                    });
+                                    $('#issueSelect').append(recentGroup);
+                                }
+                            } else {
+                                // No suggestions available
+                                $('.suggestion-container').hide();
+                            }
+                        });
+                    } else {
+                        // No matching task list
+                        $('.suggestion-container').hide();
+                    }
+                });
+            });
+
+            // When a suggestion is selected, populate the input field
+            $('#issueSelect').change(function () {
+                var selectedText = $(this).val();
+                if (selectedText) {
+                    $('#issueText').val(selectedText);
+                }
+            });
+        });
+
+        // Add this inside your existing document.ready function
+        function showEstimationHistory(taskId) {
+            const modal = new bootstrap.Modal(document.getElementById('estimationHistoryModal'));
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const noHistoryMessage = document.getElementById('noHistoryAlert');
+            const tbody = document.getElementById('estimationHistoryTableBody');
+            
+            // Show loading spinner
+            loadingSpinner.classList.remove('d-none');
+            noHistoryMessage.classList.add('d-none');
+            tbody.innerHTML = '';
+            modal.show();
+            
+            // Fetch history data
+            fetch(`@Url.Action("GetEstimationHistory","PETasks")/${taskId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loadingSpinner.classList.add('d-none');
+                    
+                    if (!data || data.length === 0) {
+                        noHistoryMessage.classList.remove('d-none');
+                        return;
+                    }
+                    
+                    data.forEach(history => {
+                        const row = document.createElement('tr');
+                        const estimatedDate = new Date(history.estimatedDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                        const createdAt = new Date(history.createdAt).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        row.innerHTML = `
+                            <td class="align-middle">
+                                <span class="badge bg-primary text-white">
+                                    <i class="bi bi-calendar2-check me-1"></i>
+                                    ${estimatedDate}
+                                </span>
+                            </td>
+                            <td class="align-middle">
+                                <small class="estimation-created-at fw-semibold">
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    ${createdAt}
+                                </small>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    loadingSpinner.classList.add('d-none');
+                    console.error('Error fetching estimation history:', error);
+                    const errorAlert = document.createElement('div');
+                    errorAlert.className = 'alert alert-danger m-3';
+                    errorAlert.innerHTML = `
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Failed to load estimation history. Please try again.
+                    `;
+                    tbody.parentElement.insertBefore(errorAlert, tbody);
+                });
+        }
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        function confirmUrgent(event, taskName) {
+            event.preventDefault();
+            
+            // Get the form and task ID
+            const form = event.target;
+            const taskId = form.querySelector('input[name="id"]').value;
+            
+            // Set the task ID in the confirmation modal's form
+            document.getElementById('confirmTaskId').value = taskId;
+            
+            // Get the modal element and show it
+            const modal = new bootstrap.Modal(document.getElementById('taskUrgentConfirmModal'));
+            modal.show();
+            
+            return false;
+        }
+
+        function submitUrgentForm() {
+            const form = document.getElementById('markUrgentForm');
+            form.action = '@Url.Action("MarkAsUrgent", "PETasks")';
+            form.submit();
+        }
+
+        function confirmEstimation(isConfirmed) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('estimationHistoryModal'));
+            modal.hide();
+
+            if (isConfirmed) {
+                // User confirmed the estimation
+                // You can add any additional logic here if needed
+                alert('Estimation confirmed!');
+            } else {
+                // User declined the estimation
+                alert('Estimation not confirmed.');
+            }
+        }
+    </script>
+}

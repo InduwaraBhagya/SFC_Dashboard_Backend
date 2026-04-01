@@ -1,0 +1,473 @@
+@model IEnumerable<SFCDashboard.Models.EscalationViewModel>
+
+@{
+    ViewData["Title"] = "Escalations";
+}
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>OLA Escalations</h4>
+            <div class="d-flex gap-2">
+                <button id="escalationToggleBtn" onclick="toggleEscalationService()" class="btn btn-outline-light btn-sm">
+                    <i id="escalationToggleIcon" class="bi bi-pause-circle"></i> 
+                    <span id="escalationToggleText">Loading...</span>
+                </button>
+                <a href="javascript:void(0)" onclick="refreshEscalations()" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Simple Search Bar -->
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="escalationSearch" class="form-control" placeholder="Type to search escalations..." autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button id="markAllReadBtn" onclick="markAllAsRead()" class="btn btn-info">
+                        <i class="bi bi-check2-all"></i> Mark All as Read
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <ul class="nav nav-tabs" id="escalationTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="unread-tab" data-bs-toggle="tab" data-bs-target="#unread" type="button" role="tab" aria-controls="unread" aria-selected="true">
+                            Unread <span class="badge bg-danger ms-1">@Model.Count(e => !e.IsRead)</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="read-tab" data-bs-toggle="tab" data-bs-target="#read" type="button" role="tab" aria-controls="read" aria-selected="false">
+                            Read <span class="badge bg-info ms-1">@Model.Count(e => e.IsRead)</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="false">
+                            All <span class="badge bg-dark ms-1">@Model.Count()</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content mt-3" id="escalationTabsContent">
+                    <!-- Unread Escalations Tab -->
+                    <div class="tab-pane fade show active" id="unread" role="tabpanel" aria-labelledby="unread-tab">
+                        @if (Model.Any(e => !e.IsRead))
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Task ID</th>
+                                            <th>Title</th>
+                                            <th>Created At</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.Where(e => !e.IsRead).OrderByDescending(e => e.CreatedAt))
+                                        {
+                                            <tr class="table-danger">
+                                                <td>@item.TaskId</td>
+                                                <td>@item.Title</td>
+                                                <td>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                                <td>
+                                                    <a href="@Url.Action("Details", new { id = item.Id })" class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i> No unread escalations.
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Read Escalations Tab -->
+                    <div class="tab-pane fade" id="read" role="tabpanel" aria-labelledby="read-tab">
+                        @if (Model.Any(e => e.IsRead))
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Task ID</th>
+                                            <th>Title</th>
+                                            <th>Created At</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.Where(e => e.IsRead).OrderByDescending(e => e.CreatedAt))
+                                        {
+                                            <tr>
+                                                <td>@item.TaskId</td>
+                                                <td>@item.Title</td>
+                                                <td>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                                <td>
+                                                    <a href="@Url.Action("Details", new { id = item.Id })" class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i> No read escalations.
+                            </div>
+                        }
+                    </div>
+
+                    <!-- All Escalations Tab -->
+                    <div class="tab-pane fade" id="all" role="tabpanel" aria-labelledby="all-tab">
+                        @if (Model.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Task ID</th>
+                                            <th>Title</th>
+                                            <th>Status</th>
+                                            <th>Created At</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.OrderByDescending(e => e.CreatedAt))
+                                        {
+                                            string rowClass = !item.IsRead ? "table-danger" : "";
+                                            <tr class="@rowClass">
+                                                <td>@item.TaskId</td>
+                                                <td>@item.Title</td>
+                                                <td>
+                                                    @if (item.IsRead)
+                                                    {
+                                                        <span class="badge bg-info">Read</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger">Unread</span>
+                                                    }
+                                                </td>
+                                                <td>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                                <td>
+                                                    <a href="@Url.Action("Details", new { id = item.Id })" class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i> No escalations found.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Load escalation service status on page load
+        $(document).ready(function() {
+            loadEscalationServiceStatus();
+            initializeSimpleSearch();
+        });
+
+        // Initialize simple search functionality
+        function initializeSimpleSearch() {
+            $('#escalationSearch').on('input', function() {
+                filterEscalations($(this).val());
+            });
+        }
+
+        // Simple search filter function
+        function filterEscalations(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            
+            // Get all table rows in all tabs
+            $('.table tbody tr').each(function() {
+                const row = $(this);
+                const rowText = row.text().toLowerCase();
+                
+                // Check if search term appears anywhere in the row
+                if (term === '' || rowText.includes(term)) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
+            });
+            
+            // Update tab badges and show/hide no results messages
+            updateTabBadges();
+            updateNoResultsMessages(term);
+        }
+
+        // Update tab badges based on visible rows
+        function updateTabBadges() {
+            const unreadVisible = $('#unread tbody tr:visible').length;
+            const readVisible = $('#read tbody tr:visible').length;
+            const allVisible = $('#all tbody tr:visible').length;
+            
+            $('#unread-tab .badge').text(unreadVisible);
+            $('#read-tab .badge').text(readVisible);
+            $('#all-tab .badge').text(allVisible);
+        }
+
+        // Show/hide no results messages
+        function updateNoResultsMessages(searchTerm) {
+            const tabs = ['unread', 'read', 'all'];
+            
+            tabs.forEach(tab => {
+                const tabPane = $(`#${tab}`);
+                const visibleRows = tabPane.find('tbody tr:visible').length;
+                const table = tabPane.find('.table-responsive');
+                const alertInfo = tabPane.find('.alert-info');
+                
+                // Remove existing no results message
+                tabPane.find('.no-search-results').remove();
+                
+                if (searchTerm && visibleRows === 0) {
+                    // Hide table and existing alert, show no results message
+                    table.hide();
+                    alertInfo.hide();
+                    tabPane.append(`
+                        <div class="alert alert-warning no-search-results">
+                            <i class="bi bi-search me-2"></i> No escalations match your search.
+                        </div>
+                    `);
+                } else if (visibleRows > 0) {
+                    // Show table, hide alerts
+                    table.show();
+                    alertInfo.hide();
+                } else {
+                    // Show original alert if no search term and no rows
+                    table.hide();
+                    alertInfo.show();
+                }
+            });
+        }
+
+        // Clear search
+        function clearSearch() {
+            $('#escalationSearch').val('');
+            filterEscalations('');
+        }
+
+        // Mark all escalations as read
+        function markAllAsRead() {
+            const btn = $('#markAllReadBtn');
+            const originalText = btn.html();
+            
+            // Show loading state
+            btn.prop('disabled', true).html('<i class="spinner-border spinner-border-sm me-2"></i>Processing...');
+            
+            $.ajax({
+                url: '@Url.Action("MarkAllAsRead", "Escalation")',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        // Show success message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success('All escalations marked as read');
+                        } else {
+                            alert('All escalations marked as read');
+                        }
+                        
+                        // Refresh the page to show updated data
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        // Show error message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error('Failed to mark escalations as read');
+                        } else {
+                            alert('Failed to mark escalations as read');
+                        }
+                    }
+                },
+                error: function() {
+                    // Show error message
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error('Server error occurred. Please try again.');
+                    } else {
+                        alert('Server error occurred. Please try again.');
+                    }
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
+
+        // Function to refresh the page
+        function refreshEscalations() {
+            location.reload();
+        }
+
+        // Load and display the current escalation service status
+        function loadEscalationServiceStatus() {
+            $.ajax({
+                url: '@Url.Action("GetEscalationServiceStatus", "Escalation")',
+                type: 'GET',
+                success: function(response) {
+                    updateToggleButton(response.enabled);
+                },
+                error: function() {
+                    // Default to enabled if we can't get status
+                    updateToggleButton(true);
+                }
+            });
+        }
+
+        // Update the toggle button appearance
+        function updateToggleButton(isEnabled) {
+            const btn = $('#escalationToggleBtn');
+            const icon = $('#escalationToggleIcon');
+            const text = $('#escalationToggleText');
+            
+            if (isEnabled) {
+                btn.removeClass('btn-outline-success').addClass('btn-outline-warning');
+                icon.removeClass('bi-play-circle').addClass('bi-pause-circle');
+                text.text('Stop Auto Escalation');
+            } else {
+                btn.removeClass('btn-outline-warning').addClass('btn-outline-success');
+                icon.removeClass('bi-pause-circle').addClass('bi-play-circle');
+                text.text('Start Auto Escalation');
+            }
+        }
+
+        // Toggle escalation service
+        function toggleEscalationService() {
+            const btn = $('#escalationToggleBtn');
+            const originalText = $('#escalationToggleText').text();
+            
+            // Show loading state
+            btn.prop('disabled', true);
+            $('#escalationToggleText').text('Processing...');
+            
+            $.ajax({
+                url: '@Url.Action("ToggleEscalationService", "Escalation")',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        updateToggleButton(response.enabled);
+                        
+                        // Show success message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    } else {
+                        // Show error message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(response.message);
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                        $('#escalationToggleText').text(originalText);
+                    }
+                },
+                error: function() {
+                    // Show error message
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error('Failed to toggle escalation service. Please try again.');
+                    } else {
+                        alert('Failed to toggle escalation service. Please try again.');
+                    }
+                    $('#escalationToggleText').text(originalText);
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                }
+            });
+        }
+
+        function disableEscalationsForTask(taskId) {
+            // API call or database update to stop future escalations for this task
+            return fetch(`${APP_BASE}api/tasks/updateEscalationSettings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: taskId,
+                    sendEscalations: false
+                })
+            });
+        }
+
+        function resolveIssue(resolutionId) {
+            // Display loading indicator
+            $("#resolve-status-" + resolutionId).html("<span class='text-info'>Processing...</span>");
+            
+            $.ajax({
+                url: '@Url.Action("ConfirmResolution", "Issues")',
+                type: 'POST',
+                data: {
+                    resolutionId: resolutionId,
+                    isConfirmed: true
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update UI to show resolved status
+                        $("#resolve-button-" + resolutionId).prop('disabled', true).removeClass('btn-primary').addClass('btn-success');
+                        $("#resolve-status-" + resolutionId).html("<span class='text-success'>✓ Resolved</span>");
+                        
+                        // Show success message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success(response.message);
+                        }
+                        
+                        // Optionally update any other UI elements
+                        $("#issue-row-" + resolutionId).addClass('resolved-item');
+                    } else {
+                        // Show error
+                        $("#resolve-status-" + resolutionId).html("");
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(response.message);
+                        }
+                    }
+                },
+                error: function() {
+                    $("#resolve-status-" + resolutionId).html("");
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error("Server error occurred. Please try again.");
+                    }
+                }
+            });
+            
+            return false; // Prevent form submission
+        }
+    </script>
+}

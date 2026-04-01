@@ -1,0 +1,223 @@
+/* Dark Mode Text Visibility Fixes */
+
+/* Message Inbox - Dark mode text styling */
+[data-theme="dark"] .message-sender {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .message-content .message-sender {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .message-subject {
+    color: #e9ecef !important;
+}
+
+[data-theme="dark"] .message-preview {
+    color: #adb5bd !important;
+}
+
+[data-theme="dark"] .message-time {
+    color: #6c757d !important;
+}
+
+[data-theme="dark"] .message-item .message-content {
+    color: #ffffff !important;
+}
+
+/* Task Queue - Dark mode text styling */
+[data-theme="dark"] .task-queue-item h6 {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .task-queue-item h6 a {
+    color: #4fc3f7 !important;
+}
+
+[data-theme="dark"] .task-queue-item .text-muted {
+    color: #e6e9ed !important;
+}
+
+[data-theme="dark"] .task-queue-container .task-queue-item {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .task-queue-item p {
+    color: #e9ecef !important;
+}
+
+/* Notice Board - Dark mode text styling */
+[data-theme="dark"] .notice-item .notice-title {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .notice-item .notice-content {
+    color: #e9ecef !important;
+}
+
+[data-theme="dark"] .notice-item .text-muted {
+    color: #6c757d !important;
+}
+
+[data-theme="dark"] .notice-item {
+    color: #ffffff !important;
+}
+
+/* General dark mode improvements for dashboard components */
+[data-theme="dark"] .card-body .text-muted {
+    color: #6c757d !important;
+}
+
+[data-theme="dark"] .detail-value {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .detail-label {
+    color: #adb5bd !important;
+}
+
+/* Ensure task table text is visible in dark mode */
+[data-theme="dark"] .task-table td {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .task-table th {
+    color: #ffffff !important;
+}
+
+/* BOQ Status text in dark mode */
+[data-theme="dark"] .boq-status-item {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .boq-summary-card .card-body {
+    color: #ffffff !important;
+}
+
+/* Workgroup filter text in dark mode */
+[data-theme="dark"] .filter-row .form-label {
+    color: #ffffff !important;
+}
+
+/* Dashboard tile text improvements in dark mode */
+[data-theme="dark"] .dashboard-tile .text-secondary {
+    color: #adb5bd !important;
+}
+
+[data-theme="dark"] .dashboard-tile h2 {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .dashboard-tile p {
+    color: #e9ecef !important;
+}
+
+/* No tasks/notices message text in dark mode */
+[data-theme="dark"] .text-center .text-muted {
+    color: #6c757d !important;
+}
+
+/* Inbox search and filter text in dark mode */
+[data-theme="dark"] .inbox-search::placeholder {
+    color: #6c757d !important;
+}
+
+[data-theme="dark"] .inbox-filters .btn-outline-primary {
+    color: #4fc3f7 !important;
+    border-color: #4fc3f7 !important;
+}
+
+[data-theme="dark"] .inbox-filters .btn-outline-primary.active {
+    background-color: #4fc3f7 !important;
+    color: #000000 !important;
+    border-color: #4fc3f7 !important;
+}
+
+/* Additional fixes for small text elements */
+[data-theme="dark"] small.text-muted {
+    color: #6c757d !important;
+}
+
+[data-theme="dark"] .small.text-muted {
+    color: #6c757d !important;
+}
+
+/* PE Tasks table text in dark mode */
+[data-theme="dark"] .table td,
+[data-theme="dark"] .table th {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .table-light th {
+    background-color: #495057 !important;
+    color: #ffffff !important;
+}
+
+/* Comment blocks in dark mode */
+[data-theme="dark"] .comment-header {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .comment-content {
+    color: #e9ecef !important;
+}
+
+/* Alert and badge text adjustments for dark mode */
+[data-theme="dark"] .alert-info {
+    color: #0c5460 !important;
+    background-color: #d1ecf1 !important;
+}
+
+[data-theme="dark"] .alert-warning {
+    color: #664d03 !important;
+    background-color: #fff3cd !important;
+}
+
+/* Ensure important dashboard text is visible */
+[data-theme="dark"] .dashboard-stats h3 {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .dashboard-stats p {
+    color: #e9ecef !important;
+}
+
+/* Form labels and inputs in dark mode */
+[data-theme="dark"] .form-label {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .form-control {
+    background-color: #495057 !important;
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: #adb5bd !important;
+}
+
+/* Select2 dark mode styling for workgroup filter */
+[data-theme="dark"] .select2-container--default .select2-selection--single {
+    background-color: #495057 !important;
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .select2-dropdown {
+    background-color: #343a40 !important;
+    border-color: #6c757d !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-results__option {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #495057 !important;
+    color: #ffffff !important;
+}

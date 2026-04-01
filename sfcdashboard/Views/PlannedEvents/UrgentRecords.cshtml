@@ -1,0 +1,305 @@
+﻿@using SFCDashboard.Models
+@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "Urgent Records";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-exclamation-triangle text-danger me-3"></i>Urgent Records
+        </h1>
+        <a asp-action="Index" class="btn btn-danger">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="searchForm" class="row g-3" method="get">
+                <div class="col-md-3">
+                    <label for="searchPeNumber" class="form-label">PE Number</label>
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber" 
+                           value="@ViewData["SearchPeNumber"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchReference" class="form-label">Request Reference</label>
+                    <input type="text" class="form-control" id="searchReference" name="reference" 
+                           value="@ViewData["SearchReference"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchCustomer" class="form-label">Customer</label>
+                    <input type="text" class="form-control" id="searchCustomer" name="customer" 
+                           value="@ViewData["SearchCustomer"]">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <a href="@Url.Action("UrgentRecords")" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+   
+
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>Urgent Records & Tasks</h5>
+                @{
+                    var urgentTasks = ViewData["UrgentTasks"] as IEnumerable<SFCDashboard.Models.PETask> ?? new List<SFCDashboard.Models.PETask>();
+                    var totalCount = Model.Count() + urgentTasks.Count();
+                }
+                <span class="badge bg-light text-dark">@totalCount Total</span>
+            </div>
+        </div>
+        <div class="card-body">
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" style="font-size: 0.8rem;">
+                    <thead class="table-light" style="font-size: 0.75rem;">
+                        <tr>
+                            <th style="width: 3%;">#</th>
+                            <th style="width: 10%;">PE Number</th>
+                            <th style="width: 15%;">Description</th>
+                            <th style="width: 8%;">Region</th>
+                            <th style="width: 10%;">Job Reference</th>
+                            <th style="width: 12%;">Customer</th>
+                            <th style="width: 10%;">Required/Target Date</th>
+                            <th style="width: 10%;">Priority</th>
+                            <th style="width: 15%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int rowNumber = 1;
+                        }
+                        @foreach (var item in Model)
+                        {
+                            <tr style="font-size: 0.8rem;">
+                                <td>@(rowNumber++)</td>
+                                <td>@item.PeNumber</td>
+                                <td>@item.RequestReferenceNo</td>
+                                <td>@item.Region</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.JobReference))
+                                    {
+                                        @item.JobReference
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@item.Customer</td>
+                                <td>
+                                    @if (item.ServiceRequiredDate.HasValue)
+                                    {
+                                        @item.ServiceRequiredDate.Value.ToString("yyyy-MM-dd")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 1"))
+                                    {
+                                        <span class="badge bg-danger">Opening Ceremony (Priority 01)</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("Priority 2"))
+                                    {
+                                        <span class="badge bg-warning text-dark">Critical Customer (Priority 02)</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(item.Priority) && item.Priority.Contains("URGENT"))
+                                    {
+                                        <span class="badge bg-danger">URGENT</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Standard</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                            asp-route-returnUrl="@Url.Action("UrgentRecords")" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-eye"></i> View Details
+                                        </a>
+                                        <form asp-action="RemoveUrgentStatus" asp-route-id="@item.Id" method="post" 
+                                              onsubmit="return confirm('Are you sure you want to remove the urgent status from this record?');">
+                                            <button type="submit" class="btn btn-warning btn-sm">
+                                                <i class="bi bi-arrow-down-circle"></i> Remove Urgent
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var task in urgentTasks)
+                        {
+                            <tr class="table-warning">
+                                <td>@(rowNumber++)</td>
+                                <td><strong>@task.PENumber</strong></td>
+                                <td>@task.Task</td>
+                                <td>
+                                    <span class="badge bg-primary">@task.TaskWorkGroup</span>
+                                </td>
+                                <td>@(task.PlannedEvent?.Customer ?? "N/A")</td>
+                                <td>
+                                    @if (task.TaskCompleteDate != default(DateTime))
+                                    {
+                                        var daysRemaining = (task.TaskCompleteDate - DateTime.Now).Days;
+                                        <span class="@(daysRemaining <= 0 ? "text-danger fw-bold" : daysRemaining <= 3 ? "text-warning fw-bold" : "text-success")">
+                                            @task.TaskCompleteDate.ToString("yyyy-MM-dd")
+                                            @if (daysRemaining <= 0)
+                                            {
+                                                <small class="d-block text-danger">(Overdue)</small>
+                                            }
+                                            else if (daysRemaining <= 3)
+                                            {
+                                                <small class="d-block text-warning">(@daysRemaining days left)</small>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(task.Priority) && task.Priority.Contains("Priority 1"))
+                                    {
+                                        <span class="badge bg-danger">Opening Ceremony (P1)</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(task.Priority) && task.Priority.Contains("Priority 2"))
+                                    {
+                                        <span class="badge bg-warning text-dark">Critical Customer (P2)</span>
+                                    }
+                                    else if (task.IsUrgent)
+                                    {
+                                        <span class="badge bg-danger">URGENT TASK</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Standard</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-controller="PlannedEvents" asp-action="Details" asp-route-id="@task.PlannedEvent?.Id" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="bi bi-eye"></i> View PE
+                                        </a>
+                                        @if (task.TaskStatus?.ToUpper() == "ONGOING")
+                                        {
+                                            <form asp-controller="PETasks" asp-action="RemoveUrgentStatus" asp-route-id="@task.Id" method="post" 
+                                                  class="d-inline" onsubmit="return confirm('Are you sure you want to remove urgent status from this task?')">
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="bi bi-x-circle"></i> Remove
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any() && !(ViewData["UrgentTasks"] as IEnumerable<SFCDashboard.Models.PETask> ?? new List<SFCDashboard.Models.PETask>()).Any())
+            {
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i> No urgent records or tasks found.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM loaded, setting up modal handlers');
+
+            // Ensure Bootstrap is loaded
+            if (typeof bootstrap !== 'undefined') {
+                console.log('Bootstrap is loaded properly');
+            } else {
+                console.error('Bootstrap is not loaded!');
+            }
+            // Add search functionality
+        const searchForm = document.getElementById('searchForm');
+        const searchInputs = searchForm.querySelectorAll('input');
+        const tableBody = document.querySelector('table tbody');
+        const noRecordsAlert = document.querySelector('.alert-info');
+
+        function filterTable() {
+            const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+            const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+            const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+
+            let visibleRows = 0;
+            const rows = tableBody.getElementsByTagName('tr');
+
+            Array.from(rows).forEach(row => {
+                const cells = row.getElementsByTagName('td');
+                const matchPeNumber = cells[1].textContent.trim().toLowerCase().includes(peNumber);
+                const matchReference = cells[3].textContent.trim().toLowerCase().includes(reference);
+                const matchCustomer = cells[4].textContent.trim().toLowerCase().includes(customer);
+
+                if (matchPeNumber && matchReference && matchCustomer) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update record count
+            document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+            // Show/hide no records message
+            if (noRecordsAlert) {
+                noRecordsAlert.style.display = visibleRows === 0 ? 'block' : 'none';
+            }
+        }
+
+        // Add real-time search
+        searchInputs.forEach(input => {
+            input.addEventListener('input', filterTable);
+        });
+
+        // Prevent form submission (using real-time filter instead)
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            filterTable();
+        });
+
+        // Ensure Bootstrap dropdowns are properly initialized
+        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl);
+        });
+        });
+</script>
+}

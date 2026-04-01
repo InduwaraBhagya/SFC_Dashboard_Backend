@@ -1,0 +1,63 @@
+@model SFCDashboard.Models.PEIssueViewModel
+
+<div class="message-item @(Model.IsRead ? "read" : "unread") system-reminder"
+    data-message-id="reminder-@Model.CreatedAt.Ticks" data-issue-id="@Model.Id" data-pe-id="@Model.PlannedEventId"
+    data-sender="System" data-sender-id="@Model.SenderId" data-issue-text="@Model.IssueText"
+    data-date="@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")" data-is-read="@Model.IsRead.ToString().ToLower()"
+    data-is-reminder="true" onclick="showReminderDetails(this)">
+    <div class="message-indicator"></div>
+    <div class="message-content">
+        <div class="d-flex justify-content-between align-items-start">
+            <h6 class="message-sender">
+                <span class="badge bg-primary me-1">System</span>
+                Hold Reminder
+            </h6>
+            <span class="message-time">@Model.CreatedAt.ToString("MMM dd")</span>
+        </div>
+        <div class="message-subject">
+            <span class="badge bg-warning text-dark me-1">Reminder</span>
+            @Model.IssueText
+        </div>
+    </div>
+</div>
+
+<style>
+    .message-item.system-reminder {
+        border-left: 4px solid #ffc107;
+        background-color: #fffbf0;
+    }
+
+    .message-item.system-reminder:hover {
+        background-color: #fff8e1;
+        cursor: pointer;
+    }
+
+    .message-item.system-reminder.unread::before {
+        background-color: #ffc107;
+    }
+
+    .message-item.system-reminder .message-subject {
+        color: #856404;
+    }
+</style>
+
+<style>
+    .message-item.system-reminder {
+        background-color: rgba(13, 110, 253, 0.05);
+        border-left: 3px solid #0d6efd;
+    }
+
+    .message-item.system-reminder:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15);
+    }
+
+    .message-item.system-reminder.unread::before {
+        background-color: #0d6efd;
+    }
+
+    .message-item.system-reminder .message-subject {
+        color: #0d6efd;
+    }
+</style>

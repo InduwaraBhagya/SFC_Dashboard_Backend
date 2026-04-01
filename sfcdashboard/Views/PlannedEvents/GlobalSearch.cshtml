@@ -1,0 +1,546 @@
+@model PaginatedList<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "Global Search";
+    bool isSearchPerformed = !string.IsNullOrEmpty(ViewData["PENumberFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["CustomerFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["JobReferenceFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["SONumberFilter"]?.ToString());
+}
+
+
+
+<div class="container mt-4">
+    <h2>Global Search</h2>
+    <div class="search-section mb-4">
+        <form method="get" asp-action="GlobalSearch">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchType" class="form-label">Search By:</label>
+                        <select class="form-select" id="searchType" name="searchType" onchange="toggleSearchFields()">
+                            <option value="peNumber" selected="@(ViewData["SearchType"]?.ToString() == "peNumber")">PE Number</option>
+                            <option value="customer" selected="@(ViewData["SearchType"]?.ToString() == "customer")">Customer</option>
+                            <option value="jobReference" selected="@(ViewData["SearchType"]?.ToString() == "jobReference")">Job Reference</option>
+                            <option value="soNumber" selected="@(ViewData["SearchType"]?.ToString() == "soNumber")">SO Number</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "peNumber" ? "" : "d-none")" id="peNumberField">
+                        <label for="peNumber" class="form-label">PE Number:</label>
+                        <input type="text" name="peNumber" class="form-control" id="peNumber" placeholder="Enter PE Number" value="@ViewData["PENumberFilter"]" />
+                    </div>
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "customer" ? "" : "d-none")" id="customerField">
+                        <label for="customer" class="form-label">Customer:</label>
+                        <input type="text" name="customer" class="form-control" id="customer" placeholder="Enter Customer Name" value="@ViewData["CustomerFilter"]" />
+                    </div>
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "jobReference" ? "" : "d-none")" id="jobReferenceField">
+                        <label for="jobReference" class="form-label">Job Reference:</label>
+                        <input type="text" name="jobReference" class="form-control" id="jobReference" placeholder="Enter Job Reference" value="@ViewData["JobReferenceFilter"]" />
+                    </div>
+                    <div class="search-field @(ViewData["SearchType"]?.ToString() == "soNumber" ? "" : "d-none")" id="soNumberField">
+                        <label for="soNumber" class="form-label">SO Number:</label>
+                        <input type="text" name="soNumber" class="form-control" id="soNumber" placeholder="Enter SO Number" value="@ViewData["SONumberFilter"]" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary btn-ripple w-100">Search</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var item in Model)
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">PE Number: @item.PeNumber</h5>
+                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@item.PeNumber" aria-expanded="false">
+                        Show Details
+                    </button>
+                </div>
+                <div id="@item.PeNumber">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Status</dt>
+                                    <dd class="col-sm-8">@item.PEStatus</dd>
+                                    <dt class="col-sm-4">Customer</dt>
+                                    <dd class="col-sm-8">@item.Customer</dd>
+                                    <dt class="col-sm-4">Service Type</dt>
+                                    <dd class="col-sm-8">@item.ServiceType</dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Start Date</dt>
+                                    <dd class="col-sm-8">@item.PECreatedDate.ToString("dd/MM/yyyy")</dd>
+                                    <dt class="col-sm-4">Required Date</dt>
+                                    <dd class="col-sm-8">@item.ServiceRequiredDate?.ToString("dd/MM/yyyy")</dd>
+                                    <dt class="col-sm-4">SO Number</dt>
+                                    <dd class="col-sm-8">@item.SoNumber</dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="collapse" id="collapse-@item.PeNumber">
+                            <hr class="details-divider" />
+
+                            <div class="details-header mb-3">
+                                <h5 class="details-title text-primary">
+                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                    PE Details: <span class="text-dark">@item.PeNumber</span>
+                                </h5>
+                            </div>
+
+                            @{
+                                // Timeline logic for Global Search
+                                // Parse PE Created Date from PE Number
+                                DateTime startDate;
+                                if (!string.IsNullOrEmpty(item.PeNumber) && item.PeNumber.Length >= 10)
+                                {
+                                    try
+                                    {
+                                        var year = int.Parse(item.PeNumber.Substring(2, 4));
+                                        var month = int.Parse(item.PeNumber.Substring(6, 2));
+                                        var day = int.Parse(item.PeNumber.Substring(8, 2));
+                                        startDate = new DateTime(year, month, day);
+                                    }
+                                    catch
+                                    {
+                                        startDate = item.PECreatedDate; // fallback
+                                    }
+                                }
+                                else
+                                {
+                                    startDate = item.PECreatedDate;
+                                }
+                                var targetDate = item.ServiceRequiredDate ?? startDate.AddDays(7);
+                                var today = DateTime.Now.Date;
+                                var totalDays = (targetDate - startDate).TotalDays;
+                                var daysPassed = (today - startDate).TotalDays;
+                                var daysLeft = (targetDate - today).TotalDays;
+                                var isViolated = today > targetDate;
+                                var daysExceeded = isViolated ? (today - targetDate).TotalDays : 0;
+                                var progressPercent = totalDays > 0 ? Math.Min(100, Math.Max(0, Math.Round((daysPassed / totalDays) * 100))) : 0;
+                            }
+                            <div class="timeline-container mb-4">
+                                <div class="timeline-labels d-flex justify-content-between mb-1">
+                                    <span>
+                                        <i class="bi bi-flag-fill text-success"></i>
+                                        Start: @startDate.ToString("yyyy-MM-dd")
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-calendar-event text-primary"></i>
+                                        Today: @today.ToString("yyyy-MM-dd")
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-flag-fill text-danger"></i>
+                                        Target: @targetDate.ToString("yyyy-MM-dd")
+                                    </span>
+                                </div>
+                                <div class="timeline-bar position-relative" style="height: 32px;">
+                                    <div style="position:absolute;left:0;top:12px;width:100%;height:8px;background:#e9ecef;border-radius:4px;"></div>
+                                    <div style="position:absolute;left:0;top:12px;height:8px;
+                                        background:@(isViolated ? "#dc3545" : "#198754");
+                                        border-radius:4px;
+                                        width:@progressPercent%;"></div>
+                                    <div style="position:absolute;top:0;left:@progressPercent%;transform:translateX(-50%);">
+                                        <span class="badge bg-primary">Today</span>
+                                    </div>
+                                    <div style="position:absolute;top:24px;left:100%;transform:translateX(-50%);">
+                                        <span class="badge bg-danger">Deadline</span>
+                                    </div>
+                                    <div style="position:absolute;top:24px;left:0;">
+                                        <span class="badge bg-success">Start</span>
+                                    </div>
+                                </div>
+                                <div class="timeline-info mt-3">
+                                    @if (!isViolated)
+                                    {
+                                        <span class="text-success">
+                                            <i class="bi bi-hourglass-split"></i>
+                                            @if (daysPassed < 1)
+                                            {
+                                                <strong>Just started!</strong>
+                                            }
+                                            else
+                                            {
+                                                <strong>@daysPassed.ToString("0") days passed</strong>
+                                            }
+                                            &nbsp;|&nbsp;
+                                            <strong>@daysLeft.ToString("0") days left</strong> until deadline.
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger fw-bold">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Unable to complete task within deadline, exceeded by <strong>@daysExceeded.ToString("0") days</strong>.
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                            <style>
+                                .timeline-container {
+                                    background: #f8f9fa;
+                                    border-radius: 8px;
+                                    padding: 1.5rem 1rem 1rem 1rem;
+                                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                                }
+                                .timeline-labels span {
+                                    font-size: 0.95rem;
+                                    font-weight: 500;
+                                }
+                                .timeline-bar {
+                                    min-width: 250px;
+                                    margin-bottom: 0.5rem;
+                                }
+                                .timeline-info {
+                                    font-size: 1.1rem;
+                                }
+                            </style>
+
+                            <div class="details-content">
+                                <div class="row g-4">
+                                    <!-- Location Details Card -->
+                                    <div class="col-md-6">
+                                        <div class="details-card shadow-sm border-start border-4 border-info bg-light mb-3">
+                                            <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
+                                                <i class="bi bi-geo-alt me-2"></i>
+                                                <span>Location Details</span>
+                                            </div>
+                                            <div class="details-card-body px-3 py-2">
+                                                <div class="detail-item"><span class="detail-label text-secondary">Province:</span> <span class="detail-value fw-semibold">@item.Province</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Region:</span> <span class="detail-value fw-semibold">@item.Region</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">RTOM:</span> <span class="detail-value fw-semibold">@item.Rtom</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">RTOM Description:</span> <span class="detail-value">@item.RtomDescription</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="details-card shadow-sm border-start border-4 border-success bg-light mb-3">
+                                            <div class="details-card-header bg-success text-white rounded-top px-3 py-2">
+                                                <i class="bi bi-clipboard-data me-2"></i>
+                                                <span>Project Details</span>
+                                            </div>
+                                            <div class="details-card-body px-3 py-2">
+                                                <div class="detail-item"><span class="detail-label text-secondary">Job Reference:</span> <span class="detail-value">@item.JobReference</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Contractor:</span> <span class="detail-value">@item.ContractorName</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">PE Activity:</span> <span class="detail-value">@item.PeActivity</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">PE Nature:</span> <span class="detail-value">@item.PeNature</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">PE Title:</span> <span class="detail-value">@item.PeTitle</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">PE Objective:</span> <span class="detail-value">@item.PeObjective</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">PE Area:</span> <span class="detail-value">@item.PeArea</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="details-card shadow-sm border-start border-4 border-warning bg-light mb-3">
+                                            <div class="details-card-header bg-warning text-dark rounded-top px-3 py-2">
+                                                <i class="bi bi-list-task me-2"></i>
+                                                <span>Task Information</span>
+                                            </div>
+                                            <div class="details-card-body px-3 py-2">
+                                                <div class="detail-item"><span class="detail-label text-secondary">Task Sequence:</span> <span class="detail-value">@item.TaskSeq</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Task Name:</span> <span class="detail-value">@item.TaskName</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Task Workgroup:</span> <span class="detail-value">@item.TaskWg</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Actual Start Date:</span> <span class="detail-value">@item.WoActualStartDate</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="details-card shadow-sm border-start border-4 border-primary bg-light mb-3">
+                                            <div class="details-card-header bg-primary text-white rounded-top px-3 py-2">
+                                                <i class="bi bi-gear-fill me-2"></i>
+                                                <span>Service Details</span>
+                                            </div>
+                                            <div class="details-card-body px-3 py-2">
+                                                <div class="detail-item"><span class="detail-label text-secondary">Service Category:</span> <span class="detail-value">@item.ServiceCategory</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Service Speed:</span> <span class="detail-value">@item.ServiceSpeed</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Order Type:</span> <span class="detail-value">@item.OrderType</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">CRM Order:</span> <span class="detail-value">@item.CrmOrder</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="details-card shadow-sm border-start border-4 border-secondary bg-light mb-3">
+                                            <div class="details-card-header bg-secondary text-white rounded-top px-3 py-2">
+                                                <i class="bi bi-person me-2"></i>
+                                                <span>Customer Information</span>
+                                            </div>
+                                            <div class="details-card-body px-3 py-2">
+                                                <div class="detail-item"><span class="detail-label text-secondary">Customer Type:</span> <span class="detail-value">@item.CusType</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Account Manager:</span> <span class="detail-value">@item.AccountManager</span></div>
+                                                <div class="detail-item"><span class="detail-label text-secondary">Section Handled By:</span> <span class="detail-value">@item.SectionHandledBy</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Location Information Section -->
+                                <div class="details-card shadow-sm border-start border-4 border-info bg-light mt-3">
+                                    <div class="details-card-header bg-info text-white rounded-top px-3 py-2">
+                                        <i class="bi bi-pin-map me-2"></i>
+                                        <span>Location Information</span>
+                                    </div>
+                                    <div class="details-card-body px-3 py-2">
+                                        <div class="detail-item"><span class="detail-label text-secondary">Location A:</span> <span class="detail-value">@item.LocationAAddress</span></div>
+                                        <div class="detail-item"><span class="detail-label text-secondary">Location B:</span> <span class="detail-value">@item.LocationBAddress</span></div>
+                                    </div>
+                                </div>
+
+                                <!-- Comments Section (Only Show if Comments Exist) -->
+                                @if (!string.IsNullOrEmpty(item.PeWoComments) || !string.IsNullOrEmpty(item.WoComments))
+                                {
+                                    <div class="details-card mt-3">
+                                        <div class="details-card-header">
+                                            <i class="bi bi-chat-left-text me-2"></i>
+                                            <h6>Comments</h6>
+                                        </div>
+                                        <div class="details-card-body">
+                                            @if (!string.IsNullOrEmpty(item.PeWoComments))
+                                            {
+                                                <div class="comment-block">
+                                                    <div class="comment-header">PE Work Order Comments:</div>
+                                                    <div class="comment-content">@item.PeWoComments</div>
+                                                </div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.WoComments))
+                                            {
+                                                <div class="comment-block @(string.IsNullOrEmpty(item.PeWoComments) ? "" : "mt-3")">
+                                                    <div class="comment-header">Work Order Comments:</div>
+                                                    <div class="comment-content">@item.WoComments</div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- PE Tasks Table -->
+                                <div class="card mt-4">
+                                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">PE Tasks</h6>
+                                        @{
+                                            var peTasks = ViewBag.PETasksByPeNumber != null && ViewBag.PETasksByPeNumber.ContainsKey(item.PeNumber)
+                                                ? (IEnumerable<SFCDashboard.Models.PETask>)ViewBag.PETasksByPeNumber[item.PeNumber]
+                                                : null;
+                                        }
+                                        @if (peTasks == null || !peTasks.Any())
+                                        {
+                                            <span class="badge bg-warning text-dark">No tasks found</span>
+                                        }
+                                    </div>
+                                    <div class="card-body">
+                                        @if (peTasks != null && peTasks.Any())
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table table-hover task-table">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Seq</th>
+                                                            <th>Task</th>
+                                                            <th>Priority</th>
+                                                            <th>Workgroup</th>
+                                                            <th>OLA</th>
+                                                            <th>Status</th>
+                                                            <th>Created Date</th>
+                                                            <th>Target Date</th>
+                                                            <th>Actual Start Date</th>
+                                                            <th>Actual End Date</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @{
+                                                            var orderedTasks = peTasks.OrderBy(t => t.TaskSeq).ToList();
+                                                        }
+                                                        @foreach (var task in orderedTasks)
+                                                        {
+                                                            <tr class="@(task.IsUrgent ? "table-warning" : 
+                                                                task.TaskStatus?.ToLower() == "ongoing" ? "table-primary" : 
+                                                                task.TaskStatus?.ToLower() == "completed" ? "table-success" : 
+                                                                task.TaskStatus?.ToLower() == "waiting" ? "table-secondary" : "")">
+                                                                <td>@task.TaskSeq</td>
+                                                                <td>@task.Task</td>
+                                                                <td>
+                                                                    @if (task.IsUrgent)
+                                                                    {
+                                                                        <span class="badge bg-danger">URGENT</span>
+                                                                    }
+                                                                    @if (task.UrgentRequested && !task.IsUrgent)
+                                                                    {
+                                                                        <span class="badge bg-warning">URGENT REQUESTED</span>
+                                                                    }
+                                                                    @if (!string.IsNullOrEmpty(task.Priority))
+                                                                    {
+                                                                        <small class="d-block text-muted mt-1">@task.Priority</small>
+                                                                    }
+                                                                </td>
+                                                                <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                                                <td>@task.OLA days</td>
+                                                                <td>
+                                                                    @{
+                                                                        string taskStatusClass = task.TaskStatus?.ToLower() switch
+                                                                        {
+                                                                            "completed" => "badge bg-success",
+                                                                            "ongoing" => "badge bg-warning text-dark",
+                                                                            _ => "badge bg-secondary"
+                                                                        };
+                                                                    }
+                                                                    <span class="@taskStatusClass">@task.TaskStatus</span>
+                                                                </td>
+                                                                <td>
+                                                                    @if (task == orderedTasks.First() && item.CreatedDateFromPE.HasValue)
+                                                                    {
+                                                                        @item.CreatedDateFromPE.Value.ToString("yyyy-MM-dd")
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @task.TaskCreatedDate.ToString("yyyy-MM-dd")
+                                                                    }
+                                                                </td>
+                                                                <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                                                <td>@(task.ActualTaskCreatedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                                                <td>@(task.ACtualTaskCompleteDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-info">
+                                                <i class="bi bi-info-circle me-2"></i>
+                                                No tasks have been assigned to this PE record yet.
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <!-- End PE Tasks Table -->
+
+                                <!-- Reported Issues Section -->
+                                <div class="mt-4">
+                                    <strong>Reported Issues (Subtasks):</strong>
+                                    @{
+                                        var issues = ViewBag.IssuesByPlannedEventId != null && ViewBag.IssuesByPlannedEventId.ContainsKey(item.Id)
+                                            ? ViewBag.IssuesByPlannedEventId[item.Id] 
+                                            : new List<SFCDashboard.Models.PEIssueViewModel>();
+                                    }
+                                    <table class="table table-bordered table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Reported By</th>
+                                                <th>Receiver</th>
+                                                <th>Issue</th>
+                                                <th>Attachment</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @if (issues != null && issues.Count > 0)
+                                        {
+                                            foreach (var issue in issues)
+                                            {
+                                                <tr>
+                                                    <td>@issue.SenderName</td>
+                                                    <td>@issue.ReceiverName</td>
+                                                    <td>@issue.IssueText</td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                                        {
+                                                            <a href="@issue.AttachmentPath" target="_blank">View</a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                    <td>@issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                                    <td>
+                                                        @if (issue.IsHiddenFromInbox)
+                                                        {
+                                                            <span class="badge bg-success">Fixed</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning text-dark">Open</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">No issues reported for this PE.</td>
+                                            </tr>
+                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else if (isSearchPerformed)
+    {
+        <div class="alert alert-info mt-4">
+            <i class="fas fa-info-circle me-2"></i>
+            No records found.
+        </div>
+    }
+
+   
+
+@section Scripts {
+    <script>
+        function toggleSearchFields() {
+            var searchType = document.getElementById('searchType').value;
+            document.getElementById('peNumberField').classList.toggle('d-none', searchType !== 'peNumber');
+            document.getElementById('customerField').classList.toggle('d-none', searchType !== 'customer');
+            document.getElementById('jobReferenceField').classList.toggle('d-none', searchType !== 'jobReference');
+            document.getElementById('soNumberField').classList.toggle('d-none', searchType !== 'soNumber');
+        }
+        document.addEventListener('DOMContentLoaded', toggleSearchFields);
+
+        function showTaskTable(type) {
+            var data = {
+                'Priority1Tasks': @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["Priority1Tasks"])),
+                'Priority2Tasks': @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["Priority2Tasks"])),
+                'RegularTasks': @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["RegularTasks"])),
+                'OLAViolatedTasks': @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["OLAViolatedTasks"]))
+            };
+            var tasks = data[type];
+            var html = `<table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>PE Number</th>
+                        <th>Status</th>
+                        <th>Task_WG</th>
+                        <th>Region</th>
+                        <th>Province</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            if (tasks && tasks.length > 0) {
+                tasks.forEach(function(t) {
+                    html += `<tr>
+                        <td>${t.pENumber || t.PENumber}</td>
+                        <td>${t.taskStatus || t.TaskStatus}</td>
+                        <td>${t.taskWorkGroup || t.TaskWorkGroup}</td>
+                        <td>${t.region || t.Region || ''}</td>
+                        <td>${t.province || t.Province || ''}</td>
+                    </tr>`;
+                });
+            } else {
+                html += `<tr><td colspan="5" class="text-center">No records found.</td></tr>`;
+            }
+            html += `</tbody></table>`;
+            document.getElementById('taskTableModalBody').innerHTML = html;
+            var modal = new bootstrap.Modal(document.getElementById('taskTableModal'));
+            modal.show();
+        }
+    </script>
+}

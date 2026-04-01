@@ -1,0 +1,48 @@
+﻿@model SFCDashboard.Models.UserRole
+
+@{
+    ViewData["Title"] = "Delete Role";
+}
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-gradient text-white" style="background-color: #dc3545;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle fs-4 me-2"></i>
+                <h5 class="mb-0">Confirm Deletion</h5>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <div class="alert alert-warning border-0 shadow-sm">
+                <p class="mb-0">
+                    <i class="bi bi-question-circle me-2"></i>
+                    Are you sure you want to delete the role <strong>@Model.Name</strong>? This action cannot be undone.
+                </p>
+            </div>
+
+            <div class="mt-4">
+                <h6 class="fw-bold mb-3">Role Details</h6>
+                <dl class="row">
+                    <dt class="col-sm-2">
+                        @Html.DisplayNameFor(model => model.Name)
+                    </dt>
+                    <dd class="col-sm-10">
+                        @Html.DisplayFor(model => model.Name)
+                    </dd>
+                </dl>
+            </div>
+            
+            <form asp-action="Delete" class="mt-4">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger btn-lg px-4">
+                        <i class="bi bi-trash me-2"></i>Delete
+                    </button>
+                    <a asp-action="Index" class="btn btn-light btn-lg px-4">
+                        <i class="bi bi-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

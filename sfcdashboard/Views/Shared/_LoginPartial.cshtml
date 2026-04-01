@@ -1,0 +1,118 @@
+﻿@using System.Security.Principal
+
+<ul class="navbar-nav">
+@if (User.Identity?.IsAuthenticated == true)
+{
+        <li class="nav-item">
+            <a class="nav-link" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut">
+                <i class="bi bi-box-arrow-right"></i>
+                <span class="nav-text">Sign out</span>
+            </a>
+        </li>
+}
+else
+{
+        <li class="nav-item">
+            <a class="nav-link" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignIn">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span class="nav-text">Sign in</span>
+            </a>
+        </li>
+}
+</ul>
+
+<script>
+function clearBrowserDataBeforeLogin(event, element) {
+    try {
+        // Clear all cookies
+        document.cookie.split(";").forEach(function(cookie) {
+            var eqPos = cookie.indexOf("=");
+            var name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            if (name) {
+                // Clear the cookie by setting it to expire in the past
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;";
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname + ";";
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=." + window.location.hostname + ";";
+            }
+        });
+        
+        // Clear localStorage and sessionStorage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Clear IndexedDB if supported
+        if ('indexedDB' in window) {
+            try {
+                indexedDB.deleteDatabase('default');
+            } catch (e) {
+                console.log('Could not clear IndexedDB:', e);
+            }
+        }
+        
+        // Clear any cached data if the browser supports it
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) {
+                    caches.delete(name);
+                });
+            }).catch(function(e) {
+                console.log('Could not clear cache storage:', e);
+            });
+        }
+        
+        console.log('Browser data cleared before login');
+    } catch (e) {
+        console.log('Error clearing browser data:', e);
+    }
+    
+    // Allow the default navigation to proceed
+    return true;
+}
+
+function clearBrowserDataOnSignOut(event, element) {
+    try {
+        // Clear all cookies
+        document.cookie.split(";").forEach(function(cookie) {
+            var eqPos = cookie.indexOf("=");
+            var name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            if (name) {
+                // Clear the cookie by setting it to expire in the past
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;";
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname + ";";
+                document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=." + window.location.hostname + ";";
+            }
+        });
+        
+        // Clear localStorage and sessionStorage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Clear IndexedDB if supported
+        if ('indexedDB' in window) {
+            try {
+                indexedDB.deleteDatabase('default');
+            } catch (e) {
+                console.log('Could not clear IndexedDB on sign out:', e);
+            }
+        }
+        
+        // Clear any cached data if the browser supports it
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) {
+                    caches.delete(name);
+                });
+            }).catch(function(e) {
+                console.log('Could not clear cache storage on sign out:', e);
+            });
+        }
+        
+        console.log('Browser data cleared on sign out');
+    } catch (e) {
+        console.log('Error clearing browser data on sign out:', e);
+    }
+    
+    // Allow the default navigation to proceed
+    return true;
+}
+</script>

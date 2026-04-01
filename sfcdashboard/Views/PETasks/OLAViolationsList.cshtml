@@ -1,0 +1,81 @@
+@model IEnumerable<SFCDashboard.Models.PETask>
+
+@{
+    ViewData["Title"] = "OLA Violations List";
+}
+
+<div class="container mt-4">
+    <h2>OLA Violations List</h2>
+    
+    <!-- Display success/error messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    
+    <div class="card">
+        <div class="card-body">
+            <!-- Count of violations -->
+            <div class="mb-3">
+                <strong>@Model.Count() tasks</strong> have violated their OLA target date
+            </div>
+            
+            <!-- Violations table -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>PE Number</th>
+                            <th>Task Seq</th>
+                            <th>Task Name</th>
+                            <th>Workgroup</th>
+                            <th>Status</th>
+                            <th>Target Date</th>
+                            <th>Days Overdue</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var task in Model)
+                        {
+                            var daysOverdue = (DateTime.Today - task.TaskCompleteDate.Date).Days;
+                            
+                            <tr>
+                                <td>
+                                    <a asp-controller="PlannedEvents" asp-action="Details" asp-route-id="@task.PlannedEvent?.Id">
+                                        @task.PENumber
+                                    </a>
+                                </td>
+                                <td>@task.TaskSeq</td>
+                                <td>@task.Task</td>
+                                <td>@(task.TaskWorkGroup == "NULL" ? "" : task.TaskWorkGroup)</td>
+                                <td>
+                                    <span class="badge bg-danger">@task.TaskStatus</span>
+                                </td>
+                                <td>@task.TaskCompleteDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <span class="badge bg-danger">@daysOverdue days</span>
+                                </td>
+                                <td>
+                                    <a asp-controller="PlannedEvents" asp-action="Details" asp-route-id="@task.PlannedEvent?.Id" 
+                                       class="btn btn-primary btn-sm">View Details</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
