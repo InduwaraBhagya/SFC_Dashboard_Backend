@@ -15,7 +15,7 @@ namespace SFCDashboard.Api.Models
 
         [Required(ErrorMessage = "Role name is required")]
         [StringLength(100)]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         
         [Required(ErrorMessage = "Role level is required")]
         [Range(0, 3, ErrorMessage = "Role level must be between 0 and 3")]

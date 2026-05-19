@@ -120,6 +120,7 @@ namespace SFCDashboard.Api.Services
             {
                 // Note: This method may need adjustment based on the actual customer assignment model
                 // For now, returning empty list as the CustomerUserAssignments relationship needs to be verified
+                await Task.Yield();
                 _logger.LogWarning("GetUserAssignedCustomersAsync not fully implemented - customer assignment model needs verification");
                 return new List<string>();
             }

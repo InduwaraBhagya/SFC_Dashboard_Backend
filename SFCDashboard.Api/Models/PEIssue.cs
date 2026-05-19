@@ -22,7 +22,7 @@ namespace SFCDashboard.Api.Models
         public int SenderId { get; set; } // SystemUser Id
 
         [Required]
-        public string IssueText { get; set; }
+        public string IssueText { get; set; } = string.Empty;
 
         public string? AttachmentPath { get; set; }
 

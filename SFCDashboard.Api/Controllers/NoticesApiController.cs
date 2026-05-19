@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 namespace SFCDashboard.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/notices")]
     [Produces("application/json")]
     public class NoticesApiController : ControllerBase
     {
@@ -90,7 +90,8 @@ namespace SFCDashboard.Api.Controllers
                     return Unauthorized(new { success = false, message = "Unable to identify current user." });
                 }
 
-                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices") ||
+                                    await _permissionsService.HasPermissionAsync(currentUserServiceId, "Admin");
                 if (!hasPermission)
                 {
                     return Forbid("You do not have permission to create notices.");
@@ -103,13 +104,15 @@ namespace SFCDashboard.Api.Controllers
 
                 var notice = new Notice
                 {
+                    Title = request.Title,
                     Description = request.Description,
                     CreatedBy = request.CreatedBy,
                     CreatedUserName = request.CreatedUserName,
+                    StartDate = request.StartDate ?? DateTime.Now,
                     CreatedDate = DateTime.Now,
                     IsPinned = request.IsPinned,
                     ExpireDate = request.ExpireDate,
-                    IsActive = true
+                    IsActive = request.IsActive
                 };
 
                 var createdNotice = await _noticesService.CreateNoticeAsync(notice);
@@ -118,8 +121,8 @@ namespace SFCDashboard.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating notice");
-                return StatusCode(500, new { success = false, message = "An error occurred while creating the notice." });
+                _logger.LogError(ex, "Error creating notice.");
+                return StatusCode(500, new { success = false, message = "Error creating notice in database.", detail = ex.Message, innerDetail = ex.InnerException?.Message });
             }
         }
 
@@ -138,7 +141,8 @@ namespace SFCDashboard.Api.Controllers
                     return Unauthorized(new { success = false, message = "Unable to identify current user." });
                 }
 
-                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices") ||
+                                    await _permissionsService.HasPermissionAsync(currentUserServiceId, "Admin");
                 if (!hasPermission)
                 {
                     return Forbid("You do not have permission to update notices.");
@@ -149,7 +153,7 @@ namespace SFCDashboard.Api.Controllers
                     return BadRequest(new { success = false, message = "Invalid data provided.", errors = ModelState });
                 }
 
-                var notice = await _noticesService.UpdateNoticeAsync(id, request.Description, request.UpdatedBy, request.UpdatedUserName);
+                var notice = await _noticesService.UpdateNoticeAsync(id, request.Title, request.Description, request.UpdatedBy, request.UpdatedUserName, request.StartDate, request.ExpireDate, request.IsActive);
 
                 if (notice == null)
                 {
@@ -180,7 +184,8 @@ namespace SFCDashboard.Api.Controllers
                     return Unauthorized(new { success = false, message = "Unable to identify current user." });
                 }
 
-                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices") ||
+                                    await _permissionsService.HasPermissionAsync(currentUserServiceId, "Admin");
                 if (!hasPermission)
                 {
                     return Forbid("You do not have permission to pin or unpin notices.");
@@ -222,7 +227,8 @@ namespace SFCDashboard.Api.Controllers
                     return Unauthorized(new { success = false, message = "Unable to identify current user." });
                 }
 
-                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices");
+                var hasPermission = await _permissionsService.HasPermissionAsync(currentUserServiceId, "ManageNotices") ||
+                                    await _permissionsService.HasPermissionAsync(currentUserServiceId, "Admin");
                 if (!hasPermission)
                 {
                     return Forbid("You do not have permission to delete notices.");
@@ -248,6 +254,10 @@ namespace SFCDashboard.Api.Controllers
     public class CreateNoticeRequest
     {
         [Required]
+        [StringLength(255)]
+        public string Title { get; set; } = string.Empty;
+
+        [Required]
         [StringLength(1000)]
         public string Description { get; set; } = string.Empty;
 
@@ -260,11 +270,19 @@ namespace SFCDashboard.Api.Controllers
 
         public bool IsPinned { get; set; } = false;
 
+        public DateTime? StartDate { get; set; }
+
         public DateTime? ExpireDate { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 
     public class UpdateNoticeRequest
     {
+        [Required]
+        [StringLength(255)]
+        public string Title { get; set; } = string.Empty;
+
         [Required]
         [StringLength(1000)]
         public string Description { get; set; } = string.Empty;
@@ -275,6 +293,12 @@ namespace SFCDashboard.Api.Controllers
         [Required]
         [StringLength(255)]
         public string UpdatedUserName { get; set; } = string.Empty;
+
+        public DateTime? StartDate { get; set; }
+
+        public DateTime? ExpireDate { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 
     public class TogglePinRequest

@@ -64,7 +64,7 @@ namespace SFCDashboard.Api.Services
             }
         }
 
-        public async Task<Notice?> UpdateNoticeAsync(int id, string description, int updatedBy, string updatedUserName)
+        public async Task<Notice?> UpdateNoticeAsync(int id, string title, string description, int updatedBy, string updatedUserName, DateTime? startDate, DateTime? expireDate, bool isActive)
         {
             try
             {
@@ -76,10 +76,14 @@ namespace SFCDashboard.Api.Services
                     return null;
                 }
 
+                notice.Title = title;
                 notice.Description = description;
                 notice.UpdatedBy = updatedBy;
                 notice.UpdatedUserName = updatedUserName;
                 notice.UpdatedDate = DateTime.Now;
+                if (startDate.HasValue) notice.StartDate = startDate.Value;
+                notice.ExpireDate = expireDate;
+                notice.IsActive = isActive;
 
                 await _context.SaveChangesAsync();
 

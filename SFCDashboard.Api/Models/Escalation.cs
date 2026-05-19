@@ -11,11 +11,11 @@ namespace SFCDashboard.Api.Models
 
         public int TaskId { get; set; }
         [ForeignKey("TaskId")]
-        public virtual PETask PETask { get; set; }
+        public virtual PETask PETask { get; set; } = null!;
 
         public int? Level { get; set; } // 1, 2, or 3
-        public string Title { get; set; }
-        public string Message { get; set; }
+        public required string Title { get; set; }
+        public required string Message { get; set; }
         public DateTime CreatedAt { get; set; }
 
         public bool IsRead { get; set; }
@@ -30,7 +30,7 @@ namespace SFCDashboard.Api.Models
         [ForeignKey("IgnoredBy")]
         public int? IgnoredById { get; set; }
 
-        public virtual SystemUser IgnoredBy { get; set; }
+        public virtual SystemUser? IgnoredBy { get; set; }
 
     }
     

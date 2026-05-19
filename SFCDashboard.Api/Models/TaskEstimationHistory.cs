@@ -16,7 +16,7 @@ namespace SFCDashboard.Api.Models
         public DateTime CreatedAt { get; set; }
 
         [ForeignKey("TaskId")]
-        public virtual PETask Task { get; set; }
+        public virtual PETask Task { get; set; } = null!;
     }
 }
 
