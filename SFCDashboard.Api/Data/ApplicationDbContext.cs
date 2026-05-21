@@ -37,7 +37,6 @@ namespace SFCDashboard.Api.Data
 
         public DbSet<CustomerUserAssignment> CustomerUserAssignments { get; set; }
         public DbSet<TaskQueueSnapshot> TaskQueueSnapshots { get; set; }
-        public DbSet<Notice> Notices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

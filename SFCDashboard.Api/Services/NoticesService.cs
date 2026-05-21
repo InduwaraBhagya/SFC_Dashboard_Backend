@@ -6,10 +6,10 @@ namespace SFCDashboard.Api.Services
 {
     public class NoticesService : INoticesService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly SomsDbContext _context;
         private readonly ILogger<NoticesService> _logger;
 
-        public NoticesService(ApplicationDbContext context, ILogger<NoticesService> logger)
+        public NoticesService(SomsDbContext context, ILogger<NoticesService> logger)
         {
             _context = context;
             _logger = logger;

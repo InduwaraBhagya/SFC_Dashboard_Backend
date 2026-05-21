@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SFCDashboard.Api.Models.Soms;
+using SFCDashboard.Api.Models;
 
 namespace SFCDashboard.Api.Data
 {
@@ -11,5 +12,6 @@ namespace SFCDashboard.Api.Data
         }
 
         public DbSet<SomsWorkgroup> Workgroups { get; set; }
+        public DbSet<Notice> Notices { get; set; }
     }
 }
