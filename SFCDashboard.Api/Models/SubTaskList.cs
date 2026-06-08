@@ -13,10 +13,10 @@ namespace SFCDashboard.Api.Models
         
         [Required]
         [StringLength(500)]
-        public string SubTaskName { get; set; }
+        public string SubTaskName { get; set; } = string.Empty;
         
         [ForeignKey("PETaskListId")]
-        public virtual PETaskList PETaskList { get; set; }
+        public virtual PETaskList PETaskList { get; set; } = null!;
         
         public int Frequency { get; set; } = 1; // Track how often this subtask is reported
         

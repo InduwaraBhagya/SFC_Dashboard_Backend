@@ -156,8 +156,8 @@ namespace SFCDashboard.Api.Services
             {
                 // Get all unique customers from PlannedEvents
                 var allCustomers = await _context.PlannedEvents
-                    .Where(pe => !string.IsNullOrEmpty(pe.Customer))
-                    .Select(pe => pe.Customer)
+                    .Where(pe => pe.Customer != null)
+                    .Select(pe => pe.Customer!)
                     .Distinct()
                     .ToListAsync();
 

@@ -37,7 +37,6 @@ namespace SFCDashboard.Api.Data
 
         public DbSet<CustomerUserAssignment> CustomerUserAssignments { get; set; }
         public DbSet<TaskQueueSnapshot> TaskQueueSnapshots { get; set; }
-        public DbSet<Notice> Notices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -99,7 +98,8 @@ namespace SFCDashboard.Api.Data
 
             modelBuilder.Entity<RolePermission>().HasData(
                 new RolePermission { Id = 1, RoleId = 1, PermissionId = 5 }, // Admin permission
-                new RolePermission { Id = 2, RoleId = 1, PermissionId = 6 }  // ViewAll permission
+                new RolePermission { Id = 2, RoleId = 1, PermissionId = 6 }, // ViewAll permission
+                new RolePermission { Id = 3, RoleId = 1, PermissionId = 11 } // ManageNotices permission
             );
 
             modelBuilder.Entity<ProjectPEMapping>()

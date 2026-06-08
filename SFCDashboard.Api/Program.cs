@@ -84,6 +84,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
            .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
 
+// Add SOMS database context
+builder.Services.AddDbContext<SFCDashboard.Api.Data.SomsDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SomsConnection"), 
+        sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+           .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
+
 // Register services (background services are now handled by SFCDashboard.Background and SFCDashboard.EscalationService)
 builder.Services.AddScoped<EscalationService>();
 
@@ -111,6 +117,30 @@ if (!isDevelopment && !string.IsNullOrEmpty(azureAdConfig["ClientId"]))
     // Use JWT Bearer authentication for API in production
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddMicrosoftIdentityWebApi(azureAdConfig);
+
+    // After setting up the default Microsoft Identity, configure it to accept the secondary app as well
+    builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        var somsTenantId = Environment.GetEnvironmentVariable("SOMS_AZURE_AD_TENANT_ID");
+        var somsClientId = Environment.GetEnvironmentVariable("SOMS_AZURE_AD_CLIENT_ID");
+        var somsAudience = Environment.GetEnvironmentVariable("SOMS_AZURE_AD_AUDIENCE") ?? somsClientId;
+
+        if (!string.IsNullOrEmpty(somsTenantId) && !string.IsNullOrEmpty(somsClientId))
+        {
+            var validAudiences = new List<string> { azureAdConfig["Audience"] ?? azureAdConfig["ClientId"] };
+            validAudiences.Add(somsAudience);
+            
+            var validIssuers = new List<string> {
+                $"https://sts.windows.net/{azureAdConfig["TenantId"]}/",
+                $"https://login.microsoftonline.com/{azureAdConfig["TenantId"]}/v2.0"
+            };
+            validIssuers.Add($"https://sts.windows.net/{somsTenantId}/");
+            validIssuers.Add($"https://login.microsoftonline.com/{somsTenantId}/v2.0");
+
+            options.TokenValidationParameters.ValidAudiences = validAudiences;
+            options.TokenValidationParameters.ValidIssuers = validIssuers;
+        }
+    });
 }
 else
 {

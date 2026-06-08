@@ -11,10 +11,18 @@ namespace SFCDashboard.Api.Models
         [Column("ID")]
         public int ID { get; set; }
 
+        [Column("Title")]
+        [Required]
+        [StringLength(255)]
+        public string Title { get; set; } = string.Empty;
+
         [Column("Description")]
         [Required]
         [StringLength(1000)]
         public string Description { get; set; } = string.Empty;
+
+        [Column("StartDate")]
+        public DateTime StartDate { get; set; } = DateTime.Now;
 
         [Column("CreatedDate")]
         public DateTime CreatedDate { get; set; } = DateTime.Now;

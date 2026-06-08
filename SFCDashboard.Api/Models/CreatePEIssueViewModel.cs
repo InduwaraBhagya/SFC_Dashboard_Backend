@@ -12,10 +12,10 @@ namespace SFCDashboard.Api.Models
         public int ReceiverId { get; set; }
 
         [Required]
-        public string IssueText { get; set; }
+        public string IssueText { get; set; } = string.Empty;
 
         // No [Required] attribute here
-        public IFormFile Attachment { get; set; }
+        public IFormFile? Attachment { get; set; }
 
         // Other properties...
     }
