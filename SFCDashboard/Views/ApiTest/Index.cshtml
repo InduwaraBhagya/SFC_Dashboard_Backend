@@ -1,0 +1,113 @@
+@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "API Backend Test";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>@ViewBag.Message</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="alert @(ViewBag.ApiStatus.ToString().StartsWith("✅") ? "alert-success" : "alert-danger")">
+                                <h5>@ViewBag.ApiStatus</h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5>Planned Events</h5>
+                                    <h2>@ViewBag.PlannedEventsCount</h2>
+                                    <a href="@Url.Action("PlannedEvents")" class="btn btn-light btn-sm">View All</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5>Users</h5>
+                                    <h2>@ViewBag.UsersCount</h2>
+                                    <a href="@Url.Action("Users")" class="btn btn-light btn-sm">View All</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5>PE Tasks</h5>
+                                    <h2>@ViewBag.TasksCount</h2>
+                                    <a href="@Url.Action("Tasks")" class="btn btn-light btn-sm">View All</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mt-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body">
+                                    <h5>Permissions API</h5>
+                                    <p>Test Admin Permissions</p>
+                                    <a href="@Url.Action("Permissions")" class="btn btn-dark btn-sm">Test Permissions API</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model != null && Model.Any())
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h4>Recent Planned Events (from API Backend)</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>PE Number</th>
+                                                <th>Title</th>
+                                                <th>Status</th>
+                                                <th>Created Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var pe in Model.Take(10))
+                                            {
+                                                <tr>
+                                                    <td>@pe.PeNumber</td>
+                                                    <td>@pe.PeTitle</td>
+                                                    <td>@pe.PEStatus</td>
+                                                    <td>@pe.PECreatedDate.ToString("yyyy-MM-dd")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5>API Configuration:</h5>
+                            <ul>
+                                <li><strong>API Base URL:</strong> http://localhost:5292</li>
+                                <li><strong>Status:</strong> @(ViewBag.ApiStatus.ToString().StartsWith("✅") ? "Connected" : "Disconnected")</li>
+                                <li><strong>Integration Method:</strong> HTTP Client to Separate API Backend</li>
+                            </ul>
+                            
+                            <div class="mt-3">
+                                <a href="@Url.Action("Index", "Home")" class="btn btn-primary">Back to Main Dashboard</a>
+                                <a href="http://localhost:5292" target="_blank" class="btn btn-secondary">Open API Swagger UI</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

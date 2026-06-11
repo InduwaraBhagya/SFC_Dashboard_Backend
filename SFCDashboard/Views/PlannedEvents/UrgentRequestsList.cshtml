@@ -1,0 +1,60 @@
+﻿@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "Confirm Urgent Requests";
+}
+
+<h1>Confirm Urgent Requests</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        No pending urgent requests require confirmation at this time.
+    </div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>PE Number</th>
+                <th>Customer</th>
+                <th>Request Reference No</th>
+                <th>RTOM</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.PeNumber</td>
+                    <td>@item.Customer</td>
+                    <td>@item.RequestReferenceNo</td>
+                    <td>@item.Rtom</td>
+                    <td>@item.PEStatus</td>
+                    <td>
+                        <a asp-controller="PlannedEvents" asp-action="UrgentRequestConfirmation" asp-route-id="@item.Id" class="btn btn-primary btn-sm">Review Request</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

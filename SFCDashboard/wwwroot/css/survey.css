@@ -1,0 +1,43 @@
+.survey-detail-header {
+    background: linear-gradient(135deg, #4361ee, #3f37c9);
+    color: white;
+    border-radius: 5px 5px 0 0;
+    padding: 15px;
+}
+
+.activity-history {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.attachment-icon {
+    font-size: 1.2rem;
+    margin-right: 0.25rem;
+}
+
+.activity-item {
+    border-left: 3px solid #4361ee;
+    padding: 15px;
+    transition: background-color 0.2s;
+}
+
+.activity-item:hover {
+    background-color: #f8f9fa;
+}
+
+.activity-meta {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.activity-attachment {
+    background-color: #edf2ff;
+    border-radius: 4px;
+    padding: 5px 10px;
+    display: inline-block;
+    font-size: 0.9rem;
+}
+
+.activity-attachment:hover {
+    background-color: #d8e2fd;
+}

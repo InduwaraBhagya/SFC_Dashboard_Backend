@@ -1,0 +1,523 @@
+@model SystemUserViewModel
+@{
+    ViewData["Title"] = "Register";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SLT Fiber - Complete Registration</title>
+    <link href="~/lib/select2/css/select2.min.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/lib/font-awesome/css/all.min.css" rel="stylesheet" asp-append-version="true" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pastel-blue: #e0f2fe;
+            --pastel-green: #e8f5e8;
+            --soft-blue: #bae6fd;
+            --soft-green: #bbf7d0;
+            --accent-blue: #0ea5e9;
+            --accent-green: #10b981;
+            --deep-blue: #0c4a6e;
+            --deep-green: #065f46;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #e8f5e8 50%, #bae6fd 100%);
+            --border-radius: 24px;
+            --shadow-soft: 0 20px 40px -10px rgba(14, 165, 233, 0.15);
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            overflow-x: hidden;
+        }
+
+        .background-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 15% 25%, rgba(14, 165, 233, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 85% 75%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .registration-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeInUp 0.8s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .registration-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            max-width: 420px;
+            width: 100%;
+            margin: 20px auto;
+            position: relative;
+            animation: slideInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-container img {
+            filter: drop-shadow(0 4px 8px rgba(14, 165, 233, 0.2));
+            transition: transform 0.3s ease;
+        }
+
+        .logo-container img:hover {
+            transform: scale(1.05);
+        }
+
+        h1 {
+            color: var(--deep-blue);
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            text-align: center;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .form-label i {
+            margin-right: 8px;
+            color: var(--accent-green);
+            font-size: 1.1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .form-group:hover .form-label i {
+            transform: scale(1.1);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 12px;
+            border: 2px solid var(--soft-blue);
+            background: var(--pastel-blue);
+            font-size: 0.9rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+            outline: none;
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        .form-control:disabled {
+            background: var(--pastel-green);
+            border-color: var(--soft-green);
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.85rem;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-green) 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 16px rgba(14, 165, 233, 0.25);
+            text-transform: none;
+            letter-spacing: 0.025em;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(14, 165, 233, 0.35);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        .text-danger {
+            color: #f87171;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* Modern Select2 Styles */
+        .select2-container--default .select2-selection--single {
+            height: auto;
+            min-height: 44px;
+            padding: 0.75rem;
+            border: 2px solid var(--soft-blue);
+            border-radius: 12px;
+            background: var(--pastel-blue);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+        }
+
+        .select2-container--default .select2-selection--single:focus-within {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: normal;
+            padding: 0;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 44px;
+            right: 12px;
+        }
+
+        .select2-dropdown {
+            margin-top: 6px;
+            border: 2px solid var(--soft-blue);
+            border-radius: 12px;
+            box-shadow: 0 15px 30px -8px rgba(14, 165, 233, 0.2);
+            background: white;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .select2-search--dropdown {
+            padding: 0.75rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--pastel-blue);
+            border-bottom: 1px solid var(--soft-blue);
+        }
+
+        .select2-search--dropdown .select2-search__field {
+            display: block !important;
+            width: 100% !important;
+            height: 36px;
+            padding: 0.5rem !important;
+            border: 2px solid var(--soft-blue) !important;
+            border-radius: 8px !important;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            background: white;
+            font-weight: 500;
+        }
+
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: var(--accent-blue) !important;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .select2-results__option {
+            padding: 0.75rem !important;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--pastel-blue);
+            font-weight: 500;
+        }
+
+        .select2-results__option:last-child {
+            border-bottom: none;
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green)) !important;
+            color: white;
+        }
+
+        .select2-results__options {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .select2-results__options::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .select2-results__options::-webkit-scrollbar-track {
+            background: var(--pastel-blue);
+            border-radius: 4px;
+        }
+
+        .select2-results__options::-webkit-scrollbar-thumb {
+            background: var(--accent-blue);
+            border-radius: 4px;
+        }
+
+        .select2-results__options::-webkit-scrollbar-thumb:hover {
+            background: var(--deep-blue);
+        }
+
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @@keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(1deg); }
+        }
+
+        @@media (max-width: 640px) {
+            .registration-card {
+                padding: 1.5rem;
+                margin: 1rem auto;
+                max-width: 95%;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            .subtitle {
+                font-size: 0.9rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .form-control {
+                padding: 0.65rem;
+            }
+
+            .btn-primary {
+                padding: 0.75rem;
+                font-size: 0.95rem;
+            }
+
+            .form-group {
+                margin-bottom: 1rem;
+            }
+
+            .select2-container--default .select2-selection--single {
+                min-height: 40px;
+                padding: 0.65rem;
+            }
+
+            .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 40px;
+            }
+
+            .logo-container {
+                margin-bottom: 1rem;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            .registration-container {
+                padding: 0.75rem;
+            }
+            
+            .registration-card {
+                padding: 1.25rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .form-group {
+                margin-bottom: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-pattern"></div>
+    <div class="registration-container">
+        <div class="registration-card">
+            <div class="logo-container">
+                <img src="~/images/logo.png" alt="SLT Fiber" height="45" />
+            </div>
+            <h1>Complete Registration</h1>
+            <p class="subtitle">Welcome! Please complete your registration to access the SLT Fiber Dashboard</p>
+            <form asp-action="Index" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
+                <div class="form-group">
+                    <label asp-for="Name" class="form-label">
+                        <i class="fas fa-user-circle"></i>
+                        Full Name
+                    </label>
+                    <input asp-for="Name" class="form-control" readonly />
+                </div>
+                
+                <div class="form-group">
+                    <label asp-for="ServiceId" class="form-label">
+                        <i class="fas fa-id-badge"></i>
+                        Service ID
+                    </label>
+                    <input asp-for="ServiceId" class="form-control" readonly />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-users-cog"></i>
+                        Work Groups
+                    </label>
+                    <select id="WorkGroupIds" name="WorkGroupIds" class="form-control select2" multiple="multiple" style="width:100%;">
+                        @if (ViewData["WorkGroupIds"] != null)
+                        {
+                            @foreach (var wg in (MultiSelectList)ViewData["WorkGroupIds"]!)
+                            {
+                                <option value="@wg.Value" selected="@wg.Selected">@wg.Text</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="WorkGroupIds" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                        Complete Registration
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery-3.6.0.min.js" asp-append-version="true"></script>
+    <script src="~/lib/select2/js/select2.min.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.select2').select2({
+                theme: 'default',
+                width: '100%',
+                placeholder: 'Select Work Group(s)',
+                allowClear: true,
+                minimumResultsForSearch: 0,
+                dropdownParent: $('.registration-card'),
+                language: {
+                    searching: function() {
+                        return "Type to search...";
+                    }
+                }
+            });
+
+            $('.select2').on('select2:open', function() {
+                setTimeout(function() {
+                    $('.select2-search__field').attr('placeholder', 'Type to search...');
+                }, 0);
+            });
+
+            // Intercept form submission
+            $('form').on('submit', function(e) {
+                const selectedWorkGroups = $('#WorkGroupIds').val();
+                if (!selectedWorkGroups || selectedWorkGroups.length === 0) {
+                    alert('Please select at least one work group');
+                    e.preventDefault();
+                    return false;
+                }
+               const confirmed = confirm('Are you sure you want to register with the selected work group(s)?');
+                if (!confirmed) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

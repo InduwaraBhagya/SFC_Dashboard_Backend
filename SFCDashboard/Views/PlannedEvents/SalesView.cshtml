@@ -1,0 +1,1881 @@
+﻿@using System.Linq
+@using SFCDashboard.Models
+@model PaginatedList<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "PE Records";
+    bool isSearchPerformed = !string.IsNullOrEmpty(ViewData["PENumberFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["CustomerFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["JobReferenceFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["SONumberFilter"]?.ToString());
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
+
+<!-- Global Search Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #0c1d83 100%) !important; border-radius: 15px !important;">
+            <div class="card-body py-3" style="background: transparent !important;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <!-- Logo -->
+                    <div class="me-3 ms-3">
+                        <img src="~/images/logo.png" alt="Logo" height="60" class="d-inline-block" />
+                    </div>
+                    
+                    <!-- Global Search Form -->
+                    <form class="d-flex align-items-center justify-content-center flex-grow-1" method="get" asp-controller="PlannedEvents"
+                        asp-action="GlobalSearch" role="search">
+                        <div class="input-group" style="max-width: 600px;">
+                            <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px; box-shadow: none !important; border-radius: 0.375rem 0 0 0.375rem;">
+                                <option value="peNumber" selected>PE Number</option>
+                                <option value="customer">Customer</option>
+                                <option value="jobReference">Job Reference</option>
+                                <option value="soNumber">SO Number</option>
+                            </select>
+                            <input class="form-control" type="search" name="peNumber" id="globalSearchInput"
+                                placeholder="Search PE Number" aria-label="Search" style="box-shadow: none !important; border-left: 0; border-right: 0;" />
+                            <button class="btn btn-primary" type="submit" style="box-shadow: none !important; border-left: 0; border-radius: 0 0.375rem 0.375rem 0; padding: 0.375rem 0.75rem; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Welcome Message -->
+                    <div class="mx-3">
+                        <span class="text-white fw-bold">
+                            👋 Hello, @(ViewData["CurrentUserName"]?.ToString() ?? "User")!
+                        </span>
+                    </div>
+                    
+                    <!-- Reminder Notifications -->
+                    <div class="ms-2">
+                        <div class="dropdown">
+                            <button class="btn position-relative" type="button" id="reminderDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport" data-bs-container="body"
+                                style="border: none; padding: 0.5rem; background: transparent;">
+                                <i class="bi bi-bell" style="font-size: 1.2rem; color: white;"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                    id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
+                                style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <div class="dropdown-header bg-primary text-white p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-bell me-2"></i>Reminders
+                                        </h6>
+                                        <div>
+                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
+                                                title="Mark all as read">
+                                                <i class="bi bi-check-all"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100 mt-2">
+                                        <button type="button" class="btn btn-outline-light active"
+                                            data-filter="unread">Unread</button>
+                                        <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
+                                    </div>
+                                </div>
+                                <div id="reminderNotificationList" class="notification-list">
+                                    <!-- Reminders will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Cards: 5 tiles with 4 primary operation tiles and 1 secondary tool -->
+<div class="container-fluid p-0 position-relative mb-4" style="z-index: 1;">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-center align-items-stretch gap-2 mt-0 mb-0">
+                <!-- Urgent Requests Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesUrgentRecords")" class="dashboard-card urgent-card">
+                        <div class="card-content">
+                            <h5>Urgent Records</h5>
+                            <span class="badge">@ViewData["UrgentCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/urgent.png" alt="Urgent" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- In Progress Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesInProgressRecords")" class="dashboard-card inprogress-card">
+                        <div class="card-content">
+                            <h5>Regular Records</h5>
+                            <span class="badge">@ViewData["InProgressCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/work-in-progress.png" alt="In Progress" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- OLA Violated Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesOLAViolateRecords")" class="dashboard-card ola-card">
+                        <div class="card-content">
+                            <h5>OLA Violations</h5>
+                            <span class="badge">@ViewData["OLAViolateCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/ola _Validate.png" alt="OLA Violated" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- Hold Records Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("SalesHoldRecords")" class="dashboard-card hold-card">
+                        <div class="card-content">
+                            <h5>Hold Records</h5>
+                            <span class="badge">@(ViewData["HoldCount"] != null ? ViewData["HoldCount"] : 0)</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/hold.png" alt="Hold" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- Report Generator Card - Secondary Tool -->
+                @* <div class="dashboard-card-container secondary-tool" style="flex: 0 0 140px; min-width: 140px;">
+                    <a href="@Url.Action("Generate", "Reports")" class="dashboard-card report-card secondary-card">
+                        <div class="card-content">
+                            <h6>Reports</h6>
+                            <span class="badge secondary-badge">
+                                <i class="bi bi-file-earmark-bar-graph"></i>
+                            </span>
+                        </div>
+                        <div class="img-container secondary-icon">
+                            <i class="bi bi-file-earmark-text" style="font-size: 1.8rem; color: #ffffff;"></i>
+                        </div>
+                    </a>
+                </div> *@
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt-2">
+@{
+    var nextTask = ViewBag.NextTask as List<TaskQueueItem>;
+    var hasNextTask = ViewBag.HasNextTask;
+}
+
+@{
+    bool shouldShowNextTask = 
+        (ViewData["CanViewAll"] as bool? != true) && 
+        ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count <= 1);
+}
+
+
+<!-- Top Section: Dynamic Layout Based on Permissions -->
+@if (ViewData["CanViewAll"] as bool? == true)
+{
+    <!-- For ViewAll Users: Workgroup Filter and Search PE Side by Side -->
+    <div class="row mb-2">
+        <!-- Workgroup Filter Card -->
+        <div class="col-lg-6 mb-2">
+            <div class="card border-primary h-100 shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>Filter by Workgroup
+                    </h6>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterContent" aria-expanded="false">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="collapse" id="filterContent">
+                    <div class="card-body py-2">
+                        <form method="get" asp-action="SalesView" class="workgroup-filter-form">
+                            <div class="mb-3">
+                                <select class="form-select shadow-sm" id="workgroupFilter" name="workgroupId" onchange="this.form.submit()">
+                                    <option value="">All Workgroups</option>
+                                    @if (ViewData["WorkGroups"] != null)
+                                    {
+                                        @if (ViewData["WorkGroups"] is IEnumerable<WorkGroup> workGroups)
+                                        {
+                                            @foreach (var workgroup in workGroups)
+                                            {
+                                            <option value="@workgroup.Id" selected="@(ViewData["SelectedWorkgroupId"]?.ToString() == workgroup.Id.ToString())">@workgroup.Name</option>
+                                            }
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            @if (!string.IsNullOrEmpty(selectedName))
+                            {
+                                <div class="selected-workgroup-display">
+                                    <span class="badge bg-primary">Selected: @selectedName</span>
+                                    <a href="@Url.Action("SalesView")" class="btn btn-sm btn-outline-secondary ms-2">
+                                        <i class="bi bi-x-circle me-1"></i>Clear
+                                    </a>
+                                </div>
+                            }
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Project Search Card -->
+        <div class="col-lg-6 mb-2">
+            <div class="card border-primary shadow-sm" style="height: 180px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Quick Find Projects
+                    </h6>
+                </div>
+                <div class="card-body py-2">
+                        <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchForm">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <label for="projectSearchInput" class="form-label">Project Name or Code</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control shadow-sm" id="projectSearchInput" 
+                                                name="query" placeholder="Search projects..." 
+                                                value="@Context.Request.Query["query"]" autocomplete="off" />
+                                            <button class="btn btn-primary" type="submit">
+                                                <i class="bi bi-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <!-- Project Search Results -->
+                        <div id="projectSearchResults" class="mt-3" style="max-height: 90px; overflow-y: auto;">
+                            @if (ViewBag.ProjectResults != null)
+                            {
+                                var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
+                                if (results != null && results.Any())
+                                {
+                                    <div class="project-results-container">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="text-muted">Found @results.Count() project(s)</small>
+                                        </div>
+                                        <div class="list-group list-group-flush">
+                                            @foreach (var project in results.Take(10))
+                                            {
+                                                <div class="list-group-item list-group-item-action p-2 border-0 border-bottom">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
+                                                            <small class="text-muted">ID: @project.Id</small>
+                                                        </div>
+                                                        <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
+                                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (results.Count() > 10)
+                                        {
+                                            <div class="text-center mt-2">
+                                                <small class="text-muted">Showing first 10 of @results.Count() results</small>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                                {
+                                    <div class="text-center py-3 text-muted">
+                                        <i class="bi bi-search fs-4 d-block mb-2"></i>
+                                        <p class="mb-0">No projects found for "@Context.Request.Query["query"]"</p>
+                                    </div>
+                                }
+                            }
+                            else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                            {
+                                <div class="text-center py-3 text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <span>Searching...</span>
+                                </div>
+                            }
+                        </div>
+                        
+                        <!-- View All Projects Button -->
+                        <div class="mt-2 pt-2 border-top">
+                            <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="bi bi-list-ul me-1"></i>View All Projects
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+}
+
+<!-- Message Inbox and Notice Board Section -->
+<div class="row mt-3">
+    <!-- Left Column: Message Inbox (40% width) -->
+    <div class="col-lg-4">
+        <div class="card border-info shadow-sm" style="height: 400px;">
+            <div class="card-header bg-info text-white py-1">
+                <h6 class="mb-0">
+                    <i class="fas fa-inbox me-1"></i>Message Inbox
+                        @{
+                            var unreadCount = 0;
+                            
+                            // Count unread issues
+                            if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssues)
+                            {
+                                unreadCount += inboxIssues.Count(i => !i.IsRead);
+                            }
+                            
+                            // Count pending urgent PE requests
+                            if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> urgentRequests)
+                            {
+                                unreadCount += urgentRequests.Count();
+                            }
+                            
+                            // Count pending urgent task requests
+                            if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> taskRequests)
+                            {
+                                unreadCount += taskRequests.Count();
+                            }
+                            
+                            if (unreadCount > 0)
+                            {
+                                <span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.6rem;">@unreadCount</span>
+                            }
+                        }
+                </h6>
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <!-- Message search bar -->
+                <div class="inbox-search-container mb-2">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control inbox-search" placeholder="Search..." aria-label="Search messages" style="font-size: 0.75rem;">
+                    </div>
+                </div>
+
+                <!-- Add this section after the inbox-search-container -->
+                <div class="inbox-filters mb-2">
+                    <div class="btn-group w-100" role="group" aria-label="Message filters">
+                        <button type="button" class="btn btn-outline-primary btn-sm active" data-filter="unread" style="font-size: 0.7rem; padding: 0.2rem;">Unread</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-filter="read" style="font-size: 0.7rem; padding: 0.2rem;">Read</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-filter="all" style="font-size: 0.7rem; padding: 0.2rem;">All</button>
+                    </div>
+                </div>
+
+                <div class="messages-container">
+                    @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
+                    {
+                        <!-- Urgent Request Confirmation Messages -->
+                        @if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> urgentRequestsList && urgentRequestsList.Any())
+                        {
+                            foreach (var request in urgentRequestsList)
+                            {
+                                <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender"><span class="badge bg-danger me-1">Urgent</span>
+                                                From @request.UrgentRequestedByName
+                                            </h6>
+                                            <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            <span class="badge bg-danger me-1">Action Required</span>
+                                            Confirm Urgent Status
+                                        </div>
+                                        <div class="message-preview">
+                                            Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        
+                        <!-- Task Urgent Requests -->
+                        @if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> pendingTasks)
+                        {
+                            foreach (var task in pendingTasks)
+                            {
+                                <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
+                                    <div class="message-indicator"></div>
+                                    <div class="message-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
+                                            <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
+                                        </div>
+                                        <div class="message-subject">
+                                            <span class="badge bg-danger me-1">Action Required</span>
+                                            Approve Urgent Task
+                                        </div>
+                                        <div class="message-preview">
+                                            Task: @task.Task - @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                    
+                    <!-- Issue Messages -->
+                    @if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssuesList && inboxIssuesList.Any())
+                    {
+                        foreach (var issue in inboxIssuesList)
+                        {
+                            <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
+                                 data-message-id="issue-@issue.CreatedAt.Ticks"
+                                 data-issue-id="@issue.Id"
+                                 data-pe-id="@issue.PlannedEventId"
+                                 data-sender="@issue.SenderName"
+                                 data-sender-id="@issue.SenderId"
+                                 data-issue-text="@issue.IssueText"
+                                 data-attachment="@issue.AttachmentPath"
+                                 data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
+                                 data-is-read="@issue.IsRead.ToString().ToLower()"
+                                 data-is-reply="@issue.IsReply.ToString().ToLower()"
+                                 data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
+                                 data-original-issue-id="@issue.OriginalIssueId"
+                                 @if (issue.IsResolutionRequest)
+                                 {
+                                     <text>
+                                     data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
+                                     data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                     onclick="showResolutionConfirm(this)"
+                                     </text>
+                                 }
+                                 else
+                                 {
+                                     <text>onclick="showIssueDetails(this)"</text>
+                                 }>
+                                <div class="message-indicator"></div>
+                                <div class="message-content">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="message-sender">
+                                            @if (issue.IsResolutionRequest)
+                                            {
+                                                <span class="badge bg-success me-1">Resolution</span>
+                                            }
+                                            From @issue.SenderName 
+                                        </h6>
+                                        <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                    </div>
+                                    <div class="message-subject">
+                                        @if (issue.IsResolutionRequest)
+                                        {
+                                            <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                        }
+                                        else if (issue.IsReply)
+                                        {
+                                            <span class="badge bg-info text-dark me-1">Reply</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger text-white me-1">Issue</span>
+                                        }
+                                        @issue.IssueText
+                                    </div>
+                                    <div class="message-preview">
+                                        @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                        {
+                                            <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No attachment</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    
+                    @if (!((ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> checkInboxIssues && checkInboxIssues.Any()) ||
+                         (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> checkUrgentRequests && checkUrgentRequests.Any()) ||
+                         (ViewData["PendingTaskRequests"] is IEnumerable<PETask> checkTaskRequests && checkTaskRequests.Any())))
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            <p>No messages in your inbox</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle Column: Task Queue & BOQ Status (33% width) -->
+    <div class="col-lg-4 mb-3">
+        <!-- Task Queue Section -->
+        @if (shouldShowNextTask)
+        {
+            <!-- Next Task Card -->
+            <div class="card border-info shadow-sm" style="height: 160px;">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Next Task
+                    </h6>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#nextTaskContent" aria-expanded="false">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="collapse" id="nextTaskContent">
+                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 120px;">
+                        @if (nextTask != null && nextTask.Any())
+                        {
+                            var task = nextTask.First();
+                            <div class="next-task-item">
+                                <h6 class="text-primary mb-2">@task.Task.PENumber</h6>
+                                <p class="mb-1"><strong>Customer:</strong> @task.Task.PlannedEvent?.Customer</p>
+                                <p class="mb-1"><strong>Task:</strong> @task.Task.Task</p>
+                                <p class="mb-2"><strong>Status:</strong> @task.DueStatus</p>
+                                <div class="text-center">
+                                    <a href="@Url.Action("Details", new { id = task.Task.PlannedEvent?.Id })" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-play-fill me-1"></i>Start Task
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-3 text-muted">
+                                <i class="bi bi-check-circle fs-4 d-block mb-2"></i>
+                                <p class="mb-0">No pending tasks</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Quick Find Projects Card for non-ViewAll users -->
+            <div class="card border-primary shadow-sm" style="height: 180px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Quick Find Projects
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3" style="overflow-y: auto; max-height: 140px;">
+                        <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchFormRegular">
+                            <div class="mb-2">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control shadow-sm" id="projectSearchInputRegular" 
+                                        name="query" placeholder="Search projects..." 
+                                        value="@Context.Request.Query["query"]" autocomplete="off" />
+                                    <button class="btn btn-primary btn-sm" type="submit">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <!-- Project Search Results -->
+                        <div id="projectSearchResultsRegular" style="max-height: 90px; overflow-y: auto;">
+                            @if (ViewBag.ProjectResults != null)
+                            {
+                                var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
+                                if (results != null && results.Any())
+                                {
+                                    <div class="project-results-container">
+                                        <small class="text-muted d-block mb-2">@results.Count() project(s) found</small>
+                                        <div class="list-group list-group-flush">
+                                            @foreach (var project in results.Take(5))
+                                            {
+                                                <div class="list-group-item list-group-item-action p-1 border-0 border-bottom" style="font-size: 0.85rem;">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div class="flex-grow-1" style="min-width: 0;">
+                                                            <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
+                                                            <small class="text-muted">ID: @project.Id</small>
+                                                        </div>
+                                                        <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
+                                                           class="btn btn-xs btn-outline-primary ms-1" title="View Details" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (results.Count() > 5)
+                                        {
+                                            <div class="text-center mt-1">
+                                                <small class="text-muted" style="font-size: 0.75rem;">+@(results.Count() - 5) more</small>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                                {
+                                    <div class="text-center py-2 text-muted">
+                                        <i class="bi bi-search"></i>
+                                        <small class="d-block">No projects found</small>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <!-- View All Projects Button -->
+                        <div class="mt-2 pt-2 border-top">
+                            <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100" style="font-size: 0.8rem;">
+                                <i class="bi bi-list-ul me-1"></i>View All Projects
+                            </a>
+                        </div>
+                    </div>
+                </div>
+        }
+        
+        <!-- BOQ Status Section -->
+        @{
+            var boqRecords = ViewData["BOQRecords"] as IEnumerable<dynamic>;
+            int total = boqRecords?.Count() ?? 0;
+            int done = boqRecords?.Count(x => x.Status == "Done") ?? 0;
+            int progress = boqRecords?.Count(x => x.Status == "In Progress") ?? 0;
+            int pending = boqRecords?.Count(x => x.Status == "Pending") ?? 0;
+        }
+        <div class="card border-success shadow-sm boq-summary-card" style="height: 200px;">
+            <div class="card-header boq-header text-white d-flex justify-content-between align-items-center py-1 px-3" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important; border-radius: 12px 12px 0 0; border: none;">
+                <h6 class="mb-0">
+                    <i class="bi bi-graph-up me-1"></i>BOQ Status
+                </h6>
+                <button class="btn btn-sm btn-outline-light" style="border-radius: 50%; padding: 0.2rem 0.5rem; opacity: 0.7;" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div class="card-body p-2" style="background: #f8fafc; border-radius: 0 0 12px 12px;">
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <div class="small-stat-card boq-total text-center w-100 py-1" style="background: #e3f2fd; color: #1976d2; border-radius: 4px; border: 1px solid #bbdefb; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@total</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Total</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small-stat-card boq-done text-center w-100 py-1" style="background: #e8f5e9; color: #388e3c; border-radius: 4px; border: 1px solid #a5d6a7; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@done</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Done</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <div class="small-stat-card boq-progress text-center w-100 py-1" style="background: #fffde7; color: #fbc02d; border-radius: 4px; border: 1px solid #ffe082; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@progress</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Progress</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small-stat-card boq-pending text-center w-100 py-1" style="background: #ffebee; color: #d32f2f; border-radius: 4px; border: 1px solid #ef9a9a; min-height: 32px;">
+                            <div class="fw-bold" style="font-size: 0.85rem;">@pending</div>
+                            <div class="boq-status-item" style="font-size: 0.65rem;">Pending</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-12">
+                        <a href="@Url.Action("BOQList", "BOQ")" class="d-block text-center py-1" style="border: 1px solid #b3c6e6; border-radius: 6px; background: #fff; color: #357abd; font-weight: 500; text-decoration: none; transition: background 0.2s; font-size: 0.9rem;">
+                            <i class="bi bi-list-task me-1"></i> View All
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Notice Board (33% width) -->
+    <div class="col-lg-4">
+        <!-- Notice Board Section -->
+        <div class="card border-warning shadow-sm" style="height: 400px;">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-1">
+                <h6 class="mb-0">
+                    <i class="bi bi-megaphone me-1"></i>Notice Board
+                </h6>
+                @if ((bool)(ViewData["CanManageNotices"] ?? false))
+                {
+                    <button class="btn btn-xs btn-outline-dark" id="addNoticeBtn" title="Add Notice" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                }
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <div id="noticeContent">
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading notices...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<!-- End of container-fluid -->
+
+</div>
+<!-- End of container-fluid -->
+@section Scripts {
+    <link rel="stylesheet" href="~/lib/jquery-ui/themes/base/jquery-ui.css" asp-append-version="true">
+    <script src="~/lib/jquery-ui/jquery-ui.min.js" asp-append-version="true"></script>
+    <link href="~/lib/select2/css/select2.min.css" rel="stylesheet" asp-append-version="true" />
+    <script src="~/lib/select2/js/select2.min.js" asp-append-version="true"></script>
+    <link href="~/css/theme-toggle.css" rel="stylesheet" asp-append-version="true" />
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2 with enhanced styling
+            $('#workgroupFilter').select2({
+                placeholder: "Select workgroup...",
+                allowClear: true,
+                theme: "bootstrap-5"
+            });
+            
+            // Enhanced search type toggle
+            function toggleSearchFields(formType = 'regular') {
+                let searchType, searchInput;
+                
+                if (formType === 'regular') {
+                    searchType = document.getElementById('searchTypeRegular').value;
+                    searchInput = document.getElementById('indexSearchInputRegular');
+                } else {
+                    searchType = document.getElementById('searchType') ? document.getElementById('searchType').value : 'peNumber';
+                    searchInput = document.getElementById('indexSearchInput');
+                }
+                
+                if (searchInput) {
+                    // Update input name and placeholder based on search type
+                    searchInput.name = searchType;
+                    
+                    switch (searchType) {
+                        case 'peNumber':
+                            searchInput.placeholder = 'Enter PE Number...';
+                            break;
+                        case 'customer':
+                            searchInput.placeholder = 'Enter Customer Name...';
+                            break;
+                        case 'jobReference':
+                            searchInput.placeholder = 'Enter Job Reference...';
+                            break;
+                        case 'soNumber':
+                            searchInput.placeholder = 'Enter SO Number...';
+                            break;
+                    }
+                }
+            }
+            
+            // Make toggleSearchFields available globally
+            window.toggleSearchFields = toggleSearchFields;
+            
+            // Initialize search fields based on current search type
+            toggleSearchFields();
+            
+            // Add keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    $('#indexSearchInput').focus();
+                }
+            });
+        });
+
+        // Reminder notification functionality similar to Index
+        $(document).ready(function() {
+            // Load reminders on page load
+            loadReminders();
+            
+            // Initialize notice board
+            initializeNoticeBoard();
+        });
+
+        function loadReminders() {
+            fetch(`${APP_BASE}PlannedEvents/GetReminders`)
+                .then(response => response.json())
+                .then(data => {
+                    updateReminderDropdown(data);
+                })
+                .catch(error => {
+                    console.error('Error loading reminders:', error);
+                });
+        }
+
+        function updateReminderDropdown(reminders) {
+            const reminderList = document.getElementById('reminderNotificationList');
+            const reminderCount = document.getElementById('reminderCount');
+            
+            if (reminders && reminders.length > 0) {
+                const unreadCount = reminders.filter(r => !r.isRead).length;
+                if (unreadCount > 0) {
+                    reminderCount.textContent = unreadCount;
+                    reminderCount.style.display = 'inline';
+                } else {
+                    reminderCount.style.display = 'none';
+                }
+                
+                reminderList.innerHTML = reminders.map(reminder => `
+                    <div class="dropdown-item ${!reminder.isRead ? 'fw-bold' : ''}" style="cursor: pointer;"
+                         onclick="showReminderDetails('${reminder.id}', '${reminder.peId}', '${reminder.title}', '${reminder.message}', '${reminder.reminderDate}')">
+                        <i class="bi bi-bell me-2 text-warning"></i>
+                        <div>
+                            <div class="fw-bold">${reminder.title}</div>
+                            <small class="text-muted">${formatDate(new Date(reminder.reminderDate))}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                reminderCount.style.display = 'none';
+                reminderList.innerHTML = '<div class="dropdown-item-text text-center">No reminders</div>';
+            }
+        }
+
+        function formatDate(date) {
+            const now = new Date();
+            const diffInMs = now - date;
+            const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+            const diffInHours = diffInMs / (1000 * 60 * 60);
+
+            if (diffInMinutes < 60) {
+                return `${diffInMinutes} minutes ago`;
+            } else if (diffInHours < 24) {
+                return `${Math.floor(diffInHours)} hours ago`;
+            } else {
+                const diffInDays = Math.floor(diffInHours / 24);
+                return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+            }
+        }
+
+        // User permissions for notice management
+        const canManageNotices = @Html.Raw((ViewData["CanManageNotices"] as bool?)?.ToString().ToLower() ?? "false");
+
+        // Notice Board Management
+        function initializeNoticeBoard() {
+            // Add click handlers for notice board buttons
+            $('#addNoticeBtn').on('click', function() {
+                showAddNoticeModal();
+            });
+            
+            // Initialize notice board on page load
+            loadNoticeBoard();
+        }
+        
+        function loadNoticeBoard() {
+            // Load notice board data from API
+            refreshNoticeBoard();
+        }
+        
+        function refreshNoticeBoard() {
+            // Refresh notice board content via AJAX
+            $.ajax({
+                url: '@Url.Action("GetNotices", "PlannedEvents")',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        updateNoticeBoardContent(response.data);
+                    } else {
+                        console.error('Failed to refresh notice board:', response.message);
+                        $('#noticeContent').html(`
+                            <div class="text-center py-4 text-muted">
+                                <i class="bi bi-exclamation-triangle fs-2 d-block mb-2"></i>
+                                <p>Failed to load notices</p>
+                            </div>
+                        `);
+                    }
+                },
+                error: function() {
+                    console.error('Network error while refreshing notice board');
+                    $('#noticeContent').html(`
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-wifi-off fs-2 d-block mb-2"></i>
+                            <p>Network error loading notices</p>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        function updateNoticeBoardContent(notices) {
+            const noticeContent = $('#noticeContent');
+            noticeContent.empty();
+            
+            if (notices && notices.length > 0) {
+                notices.slice(0, 5).forEach(function(notice) { // Show only first 5 notices
+                    // Split description to get title and content
+                    const lines = notice.description.split('\n');
+                    const title = lines[0] || 'Notice';
+                    const content = lines.slice(2).join('\n') || notice.description; // Skip empty line
+                    
+                    const isPinned = notice.isPinned || false;
+                    const expireDate = notice.expireDate ? new Date(notice.expireDate) : null;
+                    const isExpired = expireDate && expireDate < new Date();
+                    
+                    const noticeHtml = `
+                        <div class="notice-item mb-2 p-2 border rounded ${isExpired ? 'opacity-75' : ''}" 
+                             style="border-left: 4px solid ${isPinned ? '#007bff' : '#ffc107'} !important; ${isExpired ? 'filter: grayscale(50%);' : ''}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">
+                                        ${isPinned ? '<i class="bi bi-pin-fill text-primary me-1"></i>' : ''}
+                                        ${escapeHtml(title)}
+                                        ${isExpired ? '<small class="text-muted ms-1">(Expired)</small>' : ''}
+                                    </h6>
+                                    <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2; color: ${isExpired ? '#6c757d' : 'inherit'};">
+                                        ${escapeHtml(content)}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted" style="font-size: 0.65rem;">
+                                            By: ${escapeHtml(notice.createdUserName || 'System')} | 
+                                            ${formatNoticeDate(notice.createdDate)}
+                                        </small>
+                                        ${expireDate ? `<small class="text-muted" style="font-size: 0.6rem;">
+                                            Expires: ${expireDate.toLocaleDateString()}
+                                        </small>` : ''}
+                                    </div>
+                                </div>
+                                ${canManageNotices ? `
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                            data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <button class="dropdown-item" onclick="togglePinNotice(${notice.id}, ${!isPinned})">
+                                                <i class="bi bi-pin${isPinned ? '' : '-fill'} me-2"></i>
+                                                ${isPinned ? 'Unpin' : 'Pin'} Notice
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger" onclick="deleteNotice(${notice.id})">
+                                                <i class="bi bi-trash me-2"></i>Delete Notice
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    noticeContent.append(noticeHtml);
+                });
+                
+                // Add "View All" button if there are more notices
+                if (notices.length > 5) {
+                    noticeContent.append(`
+                        <div class="text-center mt-2">
+                            <small class="text-muted">${notices.length - 5} more notices...</small>
+                        </div>
+                    `);
+                }
+            } else {
+                const noNoticesMessage = canManageNotices ? 
+                    '<i class="bi bi-info-circle me-2"></i>No notices available<br><small>Click the + button to add the first notice</small>' :
+                    '<i class="bi bi-info-circle me-2"></i>No notices available at the moment';
+                
+                noticeContent.html(`
+                    <div class="text-center text-muted p-3">
+                        ${noNoticesMessage}
+                    </div>
+                `);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+        
+        function formatNoticeDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+            
+            if (diffDays === 0) {
+                if (diffHours === 0) {
+                    return 'Just now';
+                } else {
+                    return `${diffHours}h ago`;
+                }
+            } else if (diffDays === 1) {
+                return 'Yesterday';
+            } else if (diffDays < 7) {
+                return `${diffDays}d ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        function showAddNoticeModal() {
+            if (!canManageNotices) {
+                alert('You do not have permission to manage notices.');
+                return;
+            }
+            
+            // Create add notice modal with pin and expire date options
+            const modalHtml = `
+                <div class="modal fade" id="addNoticeModal" tabindex="-1" aria-labelledby="addNoticeModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title" id="addNoticeModalLabel">
+                                    <i class="bi bi-plus-circle me-2"></i>Add New Notice
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form id="addNoticeForm">
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label for="addNoticeTitle" class="form-label">
+                                                    <i class="bi bi-card-text me-1"></i>Title
+                                                </label>
+                                                <input type="text" class="form-control" id="addNoticeTitle" name="title" required maxlength="200"
+                                                    placeholder="Enter notice title...">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="addNoticeExpireDate" class="form-label">
+                                                    <i class="bi bi-calendar-event me-1"></i>Expire Date (Optional)
+                                                </label>
+                                                <input type="date" class="form-control" id="addNoticeExpireDate" name="expireDate">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="addNoticeContent" class="form-label">
+                                            <i class="bi bi-chat-text me-1"></i>Content
+                                        </label>
+                                        <textarea class="form-control" id="addNoticeContent" name="content" rows="6" required
+                                            placeholder="Enter notice content..."></textarea>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="addNoticePinned" name="isPinned">
+                                        <label class="form-check-label" for="addNoticePinned">
+                                            <i class="bi bi-pin me-1"></i>Pin this notice (appears at the top)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" id="submitNoticeBtn">
+                                        <i class="bi bi-plus-circle me-2"></i>Add Notice
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove any existing modal
+            $('#addNoticeModal').remove();
+            
+            // Add modal to body and show
+            $('body').append(modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('addNoticeModal'));
+            modal.show();
+            
+            // Handle form submission
+            $('#addNoticeForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const submitBtn = $('#submitNoticeBtn');
+                const originalText = submitBtn.html();
+                submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Adding...').prop('disabled', true);
+                
+                const formData = {
+                    title: $('#addNoticeTitle').val().trim(),
+                    content: $('#addNoticeContent').val().trim(),
+                    isPinned: $('#addNoticePinned').is(':checked'),
+                    expireDate: $('#addNoticeExpireDate').val() || null
+                };
+                
+                // Combine title and content for the description field
+                const description = formData.title + '\\n\\n' + formData.content;
+                
+                $.ajax({
+                    url: '@Url.Action("CreateNotice", "PlannedEvents")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        description: description,
+                        isPinned: formData.isPinned,
+                        expireDate: formData.expireDate
+                    }),
+                    success: function(response) {
+                        // Handle new API response format
+                        if (response.success !== false) {
+                            modal.hide();
+                            refreshNoticeBoard();
+                            showSuccessMessage(response.message || 'Notice added successfully!');
+                        } else {
+                            showErrorMessage('Error adding notice: ' + (response.message || 'Unknown error'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error adding notice:', error);
+                        showErrorMessage('Error adding notice. Please try again.');
+                    },
+                    complete: function() {
+                        // Reset button state
+                        submitBtn.html(originalText).prop('disabled', false);
+                    }
+                });
+            });
+            
+            // Clean up modal after hide
+            $('#addNoticeModal').on('hidden.bs.modal', function() {
+                $(this).remove();
+            });
+        }
+        
+        function togglePinNotice(noticeId, isPinned) {
+            if (!canManageNotices) {
+                alert('You do not have permission to manage notices.');
+                return;
+            }
+            
+            $.ajax({
+                url: '@Url.Action("TogglePinNotice", "PlannedEvents")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    id: noticeId,
+                    isPinned: isPinned
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        refreshNoticeBoard();
+                        showSuccessMessage(isPinned ? 'Notice pinned successfully!' : 'Notice unpinned successfully!');
+                    } else {
+                        showErrorMessage('Error updating notice: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error toggling pin notice:', error);
+                    showErrorMessage('Error updating notice. Please try again.');
+                }
+            });
+        }
+        
+        function deleteNotice(noticeId) {
+            if (!canManageNotices) {
+                alert('You do not have permission to manage notices.');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to delete this notice? This action cannot be undone.')) {
+                return;
+            }
+            
+            $.ajax({
+                url: '@Url.Action("DeleteNotice", "PlannedEvents")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    id: noticeId
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        refreshNoticeBoard();
+                        showSuccessMessage('Notice deleted successfully!');
+                    } else {
+                        showErrorMessage('Error deleting notice: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error deleting notice:', error);
+                    showErrorMessage('Error deleting notice. Please try again.');
+                }
+            });
+        }
+        
+        function showSuccessMessage(message) {
+            // Create toast notification
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+            
+            let toastContainer = $('.toast-container');
+            if (toastContainer.length === 0) {
+                toastContainer = createToastContainer();
+            }
+            
+            toastContainer.append(toast);
+            const bsToast = new bootstrap.Toast(toast[0]);
+            bsToast.show();
+        }
+        
+        function showErrorMessage(message) {
+            // Create toast notification
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-exclamation-triangle me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+            
+            let toastContainer = $('.toast-container');
+            if (toastContainer.length === 0) {
+                toastContainer = createToastContainer();
+            }
+            
+            toastContainer.append(toast);
+            const bsToast = new bootstrap.Toast(toast[0]);
+            bsToast.show();
+        }
+        
+        function createToastContainer() {
+            const container = $('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+            $('body').append(container);
+            return container;
+        }
+
+        function loadReminders() {
+            fetch(`${APP_BASE}PlannedEvents/GetReminders`)
+                .then(response => response.json())
+                .then(data => {
+                    updateReminderDropdown(data);
+                })
+                .catch(error => {
+                    console.error('Error loading reminders:', error);
+                });
+        }
+
+        function updateReminderDropdown(reminders) {
+            const reminderList = document.getElementById('reminderNotificationList');
+            const reminderCount = document.getElementById('reminderCount');
+            
+            if (reminders && reminders.length > 0) {
+                const unreadCount = reminders.filter(r => !r.isRead).length;
+                if (unreadCount > 0) {
+                    reminderCount.textContent = unreadCount;
+                    reminderCount.style.display = 'inline';
+                } else {
+                    reminderCount.style.display = 'none';
+                }
+                
+                reminderList.innerHTML = reminders.map(reminder => `
+                    <div class="dropdown-item ${!reminder.isRead ? 'fw-bold' : ''}" style="cursor: pointer;"
+                         onclick="showReminderDetails(${JSON.stringify(reminder).replace(/"/g, '&quot;')})">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">${formatDate(new Date(reminder.createdAt))}</small>
+                            ${!reminder.isRead ? '<span class="badge bg-primary badge-sm">New</span>' : ''}
+                        </div>
+                        <div class="mt-1">${reminder.message}</div>
+                    </div>
+                `).join('');
+            } else {
+                reminderCount.style.display = 'none';
+                reminderList.innerHTML = '<div class="dropdown-item-text text-center">No reminders</div>';
+            }
+        }
+
+        function formatDate(date) {
+            const now = new Date();
+            const diffInMs = now - date;
+            const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+            const diffInHours = diffInMs / (1000 * 60 * 60);
+
+            if (diffInMinutes < 60) {
+                return `${diffInMinutes} minutes ago`;
+            } else if (diffInHours < 24) {
+                return `${Math.floor(diffInHours)} hours ago`;
+            } else {
+                const diffInDays = Math.floor(diffInHours / 24);
+                return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+            }
+        }
+    </script>
+    <script src="~/js/index.js"></script> 
+}
+
+<style>
+    /* Secondary Tool Styling - Report Generator */
+    .dashboard-card-container.secondary-tool {
+        opacity: 0.8;
+        filter: grayscale(15%);
+        position: relative;
+    }
+
+    .dashboard-card.secondary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        box-shadow: 0 3px 6px rgba(102, 126, 234, 0.2);
+        transition: all 0.3s ease;
+        opacity: 0.95;
+    }
+
+    .dashboard-card.secondary-card:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        border-color: rgba(102, 126, 234, 0.6);
+        opacity: 1;
+        filter: grayscale(0%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .dashboard-card.secondary-card .card-content h6 {
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-card.secondary-card .badge.secondary-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        font-size: 1.1rem;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+    }
+
+    .dashboard-card.secondary-card .img-container.secondary-icon {
+        opacity: 0.8;
+    }
+
+    .dashboard-card.secondary-card:hover .img-container.secondary-icon {
+        opacity: 1;
+        color: #ffffff !important;
+    }
+
+    /* Visual separator for secondary tool */
+    .dashboard-card-container.secondary-tool::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 15%;
+        bottom: 15%;
+        width: 3px;
+        background: repeating-linear-gradient(
+            to bottom,
+            rgba(108, 117, 125, 0.3),
+            rgba(108, 117, 125, 0.3) 4px,
+            transparent 4px,
+            transparent 8px
+        );
+        border-radius: 2px;
+        opacity: 0.6;
+    }
+
+    /* Enhanced primary dashboard cards visual priority */
+    .dashboard-card:not(.secondary-card) {
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 2px solid transparent;
+    }
+
+    .dashboard-card:not(.secondary-card)::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        border-radius: inherit;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card:not(.secondary-card):hover::before {
+        opacity: 1;
+    }
+
+    .dashboard-card:not(.secondary-card):hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Subtle text label for secondary tools */
+    .dashboard-card-container.secondary-tool::after {
+        content: 'Generate Reports';
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        color: #6c757d;
+        background: rgba(248, 249, 250, 0.9);
+        padding: 2px 6px;
+        border-radius: 3px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card-container.secondary-tool:hover::after {
+        opacity: 1;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .dashboard-card-container.secondary-tool {
+            flex: 1 1 0 !important;
+            min-width: 120px !important;
+        }
+        
+        .dashboard-card.secondary-card .card-content h6 {
+            font-size: 0.75rem;
+        }
+
+        .dashboard-card-container.secondary-tool::before {
+            display: none;
+        }
+
+        .dashboard-card-container.secondary-tool::after {
+            display: none;
+        }
+    }
+
+    /* Subtle animation for all cards with staggered delay */
+    .dashboard-card-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .dashboard-card-container:nth-child(1) { animation-delay: 0.1s; }
+    .dashboard-card-container:nth-child(2) { animation-delay: 0.2s; }
+    .dashboard-card-container:nth-child(3) { animation-delay: 0.3s; }
+    .dashboard-card-container:nth-child(4) { animation-delay: 0.4s; }
+    .dashboard-card-container:nth-child(5) { animation-delay: 0.6s; }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Badge styling enhancement for primary cards */
+    .dashboard-card:not(.secondary-card) .badge {
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Message Inbox Enhanced Styling */
+    .message-item {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        border-left: 3px solid transparent;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.375rem;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .message-item:hover {
+        transform: translateX(3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .message-item.unread {
+        background-color: #f8f9ff;
+        border-left-color: #007bff;
+        font-weight: 500;
+    }
+
+    .message-item.important {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+
+    .message-item .message-sender {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .message-item .message-time {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+
+    .message-item .message-subject {
+        font-size: 0.85rem;
+        color: #495057;
+        margin-bottom: 0.25rem;
+    }
+
+    .message-item .message-preview {
+        font-size: 0.8rem;
+        color: #6c757d;
+        line-height: 1.3;
+    }
+
+    /* PE Records card styling */
+    .details-divider {
+        border-top: 2px solid #e9ecef;
+        margin: 1rem 0;
+    }
+
+    .details-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .details-card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .details-card-header {
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+    }
+
+    .details-card-body {
+        font-size: 0.85rem;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.25rem 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-weight: 500;
+        min-width: 120px;
+    }
+
+    .detail-value {
+        text-align: right;
+        word-break: break-word;
+    }
+</style>
+
+<!-- Simplify the modal with just Accept/Reject buttons -->
+<div class="modal fade" id="urgentRequestModal" tabindex="-1" aria-labelledby="urgentRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="urgentRequestModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Urgent Request Confirmation
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="urgentRequestDetails">
+                    <!-- Details will be loaded here -->
+                </div>
+
+                <form id="urgentRequestForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="urgentRequestId" name="id" />
+                    <input type="hidden" id="urgentRequestType" name="requestType" />
+                </form>
+            </div>
+            <div class="modal-footer">
+                <a id="urgentRequestViewDetailsBtn" href="#" class="btn btn-info me-auto" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>View Details
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="acceptUrgentRequestBtn">
+                    <i class="fas fa-check-circle me-2"></i>Accept
+                </button>
+                <button type="button" class="btn btn-danger" id="rejectUrgentRequestBtn">
+                    <i class="fas fa-times-circle me-2"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Details Modal (update the modal to have specialized view for resolution requests) -->
+<div class="modal fade" id="issueDetailsModal" tabindex="-1" aria-labelledby="issueDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title" id="issueDetailsModalLabel">
+                    <i class="fas fa-exclamation-circle me-2"></i>Issue Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="issueDetailsContent">
+                    <!-- Details will be loaded here -->
+                </div>
+
+                <div class="pe-details-section mt-4 border-top pt-3">
+                    <h6 class="fw-bold">Related PE Record</h6>
+                    <div id="relatedPEDetails" class="bg-light p-3 rounded">
+                        <!-- PE Details will be loaded here -->
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Loading PE details...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Resolution confirmation section (only shown for resolution requests) -->
+                <div id="resolutionConfirmationSection" class="d-none mt-4 border-top pt-3">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-question-circle me-2"></i>
+                        <strong>Resolution Request:</strong> Has this issue been resolved?
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewPEDetailsBtn" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                </a>
+                <button type="button" class="btn btn-info" id="replyIssueBtn">
+                    <i class="fas fa-reply me-2"></i>Reply
+                </button>
+                <button type="button" class="btn btn-success" id="resolveIssueBtn">
+                    <i class="fas fa-check-circle me-2"></i>Mark as Fixed
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Resolution Confirmation Modal (for direct confirmation from inbox) -->
+<div class="modal fade" id="resolutionConfirmModal" tabindex="-1" aria-labelledby="resolutionConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="resolutionConfirmModalLabel">Confirm Issue Resolution</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">The issue has been marked as resolved with the following notes:</p>
+                <div class="border p-3 bg-light mb-3 resolution-details-container" id="resolutionDetailsText">
+                    <!-- Resolution details will be shown here -->
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2">Loading resolution details...</span>
+                </div>
+                <p class="mb-0">If you confirm this resolution:</p>
+                <ul>
+                    <li>The issue will be marked as resolved</li>
+                    <li>The PE status will be changed back to "ongoing"</li>
+                </ul>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Has this issue been fixed satisfactorily?
+                </div>
+            </div>
+            <div class="modal-footer">
+                <form id="confirmResolutionForm" method="post" asp-controller="Issues" asp-action="ConfirmResolution">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" id="directResolutionId" name="resolutionId" />
+                    <input type="hidden" id="directIsConfirmed" name="isConfirmed" value="false" />
+                    
+                    <a id="viewPEDetailsLink" href="#" class="btn btn-info me-auto" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                    </a>
+                    
+                    <button type="button" class="btn btn-outline-danger" onclick="submitResolutionForm(false)">
+                        <i class="fas fa-times me-2"></i>No, Still an Issue
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="submitResolutionForm(true)">
+                        <i class="fas fa-check me-2"></i>Yes, Issue Fixed
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Reply Modal -->
+<div class="modal fade" id="issueReplyModal" tabindex="-1" aria-labelledby="issueReplyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title" id="issueReplyModalLabel">Reply to Issue</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
+                <div class="modal-body">
+                    <input type="hidden" id="replyIssueId" name="issueId" />
+                    <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
+                    <input type="hidden" id="replyReceiverId" name="receiverId" />
+                    
+                    <div class="mb-3">
+                        <label for="replyText" class="form-label">Reply</label>
+                        <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
+                        <input type="file" class="form-control" id="replyAttachment" name="attachment" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send Reply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Resolution Modal -->
+<div class="modal fade" id="issueResolveModal" tabindex="-1" aria-labelledby="issueResolveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="issueResolveModalLabel">Mark Issue as Fixed</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="issueResolveForm" method="post" asp-controller="Issues" asp-action="MarkAsFixed">
+                <div class="modal-body">
+                    <input type="hidden" id="resolveIssueId" name="IssueId" />
+                    <input type="hidden" id="resolvePlannedEventId" name="PlannedEventId" />
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Marking this issue as fixed will send a confirmation request to the reporter.
+                        If confirmed, the PE record status will be changed back to "ongoing".
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="resolutionDetails" class="form-label">Resolution Details</label>
+                        <textarea class="form-control" id="resolutionDetails" name="ResolutionDetails" rows="4" required
+                                  placeholder="Describe how the issue was fixed..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle me-2"></i>Confirm Resolution
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reminder Details Modal -->
+<div class="modal fade" id="reminderDetailsModal" tabindex="-1" aria-labelledby="reminderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="reminderDetailsModalLabel">
+                    <i class="bi bi-bell me-2"></i>Reminder Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="reminderDetailsContent">
+                    <!-- Details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewPEDetailsBtn" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@functions {
+    private string GetResolutionDetails(int issueId)
+    {
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return "";
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return "";
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.ResolutionDetails ?? "";
+                
+            return "";
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return "";
+        }
+    }
+
+    private int GetResolutionId(int issueId)
+    {
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return 0;
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return 0;
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.Id ?? 0;
+                
+            return 0;
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return 0;
+        }
+    }
+}
+
+
+<!-- Simplify the modal with just Accept/Reject buttons -->

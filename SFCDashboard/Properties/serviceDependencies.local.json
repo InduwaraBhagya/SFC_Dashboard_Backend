@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "identityapp1": {
+      "connectionInfo": "App registration: SLT - SFC Dashboard, Tenant: Sri Lanka Telecom PLC (slt.com.lk - Microsoft Entra ID)",
+      "type": "identityapp.default"
+    }
+  }
+}

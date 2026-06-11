@@ -1,0 +1,735 @@
+/* Clean Sidebar Layout Styles */
+
+/* Remove top header - no longer needed */
+
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 280px;
+  background: #ffffff;
+  border-right: 1px solid #e0e6ed;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1020;
+  overflow-x: hidden;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar.collapsed {
+  width: 70px;
+}
+
+/* Sidebar Header (Logo) */
+.sidebar-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e6ed;
+  display: flex;
+  align-items: center;
+  height: 70px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #374151;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.sidebar-logo {
+  display: block;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  transition: opacity 0.3s ease;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .brand-text {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-logo {
+  display: none;
+}
+
+.sidebar.collapsed .brand-text {
+  display: none;
+}
+
+/* Sidebar Toggle Arrow */
+.sidebar-toggle-arrow {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background: #ffffff;
+  border: 2px solid #e0e6ed;
+  border-radius: 50%;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1021;
+  font-size: 0.8rem;
+}
+
+.sidebar.collapsed .sidebar-toggle-arrow {
+  top: 10px;
+  right: 20px; /* Center it when sidebar is collapsed */
+  left: 20px; /* Alternative positioning when collapsed */
+  right: auto;
+}
+
+.sidebar-toggle-arrow:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+  transform: scale(1.1);
+}
+
+.sidebar.collapsed .sidebar-toggle-arrow i {
+  transform: rotate(180deg);
+}
+
+.sidebar-content {
+  padding: 0;
+  height: calc(100vh - 70px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-top: 3rem; /* Space for toggle arrow at top */
+}
+
+.sidebar.collapsed .sidebar-content {
+  height: 100vh;
+  padding-top: 3rem; /* Space for toggle arrow only */
+}
+
+.sidebar-nav {
+  list-style: none;
+  padding: 1rem 0;
+  margin: 0;
+  flex: 1;
+}
+
+.sidebar-nav .nav-item {
+  margin-bottom: 0.25rem;
+}
+
+/* Sidebar collapse improvements for perfect icon alignment */
+.sidebar.collapsed .sidebar-nav .nav-item {
+  margin-bottom: 0.25rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.sidebar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: #6b7280;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-radius: 0;
+  font-weight: 500;
+  white-space: nowrap;
+  position: relative;
+}
+
+.sidebar-nav .nav-link:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.sidebar-nav .nav-link.active {
+  color: #3b82f6;
+  background: #eff6ff;
+  border-right: 3px solid #3b82f6;
+}
+
+.sidebar-nav .nav-link i {
+  font-size: 1.1rem;
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-nav .nav-text {
+  transition: opacity 0.3s ease;
+}
+
+.sidebar.collapsed .nav-text {
+/* Style the _LoginPartial when rendered inside the sidebar bottom */
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Perfect alignment for collapsed state */
+.sidebar.collapsed .nav-link {
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+  margin: 0.25rem auto !important;
+  border-radius: 8px;
+  width: 50px !important;
+  height: 50px !important;
+  display: flex !important;
+  position: relative;
+}
+
+.sidebar.collapsed .nav-link:hover {
+  background: #f3f4f6;
+  transform: none;
+}
+
+.sidebar.collapsed .nav-link i {
+/* Collapsed behavior for login partial link */
+  margin: 0 !important;
+  width: auto !important;
+  font-size: 1.2rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sidebar.collapsed .nav-link.active {
+  background: #eff6ff;
+  border-right: none;
+  border: 2px solid #3b82f6;
+}
+
+/* Submenu Styles */
+.submenu {
+  background: #f9fafb;
+  margin: 0;
+  padding: 0;
+}
+
+.submenu .nav-link {
+  padding-left: 3rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.submenu .nav-link:hover {
+  color: #4c4f53;
+}
+
+.sidebar.collapsed .submenu {
+  display: none;
+}
+
+/* Sidebar Bottom Section */
+.sidebar-bottom {
+  border-top: 1px solid #e0e6ed;
+  padding: 1rem 0;
+  margin-top: auto;
+}
+
+.sidebar-bottom .nav-item {
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-bottom .nav-item {
+  margin-bottom: 0.25rem;
+}
+
+.sidebar-bottom .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sidebar-bottom .nav-link:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+/* Ensure the login partial stacks vertically under the user profile */
+.sidebar-bottom .navbar-nav {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-left: 0;
+  margin: 0;
+}
+
+.sidebar-bottom .navbar-nav .nav-item {
+  width: 100%;
+}
+
+.sidebar-bottom .navbar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  color: #6b7280;
+  transition: all 0.3s ease;
+}
+
+.sidebar-bottom .navbar-nav .nav-link:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+/* Make bottom section buttons match main navigation buttons */
+.sidebar-bottom .nav-link.active {
+  color: #3b82f6;
+  background: #eff6ff;
+  border-right: 3px solid #3b82f6;
+}
+
+.sidebar-bottom .nav-link i {
+  font-size: 1.1rem;
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-bottom .nav-item {
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+/* Ensure user avatar aligns like an icon in bottom section */
+.sidebar-bottom .user-avatar {
+  width: 20px;
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Perfect alignment for collapsed bottom section */
+.sidebar.collapsed .sidebar-bottom .nav-link {
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+  margin: 0.25rem auto !important;
+  border-radius: 8px;
+  width: 50px !important;
+  height: 50px !important;
+  display: flex !important;
+  position: relative;
+}
+
+.sidebar.collapsed .sidebar-bottom .nav-link i {
+  margin: 0 !important;
+  width: auto !important;
+  font-size: 1.2rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Ensure notification badge is visible and properly sized in global search area */
+.btn-outline-primary .bi-bell .badge {
+  font-size: 0.6rem !important;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 2px 4px;
+}
+
+/* Theme Toggle in Sidebar */
+.theme-toggle-item {
+  justify-content: space-between !important;
+}
+
+.theme-toggle-item i {
+  font-size: 1.1rem;
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.theme-switch-wrapper {
+  margin-left: auto;
+  margin-right: 0.5rem;
+}
+
+/* Perfect alignment for collapsed theme toggle */
+.sidebar.collapsed .theme-toggle-item {
+  justify-content: center !important;
+  align-items: center !important;
+  width: 50px !important;
+  height: 50px !important;
+  padding: 0 !important;
+  margin: 0.25rem auto !important;
+  position: relative;
+}
+
+.sidebar.collapsed .theme-toggle-item i {
+  margin: 0 !important;
+  width: auto !important;
+  font-size: 1.2rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sidebar.collapsed .theme-switch-wrapper {
+  display: none;
+}
+
+/* User Profile in Sidebar */
+.user-profile {
+  position: relative;
+}
+
+.user-profile i {
+  font-size: 1.1rem;
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Perfect alignment for collapsed user profile */
+.sidebar.collapsed .user-profile {
+  width: 50px !important;
+  height: 50px !important;
+  padding: 0 !important;
+  margin: 0.25rem auto !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative;
+}
+
+.sidebar.collapsed .user-profile i {
+  margin: 0 !important;
+  width: auto !important;
+  font-size: 1.2rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sidebar.collapsed .user-avatar {
+  margin: 0 !important;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Global alignment rules for collapsed sidebar */
+.sidebar.collapsed {
+  padding: 0;
+}
+
+.sidebar.collapsed .sidebar-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar.collapsed .sidebar-nav,
+.sidebar.collapsed .sidebar-bottom {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Ensure all collapsed items have the same alignment */
+.sidebar.collapsed .nav-item {
+  width: auto !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+/* Remove any extra margins or padding that might affect alignment */
+.sidebar.collapsed .nav-item * {
+  box-sizing: border-box;
+}
+
+/* Ensure consistent spacing between all collapsed icons */
+.sidebar.collapsed .sidebar-nav .nav-item {
+  margin-bottom: 0.25rem !important;
+}
+
+.sidebar.collapsed .sidebar-bottom .nav-item {
+  margin-bottom: 0.25rem !important;
+}
+
+.sidebar.collapsed .sidebar-nav .nav-item:last-child {
+  margin-bottom: 0.25rem !important;
+}
+
+.sidebar.collapsed .sidebar-bottom .nav-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Main Content Area */
+.main-content {
+  margin-left: 280px;
+  margin-top: 0;
+  padding: 2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.main-content.sidebar-collapsed {
+  margin-left: 70px;
+}
+
+/* Dark Theme Support */
+[data-theme="dark"] .sidebar {
+  background: #1f2937;
+  border-right-color: #374151;
+}
+
+[data-theme="dark"] .sidebar-header {
+  border-bottom-color: #374151;
+}
+
+[data-theme="dark"] .sidebar.collapsed .sidebar-header {
+  display: none;
+}
+
+[data-theme="dark"] .sidebar-brand {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .sidebar.collapsed .sidebar-brand {
+  display: none;
+}
+
+[data-theme="dark"] .sidebar-toggle-arrow {
+  background: #374151;
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .sidebar-toggle-arrow:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .sidebar-nav .nav-link {
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .sidebar-nav .nav-link:hover {
+  color: #f9fafb;
+  background: #374151;
+}
+
+[data-theme="dark"] .sidebar-nav .nav-link.active {
+  color: #60a5fa;
+  background: #1e3a8a;
+  border-right-color: #60a5fa;
+}
+
+[data-theme="dark"] .sidebar.collapsed .nav-link.active {
+  background: #1e3a8a;
+  border-right: none;
+  border: 2px solid #60a5fa;
+}
+
+[data-theme="dark"] .sidebar.collapsed .nav-link:hover {
+  background: #374151;
+  transform: none;
+}
+
+/* Dark theme alignment consistency */
+[data-theme="dark"] .sidebar.collapsed .nav-link i,
+[data-theme="dark"] .sidebar.collapsed .sidebar-bottom .nav-link i,
+[data-theme="dark"] .sidebar.collapsed .theme-toggle-item i,
+[data-theme="dark"] .sidebar.collapsed .user-profile i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0 !important;
+}
+
+[data-theme="dark"] .submenu {
+  background: #111827;
+}
+
+[data-theme="dark"] .submenu .nav-link {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .submenu .nav-link:hover {
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .sidebar-bottom {
+  border-top-color: #374151;
+}
+
+[data-theme="dark"] .sidebar-bottom .nav-link {
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .sidebar-bottom .nav-link:hover {
+  color: #f9fafb;
+  background: #374151;
+}
+
+[data-theme="dark"] .sidebar-bottom .nav-link.active {
+  color: #60a5fa;
+  background: #1e3a8a;
+  border-right-color: #60a5fa;
+}
+
+[data-theme="dark"] .main-content {
+  background: #111827;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .main-content.sidebar-collapsed {
+    margin-left: 0;
+  }
+}
+
+/* Theme Switch Styles */
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #3b82f6;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* Scrollbar Styles */
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Global Search Area Notification Styling */
+.btn-outline-primary {
+  border: 1px solid #0d6efd;
+  color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.btn-outline-primary .bi-bell .badge {
+  font-size: 0.6rem !important;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 2px 4px;
+}

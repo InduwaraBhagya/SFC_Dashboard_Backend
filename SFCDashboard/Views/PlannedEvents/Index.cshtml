@@ -1,0 +1,2510 @@
+﻿@using System.Linq
+@using SFCDashboard.Models
+@model PaginatedList<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "PE Records";
+    bool isSearchPerformed = !string.IsNullOrEmpty(ViewData["PENumberFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["CustomerFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["JobReferenceFilter"]?.ToString()) ||
+                             !string.IsNullOrEmpty(ViewData["SONumberFilter"]?.ToString());
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@{var selectedName = ViewData["SelectedWorkgroupName"] as string;}
+
+<!-- Global Search Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #0c1d83 100%) !important; border-radius: 15px !important;">
+            <div class="card-body py-3" style="background: transparent !important;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <!-- Logo -->
+                    <div class="me-3 ms-3">
+                        <img src="~/images/logo.png" alt="Logo" height="60" class="d-inline-block" />
+                    </div>
+                    
+                    <!-- Global Search Form -->
+                    <form class="d-flex align-items-center justify-content-center flex-grow-1" method="get" asp-controller="PlannedEvents"
+                        asp-action="GlobalSearch" role="search">
+                        <div class="input-group" style="max-width: 600px;">
+                            <select class="form-select" name="searchType" id="globalSearchType" style="max-width: 140px; box-shadow: none !important; border-radius: 0.375rem 0 0 0.375rem;">
+                                <option value="peNumber" selected>PE Number</option>
+                                <option value="customer">Customer</option>
+                                <option value="jobReference">Job Reference</option>
+                                <option value="soNumber">SO Number</option>
+                            </select>
+                            <input class="form-control" type="search" name="peNumber" id="globalSearchInput"
+                                placeholder="Search PE Number" aria-label="Search" style="box-shadow: none !important; border-left: 0; border-right: 0;" />
+                            <button class="btn btn-primary" type="submit" style="box-shadow: none !important; border-left: 0; border-radius: 0 0.375rem 0.375rem 0; padding: 0.375rem 0.75rem; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Welcome Message -->
+                    <div class="mx-3">
+                        <span class="text-white fw-bold">
+                            👋 Hello, @(ViewData["CurrentUserName"]?.ToString() ?? "User")!
+                        </span>
+                    </div>
+                    
+                    <!-- Reminder Notifications -->
+                    <div class="ms-2">
+                        <div class="dropdown">
+                            <button class="btn position-relative" type="button" id="reminderDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport" data-bs-container="body"
+                                style="border: none; padding: 0.5rem; background: transparent;">
+                                <i class="bi bi-bell" style="font-size: 1.2rem; color: white;"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                    id="reminderCount" style="display:none; font-size: 0.6rem;">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="reminderDropdown"
+                                style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <div class="dropdown-header bg-primary text-white p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-bell me-2"></i>Reminders
+                                        </h6>
+                                        <div>
+                                            <button class="btn btn-sm btn-light me-1" id="markAllRemindersRead"
+                                                title="Mark all as read">
+                                                <i class="bi bi-check-all"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light" id="refreshReminders" title="Refresh">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100 mt-2">
+                                        <button type="button" class="btn btn-outline-light active"
+                                            data-filter="unread">Unread</button>
+                                        <button type="button" class="btn btn-outline-light" data-filter="all">All</button>
+                                    </div>
+                                </div>
+                                <div id="reminderNotificationList" class="notification-list">
+                                    <!-- Reminders will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Cards: 5 tiles with 4 primary operation tiles and 1 secondary tool -->
+<div class="container-fluid p-0 position-relative mb-4" style="z-index: 1;">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-center align-items-stretch gap-2 mt-0 mb-0">
+                <!-- Urgent Requests Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("UrgentRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card urgent-card">
+                        <div class="card-content">
+                            <h5>Urgent Records</h5>
+                            <span class="badge">@ViewData["UrgentCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/urgent.png" alt="Urgent" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- In Progress Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("InProgressRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card inprogress-card">
+                        <div class="card-content">
+                            <h5>Regular Records</h5>
+                            <span class="badge">@ViewData["InProgressCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/work-in-progress.png" alt="In Progress" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- OLA Violated Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("OLAViolateRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card ola-card">
+                        <div class="card-content">
+                            <h5>OLA Violated Records</h5>
+                            <span class="badge">@ViewData["OLAViolateCount"]</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/ola _Validate.png" alt="OLA Violated" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                <!-- Hold Records Card -->
+                <div class="dashboard-card-container" style="flex: 1 1 0; min-width: 160px;">
+                    <a href="@Url.Action("HoldRecords", new { workgroupId = ViewData["SelectedWorkgroupId"] })" class="dashboard-card hold-card">
+                        <div class="card-content">
+                            <h5>Hold Records</h5>
+                            <span class="badge">@(ViewData["HoldCount"] != null ? ViewData["HoldCount"] : 0)</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="~/images/hold.png" alt="Hold" class="dashboard-img" />
+                        </div>
+                    </a>
+                </div>
+                @* <!-- Report Generator Card - Secondary Tool -->
+                <div class="dashboard-card-container secondary-tool" style="flex: 0 0 140px; min-width: 140px;">
+                    <a href="@Url.Action("Generate", "Reports")" class="dashboard-card report-card secondary-card">
+                        <div class="card-content">
+                            <h6>Reports</h6>
+                            <span class="badge secondary-badge">
+                                <i class="bi bi-file-earmark-bar-graph"></i>
+                            </span>
+                        </div>
+                        <div class="img-container secondary-icon">
+                            <i class="bi bi-file-earmark-text" style="font-size: 1.8rem; color: #ffffff;"></i>
+                        </div>
+                    </a>
+                </div> *@
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt-2">
+@{
+    var nextTask = ViewBag.NextTask as List<TaskQueueItem>;
+    var hasNextTask = ViewBag.HasNextTask;
+}
+
+@{
+    bool shouldShowNextTask = 
+        (ViewData["CanViewAll"] as bool? != true) && 
+        ((ViewData["UserWorkGroups"] as List<WorkGroup>)?.Count <= 1);
+}
+
+
+<!-- Top Section: Dynamic Layout Based on Permissions -->
+@* First workgroup filter removed - moved to middle column section *@
+
+<!-- Message Inbox and Notice Board Section -->
+<div class="row mt-3">
+    <!-- Left Column: Message Inbox (40% width) -->
+    <div class="col-lg-4">
+        <div class="card border-info shadow-sm" style="height: 400px;">
+            <div class="card-header bg-info text-white py-1">
+                <h6 class="mb-0">
+                    <i class="fas fa-inbox me-1"></i>Message Inbox
+                        @{
+                            var unreadCount = 0;
+                            
+                            // Count unread issues
+                            if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssues)
+                            {
+                                unreadCount += inboxIssues.Count(i => !i.IsRead);
+                            }
+                            
+                            // Count pending urgent PE requests
+                            if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> urgentRequests)
+                            {
+                                unreadCount += urgentRequests.Count();
+                            }
+                            
+                            // Count pending urgent task requests
+                            if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> taskRequests)
+                            {
+                                unreadCount += taskRequests.Count();
+                            }
+                            
+                            if (unreadCount > 0)
+                            {
+                                <span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.6rem;">@unreadCount</span>
+                            }
+                        }
+                </h6>
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <!-- Message search bar -->
+                <div class="inbox-search-container mb-2">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control inbox-search" placeholder="Search..." aria-label="Search messages" style="font-size: 0.75rem;">
+                    </div>
+                </div>
+
+                <!-- Add this section after the inbox-search-container -->
+                <div class="inbox-filters mb-2">
+                    <div class="btn-group w-100" role="group" aria-label="Message filters">
+                        <button type="button" class="btn btn-outline-primary btn-sm active" data-filter="unread" style="font-size: 0.7rem; padding: 0.2rem;">Unread</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-filter="read" style="font-size: 0.7rem; padding: 0.2rem;">Read</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-filter="all" style="font-size: 0.7rem; padding: 0.2rem;">All</button>
+                    </div>
+                </div>
+
+                <div class="messages-container">
+                    @if (ViewData["CanAcceptUrgentRequests"] as bool? == true)
+                    {<!-- Urgent Request Confirmation Messages -->
+                    @if (ViewData["PendingUrgentRequests"] is IEnumerable<PlannedEvent> pendingRequests)
+                                    {
+                                        foreach (var request in pendingRequests)
+                                        {
+                                            <div class="message-item unread important urgent-request" data-message-id="urgent-pe-@request.Id">
+                                                <div class="message-indicator"></div>
+                                                <div class="message-content">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <h6 class="message-sender"><span class="badge bg-danger me-1">Urgent</span>
+                    From @request.UrgentRequestedByName
+                </h6>
+                                                        <span class="message-time">@(request.PECreatedDate.ToString("MMM dd"))</span>
+                                                    </div>
+                                                    <div class="message-subject">
+                                                        <span class="badge bg-danger me-1">Action Required</span>
+                                                        Confirm Urgent Status
+                                                    </div>
+                                                    <div class="message-preview">
+                                                        Customer: @request.Customer - @(string.IsNullOrEmpty(request.Priority) ? "No reason provided" : request.Priority)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    
+                                    <!-- Task Urgent Requests -->
+                                    @if (ViewData["PendingTaskRequests"] is IEnumerable<PETask> pendingTasks)
+                                    {
+                                        foreach (var task in pendingTasks)
+                                        {
+                                            <div class="message-item unread important task-urgent-request" data-message-id="urgent-task-@task.Id">
+                                                <div class="message-indicator"></div>
+                                                <div class="message-content">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <h6 class="message-sender">Task Urgent Request: @task.PENumber</h6>
+                                                        <span class="message-time">@(task.TaskCreatedDate.ToString("MMM dd"))</span>
+                                                    </div>
+                                                    <div class="message-subject">
+                                                        <span class="badge bg-danger me-1">Action Required</span>
+                                                        Approve Urgent Task
+                                                    </div>
+                                                    <div class="message-preview">
+                                                        Task: @task.Task - @(string.IsNullOrEmpty(task.Priority) ? "No reason provided" : task.Priority)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                }
+                                    <!-- Issue Messages -->
+                    @if (ViewData["InboxIssues"] is IEnumerable<PEIssueViewModel> inboxIssuesList)
+                                {
+                                    foreach (var issue in inboxIssuesList)
+                                    {
+                                        <div class="message-item @(issue.IsRead ? "" : "unread") @(issue.IsResolutionRequest ? "resolution-request" : issue.IsReply ? "reply" : "issue-message")"
+                                             data-message-id="issue-@issue.CreatedAt.Ticks"
+                                             data-issue-id="@issue.Id"
+                                             data-pe-id="@issue.PlannedEventId"
+                                             data-sender="@issue.SenderName"
+                                             data-sender-id="@issue.SenderId"
+                                             data-issue-text="@issue.IssueText"
+                                             data-attachment="@issue.AttachmentPath"
+                                             data-date="@issue.CreatedAt.ToString("MMM dd, yyyy HH:mm")"
+                                             data-is-read="@issue.IsRead.ToString().ToLower()"
+                                             data-is-reply="@issue.IsReply.ToString().ToLower()"
+                                             data-is-resolution-request="@issue.IsResolutionRequest.ToString().ToLower()"
+                                             data-original-issue-id="@issue.OriginalIssueId"
+                                             @if (issue.IsResolutionRequest)
+                                             {
+                                                 <text>
+                                                 data-resolution-details="@GetResolutionDetails(issue.OriginalIssueId ?? issue.Id)"
+                                                 data-resolution-id="@GetResolutionId(issue.OriginalIssueId ?? issue.Id)"
+                                                 onclick="showResolutionConfirm(this)"
+                                                 </text>
+                                             }
+                                             else
+                                             {
+                                                 <text>onclick="showIssueDetails(this)"</text>
+                                             }>
+                                            <div class="message-indicator"></div>
+                                            <div class="message-content">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <h6 class="message-sender">
+                                                        @if (issue.IsResolutionRequest)
+                                                        {
+                                                            <span class="badge bg-success me-1">Resolution</span>
+                                                        }
+                                                        From @issue.SenderName 
+                                                    </h6>
+                                                    <span class="message-time">@issue.CreatedAt.ToString("MMM dd")</span>
+                                                </div>
+                                                <div class="message-subject">
+                                                    @if (issue.IsResolutionRequest)
+                                                    {
+                                                        <span class="badge bg-success text-white me-1">Issue Fixed</span>
+                                                    }
+                                                    else if (issue.IsReply)
+                                                    {
+                                                        <span class="badge bg-info text-dark me-1">Reply</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger text-white me-1">Issue</span>
+                                                    }
+                                                    @issue.IssueText
+                                                </div>
+                                                <div class="message-preview">
+                                                    @if (!string.IsNullOrEmpty(issue.AttachmentPath))
+                                                    {
+                                                        <span><i class="bi bi-paperclip me-1"></i>Has attachment</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>No attachment</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                }           
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+    <!-- Middle Column: Task Queue & BOQ Status (33% width) -->
+    <div class="col-lg-4 mb-3">
+        <!-- Task Queue Section -->
+        @if (shouldShowNextTask)
+        {
+            <!-- Next Task Card -->
+            <div class="card border-info shadow-sm" style="height: 160px;">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0" style="font-size: 1 rem;">
+                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Task Queue
+                    </h6>
+                        <div class="d-flex align-items-center gap-2">
+                            <a asp-controller="PlannedEvents" asp-action="TaskQueue" class="btn btn-sm btn-light" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                <i class="bi bi-list-task me-1"></i> View All Tasks
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="show" id="nextTaskContent">
+                        <div class="card-body py-1 px-2" style="overflow-y: auto; height: 120px;">
+                            <div id="taskContent">
+                                @if (hasNextTask == true && nextTask?.Any() == true)
+                                {
+                                    <!-- Server-side rendered task queue -->
+                                    <div class="task-queue-container">
+                                        @foreach (var task in nextTask!)
+                                        {
+                                            <div class="task-queue-item mb-1 p-2 border rounded" style="border-left: 3px solid @(task.Task.IsUrgent ? "#dc3545" : task.Task.IsOLAViolate ? "#fd7e14" : "#28a745") !important;">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1" style="font-size: 0.85rem; font-weight: 600;">
+                                                            <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" class="text-decoration-none">
+                                                                @task.Task.PlannedEvent?.PeNumber
+                                                            </a>
+                                                            @if (task.Task.IsUrgent)
+                                                            {
+                                                                <span class="badge bg-danger ms-1" style="font-size: 0.65rem;">URGENT</span>
+                                                            }
+                                                            else if (task.Task.IsOLAViolate)
+                                                            {
+                                                                <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">OLA VIOLATION</span>
+                                                            }
+                                                        </h6>
+                                                        <p class="mb-1 text-muted" style="font-size: 0.7rem; line-height: 1.3;">
+                                                            <strong>Task:</strong> @task.Task.Task<br/>
+                                                            <strong>Customer:</strong> @task.Task.PlannedEvent?.Customer<br/>
+                                                            <strong>Status:</strong> @task.DueStatus
+                                                        </p>
+                                                    </div>
+                                                    <div class="task-actions">
+                                                        <a href="@Url.Action("Details", "PlannedEvents", new { id = task.Task.PlannedEvent?.Id })" class="btn btn-sm btn-outline-primary" style="font-size: 0.65rem; padding: 0.25rem 0.4rem;">
+                                                            <i class="bi bi-eye"></i> View
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <!-- No tasks available -->
+                                    <div class="text-center py-2">
+                                        <i class="bi bi-check-circle text-success" style="font-size: 1.8rem;"></i>
+                                        <p class="mt-2 mb-2 text-muted" style="font-size: 0.8rem;">No tasks in your queue at the moment</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        }
+        else
+        {
+            <!-- Workgroup Filter for ViewAll Users -->
+            @if (ViewData["CanViewAll"] as bool? == true)
+            {
+                <div class="card border-primary shadow-sm" style="height: 250px;">
+                    <div class="card-header bg-primary text-white py-1">
+                        <h6 class="mb-0">
+                            <i class="bi bi-funnel-fill me-1"></i> Filter by Workgroups
+                        </h6>
+                    </div>
+                    
+                    <div class="card-body py-1 px-2" style="overflow-y: auto; height: 210px;">
+                        <form method="get" asp-action="Index">
+                            <div class="mb-2">
+                                <label class="form-label mb-1 small" for="workgroupFilter">
+                                    <i class="bi bi-people-fill"></i>
+                                    Select a Workgroup
+                                    <span class="info-tooltip" data-tooltip="Select a workgroup to view records only assigned to that workgroup">
+                                        <i class="bi bi-info-circle"></i>
+                                    </span>
+                                </label>
+                                <div class="filter-select-container mb-2">
+                                    <select class="form-select form-select-sm" name="workgroupId" id="workgroupFilter">
+                                        @if (ViewData["CanViewAll"] as bool? == true)
+                                        {
+                                            <option value="">All Workgroups</option>
+                                        }
+                                        @if (ViewData["UserWorkGroups"] is List<WorkGroup> workgroups)
+                                        {
+                                            foreach (var workgroup in workgroups)
+                                            {
+                                                bool isSelected = ViewData["SelectedWorkgroupId"] != null &&
+                                                                ViewData["SelectedWorkgroupId"]?.Equals(workgroup.Id) == true;
+                                                <option value="@workgroup.Id" selected="@isSelected">@workgroup.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="filter-actions d-flex gap-1">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-funnel-fill"></i> Apply Filter
+                                    </button>
+                                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-x-circle"></i> Clear Filter
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        @if (ViewData["SelectedWorkgroupId"] != null && ViewData["SelectedWorkgroupName"] != null)
+                        {
+                            <div class="alert alert-info mb-0 small">
+                                <i class="bi bi-check-circle-fill me-1"></i>
+                                Active filter: <strong>@ViewData["SelectedWorkgroupName"]</strong>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        
+        @if (ViewData["HasDrawFiberAccess"] as bool? == true)
+        {
+            <!-- Quick Find Projects Card (shown instead of BOQ for Draw Fiber users) -->
+            <div class="card border-primary shadow-sm" style="height: 180px;">
+                <div class="card-header text-white py-1" style="background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%) !important;">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Quick Find Projects
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3" style="overflow-y: auto; max-height: 140px;">
+                    <form method="get" asp-controller="PlannedEvents" asp-action="ProjectSearch" autocomplete="off" id="projectSearchFormRegular">
+                        <div class="mb-2">
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control shadow-sm" id="projectSearchInputRegular" 
+                                       name="query" placeholder="Search projects..." 
+                                       value="@Context.Request.Query["query"]" autocomplete="off" />
+                                <button class="btn btn-primary btn-sm" type="submit">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Project Search Results -->
+                    <div id="projectSearchResultsRegular" style="max-height: 90px; overflow-y: auto;">
+                        @if (ViewBag.ProjectResults != null)
+                        {
+                            var results = ViewBag.ProjectResults as IEnumerable<dynamic>;
+                            if (results != null && results.Any())
+                            {
+                                <div class="project-results-container">
+                                    <small class="text-muted d-block mb-2">@results.Count() project(s) found</small>
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var project in results.Take(5))
+                                        {
+                                            <div class="list-group-item list-group-item-action p-1 border-0 border-bottom" style="font-size: 0.85rem;">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1" style="min-width: 0;">
+                                                        <div class="fw-bold text-truncate" title="@project.ProjectName">@project.ProjectName</div>
+                                                        <small class="text-muted">ID: @project.Id</small>
+                                                    </div>
+                                                    <a href="@Url.Action("Details", "Project", new { id = project.Id })" 
+                                                       class="btn btn-xs btn-outline-primary ms-1" title="View Details" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    @if (results.Count() > 5)
+                                    {
+                                        <div class="text-center mt-1">
+                                            <small class="text-muted" style="font-size: 0.75rem;">+@(results.Count() - 5) more</small>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(Context.Request.Query["query"]))
+                            {
+                                <div class="text-center py-2 text-muted">
+                                    <i class="bi bi-search"></i>
+                                    <small class="d-block">No projects found</small>
+                                </div>
+                            }
+                        }
+                    </div>
+                    
+                    <!-- View All Projects Button -->
+                    <div class="mt-2 pt-2 border-top">
+                        <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-outline-primary w-100" style="font-size: 0.8rem;">
+                            <i class="bi bi-list-ul me-1"></i>View All Projects
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- BOQ Status Section -->
+            <div class="card border-success shadow-sm" style="height: 220px;">
+                <div class="card-header bg-success boq-header text-white d-flex justify-content-between align-items-center py-1">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clipboard-data me-1"></i>BOQ Status
+                    </h6>
+                    <button class="btn btn-xs btn-outline-light" id="refreshBoqBtn" title="Refresh BOQ Status" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+                
+                <div class="card-body py-1 px-2" style="overflow-y: auto; height: 180px;">
+                    <div id="boqStatusContent">
+                        @{
+                            // BOQ Status data from ViewBag
+                            var boqData = ViewBag.BOQStatus as dynamic;
+                            var totalBOQs = ViewBag.TotalBOQs as int? ?? 0;
+                            var completedBOQs = ViewBag.CompletedBOQs as int? ?? 0;
+                            var pendingBOQs = ViewBag.PendingBOQs as int? ?? 0;
+                            var inProgressBOQs = ViewBag.InProgressBOQs as int? ?? 0;
+                        }
+                        
+                        <!-- BOQ Summary Cards -->
+                        <div class="row g-1 mb-2">
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-primary boq-total text-white rounded">
+                                    <div class="fw-bold h6 mb-0">@totalBOQs</div>
+                                    <small style="font-size: 0.7rem;">Total</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-success boq-done text-white rounded">
+                                    <div class="fw-bold h6 mb-0">@completedBOQs</div>
+                                    <small style="font-size: 0.7rem;">Done</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-1 mb-2">
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-warning boq-progress text-dark rounded">
+                                    <div class="fw-bold h6 mb-0">@inProgressBOQs</div>
+                                    <small style="font-size: 0.7rem;">Progress</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small-stat-card text-center p-1 bg-danger boq-pending text-white rounded">
+                                    <div class="fw-bold h6 mb-0">@pendingBOQs</div>
+                                    <small style="font-size: 0.7rem;">Pending</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        @if (totalBOQs > 0)
+                        {
+                            var completionPercentage = Math.Round((double)completedBOQs / totalBOQs * 100, 1);
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted" style="font-size: 0.7rem;">Progress</small>
+                                    <small class="fw-bold" style="font-size: 0.7rem;">@completionPercentage%</small>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: @completionPercentage%" 
+                                         aria-valuenow="@completionPercentage" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        <!-- Quick Actions -->
+                        <div class="d-grid gap-1">
+                            <a href="@Url.Action("BOQList", "BOQ")" class="btn btn-outline-success btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                                <i class="bi bi-list-ul me-1"></i> View All
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Right Column: Notice Board (33% width) -->
+    <div class="col-lg-4">
+        <!-- Notice Board Section -->
+        <div class="card border-warning shadow-sm" style="height: 400px;">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-1">
+                <h6 class="mb-0">
+                    <i class="bi bi-megaphone me-1"></i>Notice Board
+                </h6>
+                @if ((bool)(ViewData["CanManageNotices"] ?? false))
+                {
+                    <button class="btn btn-xs btn-outline-dark" id="addNoticeBtn" title="Add Notice" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                }
+            </div>
+            
+            <div class="card-body py-1 px-2" style="overflow-y: auto; height: 360px;">
+                <div id="noticeContent">
+                    @{
+                        // Notice data from ViewBag (you can populate this from controller)
+                        var notices = ViewBag.Notices as List<dynamic> ?? new List<dynamic>();
+                    }
+                    
+                    @if (notices.Any())
+                    {
+                        foreach (var notice in notices)
+                        {
+                            <div class="notice-item mb-2 p-2 border rounded" style="border-left: 4px solid #ffc107 !important;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="notice-title mb-1" style="font-size: 0.8rem; font-weight: bold;">@notice.Title</h6>
+                                    <small class="text-muted" style="font-size: 0.65rem;">@notice.Date</small>
+                                </div>
+                                <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2;">@notice.Content</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted" style="font-size: 0.65rem;">By: @notice.CreatedBy</small>
+                                    @if (notice.Priority == "High")
+                                    {
+                                        <span class="badge bg-danger" style="font-size: 0.6rem;">High Priority</span>
+                                    }
+                                    else if (notice.Priority == "Medium")
+                                    {
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Medium</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info" style="font-size: 0.6rem;">Normal</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <!-- No notices available message -->
+                        <div class="text-center py-4">
+                            <i class="bi bi-journal-x text-muted" style="font-size: 2rem;"></i>
+                            <p class="mt-3 mb-0 text-muted" style="font-size: 0.8rem;">No notices available at the moment</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<!-- End of container-fluid -->
+
+@section Scripts {
+    <link rel="stylesheet" href="~/lib/jquery-ui/themes/base/jquery-ui.css" asp-append-version="true">
+    <script src="~/lib/jquery-ui/jquery-ui.min.js" asp-append-version="true"></script>
+    <link href="~/lib/select2/css/select2.min.css" rel="stylesheet" asp-append-version="true" />
+    <script src="~/lib/select2/js/select2.min.js" asp-append-version="true"></script>
+    <link href="~/css/theme-toggle.css" rel="stylesheet" asp-append-version="true" />
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2 with enhanced styling
+            $('#workgroupFilter').select2({
+                placeholder: "Select a workgroup...",
+                allowClear: true,
+                width: '100%',
+                templateResult: function(option) {
+                    if (!option.id) return option.text;
+                    return $('<span><i class="bi bi-people me-2"></i>' + option.text + '</span>');
+                },
+                templateSelection: function(option) {
+                    if (!option.id) return option.text;
+                    return $('<span><i class="bi bi-people me-1"></i>' + option.text + '</span>');
+                }
+            });
+            
+            // Animated toggle for filter section
+            $('.filter-toggle-btn').on('click', function() {
+                const icon = $(this).find('i');
+                const target = $(this).data('bs-target');
+                
+                setTimeout(() => {
+                    if ($(target).hasClass('show')) {
+                        icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+                    } else {
+                        icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+                    }
+                }, 150);
+            });
+            
+            // Enhanced search type toggle
+            function toggleSearchFields(formType = 'regular') {
+                const searchTypeId = formType === 'viewall' ? '#searchTypeViewAll' : '#searchTypeRegular';
+                const inputFieldId = formType === 'viewall' ? '#searchInputViewAll' : '#searchInputRegular';
+                const labelId = formType === 'viewall' ? '#searchLabelViewAll' : '#searchLabelRegular';
+                
+                const searchType = $(searchTypeId).val();
+                const inputField = $(inputFieldId);
+                const label = $(labelId);
+                
+                // Add loading animation
+                inputField.addClass('loading-shimmer');
+                
+                setTimeout(() => {
+                    switch (searchType) {
+                        case 'customer':
+                            label.html('<i class="bi bi-person"></i> Customer Name');
+                            inputField.attr('name', 'customer');
+                            inputField.attr('placeholder', 'Enter customer name');
+                            break;
+                        case 'jobReference':
+                            label.html('<i class="bi bi-briefcase"></i> Job Reference');
+                            inputField.attr('name', 'jobReference');
+                            inputField.attr('placeholder', 'Enter job reference');
+                            break;
+                        case 'soNumber':
+                            label.html('<i class="bi bi-receipt"></i> SO Number');
+                            inputField.attr('name', 'soNumber');
+                            inputField.attr('placeholder', 'Enter SO number');
+                            break;
+                        default:
+                            label.html('<i class="bi bi-hash"></i> PE Number');
+                            inputField.attr('name', 'peNumber');
+                            inputField.attr('placeholder', 'Enter PE number');
+                    }
+                    
+                    inputField.removeClass('loading-shimmer');
+                    inputField.focus();
+                }, 300);
+            }
+            
+            // Make toggleSearchFields available globally
+            window.toggleSearchFields = toggleSearchFields;
+            
+            // Initialize search fields based on current search type
+            function initializeSearchFields() {
+                const currentSearchType = '@ViewData["SearchType"]';
+                if (currentSearchType) {
+                    // Initialize ViewAll form if present
+                    if ($('#searchTypeViewAll').length) {
+                        $('#searchTypeViewAll').val(currentSearchType);
+                        toggleSearchFields('viewall');
+                    }
+                    // Initialize Regular form if present  
+                    if ($('#searchTypeRegular').length) {
+                        $('#searchTypeRegular').val(currentSearchType);
+                        toggleSearchFields('regular');
+                    }
+                }
+            }
+            
+            // Call initialization
+            initializeSearchFields();
+            
+            // Add success animation when filter is applied
+            if (window.location.search.includes('workgroupId')) {
+                $('.workgroup-filter-section').addClass('filter-success');
+                setTimeout(() => {
+                    $('.workgroup-filter-section').removeClass('filter-success');
+                }, 600);
+            }
+            
+            // Enhanced form validation
+            $('.btn-filter-apply').on('click', function(e) {
+                const selectedOptions = $('#workgroupFilter').val();
+                if (!selectedOptions || selectedOptions.length === 0) {
+                    e.preventDefault();
+                    
+                    // Show elegant error message
+                    const errorMsg = $('<div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">' +
+                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                        'Please select at least one workgroup to apply the filter.' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>');
+                    
+                    $('.filter-actions').parent().append(errorMsg);
+                    
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        errorMsg.fadeOut();
+                    }, 5000);
+                }
+            });
+            
+            // Enhanced search form validation
+            $('form[action*="Index"]').on('submit', function(e) {
+                const form = $(this);
+                const searchType = form.find('select[name="searchType"]').val();
+                const searchValue = form.find('input[name="' + searchType + '"]').val();
+                
+                if (!searchValue || searchValue.trim() === '') {
+                    e.preventDefault();
+                    
+                    const searchFieldName = searchType === 'peNumber' ? 'PE Number' :
+                                          searchType === 'customer' ? 'Customer Name' :
+                                          searchType === 'jobReference' ? 'Job Reference' :
+                                          searchType === 'soNumber' ? 'SO Number' : 'search field';
+                    
+                    // Show error message
+                    const errorMsg = $('<div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">' +
+                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                        'Please enter a value for ' + searchFieldName + ' before searching.' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>');
+                    
+                    form.append(errorMsg);
+                    
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        errorMsg.fadeOut();
+                    }, 5000);
+                    
+                    // Focus on the input field
+                    form.find('input[name="' + searchType + '"]').focus();
+                }
+            });
+            
+            // Add keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                // Alt + F to focus on filter
+                if (e.altKey && e.key === 'f') {
+                    e.preventDefault();
+                    $('#workgroupFilter').select2('open');
+                }
+                
+                // Alt + S to focus on search
+                if (e.altKey && e.key === 's') {
+                    e.preventDefault();
+                    // Focus on the visible search input
+                    if ($('#searchInputViewAll').is(':visible')) {
+                        $('#searchInputViewAll').focus();
+                    } else if ($('#searchInputRegular').is(':visible')) {
+                        $('#searchInputRegular').focus();
+                    }
+                }
+            });
+            
+            // Add smooth scrolling to results
+            $('.btn-search, .btn-filter-apply').on('click', function() {
+                setTimeout(() => {
+                    $('html, body').animate({
+                        scrollTop: $('.search-section').offset().top + $('.search-section').outerHeight() + 20
+                    }, 500);
+                }, 100);
+            });
+        });
+        
+        // Synchronized card collapse/expand functionality
+        const searchCollapseViewAll = document.getElementById('searchFormCollapseViewAll');
+        const searchToggleButtonViewAll = document.querySelector('[data-bs-target="#searchFormCollapseViewAll"]');
+        const searchCollapseRegular = document.getElementById('searchFormCollapseRegular');
+        const searchToggleButtonRegular = document.querySelector('[data-bs-target="#searchFormCollapseRegular"]');
+        const nextTaskCollapse = document.getElementById('nextTaskContent');
+        const nextTaskToggleButton = document.querySelector('[data-bs-target="#nextTaskContent"]');
+        const filterCollapse = document.getElementById('filterContent');
+        const filterToggleButton = document.querySelector('[data-bs-target="#filterContent"]');
+        
+        // Track which button was clicked to avoid infinite loops
+        let isManualToggle = false;
+        
+        // Function to update chevron icons for two cards
+        function updateChevronIcons(isExpanded, button1, button2) {
+            const icon1 = button1?.querySelector('i');
+            const icon2 = button2?.querySelector('i');
+            
+            if (icon1) {
+                icon1.className = isExpanded ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+            }
+            if (icon2) {
+                icon2.className = isExpanded ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+            }
+        }
+        
+        // Scenario 1: ViewAll users - Sync workgroup filter and search cards
+        if (filterCollapse && searchCollapseViewAll && filterToggleButton && searchToggleButtonViewAll) {
+            // When filter card is shown, show search card
+            filterCollapse.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseViewAll);
+                    searchBsCollapse.show();
+                }
+                updateChevronIcons(true, filterToggleButton, searchToggleButtonViewAll);
+            });
+            
+            // When filter card is hidden, hide search card
+            filterCollapse.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseViewAll);
+                    searchBsCollapse.hide();
+                }
+                updateChevronIcons(false, filterToggleButton, searchToggleButtonViewAll);
+            });
+            
+            // When search card is shown, show filter card
+            searchCollapseViewAll.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const filterBsCollapse = bootstrap.Collapse.getOrCreateInstance(filterCollapse);
+                    filterBsCollapse.show();
+                }
+                updateChevronIcons(true, filterToggleButton, searchToggleButtonViewAll);
+            });
+            
+            // When search card is hidden, hide filter card
+            searchCollapseViewAll.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const filterBsCollapse = bootstrap.Collapse.getOrCreateInstance(filterCollapse);
+                    filterBsCollapse.hide();
+                }
+                updateChevronIcons(false, filterToggleButton, searchToggleButtonViewAll);
+            });
+            
+            // Reset the manual toggle flag after animations complete
+            filterCollapse.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            filterCollapse.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            searchCollapseViewAll.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            searchCollapseViewAll.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+        }
+        // Scenario 2: Regular users - Sync next task and search cards
+        else if (nextTaskCollapse && searchCollapseRegular && nextTaskToggleButton && searchToggleButtonRegular) {
+            // When search card is shown, show next task card
+            searchCollapseRegular.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const nextTaskBsCollapse = bootstrap.Collapse.getOrCreateInstance(nextTaskCollapse);
+                    nextTaskBsCollapse.show();
+                }
+                updateChevronIcons(true, searchToggleButtonRegular, nextTaskToggleButton);
+            });
+            
+            // When search card is hidden, hide next task card
+            searchCollapseRegular.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const nextTaskBsCollapse = bootstrap.Collapse.getOrCreateInstance(nextTaskCollapse);
+                    nextTaskBsCollapse.hide();
+                }
+                updateChevronIcons(false, searchToggleButtonRegular, nextTaskToggleButton);
+            });
+            
+            // When next task card is shown, show search card
+            nextTaskCollapse.addEventListener('show.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseRegular);
+                    searchBsCollapse.show();
+                }
+                updateChevronIcons(true, filterToggleButton, searchToggleButtonRegular);
+            });
+            
+            // When next task card is hidden, hide search card
+            nextTaskCollapse.addEventListener('hide.bs.collapse', function() {
+                if (!isManualToggle) {
+                    isManualToggle = true;
+                    const searchBsCollapse = bootstrap.Collapse.getOrCreateInstance(searchCollapseRegular);
+                    searchBsCollapse.hide();
+                }
+                updateChevronIcons(false, filterToggleButton, searchToggleButtonRegular);
+            });
+            
+            // Reset the manual toggle flag after animations complete
+            searchCollapseRegular.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            searchCollapseRegular.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            nextTaskCollapse.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+            
+            nextTaskCollapse.addEventListener('hidden.bs.collapse', function() {
+                setTimeout(() => { isManualToggle = false; }, 50);
+            });
+        }
+
+        // Task Queue Management - Server-side rendering only
+        // No automatic refresh - task queue loads from server on page load only
+        
+        function showError(message) {
+            if (typeof toastr !== 'undefined') {
+                toastr.error(message);
+            } else {
+                alert(message);
+            }
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+    <script src="~/js/index.js"></script>
+    
+    <script>
+        // Export functionality for the action buttons
+        function exportData() {
+            // Show a modern export options modal or directly trigger export
+            const exportFormat = confirm("Export as Excel? (Cancel for CSV)") ? 'excel' : 'csv';
+            
+            // Get current filter parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentFilters = {};
+            
+            // Extract current filters from URL
+            for (const [key, value] of urlParams) {
+                currentFilters[key] = value;
+            }
+            
+            // Build export URL with current filters
+            const exportUrl = new URL('@Url.Action("Export", "PlannedEvents")', window.location.origin);
+            exportUrl.searchParams.append('format', exportFormat);
+            
+            // Add current filter parameters to maintain context
+            Object.entries(currentFilters).forEach(([key, value]) => {
+                if (value && key !== 'page') { // Don't include pagination in export
+                    exportUrl.searchParams.append(key, value);
+                }
+            });
+            
+            // Create temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = exportUrl.toString();
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Show success toast
+            showToast('Export started!', 'Your data is being prepared for download.', 'success');
+        }
+        
+        // Toast notification function
+        function showToast(title, message, type = 'info') {
+            // Create toast element
+            const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+            
+            const toastHtml = `
+                <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="4000">
+                    <div class="toast-header">
+                        <i class="bi bi-${type === 'success' ? 'check-circle-fill text-success' : 
+                                        type === 'error' ? 'exclamation-triangle-fill text-danger' : 
+                                        'info-circle-fill text-info'} me-2"></i>
+                        <strong class="me-auto">${title}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Auto remove after delay
+            setTimeout(() => {
+                const toasts = toastContainer.querySelectorAll('.toast');
+                if (toasts.length > 3) {
+                    toasts[0].remove();
+                }
+            }, 4500);
+        }
+        
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '9999';
+            document.body.appendChild(container);
+            return container;
+        }
+        
+        // Expose clearTaskCache globally for use by other scripts
+        // window.clearTaskCache = clearTaskCache; // Commented out - function not defined
+
+        // User permissions for notice management
+    const canManageNotices = @( (ViewData["CanManageNotices"] as bool? == true) ? "true" : "false" );
+
+        // Notice Board Management
+        function initializeNoticeBoard() {
+            // Add click handlers for notice board buttons
+            $('#addNoticeBtn').on('click', function() {
+                showAddNoticeModal();
+            });
+            
+            // Initialize notice board on page load
+            loadNoticeBoard();
+        }
+        
+        function loadNoticeBoard() {
+            // Load notice board data from API
+            refreshNoticeBoard();
+        }
+        
+        function showAddNoticeModal() {
+            // Create add notice modal with pin and expire date options
+            const modalHtml = `
+                <div class="modal fade" id="addNoticeModal" tabindex="-1" aria-labelledby="addNoticeModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title" id="addNoticeModalLabel">
+                                    <i class="bi bi-plus-circle me-2"></i>Add New Notice
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form id="addNoticeForm">
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label for="addNoticeTitle" class="form-label">
+                                                    <i class="bi bi-card-text me-1"></i>Title
+                                                </label>
+                                                <input type="text" class="form-control" id="addNoticeTitle" name="title" required 
+                                                       placeholder="Enter notice title">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="addNoticeContent" class="form-label">
+                                                    <i class="bi bi-file-text me-1"></i>Content
+                                                </label>
+                                                <textarea class="form-control" id="addNoticeContent" name="content" rows="4" required 
+                                                          placeholder="Enter notice content..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">
+                                                    <i class="bi bi-pin-angle me-1"></i>Notice Options
+                                                </label>
+                                                <div class="card border-light">
+                                                    <div class="card-body py-2">
+                                                        <div class="form-check form-switch mb-2">
+                                                            <input class="form-check-input" type="checkbox" id="isPinnedCheck" name="isPinned">
+                                                            <label class="form-check-label" for="isPinnedCheck">
+                                                                <i class="bi bi-pin-fill me-1"></i>Pin Notice
+                                                            </label>
+                                                            <small class="d-block text-muted">Pinned notices appear at the top</small>
+                                                        </div>
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" id="hasExpireDateCheck" name="hasExpireDate">
+                                                            <label class="form-check-label" for="hasExpireDateCheck">
+                                                                <i class="bi bi-calendar-x me-1"></i>Set Expire Date
+                                                            </label>
+                                                            <small class="d-block text-muted">Notice will auto-hide after this date</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3" id="expireDateContainer" style="display: none;">
+                                                <label for="expireDate" class="form-label">
+                                                    <i class="bi bi-calendar-event me-1"></i>Expire Date & Time
+                                                </label>
+                                                <input type="datetime-local" class="form-control" id="expireDate" name="expireDate">
+                                                <small class="form-text text-muted">Notice will disappear after this date and time</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <small>Notices will be visible to all users. Pinned notices appear first and expired notices are automatically hidden.</small>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="bi bi-x-circle me-1"></i>Cancel
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle me-1"></i>Add Notice
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            $('#addNoticeModal').remove();
+            
+            // Add modal to page
+            $('body').append(modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addNoticeModal'));
+            modal.show();
+            
+            // Handle expire date toggle
+            $('#hasExpireDateCheck').on('change', function() {
+                const expireDateContainer = $('#expireDateContainer');
+                if ($(this).is(':checked')) {
+                    expireDateContainer.slideDown();
+                    // Set minimum date to tomorrow
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    $('#expireDate').attr('min', tomorrow.toISOString().slice(0, 16));
+                } else {
+                    expireDateContainer.slideUp();
+                    $('#expireDate').val('');
+                }
+            });
+            
+            // Handle form submission
+            $('#addNoticeForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const title = $('#addNoticeTitle').val().trim();
+                const content = $('#addNoticeContent').val().trim();
+                const isPinned = $('#isPinnedCheck').is(':checked');
+                const hasExpireDate = $('#hasExpireDateCheck').is(':checked');
+                const expireDate = hasExpireDate ? $('#expireDate').val() : null;
+                
+                // Validate fields
+                if (!title) {
+                    showValidationError('Please enter a title.', '#addNoticeTitle');
+                    return;
+                }
+                
+                if (!content) {
+                    showValidationError('Please enter content.', '#addNoticeContent');
+                    return;
+                }
+                
+                if (hasExpireDate && !expireDate) {
+                    showValidationError('Please select an expire date or uncheck the expire date option.', '#expireDate');
+                    return;
+                }
+                
+                // Validate expire date is in the future
+                if (expireDate) {
+                    const selectedDate = new Date(expireDate);
+                    const now = new Date();
+                    if (selectedDate <= now) {
+                        showValidationError('Expire date must be in the future.', '#expireDate');
+                        return;
+                    }
+                }
+                
+                // Create notice description (combine title and content)
+                const description = title + '\n\n' + content;
+                
+                // Prepare request data
+                const requestData = {
+                    description: description,
+                    isPinned: isPinned,
+                    expireDate: expireDate
+                };
+                
+                // Show loading state
+                const submitBtn = $('#addNoticeForm button[type="submit"]');
+                const originalText = submitBtn.html();
+                submitBtn.html('<i class="spinner-border spinner-border-sm me-1"></i>Adding...').prop('disabled', true);
+                
+                // Submit the notice using new secure API
+                $.ajax({
+                    url: `${APP_BASE}api/planned-events/${peId}/notices`,
+                    type: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() || $('meta[name="csrf-token"]').attr('content') || ''
+                    },
+                    data: JSON.stringify(requestData),
+                    success: function(response) {
+                        // Handle new API response format
+                        if (response.success !== false) {
+                            modal.hide();
+                            refreshNoticeBoard();
+                            showSuccessMessage(response.message || 'Notice added successfully!');
+                        } else {
+                            showErrorMessage('Error adding notice: ' + (response.message || 'Unknown error'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error adding notice:', error);
+                        showErrorMessage('Error adding notice. Please try again.');
+                    },
+                    complete: function() {
+                        // Reset button state
+                        submitBtn.html(originalText).prop('disabled', false);
+                    }
+                });
+            });
+            
+            // Clean up modal after hide
+            $('#addNoticeModal').on('hidden.bs.modal', function() {
+                $(this).remove();
+            });
+        }
+        
+        function refreshNoticeBoard() {
+            // Refresh notice board content via AJAX
+            $.ajax({
+                url: '@Url.Action("GetNotices", "PlannedEvents")',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        updateNoticeBoardContent(response.data);
+                    } else {
+                        console.error('Failed to refresh notice board:', response.message);
+                    }
+                },
+                error: function() {
+                    console.error('Network error while refreshing notice board');
+                }
+            });
+        }
+        
+        function updateNoticeBoardContent(notices) {
+            const noticeContent = $('#noticeContent');
+            noticeContent.empty();
+            
+            if (notices && notices.length > 0) {
+                notices.slice(0, 5).forEach(function(notice) { // Show only first 5 notices
+                    // Split description to get title and content
+                    const lines = notice.description.split('\n');
+                    const title = lines[0] || 'Notice';
+                    const content = lines.slice(2).join('\n') || notice.description; // Skip empty line
+                    
+                    const isPinned = notice.isPinned || false;
+                    const expireDate = notice.expireDate ? new Date(notice.expireDate) : null;
+                    const isExpiringSoon = expireDate && expireDate <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); // Within 2 days
+                    
+                    const pinIcon = isPinned ? '<i class="bi bi-pin-fill text-warning me-1" title="Pinned Notice"></i>' : '';
+                    const expireIcon = expireDate ? '<i class="bi bi-clock text-muted me-1" title="Expires: ' + expireDate.toLocaleDateString() + '"></i>' : '';
+                    const expireWarning = isExpiringSoon ? '<i class="bi bi-exclamation-triangle text-danger me-1" title="Expiring Soon!"></i>' : '';
+                    
+                    const borderColor = isPinned ? 'ffc107' : (isExpiringSoon ? 'dc3545' : '0dcaf0');
+                    const bgClass = isPinned ? 'bg-light' : '';
+                    
+                    const noticeHtml = `
+                        <div class="notice-item mb-2 p-2 border rounded ${bgClass}" 
+                             style="border-left: 4px solid #${borderColor} !important; position: relative;"
+                             data-notice-id="${notice.id}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        ${pinIcon}${expireWarning}${expireIcon}
+                                        <h6 class="notice-title mb-0" style="font-size: 0.8rem; font-weight: bold;">
+                                            ${escapeHtml(title)}
+                                        </h6>
+                                    </div>
+                                    <p class="notice-content mb-1" style="font-size: 0.75rem; line-height: 1.2; color: #6c757d;">
+                                        ${escapeHtml(content.substring(0, 120))}${content.length > 120 ? '...' : ''}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted" style="font-size: 0.65rem;">
+                                            By: ${escapeHtml(notice.createdUserName)} • ${formatNoticeDate(notice.createdDate)}
+                                        </small>
+                                        ${expireDate ? `<small class="text-muted" style="font-size: 0.65rem;">Expires: ${expireDate.toLocaleDateString()}</small>` : ''}
+                                    </div>
+                                </div>
+                                ${canManageNotices ? `
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                        <li>
+                                            <button class="dropdown-item" onclick="togglePinNotice(${notice.id}, ${!isPinned})">
+                                                <i class="bi bi-pin${isPinned ? '-angle' : '-fill'} me-2"></i>
+                                                ${isPinned ? 'Unpin' : 'Pin'} Notice
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger" onclick="deleteNotice(${notice.id})">
+                                                <i class="bi bi-trash me-2"></i>Delete Notice
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    noticeContent.append(noticeHtml);
+                });
+                
+                // Add "View All" button if there are more notices
+                if (notices.length > 5) {
+                    noticeContent.append(`
+                        <div class="text-center mt-2">
+                            <small class="text-muted">${notices.length - 5} more notices...</small>
+                        </div>
+                    `);
+                }
+            } else {
+                const noNoticesMessage = canManageNotices ? 
+                    '<i class="bi bi-info-circle me-2"></i>No notices available<br><small>Click the + button to add the first notice</small>' :
+                    '<i class="bi bi-info-circle me-2"></i>No notices available at the moment';
+                
+                noticeContent.html(`
+                    <div class="text-center text-muted p-3">
+                        ${noNoticesMessage}
+                    </div>
+                `);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+        
+        function formatNoticeDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 1) {
+                return 'Today';
+            } else if (diffDays === 2) {
+                return 'Yesterday';
+            } else if (diffDays <= 7) {
+                return `${diffDays - 1} days ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        // Pin/Unpin notice functionality
+        function togglePinNotice(noticeId, shouldPin) {
+            if (!noticeId) {
+                showErrorMessage('Invalid notice ID');
+                return;
+            }
+            
+            const action = shouldPin ? 'pin' : 'unpin';
+            console.log(`${action}ning notice ${noticeId}`);
+            
+            // Get PE ID from current page context
+            const peId = window.location.pathname.split('/').pop();
+            
+            $.ajax({
+                url: `${APP_BASE}api/planned-events/${peId}/notices/${noticeId}/pin`,
+                type: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() || $('meta[name="csrf-token"]').attr('content') || ''
+                },
+                data: JSON.stringify({
+                    isPinned: shouldPin
+                }),
+                success: function(response) {
+                    // Handle new API response format
+                    if (response.success !== false) {
+                        refreshNoticeBoard();
+                        showSuccessMessage(response.message || `Notice ${action}ned successfully!`);
+                    } else {
+                        showErrorMessage(`Error ${action}ning notice: ` + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error(`Error ${action}ning notice:`, error);
+                    showErrorMessage(`Error ${action}ning notice. Please try again.`);
+                }
+            });
+        }
+        
+        // Delete notice functionality
+        function deleteNotice(noticeId) {
+            if (!noticeId) {
+                showErrorMessage('Invalid notice ID');
+                return;
+            }
+            
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to delete this notice? This action cannot be undone.')) {
+                return;
+            }
+            
+            console.log('Deleting notice', noticeId);
+            
+            // Get PE ID from current page context
+            const peId = window.location.pathname.split('/').pop();
+            
+            $.ajax({
+                url: `${APP_BASE}api/planned-events/${peId}/notices/${noticeId}`,
+                type: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() || $('meta[name="csrf-token"]').attr('content') || ''
+                },
+                success: function(response) {
+                    // Handle new API response format
+                    if (response.success !== false) {
+                        refreshNoticeBoard();
+                        showSuccessMessage(response.message || 'Notice deleted successfully!');
+                    } else {
+                        showErrorMessage('Error deleting notice: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error deleting notice:', error);
+                    if (xhr.status === 404) {
+                        showErrorMessage('Notice not found or already deleted.');
+                    } else if (xhr.status === 401) {
+                        showErrorMessage('You are not authorized to delete this notice.');
+                    } else {
+                        showErrorMessage('Error deleting notice. Please try again.');
+                    }
+                }
+            });
+        }
+        
+        // Helper functions for validation and messaging
+        function showValidationError(message, fieldSelector) {
+            if (typeof toastr !== 'undefined') {
+                toastr.error(message);
+            } else {
+                alert(message);
+            }
+            
+            if (fieldSelector) {
+                $(fieldSelector).focus().addClass('is-invalid');
+                setTimeout(() => {
+                    $(fieldSelector).removeClass('is-invalid');
+                }, 3000);
+            }
+        }
+        
+        function showSuccessMessage(message) {
+            if (typeof toastr !== 'undefined') {
+                toastr.success(message);
+            } else {
+                // Create a custom success alert
+                const alertDiv = $(`
+                    <div class="alert alert-success alert-dismissible fade show position-fixed" 
+                         style="top: 20px; right: 20px; z-index: 9999; max-width: 300px;" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                $('body').append(alertDiv);
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    alertDiv.fadeOut();
+                }, 3000);
+            }
+        }
+        
+        function showErrorMessage(message) {
+            if (typeof toastr !== 'undefined') {
+                toastr.error(message);
+            } else {
+                // Create a custom error alert
+                const alertDiv = $(`
+                    <div class="alert alert-danger alert-dismissible fade show position-fixed" 
+                         style="top: 20px; right: 20px; z-index: 9999; max-width: 300px;" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                $('body').append(alertDiv);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    alertDiv.fadeOut();
+                }, 5000);
+            }
+        }
+        
+        // Initialize notice board when document is ready
+        $(document).ready(function() {
+            initializeNoticeBoard();
+        });
+    </script>
+}
+
+@* Simplify the modal with just Accept/Reject buttons *@
+<div class="modal fade" id="urgentRequestModal" tabindex="-1" aria-labelledby="urgentRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="urgentRequestModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Urgent Request Confirmation
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="urgentRequestDetails">
+                    <!-- Details will be loaded here -->
+                </div>
+
+                <form id="urgentRequestForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="urgentRequestId" name="id" />
+                    <input type="hidden" id="urgentRequestType" name="requestType" />
+                </form>
+            </div>
+            <div class="modal-footer">
+                <a id="urgentRequestViewDetailsBtn" href="#" class="btn btn-info" target="_blank">
+    <i class="bi bi-eye"></i> View Details
+</a>
+                <button type="button" class="btn btn-success" id="acceptUrgentRequestBtn">
+                    <i class="fas fa-check-circle me-2"></i>Accept
+                </button>
+                <button type="button" class="btn btn-danger" id="rejectUrgentRequestBtn">
+                    <i class="fas fa-times-circle me-2"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Details Modal (update the modal to have specialized view for resolution requests) -->
+<div class="modal fade" id="issueDetailsModal" tabindex="-1" aria-labelledby="issueDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title" id="issueDetailsModalLabel">
+                    <i class="fas fa-exclamation-circle me-2"></i>Issue Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="issueDetailsContent">
+                    <!-- Details will be loaded here -->
+                </div>
+
+                <div class="pe-details-section mt-4 border-top pt-3">
+                    <h6 class="fw-bold">Related PE Record</h6>
+                    <div id="relatedPEDetails" class="bg-light p-3 rounded">
+                        <!-- PE Details will be loaded here -->
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Loading PE details...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Resolution confirmation section (only shown for resolution requests) -->
+                <div id="resolutionConfirmationSection" class="d-none mt-4 border-top pt-3">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-question-circle me-2"></i>
+                        <strong>Resolution Request:</strong> Has this issue been resolved?
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewPEDetailsBtn" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                </a>
+                <button type="button" class="btn btn-info" id="replyIssueBtn">
+                    <i class="fas fa-reply me-2"></i>Reply
+                </button>
+                <button type="button" class="btn btn-success" id="resolveIssueBtn">
+                    <i class="fas fa-check-circle me-2"></i>Mark as Fixed
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Resolution Confirmation Modal (for direct confirmation from inbox) -->
+<div class="modal fade" id="resolutionConfirmModal" tabindex="-1" aria-labelledby="resolutionConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="resolutionConfirmModalLabel">Confirm Issue Resolution</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">The issue has been marked as resolved with the following notes:</p>
+                <div class="border p-3 bg-light mb-3 resolution-details-container" id="resolutionDetailsText">
+                    <!-- Resolution details will be shown here -->
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2">Loading resolution details...</span>
+                </div>
+                <p class="mb-0">If you confirm this resolution:</p>
+                <ul>
+                    <li>The issue will be marked as resolved</li>
+                    <li>The PE status will be changed back to "ongoing"</li>
+                </ul>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Has this issue been fixed satisfactorily?
+                </div>
+            </div>
+            <div class="modal-footer">
+                <form id="confirmResolutionForm" method="post" asp-controller="Issues" asp-action="ConfirmResolution">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" id="directResolutionId" name="resolutionId" />
+                    <input type="hidden" id="directIsConfirmed" name="isConfirmed" value="false" />
+                    
+                    <a id="viewPEDetailsLink" href="#" class="btn btn-info me-auto" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i>View PE Details
+                    </a>
+                    
+                    <button type="button" class="btn btn-outline-danger" onclick="submitResolutionForm(false)">
+                        <i class="fas fa-times me-2"></i>No, Still an Issue
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="submitResolutionForm(true)">
+                        <i class="fas fa-check me-2"></i>Yes, Issue Fixed
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Issue Reply Modal -->
+<div class="modal fade" id="issueReplyModal" tabindex="-1" aria-labelledby="issueReplyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title" id="issueReplyModalLabel">Reply to Issue</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+                <form id="issueReplyForm" enctype="multipart/form-data" method="post" asp-controller="Issues" asp-action="Reply">
+                    <div class="modal-body">
+                        <input type="hidden" id="replyIssueId" name="issueId" />
+                        <input type="hidden" id="replyPlannedEventId" name="plannedEventId" />
+                        <input type="hidden" id="replyReceiverId" name="receiverId" />
+                        
+                        <div class="mb-3">
+                            <label for="replyText" class="form-label">Reply</label>
+                            <textarea class="form-control" id="replyText" name="replyText" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="replyAttachment" class="form-label">Attachment (Optional)</label>
+                            <input type="file" class="form-control" id="replyAttachment" name="attachment" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Send Reply</button>
+                    </div>
+                </form>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Resolution Modal -->
+<div class="modal fade" id="issueResolveModal" tabindex="-1" aria-labelledby="issueResolveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="issueResolveModalLabel">Mark Issue as Fixed</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="issueResolveForm" method="post" asp-controller="Issues" asp-action="MarkAsFixed">
+                <div class="modal-body">
+                    <input type="hidden" id="resolveIssueId" name="IssueId" />
+                    <input type="hidden" id="resolvePlannedEventId" name="PlannedEventId" />
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Marking this issue as fixed will send a confirmation request to the reporter.
+                        If confirmed, the PE record status will be changed back to "ongoing".
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="resolutionDetails" class="form-label">Resolution Details</label>
+                        <textarea class="form-control" id="resolutionDetails" name="ResolutionDetails" rows="4" required
+                                  placeholder="Describe how the issue was fixed..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle me-2"></i>Confirm Resolution
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@functions {
+    private string GetResolutionDetails(int issueId)
+    {
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return string.Empty;
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return string.Empty;
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.ResolutionDetails ?? string.Empty;
+                
+            return string.Empty;
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return string.Empty;
+        }
+    }
+
+    private int GetResolutionId(int issueId)
+    {
+        try
+        {
+            if (ViewBag.ResolutionsByIssueId == null)
+                return 0;
+                
+            var dictionary = ViewBag.ResolutionsByIssueId as Dictionary<int, PEIssueResolution>;
+            if (dictionary == null)
+                return 0;
+                
+            if (dictionary.ContainsKey(issueId))
+                return dictionary[issueId]?.Id ?? 0;
+                
+            return 0;
+        }
+        catch (Exception)
+        {
+            // Log error if needed
+            return 0;
+        }
+    }
+}
+
+<!-- Reminder Details Modal -->
+<div class="modal fade" id="reminderDetailsModal" tabindex="-1" aria-labelledby="reminderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="reminderDetailsModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Reminder Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="reminderDetailsContent">
+                <!-- Reminder details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" class="btn btn-primary" id="viewPEDetailsBtn" target="_blank">
+                    <i class="bi bi-eye me-1"></i>View PE Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Reminder notification functionality
+    // currentReminderFilter already declared in previous script section
+
+    $(document).ready(function() {
+        // Load reminders on page load
+        loadReminders();
+        
+        // Set up filter buttons
+        $('[data-filter]').on('click', function() {
+            $('[data-filter]').removeClass('active');
+            $(this).addClass('active');
+            currentReminderFilter = $(this).data('filter');
+            loadReminders();
+        });
+        
+        // Set up event listeners for reminder dropdown
+        document.getElementById('refreshReminders')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            loadReminders();
+        });
+
+        document.getElementById('markAllRemindersRead')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            markAllRemindersAsRead();
+        });
+
+        // Load reminders when dropdown is shown and handle positioning
+        document.getElementById('reminderDropdown')?.addEventListener('show.bs.dropdown', function () {
+            loadReminders();
+            
+            // Move dropdown to body to avoid container clipping
+            setTimeout(() => {
+                const dropdown = document.querySelector('#reminderDropdown + .dropdown-menu');
+                if (dropdown && dropdown.parentElement !== document.body) {
+                    document.body.appendChild(dropdown);
+                }
+            }, 1);
+        });
+
+        // Clean up when dropdown is hidden
+        document.getElementById('reminderDropdown')?.addEventListener('hide.bs.dropdown', function () {
+            const dropdown = document.querySelector('.dropdown-menu[aria-labelledby="reminderDropdown"]');
+            const originalParent = document.querySelector('.dropdown:has(#reminderDropdown)');
+            if (dropdown && originalParent && dropdown.parentElement === document.body) {
+                originalParent.appendChild(dropdown);
+            }
+        });
+    });
+
+    function loadReminders() {
+    fetch(`${APP_BASE}PlannedEvents/GetReminders`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Loaded reminders data:', data);
+
+                // Filter to ensure only reminders are processed (extra safety)
+                const reminderData = data.filter(item => item.isReminder !== false);
+                console.log('Filtered reminder data:', reminderData);
+
+                const reminderList = document.getElementById('reminderNotificationList');
+                const reminderBadge = document.getElementById('reminderCount');
+
+                if (!reminderList) return;
+
+                reminderList.innerHTML = '';
+
+                // Filter data based on current filter
+                const filteredData = currentReminderFilter === 'unread'
+                    ? reminderData.filter(r => !r.isRead)
+                    : reminderData;
+
+                // Update badge count (always show unread count)
+                const unreadCount = reminderData.filter(r => !r.isRead).length;
+                if (unreadCount > 0) {
+                    reminderBadge.textContent = unreadCount;
+                    reminderBadge.style.display = 'block';
+                } else {
+                    reminderBadge.style.display = 'none';
+                }
+
+                if (filteredData.length === 0) {
+                    reminderList.innerHTML = `
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-bell-slash me-2"></i>No ${currentReminderFilter} reminders
+                        </div>`;
+                    return;
+                }
+
+                filteredData.forEach(reminder => {
+                    const reminderElement = document.createElement('div');
+                    reminderElement.className = `dropdown-item reminder-item ${!reminder.isRead ? 'unread' : 'read'}`;
+                    reminderElement.style.cursor = 'pointer';
+                    reminderElement.style.borderBottom = '1px solid #eee';
+                    reminderElement.setAttribute('data-reminder-id', reminder.id);
+                    reminderElement.setAttribute('data-pe-id', reminder.plannedEventId);
+
+                    reminderElement.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-warning text-dark me-2">Hold Reminder</span>
+                                    ${!reminder.isRead ? '<i class="bi bi-circle-fill text-primary me-1" style="font-size: 0.5rem;"></i>' : ''}
+                                </div>
+                                <p class="mb-1 small">${reminder.message}</p>
+                                <small class="text-muted">${formatDate(new Date(reminder.createdDate))}</small>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    ${!reminder.isRead ?
+                            `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); markReminderAsRead(${reminder.id})">
+                                            <i class="bi bi-check me-2"></i>Mark as Read</a></li>` : ''
+                        }
+                                </ul>
+                            </div>
+                        </div>`;
+
+                    // Add click event to show details modal
+                    reminderElement.addEventListener('click', function () {
+                        showReminderDetails(reminder);
+                    });
+
+                    reminderList.appendChild(reminderElement);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading reminders:', error);
+            });
+    }
+
+    function showReminderDetails(reminder) {
+        console.log('showReminderDetails called with:', reminder);
+        console.log('plannedEventId:', reminder.plannedEventId);
+
+        // Mark as read if unread
+        if (!reminder.isRead) {
+            markReminderAsRead(reminder.id);
+        }
+
+        // Build reminder details content
+        const detailsContent = `
+        <div class="alert alert-warning">
+            <h6 class="fw-bold mb-2">
+                <i class="bi bi-exclamation-triangle me-2"></i>Hold Reminder
+            </h6>
+            <p class="mb-0">${reminder.message}</p>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Created:</strong> ${formatDate(new Date(reminder.createdDate))}
+            </div>
+            <div class="col-md-6">
+                <strong>Status:</strong> 
+                <span class="badge ${reminder.isRead ? 'bg-success' : 'bg-warning text-dark'}">
+                    ${reminder.isRead ? 'Read' : 'Unread'}
+                </span>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <h6 class="fw-bold mb-3">Related PE Information</h6>
+            <p class="mb-2"><strong>PE Number:</strong> ${reminder.peNumber || extractPENumber(reminder.message)}</p>
+            <p class="mb-0"><strong>Customer:</strong> ${reminder.customer || extractCustomer(reminder.message)}</p>
+        </div>
+    `;
+
+        document.getElementById('reminderDetailsContent').innerHTML = detailsContent;
+
+        // Debug the PE ID and URL construction
+        const peId = reminder.plannedEventId;
+    const detailsUrl = `${APP_BASE}PlannedEvents/Details/${peId}`;
+        console.log('Setting PE details URL to:', detailsUrl);
+
+        document.getElementById('viewPEDetailsBtn').href = detailsUrl;
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('reminderDetailsModal'));
+        modal.show();
+    }
+
+    // Helper functions to extract PE number and customer from reminder message
+    function extractPENumber(message) {
+        const match = message.match(/PE\s+([A-Z0-9]+)/i);
+        return match ? match[1] : 'N/A';
+    }
+
+    function extractCustomer(message) {
+        const match = message.match(/Customer:\s*([^.]+)/i);
+        return match ? match[1].trim() : 'N/A';
+    }
+
+    function markReminderAsRead(reminderId) {
+    fetch(`${APP_BASE}PlannedEvents/MarkReminderAsRead`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ id: reminderId })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Reminder marked as read successfully');
+                    loadReminders(); // Refresh the list
+                } else {
+                    console.error('Error marking reminder as read:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error marking reminder as read:', error);
+            });
+    }
+
+    function markAllRemindersAsRead() {
+    fetch(`${APP_BASE}PlannedEvents/MarkAllRemindersAsRead`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('All reminders marked as read successfully');
+                    loadReminders(); // Refresh the list
+                } else {
+                    console.error('Error marking all reminders as read:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error marking all reminders as read:', error);
+            });
+    }
+
+    function formatDate(date) {
+        const now = new Date();
+        const diffInMs = now - date;
+        const diffInHours = diffInMs / (1000 * 60 * 60);
+
+        if (diffInHours < 1) {
+            const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+            return `${diffInMinutes} minutes ago`;
+        } else if (diffInHours < 24) {
+            return `${Math.floor(diffInHours)} hours ago`;
+        } else {
+            const diffInDays = Math.floor(diffInHours / 24);
+            return `${diffInDays} days ago`;
+        }
+    }
+</script>
+
+<style>
+    /* Secondary Tool Styling - Report Generator */
+    .dashboard-card-container.secondary-tool {
+        opacity: 0.8;
+        filter: grayscale(15%);
+        position: relative;
+    }
+
+    .dashboard-card.secondary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        box-shadow: 0 3px 6px rgba(102, 126, 234, 0.2);
+        transition: all 0.3s ease;
+        opacity: 0.95;
+    }
+
+    .dashboard-card.secondary-card:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        border-color: rgba(102, 126, 234, 0.6);
+        opacity: 1;
+        filter: grayscale(0%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .dashboard-card.secondary-card .card-content h6 {
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-card.secondary-card .badge.secondary-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        font-size: 1.1rem;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+    }
+
+    .dashboard-card.secondary-card .img-container.secondary-icon {
+        opacity: 0.8;
+    }
+
+    .dashboard-card.secondary-card:hover .img-container.secondary-icon {
+        opacity: 1;
+        color: #ffffff !important;
+    }
+
+    /* Visual separator for secondary tool */
+    .dashboard-card-container.secondary-tool::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 15%;
+        bottom: 15%;
+        width: 3px;
+        background: repeating-linear-gradient(
+            to bottom,
+            #adb5bd,
+            #adb5bd 4px,
+            transparent 4px,
+            transparent 8px
+        );
+        border-radius: 2px;
+        opacity: 0.6;
+    }
+
+    /* Enhanced primary dashboard cards visual priority */
+    .dashboard-card:not(.secondary-card) {
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 2px solid transparent;
+    }
+
+    .dashboard-card:not(.secondary-card)::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        border-radius: inherit;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card:not(.secondary-card):hover::before {
+        opacity: 1;
+    }
+
+    .dashboard-card:not(.secondary-card):hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Subtle text label for secondary tools */
+    .dashboard-card-container.secondary-tool::after {
+        content: 'Generate Reports';
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        color: #6c757d;
+        background: rgba(248, 249, 250, 0.9);
+        padding: 2px 6px;
+        border-radius: 3px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dashboard-card-container.secondary-tool:hover::after {
+        opacity: 1;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .dashboard-card-container.secondary-tool {
+            flex: 1 1 0 !important;
+            min-width: 120px !important;
+        }
+        
+        .dashboard-card.secondary-card .card-content h6 {
+            font-size: 0.75rem;
+        }
+
+        .dashboard-card-container.secondary-tool::before {
+            display: none;
+        }
+
+        .dashboard-card-container.secondary-tool::after {
+            display: none;
+        }
+    }
+
+    /* Subtle animation for all cards with staggered delay */
+    .dashboard-card-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .dashboard-card-container:nth-child(1) { animation-delay: 0.1s; }
+    .dashboard-card-container:nth-child(2) { animation-delay: 0.2s; }
+    .dashboard-card-container:nth-child(3) { animation-delay: 0.3s; }
+    .dashboard-card-container:nth-child(4) { animation-delay: 0.4s; }
+    .dashboard-card-container:nth-child(5) { animation-delay: 0.6s; }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Badge styling enhancement for primary cards */
+    .dashboard-card:not(.secondary-card) .badge {
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Notice Board Enhanced Styling */
+    .notice-item {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .notice-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .notice-item.bg-light {
+        background-color: #fff9e6 !important;
+    }
+
+    .notice-item .dropdown-toggle::after {
+        display: none;
+    }
+
+    .notice-item .btn-link {
+        text-decoration: none;
+    }
+
+    .notice-item .btn-link:hover {
+        color: #495057 !important;
+    }
+
+    /* Modal enhancements for add notice */
+    #addNoticeModal .modal-content {
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    #addNoticeModal .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    #addNoticeModal .form-check-input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+    #addNoticeModal .card {
+        transition: all 0.3s ease;
+    }
+
+    #addNoticeModal .form-check-input:checked + .form-check-label {
+        color: #007bff;
+        font-weight: 500;
+    }
+
+    /* Expire date animation */
+    #expireDateContainer {
+        transition: all 0.4s ease;
+    }
+
+    /* Alert positioning for success/error messages */
+    .position-fixed.alert {
+        animation: slideInRight 0.5s ease;
+    }
+
+    @@keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Notice icons styling */
+    .notice-item .bi-pin-fill {
+        animation: pinPulse 2s infinite;
+    }
+
+    @@keyframes pinPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .notice-item .bi-exclamation-triangle {
+        animation: warningBlink 1.5s infinite;
+    }
+
+    @@keyframes warningBlink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Dropdown menu styling */
+    .notice-item .dropdown-menu {
+        border: none;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    .notice-item .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .notice-item .dropdown-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(3px);
+    }
+
+    .notice-item .dropdown-item.text-danger:hover {
+        background-color: #f8d7da;
+        color: #721c24 !important;
+    }
+</style>

@@ -1,0 +1,168 @@
+﻿@{
+    ViewData["Title"] = "Import PE Records from Excel";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg border-0 rounded-lg">
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-excel me-2"></i>Import PE Records from Excel
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert @(TempData["Message"].ToString().StartsWith("Error") ? "alert-danger" : "alert-success") 
+                                 alert-dismissible fade show" role="alert">
+                            <i
+                                class="@(TempData["Message"].ToString().StartsWith("Error") ? "fas fa-exclamation-circle" : "fas fa-check-circle") me-2"></i>
+                            @TempData["Message"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <form method="post" enctype="multipart/form-data" asp-action="ImportExcel" class="needs-validation"
+                        novalidate>
+                        <div class="upload-container mb-4 p-4 border-2 border-dashed rounded-3 text-center">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <div class="mb-3">
+                                <label for="excelFile" class="form-label d-block">
+                                    <span class="h5 mb-2 d-block">Drop your Excel file here or click to browse</span>
+                                    <span class="text-muted small">Supported format: .xlsx</span>
+                                </label>
+                                <input type="file" class="form-control d-none" id="excelFile" name="excelFile"
+                                    accept=".xlsx" required />
+                            </div>
+                            <div id="selected-file" class="text-muted mt-2"></div>
+                        </div>
+
+                        <div class="alert alert-info mb-4">
+                            <div class="d-flex">
+                                <i class="fas fa-info-circle fa-lg me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-1">Important Information</h6>
+                                    <p class="mb-0 small">Please ensure your Excel file follows the required format:</p>
+                                    <ul class="mb-0 mt-2 small">
+                                        <li>All required columns must be present</li>
+                                        <li>Data should be in the first worksheet</li>
+                                        <li>No empty rows at the beginning</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning mb-4">
+                            <div class="d-flex">
+                                <i class="fas fa-exclamation-triangle fa-lg me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-1">Warning</h6>
+                                    <p class="mb-0 small">Uploading a new Excel file will replace ALL existing records
+                                        in the database.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary px-4 py-2" id="uploadBtn" disabled>
+                                <i class="fas fa-upload me-2"></i>Import
+                            </button>
+                            <a asp-controller="PlannedEvents" asp-action="Index"
+                                class="btn btn-secondary px-4 py-2">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .border-dashed {
+            border-style: dashed !important;
+        }
+
+        .upload-container {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-container:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.05);
+            border-color: var(--bs-primary) !important;
+        }
+
+        .dragging {
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+            border-color: var(--bs-primary) !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const uploadContainer = document.querySelector('.upload-container');
+            const fileInput = document.getElementById('excelFile');
+            const selectedFile = document.getElementById('selected-file');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            uploadContainer.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    selectedFile.innerHTML = `
+                            <div class="alert alert-success p-2 mb-0">
+                                <i class="fas fa-file-excel me-2"></i>${this.files[0].name}
+                            </div>`;
+                    uploadBtn.disabled = false;
+                }
+            });
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadContainer.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadContainer.addEventListener(eventName, () => {
+                    uploadContainer.classList.add('dragging');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadContainer.addEventListener(eventName, () => {
+                    uploadContainer.classList.remove('dragging');
+                });
+            });
+
+            uploadContainer.addEventListener('drop', function (e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0 && files[0].name.endsWith('.xlsx')) {
+                    fileInput.files = files;
+                    selectedFile.innerHTML = `
+                            <div class="alert alert-success p-2 mb-0">
+                                <i class="fas fa-file-excel me-2"></i>${files[0].name}
+                            </div>`;
+                    uploadBtn.disabled = false;
+                } else {
+                    selectedFile.innerHTML = `
+                            <div class="alert alert-danger p-2 mb-0">
+                                <i class="fas fa-exclamation-circle me-2"></i>Please select a valid Excel file (.xlsx)
+                            </div>`;
+                    uploadBtn.disabled = true;
+                }
+            });
+        });
+    </script>
+}

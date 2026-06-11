@@ -1,0 +1,562 @@
+@model List<SFCDashboard.Models.PlannedEvent>
+@{
+    ViewData["Title"] = "Report Generator";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h3 class="card-title text-white mb-0">
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Planned Events Report Generator
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Filters Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5><i class="bi bi-funnel me-2"></i>Filters</h5>
+                            <form id="filterForm" class="row g-3">
+                                <div class="col-md-2">
+                                    <label for="regionFilter" class="form-label">Region</label>
+                                    <select class="form-select" id="regionFilter" name="region">
+                                        <option value="">All Regions</option>
+                                        @foreach (var region in (ViewBag.Regions as List<string> ?? new List<string>()))
+                                        {
+                                            <option value="@region">@region</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="provinceFilter" class="form-label">Province</label>
+                                    <select class="form-select" id="provinceFilter" name="province">
+                                        <option value="">All Provinces</option>
+                                        @foreach (var province in (ViewBag.Provinces as List<string> ?? new List<string>()))
+                                        {
+                                            <option value="@province">@province</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="rtomFilter" class="form-label">RTOM</label>
+                                    <select class="form-select" id="rtomFilter" name="rtom">
+                                        <option value="">All RTOMs</option>
+                                        @foreach (var rtom in ViewBag.RTOMs as List<string>)
+                                        {
+                                            <option value="@rtom">@rtom</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="contractorFilter" class="form-label">Contractor</label>
+                                    <select class="form-select" id="contractorFilter" name="contractorName">
+                                        <option value="">All Contractors</option>
+                                        @foreach (var contractor in ViewBag.ContractorNames as List<string>)
+                                        {
+                                            <option value="@contractor">@contractor</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="peNumberFilter" class="form-label">PE Number</label>
+                                    <select class="form-select" id="peNumberFilter" name="peNumber">
+                                        <option value="">All PE Numbers</option>
+                                        @foreach (var peNumber in ViewBag.PENumbers as List<string>)
+                                        {
+                                            <option value="@peNumber">@peNumber</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="customerFilter" class="form-label">Customer</label>
+                                    <select class="form-select" id="customerFilter" name="customer">
+                                        <option value="">All Customers</option>
+                                        @foreach (var customer in ViewBag.Customers as List<string>)
+                                        {
+                                            <option value="@customer">@customer</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="startDateFilter" class="form-label">Service Required From</label>
+                                    <input type="date" class="form-control" id="startDateFilter" name="startDate" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="endDateFilter" class="form-label">Service Required To</label>
+                                    <input type="date" class="form-control" id="endDateFilter" name="endDate" />
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="urgentOnlyFilter" name="urgentOnly" value="true">
+                                        <label class="form-check-label" for="urgentOnlyFilter">
+                                            Urgent only
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-primary" onclick="applyFilters()">
+                                        <i class="bi bi-search me-1"></i>Apply Filters
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Export Buttons -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h5><i class="bi bi-download me-2"></i>Export Options</h5>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-success" onclick="exportData('excel')">
+                                    <i class="bi bi-file-excel me-1"></i>Export to Excel
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="exportData('pdf')">
+                                    <i class="bi bi-file-pdf me-1"></i>Export to PDF
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Records Count -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <span id="recordsCount">Total Records: @Model.Count</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover" id="recordsTable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Province</th>
+                                            <th>Region</th>
+                                            <th>RTOM</th>
+                                            <th>Contractor Name</th>
+                                            <th>SO Number</th>
+                                            <th>Customer</th>
+                                            <th>PE Number</th>
+                                            <th>PE Title</th>
+                                            <th>Task Name</th>
+                                            <th>Task Workgroup</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recordsTableBody">
+                                        @foreach (var record in Model)
+                                        {
+                                            <tr data-pe-status="@record.PEStatus" data-srd="@record.ServiceRequiredDate?.ToString("yyyy-MM-dd")">
+                                            <td>@record.Id</td>
+                                            <td>@(record.Province ?? "")</td>
+                                            <td>@(record.Region ?? "")</td>
+                                            <td>@(record.Rtom ?? "")</td>
+                                            <td>@(record.ContractorName ?? "")</td>
+                                            <td>@(record.SoNumber ?? "")</td>
+                                            <td>@(record.Customer ?? "")</td>
+                                            <td>@(record.PeNumber ?? "")</td>
+                                            <td>@(record.PeTitle ?? "")</td>
+                                            <td>@(record.TaskName ?? "")</td>
+                                            <td>@(record.TaskWg ?? "")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Processing...</h5>
+                <p>Please wait while we process your request.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Store all data for fast client-side filtering
+        let allRecords = [];
+        let filteredRecords = [];
+    // Preserve the initial default option text for each select (e.g., "All Provinces")
+    const selectDefaults = {};
+
+        // Initialize data from the table
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeData();
+            setupRealTimeFiltering();
+            console.log('Reports page loaded with @Model.Count records');
+        });
+
+        function initializeData() {
+            const tbody = document.getElementById('recordsTableBody');
+            const rows = tbody.querySelectorAll('tr');
+
+            allRecords = Array.from(rows).map(row => {
+                const cells = row.querySelectorAll('td');
+                return {
+                    id: cells[0].textContent.trim(),
+                    province: cells[1].textContent.trim(),
+                    region: cells[2].textContent.trim(),
+                    rtom: cells[3].textContent.trim(),
+                    contractor_name: cells[4].textContent.trim(),
+                    so_number: cells[5].textContent.trim(),
+                    customer: cells[6].textContent.trim(),
+                    pe_number: cells[7].textContent.trim(),
+                    pe_title: cells[8].textContent.trim(),
+                    task_name: cells[9].textContent.trim(),
+                    task_wg: cells[10].textContent.trim(),
+                    pe_status: (row.dataset.peStatus || '').trim(),
+                    service_required_date: (row.dataset.srd || '').trim(),
+                    element: row // Keep reference to DOM element for fast manipulation
+                };
+            });
+
+            filteredRecords = [...allRecords];
+
+            // Cache default option labels so we can rebuild selects consistently
+            cacheSelectDefaults([
+                'provinceFilter',
+                'regionFilter',
+                'rtomFilter',
+                'contractorFilter',
+                'peNumberFilter',
+                'customerFilter'
+            ]);
+
+            // Ensure dropdowns reflect the available values from all records on load
+            updateAllDropdownOptions(getCurrentFilters());
+        }
+
+        function cacheSelectDefaults(ids) {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const first = el.options?.[0]?.text || 'All';
+                selectDefaults[id] = first;
+            });
+        }
+
+        function setupRealTimeFiltering() {
+            // Add event listeners for real-time filtering
+            const filterInputs = document.querySelectorAll('#filterForm select, #filterForm input');
+            filterInputs.forEach(input => {
+                input.addEventListener('change', applyFiltersInstant);
+                if (input.type === 'text') {
+                    input.addEventListener('input', debounce(applyFiltersInstant, 300));
+                }
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function applyFilters() {
+            // This function is called by the Apply Filters button
+            applyFiltersInstant();
+        }
+
+        function applyFiltersInstant() {
+            // Show minimal loading for visual feedback
+            const button = document.querySelector('button[onclick="applyFilters()"]');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Filtering...';
+            button.disabled = true;
+
+            // Small delay to show the feedback, then filter instantly
+            setTimeout(() => {
+                performClientSideFilter();
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 100);
+        }
+
+        function performClientSideFilter() {
+            const filters = getCurrentFilters();
+
+            // Filter records instantly
+            filteredRecords = allRecords.filter(record => {
+                const inDateRange = () => {
+                    const s = (filters.startDate || '').trim();
+                    const e = (filters.endDate || '').trim();
+                    if (!s && !e) return true;
+                    const rec = record.service_required_date;
+                    if (!rec) return false;
+                    const recTime = Date.parse(rec);
+                    if (isNaN(recTime)) return false;
+                    if (s) {
+                        const sTime = Date.parse(s);
+                        if (!isNaN(sTime) && recTime < sTime) return false;
+                    }
+                    if (e) {
+                        // add 1 day to include end date fully
+                        const eTime = Date.parse(e);
+                        if (!isNaN(eTime) && recTime > (eTime + 24*60*60*1000 - 1)) return false;
+                    }
+                    return true;
+                };
+                return (!filters.province || record.province.toLowerCase().includes(filters.province)) &&
+                    (!filters.region || record.region.toLowerCase().includes(filters.region)) &&
+                    (!filters.rtom || record.rtom.toLowerCase().includes(filters.rtom)) &&
+                    (!filters.contractor || record.contractor_name.toLowerCase().includes(filters.contractor)) &&
+                    (!filters.customer || record.customer.toLowerCase().includes(filters.customer)) &&
+                    (!filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber)) &&
+                    (!filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent') &&
+                    inDateRange();
+            });
+
+            updateTableInstant();
+            updateRecordsCount(filteredRecords.length);
+
+            // After filtering rows, repopulate dropdowns to only values present in filtered set
+            updateAllDropdownOptions(filters);
+        }
+
+        function getCurrentFilters() {
+            return {
+                province: document.getElementById('provinceFilter')?.value.toLowerCase() || '',
+                region: document.getElementById('regionFilter')?.value.toLowerCase() || '',
+                rtom: document.getElementById('rtomFilter')?.value.toLowerCase() || '',
+                contractor: document.getElementById('contractorFilter')?.value.toLowerCase() || '',
+                soNumber: '',
+                customer: document.getElementById('customerFilter')?.value.toLowerCase() || '',
+                peNumber: document.getElementById('peNumberFilter')?.value.toLowerCase() || '',
+                urgentOnly: document.getElementById('urgentOnlyFilter')?.checked || false,
+                startDate: document.getElementById('startDateFilter')?.value || '',
+                endDate: document.getElementById('endDateFilter')?.value || ''
+            };
+        }
+
+        function updateAllDropdownOptions(currentFilters) {
+            // For better UX, compute each dropdown's options using all other filters except itself
+            updateOneDropdown('provinceFilter', 'province', 'province', currentFilters);
+            updateOneDropdown('regionFilter', 'region', 'region', currentFilters);
+            updateOneDropdown('rtomFilter', 'rtom', 'rtom', currentFilters);
+            updateOneDropdown('contractorFilter', 'contractor', 'contractor_name', currentFilters);
+            updateOneDropdown('peNumberFilter', 'peNumber', 'pe_number', currentFilters);
+            updateOneDropdown('customerFilter', 'customer', 'customer', currentFilters);
+        }
+
+        function updateOneDropdown(selectId, filterKey, recordProp, currentFilters) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            const selectedValue = (select.value || '').toLowerCase();
+
+            // Build the set of records matching all filters except the one tied to this select
+            const recordsForThisSelect = allRecords.filter(r => matchesFiltersExcept(r, currentFilters, filterKey));
+            const values = distinctValues(recordsForThisSelect.map(r => (r[recordProp] || '').trim()))
+                .filter(v => v !== '');
+
+            // If currently selected value isn't in the new list but is non-empty, include it to avoid abrupt clearing
+            const hasSelected = selectedValue && values.some(v => v.toLowerCase() === selectedValue);
+            const finalValues = hasSelected ? values : values;
+
+            setSelectOptions(select, finalValues, selectedValue, selectDefaults[selectId] || 'All');
+        }
+
+        function matchesFiltersExcept(record, filters, exceptKey) {
+            // Check each filter except the specified one
+            const checks = [
+                exceptKey === 'province' || !filters.province || record.province.toLowerCase().includes(filters.province),
+                exceptKey === 'region' || !filters.region || record.region.toLowerCase().includes(filters.region),
+                exceptKey === 'rtom' || !filters.rtom || record.rtom.toLowerCase().includes(filters.rtom),
+                exceptKey === 'contractor' || !filters.contractor || record.contractor_name.toLowerCase().includes(filters.contractor),
+                true, // soNumber no longer used
+                exceptKey === 'customer' || !filters.customer || record.customer.toLowerCase().includes(filters.customer),
+                exceptKey === 'peNumber' || !filters.peNumber || record.pe_number.toLowerCase().includes(filters.peNumber),
+                // urgentOnly is a boolean flag; apply it regardless of exceptKey
+                !filters.urgentOnly || record.pe_status.toLowerCase() === 'urgent',
+                // date range applies regardless of exceptKey
+                (function() {
+                    const s = (filters.startDate || '').trim();
+                    const e = (filters.endDate || '').trim();
+                    if (!s && !e) return true;
+                    const rec = record.service_required_date;
+                    if (!rec) return false;
+                    const recTime = Date.parse(rec);
+                    if (isNaN(recTime)) return false;
+                    if (s) {
+                        const sTime = Date.parse(s);
+                        if (!isNaN(sTime) && recTime < sTime) return false;
+                    }
+                    if (e) {
+                        const eTime = Date.parse(e);
+                        if (!isNaN(eTime) && recTime > (eTime + 24*60*60*1000 - 1)) return false;
+                    }
+                    return true;
+                })()
+            ];
+            return checks.every(Boolean);
+        }
+
+        function distinctValues(arr) {
+            const set = new Set();
+            arr.forEach(v => {
+                if (typeof v === 'string') {
+                    const trimmed = v.trim();
+                    if (trimmed.length > 0) set.add(trimmed);
+                }
+            });
+            return Array.from(set).sort((a, b) => a.localeCompare(b));
+        }
+
+        function setSelectOptions(select, values, selectedLower, defaultText) {
+            // Rebuild options: first the default, then sorted distinct values
+            const prevScrollTop = select.scrollTop;
+            const frag = document.createDocumentFragment();
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = defaultText || 'All';
+            frag.appendChild(defaultOpt);
+
+            values.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                if (selectedLower && val.toLowerCase() === selectedLower) opt.selected = true;
+                frag.appendChild(opt);
+            });
+
+            // Replace options efficiently
+            select.innerHTML = '';
+            select.appendChild(frag);
+            // Restore scroll position if the list was long
+            select.scrollTop = prevScrollTop;
+        }
+
+        function updateTableInstant() {
+            const tbody = document.getElementById('recordsTableBody');
+
+            // Hide all rows first
+            allRecords.forEach(record => {
+                record.element.style.display = 'none';
+            });
+
+            // Show only filtered rows
+            filteredRecords.forEach(record => {
+                record.element.style.display = '';
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('filterForm').reset();
+            filteredRecords = [...allRecords];
+            updateTableInstant();
+            updateRecordsCount(allRecords.length);
+            // Reset dropdowns to full available values
+            updateAllDropdownOptions(getCurrentFilters());
+        }
+
+        function updateRecordsCount(count) {
+            document.getElementById('recordsCount').textContent = `Total Records: ${count}`;
+        }
+
+        function exportData(format) {
+            showLoading();
+
+            const formData = new FormData(document.getElementById('filterForm'));
+            const params = new URLSearchParams(formData).toString();
+
+            let url = '';
+            switch (format) {
+                case 'excel':
+                    url = '/Reports/ExportExcel';
+                    break;
+                case 'pdf':
+                    url = '/Reports/ExportPDF';
+                    break;
+                case 'png':
+                    url = '/Reports/ExportPNG';
+                    break;
+                default:
+                    hideLoading();
+                    alert('Invalid export format');
+                    return;
+            }
+
+            if (params) {
+                url += '?' + params;
+            }
+
+            // Create a temporary link to download the file
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(() => {
+                hideLoading();
+            }, 2000);
+        }
+
+        function showLoading() {
+            const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            modal.show();
+        }
+
+        function hideLoading() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
+            if (modal) {
+                modal.hide();
+            }
+        }
+    </script>
+
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* CSS keyframes for spin animation */
+        @@keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

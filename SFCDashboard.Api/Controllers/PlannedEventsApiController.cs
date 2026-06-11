@@ -253,6 +253,34 @@ namespace SFCDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Create a new planned event
+        /// </summary>
+        [HttpPost]
+        public async Task<ActionResult<PlannedEvent>> CreatePlannedEvent([FromBody] PlannedEvent plannedEvent)
+        {
+            try
+            {
+                if (plannedEvent == null)
+                {
+                    return BadRequest("Planned event data is required");
+                }
+
+                var createdEvent = await _plannedEventsService.CreatePlannedEventAsync(plannedEvent);
+                if (createdEvent == null)
+                {
+                    return StatusCode(500, "Failed to create the planned event");
+                }
+
+                return CreatedAtAction(nameof(GetPlannedEvent), new { id = createdEvent.Id }, createdEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating planned event");
+                return StatusCode(500, "An error occurred while creating the planned event");
+            }
+        }
+
+        /// <summary>
         /// Update a planned event
         /// </summary>
         [HttpPut("{id}")]

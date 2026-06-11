@@ -1,0 +1,200 @@
+using System.Text;
+using System.Text.Json;
+using SFCDB.Models;
+
+namespace SFCDashboard.ApiClients
+{
+    public class PERecordsApiClient : IPERecordsApiClient
+    {
+        private readonly HttpClient _httpClient;
+        private readonly ILogger<PERecordsApiClient> _logger;
+        private readonly JsonSerializerOptions _jsonOptions;
+
+        public PERecordsApiClient(HttpClient httpClient, ILogger<PERecordsApiClient> logger)
+        {
+            _httpClient = httpClient;
+            _logger = logger;
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            };
+        }
+
+        public async Task<ApiResponse> ImportPERecordsAsync(IFormFile excelFile)
+        {
+            try
+            {
+                using var content = new MultipartFormDataContent();
+                using var fileContent = new StreamContent(excelFile.OpenReadStream());
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(excelFile.ContentType);
+                content.Add(fileContent, "excelFile", excelFile.FileName);
+
+                var response = await _httpClient.PostAsync("api/PERecordsApi/import", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse>(responseContent, _jsonOptions);
+                    return result ?? new ApiResponse { Success = false, Message = "Failed to deserialize response" };
+                }
+
+                _logger.LogError("Failed to import PE records. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return new ApiResponse { Success = false, Message = $"API call failed with status {response.StatusCode}" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error importing PE records");
+                return new ApiResponse { Success = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<ApiResponse> ImportPERecordsFromJsonAsync(List<PERecord> peRecords)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(peRecords, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync("api/PERecordsApi/import-json", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse>(responseContent, _jsonOptions);
+                    return result ?? new ApiResponse { Success = false, Message = "Failed to deserialize response" };
+                }
+
+                _logger.LogError("Failed to import PE records from JSON. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return new ApiResponse { Success = false, Message = $"API call failed with status {response.StatusCode}" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error importing PE records from JSON");
+                return new ApiResponse { Success = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<ApiResponse<PaginatedResult<PERecord>>> GetPERecordsAsync(int page = 1, int pageSize = 1000)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/PERecordsApi?page={page}&pageSize={pageSize}");
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<PaginatedResult<PERecord>>>(responseContent, _jsonOptions);
+                    return result ?? new ApiResponse<PaginatedResult<PERecord>> { Success = false, Message = "Failed to deserialize response" };
+                }
+
+                _logger.LogError("Failed to get PE records. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return new ApiResponse<PaginatedResult<PERecord>> { Success = false, Message = $"API call failed with status {response.StatusCode}" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PE records");
+                return new ApiResponse<PaginatedResult<PERecord>> { Success = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<ApiResponse<List<PERecord>>> GetFilteredPERecordsAsync(string? province = null, string? region = null,
+            string? rtom = null, string? contractorName = null, string? soNumber = null, string? customer = null)
+        {
+            try
+            {
+                var queryParams = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(province))
+                    queryParams.Add($"province={Uri.EscapeDataString(province)}");
+
+                if (!string.IsNullOrWhiteSpace(region))
+                    queryParams.Add($"region={Uri.EscapeDataString(region)}");
+
+                if (!string.IsNullOrWhiteSpace(rtom))
+                    queryParams.Add($"rtom={Uri.EscapeDataString(rtom)}");
+
+                if (!string.IsNullOrWhiteSpace(contractorName))
+                    queryParams.Add($"contractorName={Uri.EscapeDataString(contractorName)}");
+
+                if (!string.IsNullOrWhiteSpace(soNumber))
+                    queryParams.Add($"soNumber={Uri.EscapeDataString(soNumber)}");
+
+                if (!string.IsNullOrWhiteSpace(customer))
+                    queryParams.Add($"customer={Uri.EscapeDataString(customer)}");
+
+                var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+                var url = $"api/PERecordsApi/filter{queryString}";
+
+                var response = await _httpClient.GetAsync(url);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<List<PERecord>>>(responseContent, _jsonOptions);
+                    return result ?? new ApiResponse<List<PERecord>> { Success = false, Message = "Failed to deserialize response" };
+                }
+
+                _logger.LogError("Failed to get filtered PE records. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return new ApiResponse<List<PERecord>> { Success = false, Message = $"API call failed with status {response.StatusCode}" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting filtered PE records");
+                return new ApiResponse<List<PERecord>> { Success = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<ApiResponse<DatabaseStats>> GetDatabaseStatsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/PERecordsApi/stats");
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<DatabaseStats>>(responseContent, _jsonOptions);
+                    return result ?? new ApiResponse<DatabaseStats> { Success = false, Message = "Failed to deserialize response" };
+                }
+
+                _logger.LogError("Failed to get database stats. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return new ApiResponse<DatabaseStats> { Success = false, Message = $"API call failed with status {response.StatusCode}" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting database stats");
+                return new ApiResponse<DatabaseStats> { Success = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<ApiResponse> SyncPERecordsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync("api/PERecordsApi/sync", null);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse>(responseContent, _jsonOptions);
+                    return result ?? new ApiResponse { Success = false, Message = "Failed to deserialize response" };
+                }
+
+                _logger.LogError("Failed to sync PE records. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return new ApiResponse { Success = false, Message = $"API call failed with status {response.StatusCode}" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing PE records");
+                return new ApiResponse { Success = false, Message = ex.Message };
+            }
+        }
+    }
+}

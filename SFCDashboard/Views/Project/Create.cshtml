@@ -1,0 +1,25 @@
+@model Project
+
+@{
+    ViewData["Title"] = "Create Project";
+}
+
+<div class="modal-content">
+    <div class="modal-header">
+        <h5 class="modal-title">Create New Project</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <form asp-action="Create" method="post">
+        <div class="modal-body">
+            <div class="mb-3">
+                <label asp-for="ProjectName" class="form-label">Project Name</label>
+                <input asp-for="ProjectName" class="form-control" required>
+                <span asp-validation-for="ProjectName" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Project</button>
+        </div>
+    </form>
+</div>

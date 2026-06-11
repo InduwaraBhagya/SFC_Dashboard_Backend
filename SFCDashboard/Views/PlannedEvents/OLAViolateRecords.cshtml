@@ -1,0 +1,208 @@
+@using SFCDashboard.Models
+@model IEnumerable<SFCDashboard.Models.PlannedEvent>
+
+@{
+    ViewData["Title"] = "OLA Violation Records";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">
+            <i class="bi bi-clock-history text-primary me-3"></i>OLA Violation Records
+        </h1>
+        <a asp-action="Index" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="searchForm" class="row g-3" method="get">
+                <div class="col-md-3">
+                    <label for="searchPeNumber" class="form-label">PE Number</label>
+                    <input type="text" class="form-control" id="searchPeNumber" name="peNumber"
+                        value="@ViewData["SearchPeNumber"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchCustomer" class="form-label">Customer</label>
+                    <input type="text" class="form-control" id="searchCustomer" name="customer"
+                        value="@ViewData["SearchCustomer"]">
+                </div>
+                <div class="col-md-3">
+                    <label for="searchReference" class="form-label">Request Reference</label>
+                    <input type="text" class="form-control" id="searchReference" name="reference"
+                        value="@ViewData["SearchReference"]">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <a href="@Url.Action("OLAViolateRecords")" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>OLA Violation Records</h5>
+                <span class="badge bg-light text-dark">@Model.Count() Records</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" style="font-size: 0.8rem;">
+                    <thead style="font-size: 0.75rem;">
+                        <tr>
+                            <th style="width: 12%;">PE Number</th>
+                            <th style="width: 15%;">Customer</th>
+                            <th style="width: 15%;">Request Reference</th>
+                            <th style="width: 12%;">Job Reference</th>
+                            <th style="width: 15%;">Current Task</th>
+                            <th style="width: 8%;">Workgroup</th>
+                            <th style="width: 12%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr style="font-size: 0.8rem;">
+                                <td>@item.PeNumber</td>
+                                <td>@item.Customer</td>
+                                <td>@item.RequestReferenceNo</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.JobReference))
+                                    {
+                                        @item.JobReference
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@item.TaskName</td>
+                                <td>@item.TaskWg</td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                        asp-route-returnUrl="@Url.Action("OLAViolateRecords")"
+                                        class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i> No OLA violations found.
+                </div>
+
+                @* Add diagnostic information for troubleshooting *@
+                @if (ViewBag.DiagnosticInfo != null)
+                {
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="bi bi-wrench me-2"></i>Diagnostic Information:</h6>
+                        <p><strong>User ID:</strong> @ViewBag.DiagnosticInfo.UserId</p>
+                        <p><strong>Can View All:</strong> @ViewBag.DiagnosticInfo.CanViewAll</p>
+                        <p><strong>Selected Workgroup ID:</strong> @ViewBag.DiagnosticInfo.WorkgroupId</p>
+                        <p><strong>User Workgroups:</strong> @ViewBag.DiagnosticInfo.UserWorkgroups</p>
+                        <p><strong>Has Draw Fiber Access:</strong> @ViewBag.DiagnosticInfo.HasDrawFiberAccess</p>
+                        <p><strong>Records Found:</strong> @ViewBag.DiagnosticInfo.RecordCount</p>
+                        <small class="text-muted">This information helps diagnose why no records are showing. Check the
+                            application logs for more detailed information about the database queries.</small>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add search functionality
+            const searchForm = document.getElementById('searchForm');
+            const searchInputs = searchForm.querySelectorAll('input');
+            const tableBody = document.querySelector('table tbody');
+            const noRecordsAlert = document.querySelector('.alert-info');
+
+            function filterTable() {
+                const peNumber = document.getElementById('searchPeNumber').value.trim().toLowerCase();
+                const customer = document.getElementById('searchCustomer').value.trim().toLowerCase();
+                const reference = document.getElementById('searchReference').value.trim().toLowerCase();
+
+                let visibleRows = 0;
+                const rows = tableBody.getElementsByTagName('tr');
+
+                Array.from(rows).forEach(row => {
+                    const cells = row.getElementsByTagName('td');
+                    const matchPeNumber = cells[0].textContent.trim().toLowerCase().includes(peNumber);
+                    const matchCustomer = cells[1].textContent.trim().toLowerCase().includes(customer);
+                    const matchReference = cells[2].textContent.trim().toLowerCase().includes(reference);
+
+                    if (matchPeNumber && matchCustomer && matchReference) {
+                        row.style.display = '';
+                        visibleRows++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Update record count
+                document.querySelector('.badge').textContent = visibleRows + ' Records';
+
+                // Show/hide no records message
+                if (noRecordsAlert && visibleRows === 0) {
+                    if (noRecordsAlert.style.display !== 'block') {
+                        const newAlert = document.createElement('div');
+                        newAlert.className = 'alert alert-info mt-3';
+                        newAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i> No matching OLA violations found.';
+                        tableBody.parentElement.appendChild(newAlert);
+                    }
+                } else {
+                    const existingAlerts = document.querySelectorAll('.card-body .alert-info');
+                    existingAlerts.forEach(alert => {
+                        if (alert !== noRecordsAlert) {
+                            alert.remove();
+                        }
+                    });
+                }
+            }
+
+            // Add real-time search
+            searchInputs.forEach(input => {
+                input.addEventListener('input', filterTable);
+            });
+
+            // Prevent form submission (using real-time filter instead)
+            searchForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                filterTable();
+            });
+
+            // Ensure Bootstrap dropdowns are properly initialized
+            var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+            var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+                return new bootstrap.Dropdown(dropdownToggleEl);
+            });
+        });
+    </script>
+}
