@@ -10,7 +10,7 @@ public class Project
 
     [Required]
     [StringLength(200)]
-    public string ProjectName { get; set; }
+    public string ProjectName { get; set; } = string.Empty;
 
     public DateTime CreatedDate { get; set; } = DateTime.Now;
 
@@ -29,9 +29,8 @@ public class ProjectPEMapping
     public int PlannedEventId { get; set; }
 
     [ForeignKey("ProjectId")]
-    public virtual Project Project { get; set; }
+    public virtual Project Project { get; set; } = null!;
 
     [ForeignKey("PlannedEventId")]
-    public virtual PlannedEvent PlannedEvent { get; set; }
+    public virtual PlannedEvent PlannedEvent { get; set; } = null!;
 }
-

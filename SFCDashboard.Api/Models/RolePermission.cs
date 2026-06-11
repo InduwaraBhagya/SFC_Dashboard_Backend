@@ -15,10 +15,10 @@ namespace SFCDashboard.Api.Models
         public int PermissionId { get; set; }
 
         [ForeignKey("RoleId")]
-        public virtual UserRole Role { get; set; }
+        public virtual UserRole Role { get; set; } = null!;
 
         [ForeignKey("PermissionId")]
-        public virtual Permission Permission { get; set; }
+        public virtual Permission Permission { get; set; } = null!;
     }
 }
 

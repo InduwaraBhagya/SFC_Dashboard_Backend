@@ -6,10 +6,10 @@ namespace SFCDashboard.Api.Models
     {
         public int Id { get; set; }
         public int SenderId { get; set; }
-        public string SenderName { get; set; }
+        public string SenderName { get; set; } = string.Empty;
         public int ReceiverId { get; set; }
-        public string ReceiverName { get; set; }
-        public string IssueText { get; set; }
+        public string ReceiverName { get; set; } = string.Empty;
+        public string IssueText { get; set; } = string.Empty;
         public string? AttachmentPath { get; set; }
         public DateTime CreatedAt { get; set; }
         public int PlannedEventId { get; set; }
@@ -21,11 +21,10 @@ namespace SFCDashboard.Api.Models
         public int PETaskId { get; set; }
 
         // New properties for resolution information
-        public string ResolutionDetails { get; set; }
+        public string ResolutionDetails { get; set; } = string.Empty;
         public int? ResolutionId { get; set; }
 
         // Property to indicate if the issue is hidden from the inbox
         public bool IsHiddenFromInbox { get; set; }
     }
 }
-

@@ -28,7 +28,7 @@ namespace SFCDashboard.Api.Services
                 // Get user with role and permissions in a single query with proper includes
                 var user = await _context.Users
                     .Include(u => u.UserRole)
-                        .ThenInclude(r => r != null ? r.RolePermissions : null!)
+                        .ThenInclude(r => r.RolePermissions)
                             .ThenInclude(rp => rp.Permission)
                     .FirstOrDefaultAsync(u => u.ServiceId == serviceId);
 
