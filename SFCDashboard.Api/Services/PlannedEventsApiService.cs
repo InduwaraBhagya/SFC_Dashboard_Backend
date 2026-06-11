@@ -9,12 +9,21 @@ namespace SFCDashboard.Api.Services
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PlannedEventsApiService> _logger;
         private readonly IUsersApiService _usersApiService;
+        private readonly IPETasksApiService _peTasksService;
+        private readonly ITaskQueueService _taskQueueService;
 
-        public PlannedEventsApiService(ApplicationDbContext context, ILogger<PlannedEventsApiService> logger, IUsersApiService usersApiService)
+        public PlannedEventsApiService(
+            ApplicationDbContext context, 
+            ILogger<PlannedEventsApiService> logger, 
+            IUsersApiService usersApiService,
+            IPETasksApiService peTasksService,
+            ITaskQueueService taskQueueService)
         {
             _context = context;
             _logger = logger;
             _usersApiService = usersApiService;
+            _peTasksService = peTasksService;
+            _taskQueueService = taskQueueService;
         }
         /// <summary>
         /// Gets in-progress planned events for a specific user (filters by workgroups and permissions)
@@ -844,8 +853,50 @@ namespace SFCDashboard.Api.Services
         {
             try
             {
+                // Set initial status if not set
+                if (string.IsNullOrEmpty(plannedEvent.PEStatus))
+                {
+                    plannedEvent.PEStatus = "ongoing";
+                }
+                
+                plannedEvent.PECreatedDate = DateTime.Now;
+
                 _context.Add(plannedEvent);
                 await _context.SaveChangesAsync();
+
+                // Create initial task for the PE to ensure it shows up in Task Queue
+                if (!string.IsNullOrEmpty(plannedEvent.PeNumber) && !string.IsNullOrEmpty(plannedEvent.TaskName))
+                {
+                    var initialTask = new PETask
+                    {
+                        PENumber = plannedEvent.PeNumber,
+                        Task = plannedEvent.TaskName,
+                        TaskWorkGroup = plannedEvent.TaskWg ?? "NULL",
+                        TaskSeq = plannedEvent.TaskSeq ?? 1,
+                        TaskStatus = "INPROGRESS",
+                        TaskCreatedDate = DateTime.Now,
+                        TaskCompleteDate = DateTime.Now.AddDays(1), // Default 1 day OLA
+                        OLA = "1",
+                        IsUrgent = plannedEvent.PEStatus.Equals("urgent", StringComparison.OrdinalIgnoreCase)
+                    };
+
+                    await _peTasksService.CreatePETaskAsync(initialTask);
+                    
+                    // Refresh task queue snapshots to reflect the new task immediately
+                    try
+                    {
+                        // Get workgroup ID if possible
+                        var workgroup = await _context.WorkGroups
+                            .FirstOrDefaultAsync(w => w.Name == plannedEvent.TaskWg);
+                            
+                        await _taskQueueService.RefreshTaskQueueSnapshotsAsync(workgroup?.Id, DateTime.Now.Year);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to refresh task queue snapshots after PE creation, but PE was created successfully");
+                    }
+                }
+
                 return plannedEvent;
             }
             catch (Exception ex)

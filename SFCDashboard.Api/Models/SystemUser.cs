@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic;
+using System.Linq;
 using SFCDashboard.Api.Models;
 
 public class SystemUser
@@ -32,5 +34,8 @@ public class SystemUser
     {
         UserWorkGroups = new HashSet<UserWorkGroup>();
     }
+
+    [NotMapped]
+    public List<int> WorkGroupIds => UserWorkGroups?.Select(uwg => uwg.WorkGroupId).ToList() ?? new List<int>();
 }
 

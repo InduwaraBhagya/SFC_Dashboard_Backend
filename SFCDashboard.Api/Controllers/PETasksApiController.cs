@@ -11,7 +11,7 @@ namespace SFCDashboard.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize]
+    // [Authorize]
     public class PETasksApiController : ControllerBase
     {
         private readonly ILogger<PETasksApiController> _logger;

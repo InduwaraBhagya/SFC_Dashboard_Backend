@@ -11,7 +11,7 @@ namespace SFCDashboard.Api.Controllers
     [ApiController]
     [Route("api/taskqueue")]
     [Produces("application/json")]
-    [Authorize]
+    // [Authorize]
     public class TaskQueueApiController : ControllerBase
     {
         private readonly ITaskQueueService _taskQueueService;

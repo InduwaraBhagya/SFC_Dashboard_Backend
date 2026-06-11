@@ -574,60 +574,121 @@ namespace SFCDashboard.Controllers.Api
         }
 
         /// <summary>
-        /// Get filtered PE Records for reporting
+        /// Get filtered PE Records with pagination and search support
         /// </summary>
-        /// <param name="province">Filter by province</param>
-        /// <param name="region">Filter by region</param>
-        /// <param name="rtom">Filter by RTOM</param>
-        /// <param name="contractorName">Filter by contractor name</param>
-        /// <param name="soNumber">Filter by SO number</param>
-        /// <param name="customer">Filter by customer</param>
-        /// <returns>Filtered list of PE Records</returns>
+        /// <param name="request">Pagination and search parameters</param>
+        /// <param name="searchCategory">Field to search (e.g., PE Number, Province, Customer, SO Number)</param>
+        /// <param name="searchValue">Value to search for</param>
+        /// <returns>Paginated list of filtered PE Records</returns>
         [HttpGet("filter")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetFilteredPERecords(
-            [FromQuery] string? province = null,
-            [FromQuery] string? region = null,
-            [FromQuery] string? rtom = null,
-            [FromQuery] string? contractorName = null,
-            [FromQuery] string? soNumber = null,
-            [FromQuery] string? customer = null)
+            [FromQuery] PERecordsRequest request,
+            [FromQuery] string? searchCategory = null,
+            [FromQuery] string? searchValue = null)
         {
             try
             {
+                // Validate pagination parameters
+                if (request.Page < 1)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Page number must be greater than 0."
+                    });
+                }
+
+                if (request.PageSize < 1 || request.PageSize > 10000)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Page size must be between 1 and 10000."
+                    });
+                }
+
+                // Validate search parameters
+                if (!string.IsNullOrWhiteSpace(searchCategory) && string.IsNullOrWhiteSpace(searchValue))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Search value is required when search category is provided."
+                    });
+                }
+
+                var allowedSearchCategories = new[] { "PE Number", "Province", "Customer", "SO Number" };
+                if (!string.IsNullOrWhiteSpace(searchCategory) && !allowedSearchCategories.Contains(searchCategory))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"Invalid search category. Allowed values: {string.Join(", ", allowedSearchCategories)}."
+                    });
+                }
+
                 var query = _context.PERecords.AsQueryable();
 
-                if (!string.IsNullOrWhiteSpace(province))
-                    query = query.Where(x => x.PROVINCE == province);
+                // Apply search filter based on category
+                if (!string.IsNullOrWhiteSpace(searchCategory) && !string.IsNullOrWhiteSpace(searchValue))
+                {
+                    switch (searchCategory)
+                    {
+                        case "PE Number":
+                            query = query.Where(x => x.PE_NUMBER != null && x.PE_NUMBER.Contains(searchValue));
+                            break;
+                        case "Province":
+                            query = query.Where(x => x.PROVINCE != null && x.PROVINCE.Contains(searchValue));
+                            break;
+                        case "Customer":
+                            query = query.Where(x => x.CUSTOMER != null && x.CUSTOMER.Contains(searchValue));
+                            break;
+                        case "SO Number":
+                            query = query.Where(x => x.SO_NUMBER != null && x.SO_NUMBER.Contains(searchValue));
+                            break;
+                    }
+                }
 
-                if (!string.IsNullOrWhiteSpace(region))
-                    query = query.Where(x => x.REGION == region);
+                // Get total count before pagination
+                var totalRecords = await query.CountAsync();
 
-                if (!string.IsNullOrWhiteSpace(rtom))
-                    query = query.Where(x => x.RTOM == rtom);
+                // Apply pagination
+                var records = await query
+                    .Skip((request.Page - 1) * request.PageSize)
+                    .Take(request.PageSize)
+                    .ToListAsync();
 
-                if (!string.IsNullOrWhiteSpace(contractorName))
-                    query = query.Where(x => x.CONTRACTOR_NAME == contractorName);
+                var totalPages = (int)Math.Ceiling((double)totalRecords / request.PageSize);
 
-                if (!string.IsNullOrWhiteSpace(soNumber))
-                    query = query.Where(x => x.SO_NUMBER == soNumber);
-
-                if (!string.IsNullOrWhiteSpace(customer))
-                    query = query.Where(x => x.CUSTOMER == customer);
-
-                var filteredRecords = await query.ToListAsync();
+                _logger.LogInformation("Retrieved {count} filtered PE records for category {category} with value {value}",
+                    records.Count, searchCategory ?? "none", searchValue ?? "none");
 
                 return Ok(new
                 {
                     success = true,
-                    data = filteredRecords,
-                    message = $"Retrieved {filteredRecords.Count} filtered records successfully."
+                    data = new
+                    {
+                        values = records // Match frontend's expected structure
+                    },
+                    message = $"Retrieved {records.Count} filtered records successfully.",
+                    pagination = new
+                    {
+                        currentPage = request.Page,
+                        pageSize = request.PageSize,
+                        totalRecords = totalRecords,
+                        totalPages = totalPages,
+                        hasNextPage = request.Page < totalPages,
+                        hasPreviousPage = request.Page > 1
+                    }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving filtered PE records");
+                _logger.LogError(ex, "Error retrieving filtered PE records for category {category} with value {value}",
+                    searchCategory ?? "none", searchValue ?? "none");
                 return StatusCode(500, new
                 {
                     success = false,
